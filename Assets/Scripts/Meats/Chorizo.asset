@@ -12,3 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1244beab36128dd4ebb20cd420b32ba0, type: 3}
   m_Name: Chorizo
   m_EditorClassIdentifier: 
+  timeHeatA: 0
+  timeHeatB: 0
+  price: 0
+  meatSpriteA: {fileID: 0}
+  meatSpriteB: {fileID: 0}
+  grillSpace: {x: 1, y: 2}

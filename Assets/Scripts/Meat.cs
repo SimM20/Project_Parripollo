@@ -14,6 +14,7 @@ public class Meat : MonoBehaviour
     private float percentSideB => Mathf.Clamp01(actualTimeB / meatData.TimeHeatB);
     private float percentGeneral => (percentSideA + percentSideB) / (meatData.TimeHeatA + meatData.TimeHeatB);
     private MeatStates actualState = MeatStates.Crudo;
+    private ItemType type = ItemType.Meat;
 
     public void Cook(float heat)
     {
@@ -53,7 +54,6 @@ public class Meat : MonoBehaviour
                 actualState = MeatStates.Pasado;
                 break;
         }
-
     }
 
     public float GetCookedPercent()
