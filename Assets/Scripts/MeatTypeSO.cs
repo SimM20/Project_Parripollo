@@ -8,12 +8,12 @@ public class MeatTypeSO : ScriptableObject
     [SerializeField] private float price;
     [SerializeField] private Sprite meatSpriteA;
     [SerializeField] private Sprite meatSpriteB;
-    [SerializeField] private Vector2 grillSpace;
+    [SerializeField] private Vector2Int grillSpace;
 
     public float TimeHeatA => timeHeatA;
     public float TimeHeatB => timeHeatB;
     public float Price => price;
     public Sprite MeatSpriteA => meatSpriteA;
     public Sprite MeatSpriteB => meatSpriteB;
-    public  Vector2 GrillSpace => grillSpace;
+    public  Vector2Int GrillSpace => grillSpace;
 }

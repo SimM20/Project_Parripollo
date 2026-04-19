@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Meat : MonoBehaviour
 {
-    [SerializeField] private MeatTypeSO meatData;
+    [SerializeField] public MeatTypeSO meatData;
     
     private bool isCookingSideA = false;
     private float cookedPercent = 0f;
