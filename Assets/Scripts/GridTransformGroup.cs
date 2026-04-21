@@ -8,28 +8,17 @@ public class GridTransformGroup : MonoBehaviour
     [Min(1)]
     public int columns = 3;
 
-    private void OnEnable()
-    {
-        ArrangeChildrenInGrid();
-    }
+    private void OnEnable() => ArrangeChildrenInGrid();
 
-    private void OnValidate()
-    {
-        ArrangeChildrenInGrid();
-    }
+    private void OnValidate() => ArrangeChildrenInGrid();
 
-    private void OnTransformChildrenChanged()
-    {
-        ArrangeChildrenInGrid();
-    }
+    private void OnTransformChildrenChanged() => ArrangeChildrenInGrid();
 
 #if UNITY_EDITOR
     private void Update()
     {
         if (!Application.isPlaying)
-        {
             ArrangeChildrenInGrid();
-        }
     }
 #endif
 
@@ -43,9 +32,7 @@ public class GridTransformGroup : MonoBehaviour
         {
             Transform child = transform.GetChild(i);
             if (!child.gameObject.activeSelf)
-            {
                 continue;
-            }
 
             int row = activeIndex / safeColumns;
             int column = activeIndex % safeColumns;
@@ -56,9 +43,7 @@ public class GridTransformGroup : MonoBehaviour
             );
 
             if (child.localPosition != newPosition)
-            {
                 child.localPosition = newPosition;
-            }
 
             activeIndex++;
         }
