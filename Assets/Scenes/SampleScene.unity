@@ -3167,6 +3167,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3803424138844470246, guid: ae9506f72913b134ab82dad594af2827, type: 3}
+      propertyPath: m_Color.b
+      value: 0.19063723
+      objectReference: {fileID: 0}
+    - target: {fileID: 3803424138844470246, guid: ae9506f72913b134ab82dad594af2827, type: 3}
+      propertyPath: m_Color.g
+      value: 0.19063723
+      objectReference: {fileID: 0}
+    - target: {fileID: 3803424138844470246, guid: ae9506f72913b134ab82dad594af2827, type: 3}
+      propertyPath: m_Color.r
+      value: 0.6415094
+      objectReference: {fileID: 0}
     - target: {fileID: 6772584715038805555, guid: ae9506f72913b134ab82dad594af2827, type: 3}
       propertyPath: m_Name
       value: Chorizo

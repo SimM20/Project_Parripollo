@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1405610c36759ba479e08c316fd0cc0e, type: 3}
+  m_Name: TEST
+  m_EditorClassIdentifier: Assembly-CSharp::MeatCutSO
+  cutName: Hola
+  price: 0
+  meatSpriteA: {fileID: 21300000, guid: 41a6c8f48b0138843991a82dec6fe8c9, type: 3}
+  meatSpriteB: {fileID: 0}
+  timeHeatA: 10
+  timeHeatB: 10
+  grillSpace: {x: 2, y: 3}

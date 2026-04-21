@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &3364667778613331700
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6335881070450259450}
+  - component: {fileID: 2036080050042580382}
+  m_Layer: 0
+  m_Name: TransferBuffer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6335881070450259450
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3364667778613331700}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.03446, y: -0.63233, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2036080050042580382
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3364667778613331700}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fc3a02d06734974bb52813fe75faf51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeatTransferBuffer
+  grillSystem: {fileID: 0}
+  toGrillAnchor: {fileID: 0}
+  meatHolderAnchor: {fileID: 0}
+  visualPrefab: {fileID: 2095126157789312800, guid: f4ba4364921b5d54fb648a909f0a5755, type: 3}
+  stackSpacing: 0.2
+  stackDirection: {x: 0, y: 1, z: 0}
+  toGrillSortingBase: 100
+  meatHolderSortingBase: 200
+  fixedWorldScale: {x: 1, y: 1, z: 1}
