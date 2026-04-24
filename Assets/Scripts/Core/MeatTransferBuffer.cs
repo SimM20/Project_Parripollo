@@ -9,6 +9,11 @@ public class MeatTransferBuffer : MonoBehaviour
     [Header("Anchors")]
     [SerializeField] private Transform toGrillAnchor;
     [SerializeField] private Transform meatHolderAnchor;
+    [SerializeField] private Transform toBuildAnchor;
+    [SerializeField] private Transform buildMeatHolderAnchor;
+
+    [Header("Drop Areas")]
+    [SerializeField] private SpriteRenderer toBuildDropArea;
 
     [Header("Visual")]
     [SerializeField] private GameObject visualPrefab;
@@ -17,19 +22,82 @@ public class MeatTransferBuffer : MonoBehaviour
     [SerializeField] private Vector3 stackDirection = Vector3.up;
     [SerializeField] private int toGrillSortingBase = 100;
     [SerializeField] private int meatHolderSortingBase = 200;
+    [SerializeField] private int toBuildSortingBase = 300;
+    [SerializeField] private int buildMeatHolderSortingBase = 400;
 
     [Header("Visual Size")]
     [SerializeField] private Vector3 fixedWorldScale = Vector3.one;
 
     private System.Type meatHolderDraggableType;
 
-    private readonly List<MeatCutSO> toGrillCuts = new List<MeatCutSO>();
-    private readonly List<MeatCutSO> meatHolderCuts = new List<MeatCutSO>();
+    private class BufferedMeatData
+    {
+        public MeatCutSO cut;
+        public float sideACookTime;
+        public float sideBCookTime;
+        public bool isSideA;
+        public MeatStates state;
+        public bool isGridRotated;
+
+        public static BufferedMeatData FromCut(MeatCutSO sourceCut)
+        {
+            if (sourceCut == null)
+                return null;
+
+            return new BufferedMeatData
+            {
+                cut = sourceCut,
+                sideACookTime = 0f,
+                sideBCookTime = 0f,
+                isSideA = true,
+                state = MeatStates.Crudo,
+                isGridRotated = false
+            };
+        }
+
+        public static BufferedMeatData FromMeat(Meat meat)
+        {
+            if (meat == null || meat.cut == null)
+                return null;
+
+            return new BufferedMeatData
+            {
+                cut = meat.cut,
+                sideACookTime = Mathf.Max(0f, meat.sideACookTime),
+                sideBCookTime = Mathf.Max(0f, meat.sideBCookTime),
+                isSideA = meat.IsSideAActive,
+                state = meat.state,
+                isGridRotated = meat.IsGridRotated
+            };
+        }
+
+        public void ApplyTo(Meat meat, bool rotateFootprint)
+        {
+            if (meat == null || cut == null)
+                return;
+
+            meat.sideACookTime = Mathf.Max(0f, sideACookTime);
+            meat.sideBCookTime = Mathf.Max(0f, sideBCookTime);
+            meat.isSideA = isSideA;
+            meat.state = state;
+            meat.SetGridRotation(rotateFootprint);
+            meat.SetCut(cut);
+        }
+    }
+
+    private readonly List<BufferedMeatData> toGrillCuts = new List<BufferedMeatData>();
+    private readonly List<BufferedMeatData> meatHolderCuts = new List<BufferedMeatData>();
+    private readonly List<BufferedMeatData> toBuildCuts = new List<BufferedMeatData>();
+    private readonly List<BufferedMeatData> buildMeatHolderCuts = new List<BufferedMeatData>();
     private readonly List<Vector3> toGrillLocalPositions = new List<Vector3>();
     private readonly List<Vector3> meatHolderLocalPositions = new List<Vector3>();
+    private readonly List<Vector3> toBuildLocalPositions = new List<Vector3>();
+    private readonly List<Vector3> buildMeatHolderLocalPositions = new List<Vector3>();
 
     private readonly List<GameObject> toGrillVisuals = new List<GameObject>();
     private readonly List<GameObject> meatHolderVisuals = new List<GameObject>();
+    private readonly List<GameObject> toBuildVisuals = new List<GameObject>();
+    private readonly List<GameObject> buildMeatHolderVisuals = new List<GameObject>();
     private readonly List<GridSlot> meatHolderHoverSlots = new List<GridSlot>();
 
     void Start()
@@ -40,22 +108,44 @@ public class MeatTransferBuffer : MonoBehaviour
 
     public void EnqueueToGrill(MeatCutSO cut)
     {
-        if (cut == null)
+        BufferedMeatData entry = BufferedMeatData.FromCut(cut);
+        if (entry == null)
             return;
 
-        toGrillCuts.Add(cut);
+        toGrillCuts.Add(entry);
         toGrillLocalPositions.Add(GetStackLocalPosition(toGrillLocalPositions.Count));
         RebuildStack(toGrillCuts, toGrillVisuals, toGrillAnchor, toGrillSortingBase, false, toGrillLocalPositions);
     }
 
     public bool EnqueueToGrillAtPoint(MeatCutSO cut, Vector3 worldPoint)
     {
-        if (cut == null)
+        BufferedMeatData entry = BufferedMeatData.FromCut(cut);
+        if (entry == null)
             return false;
 
-        toGrillCuts.Add(cut);
+        toGrillCuts.Add(entry);
         toGrillLocalPositions.Add(WorldToAnchorLocalPosition(worldPoint, toGrillAnchor));
         RebuildStack(toGrillCuts, toGrillVisuals, toGrillAnchor, toGrillSortingBase, false, toGrillLocalPositions);
+        return true;
+    }
+
+    public bool EnqueueToBuildAtPoint(MeatCutSO cut, Vector3 worldPoint)
+    {
+        return EnqueueToBuildAtPoint(BufferedMeatData.FromCut(cut), worldPoint);
+    }
+
+    private bool EnqueueToBuildAtPoint(BufferedMeatData entry, Vector3 worldPoint)
+    {
+        if (entry == null || entry.cut == null)
+            return false;
+
+        Transform anchor = ResolveToBuildAnchor();
+        if (anchor == null)
+            return false;
+
+        toBuildCuts.Add(entry);
+        toBuildLocalPositions.Add(WorldToAnchorLocalPosition(worldPoint, anchor));
+        RebuildStack(toBuildCuts, toBuildVisuals, anchor, toBuildSortingBase, false, toBuildLocalPositions);
         return true;
     }
 
@@ -72,10 +162,46 @@ public class MeatTransferBuffer : MonoBehaviour
         RefreshVisuals();
     }
 
+    public void MoveToBuildMeatHolder()
+    {
+        if (toBuildCuts.Count == 0)
+            return;
+
+        buildMeatHolderCuts.AddRange(toBuildCuts);
+        buildMeatHolderLocalPositions.AddRange(toBuildLocalPositions);
+        toBuildCuts.Clear();
+        toBuildLocalPositions.Clear();
+
+        RefreshVisuals();
+    }
+
     public void RefreshVisuals()
     {
         RebuildStack(toGrillCuts, toGrillVisuals, toGrillAnchor, toGrillSortingBase, false, toGrillLocalPositions);
         RebuildStack(meatHolderCuts, meatHolderVisuals, meatHolderAnchor, meatHolderSortingBase, true, meatHolderLocalPositions);
+        RebuildStack(toBuildCuts, toBuildVisuals, ResolveToBuildAnchor(), toBuildSortingBase, false, toBuildLocalPositions);
+        RebuildStack(buildMeatHolderCuts, buildMeatHolderVisuals, ResolveBuildMeatHolderAnchor(), buildMeatHolderSortingBase, false, buildMeatHolderLocalPositions);
+    }
+
+    public bool TryQueueFromGrillToBuild(Meat meat, Vector3 dropWorldPoint)
+    {
+        if (meat == null || meat.cut == null)
+            return false;
+
+        if (!IsOverToBuild(dropWorldPoint))
+            return false;
+
+        BufferedMeatData entry = BufferedMeatData.FromMeat(meat);
+        if (!EnqueueToBuildAtPoint(entry, dropWorldPoint))
+            return false;
+
+        MeatCutSO cut = meat.cut;
+        meat.ReleaseOccupiedSlots();
+        Destroy(meat.gameObject);
+
+        string cutName = cut != null ? cut.cutName : "Sin corte";
+        Debug.Log("Mandaste a Build desde la parrilla: " + cutName);
+        return true;
     }
 
     public bool TryDropFromMeatHolder(MeatCutSO cut, Vector3 dropWorldPoint)
@@ -85,26 +211,58 @@ public class MeatTransferBuffer : MonoBehaviour
 
     public bool TryDropFromMeatHolder(MeatCutSO cut, Vector3 dropWorldPoint, bool rotateFootprint)
     {
-        if (cut == null || grillSystem == null)
+        if (cut == null)
             return false;
 
-        if (!grillSystem.TrySpawnMeatAtPoint(cut, dropWorldPoint, rotateFootprint))
+        return TryDropFromMeatHolderById(FindMeatHolderIndexByCut(cut), dropWorldPoint, rotateFootprint);
+    }
+
+    public bool TryDropFromMeatHolderById(int entryId, Vector3 dropWorldPoint)
+    {
+        return TryDropFromMeatHolderById(entryId, dropWorldPoint, false);
+    }
+
+    public bool TryDropFromMeatHolderById(int entryId, Vector3 dropWorldPoint, bool rotateFootprint)
+    {
+        if (grillSystem == null)
             return false;
 
-        int index = meatHolderCuts.IndexOf(cut);
-        if (index < 0)
+        if (entryId < 0 || entryId >= meatHolderCuts.Count)
             return false;
 
-        meatHolderCuts.RemoveAt(index);
+        BufferedMeatData entry = meatHolderCuts[entryId];
+        if (entry == null || entry.cut == null)
+            return false;
 
-        if (index >= 0 && index < meatHolderLocalPositions.Count)
-            meatHolderLocalPositions.RemoveAt(index);
+        if (!grillSystem.TrySpawnMeatAtPoint(entry.cut, dropWorldPoint, out Meat spawnedMeat, rotateFootprint))
+            return false;
+
+        entry.ApplyTo(spawnedMeat, rotateFootprint);
+        meatHolderCuts.RemoveAt(entryId);
+
+        if (entryId >= 0 && entryId < meatHolderLocalPositions.Count)
+            meatHolderLocalPositions.RemoveAt(entryId);
 
         RefreshVisuals();
 
-        string cutName = cut != null ? cut.cutName : "Sin corte";
-        Debug.Log("Mandaste a la parrilla desde MeatHolder: " + cutName);
+        string cutName = entry.cut != null ? entry.cut.cutName : "Sin corte";
+        Debug.Log("Mandaste a la parrilla desde MeatHolder: " + cutName + " | Estado: " + entry.state);
         return true;
+    }
+
+    private int FindMeatHolderIndexByCut(MeatCutSO cut)
+    {
+        if (cut == null)
+            return -1;
+
+        for (int i = 0; i < meatHolderCuts.Count; i++)
+        {
+            BufferedMeatData entry = meatHolderCuts[i];
+            if (entry != null && entry.cut == cut)
+                return i;
+        }
+
+        return -1;
     }
 
     public void UpdateMeatHolderHover(MeatCutSO cut, Vector3 worldPoint)
@@ -221,6 +379,17 @@ public class MeatTransferBuffer : MonoBehaviour
         return null;
     }
 
+    private bool IsOverToBuild(Vector3 worldPoint)
+    {
+        SpriteRenderer dropArea = ResolveToBuildDropArea();
+        if (dropArea == null)
+            return false;
+
+        Vector3 point = worldPoint;
+        point.z = dropArea.bounds.center.z;
+        return dropArea.bounds.Contains(point);
+    }
+
     private static Vector2Int ResolveRequiredSize(MeatCutSO cut, bool rotateFootprint)
     {
         if (cut == null)
@@ -233,7 +402,105 @@ public class MeatTransferBuffer : MonoBehaviour
         return new Vector2Int(Mathf.Max(1, size.x), Mathf.Max(1, size.y));
     }
 
-    private void RebuildStack(List<MeatCutSO> sourceCuts, List<GameObject> visuals, Transform anchor, int sortingBase, bool enableDragToGrill, List<Vector3> localPositions)
+    private SpriteRenderer ResolveToBuildDropArea()
+    {
+        if (toBuildDropArea != null)
+            return toBuildDropArea;
+
+        toBuildDropArea = FindSpriteRendererByNameUnderRoot("ToBuild", "GrillView");
+        return toBuildDropArea;
+    }
+
+    private Transform ResolveToBuildAnchor()
+    {
+        if (toBuildAnchor != null)
+            return toBuildAnchor;
+
+        SpriteRenderer dropArea = ResolveToBuildDropArea();
+        if (dropArea != null)
+            toBuildAnchor = dropArea.transform;
+
+        if (toBuildAnchor == null)
+            toBuildAnchor = FindTransformByNameUnderRoot("ToBuild", "GrillView");
+
+        return toBuildAnchor;
+    }
+
+    private Transform ResolveBuildMeatHolderAnchor()
+    {
+        if (buildMeatHolderAnchor != null)
+            return buildMeatHolderAnchor;
+
+        buildMeatHolderAnchor = FindTransformByNameUnderRoot("MeatHolderSlot", "BuildView");
+        if (buildMeatHolderAnchor == null)
+            buildMeatHolderAnchor = FindTransformByNameUnderRoot("MeatHolder", "BuildView");
+
+        return buildMeatHolderAnchor;
+    }
+
+    private static Transform FindTransformByNameUnderRoot(string targetName, string rootName)
+    {
+        if (string.IsNullOrEmpty(targetName))
+            return null;
+
+        Transform[] allTransforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < allTransforms.Length; i++)
+        {
+            Transform candidate = allTransforms[i];
+            if (candidate == null || candidate.name != targetName)
+                continue;
+
+            if (!IsUnderRoot(candidate, rootName))
+                continue;
+
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private static SpriteRenderer FindSpriteRendererByNameUnderRoot(string targetName, string rootName)
+    {
+        if (string.IsNullOrEmpty(targetName))
+            return null;
+
+        SpriteRenderer[] allRenderers = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < allRenderers.Length; i++)
+        {
+            SpriteRenderer candidate = allRenderers[i];
+            if (candidate == null || candidate.gameObject.name != targetName)
+                continue;
+
+            if (!IsUnderRoot(candidate.transform, rootName))
+                continue;
+
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private static bool IsUnderRoot(Transform target, string rootName)
+    {
+        if (target == null)
+            return false;
+
+        if (string.IsNullOrEmpty(rootName))
+            return true;
+
+        Transform current = target;
+        while (current != null)
+        {
+            if (current.name == rootName)
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    private void RebuildStack(List<BufferedMeatData> sourceEntries, List<GameObject> visuals, Transform anchor, int sortingBase, bool enableDragToGrill, List<Vector3> localPositions)
     {
         if (anchor == null || visualPrefab == null)
         {
@@ -241,15 +508,15 @@ public class MeatTransferBuffer : MonoBehaviour
             return;
         }
 
-        SyncPositionList(localPositions, sourceCuts.Count);
+        SyncPositionList(localPositions, sourceEntries.Count);
 
-        while (visuals.Count < sourceCuts.Count)
+        while (visuals.Count < sourceEntries.Count)
         {
             GameObject go = Instantiate(visualPrefab, anchor);
             visuals.Add(go);
         }
 
-        while (visuals.Count > sourceCuts.Count)
+        while (visuals.Count > sourceEntries.Count)
         {
             int lastIndex = visuals.Count - 1;
             GameObject go = visuals[lastIndex];
@@ -264,7 +531,8 @@ public class MeatTransferBuffer : MonoBehaviour
         for (int i = 0; i < visuals.Count; i++)
         {
             GameObject go = visuals[i];
-            MeatCutSO cut = sourceCuts[i];
+            BufferedMeatData entry = sourceEntries[i];
+            MeatCutSO cut = entry != null ? entry.cut : null;
 
             if (go == null || cut == null)
                 continue;
@@ -289,7 +557,7 @@ public class MeatTransferBuffer : MonoBehaviour
             }
 
             if (enableDragToGrill)
-                EnsureMeatHolderDrag(go, cut);
+                EnsureMeatHolderDrag(go, entry, i);
         }
     }
 
@@ -345,17 +613,19 @@ public class MeatTransferBuffer : MonoBehaviour
             localPositions.Add(GetStackLocalPosition(localPositions.Count));
     }
 
-    private void EnsureMeatHolderDrag(GameObject go, MeatCutSO cut)
+    private void EnsureMeatHolderDrag(GameObject go, BufferedMeatData entry, int entryId)
     {
-        if (go == null || cut == null || meatHolderDraggableType == null)
+        if (go == null || entry == null || entry.cut == null || meatHolderDraggableType == null)
             return;
 
         Component drag = go.GetComponent(meatHolderDraggableType);
         if (drag == null)
             drag = go.AddComponent(meatHolderDraggableType);
 
-        go.SendMessage("SetCut", cut, SendMessageOptions.DontRequireReceiver);
+        go.SendMessage("SetCut", entry.cut, SendMessageOptions.DontRequireReceiver);
         go.SendMessage("SetTransferBuffer", this, SendMessageOptions.DontRequireReceiver);
+        go.SendMessage("SetTransferEntryId", entryId, SendMessageOptions.DontRequireReceiver);
+        go.SendMessage("SetInitialGridRotation", entry.isGridRotated, SendMessageOptions.DontRequireReceiver);
     }
 
     private static System.Type ResolveType(string typeName)

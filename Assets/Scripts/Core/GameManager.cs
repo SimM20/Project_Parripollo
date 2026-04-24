@@ -36,6 +36,9 @@ public class GameManager : MonoBehaviour
         if (currentView == ViewType.Grill && lastView != ViewType.Grill && meatTransferBuffer != null)
             meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
 
+        if (currentView == ViewType.Build && lastView != ViewType.Build && meatTransferBuffer != null)
+            meatTransferBuffer.SendMessage("MoveToBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
+
         lastView = currentView;
 
         if (currentView != ViewType.Grill)

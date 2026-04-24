@@ -16,6 +16,14 @@ public class GrillSystem : MonoBehaviour
 
     public bool TrySpawnMeatAtPoint(MeatCutSO cut, Vector3 worldPoint, bool rotateFootprint = false)
     {
+        Meat unused;
+        return TrySpawnMeatAtPoint(cut, worldPoint, out unused, rotateFootprint);
+    }
+
+    public bool TrySpawnMeatAtPoint(MeatCutSO cut, Vector3 worldPoint, out Meat spawnedMeat, bool rotateFootprint = false)
+    {
+        spawnedMeat = null;
+
         if (cut == null)
         {
             Debug.LogWarning("Intentaste spawnear una carne sin corte asignado");
@@ -55,6 +63,7 @@ public class GrillSystem : MonoBehaviour
             placementSlots[i].PlaceMeat(meat);
 
         meat.transform.position = GetCenter(placementSlots);
+        spawnedMeat = meat;
         return true;
     }
 

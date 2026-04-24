@@ -5,6 +5,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 {
     private MeatCutSO cut;
     private MonoBehaviour transferBuffer;
+    private int transferEntryId = -1;
 
     [Header("Grid Rotation")]
     [SerializeField] private bool rotatePreviewVisual = true;
@@ -16,6 +17,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
     private int startSortingOrder;
     private SpriteRenderer selfRenderer;
     private MethodInfo dropMethod;
+    private MethodInfo dropByIdMethod;
     private MethodInfo updateHoverMethod;
     private MethodInfo clearHoverMethod;
     private bool isDragging;
@@ -30,6 +32,17 @@ public class MeatHolderDraggableMeat : MonoBehaviour
     {
         transferBuffer = setupTransferBuffer;
         CacheTransferBufferMethods();
+    }
+
+    public void SetTransferEntryId(int setupTransferEntryId)
+    {
+        transferEntryId = setupTransferEntryId;
+    }
+
+    public void SetInitialGridRotation(bool setupGridRotation)
+    {
+        isGridRotated = setupGridRotation;
+        ApplyGridRotationPreview();
     }
 
     void Awake()
@@ -96,6 +109,21 @@ public class MeatHolderDraggableMeat : MonoBehaviour
         if (dropMethod == null)
             CacheTransferBufferMethods();
 
+        if (dropMethod == null && dropByIdMethod == null)
+            return false;
+
+        if (dropByIdMethod != null && transferEntryId >= 0)
+        {
+            object resultById;
+            if (dropByIdMethod.GetParameters().Length == 3)
+                resultById = dropByIdMethod.Invoke(transferBuffer, new object[] { transferEntryId, GetMouseWorldPosition(), isGridRotated });
+            else
+                resultById = dropByIdMethod.Invoke(transferBuffer, new object[] { transferEntryId, GetMouseWorldPosition() });
+
+            if (resultById is bool okById && okById)
+                return true;
+        }
+
         if (dropMethod == null)
             return false;
 
@@ -145,6 +173,23 @@ public class MeatHolderDraggableMeat : MonoBehaviour
             return;
 
         var type = transferBuffer.GetType();
+        dropByIdMethod = type.GetMethod(
+            "TryDropFromMeatHolderById",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null,
+            new System.Type[] { typeof(int), typeof(Vector3), typeof(bool) },
+            null);
+
+        if (dropByIdMethod == null)
+        {
+            dropByIdMethod = type.GetMethod(
+                "TryDropFromMeatHolderById",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                new System.Type[] { typeof(int), typeof(Vector3) },
+                null);
+        }
+
         dropMethod = type.GetMethod(
             "TryDropFromMeatHolder",
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,

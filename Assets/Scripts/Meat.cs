@@ -60,6 +60,9 @@ public class Meat : Item
         if (TrashZone.TryConsumeAtWorldPoint(transform.position, this))
             return;
 
+        if (TrySendToBuildBuffer(transform.position))
+            return;
+
         Vector2Int requiredSize = GetRequiredGridSize();
         GridSlot[] allSlots = FindObjectsOfType<GridSlot>();
 
@@ -78,6 +81,15 @@ public class Meat : Item
         }
 
         transform.position = startPosition;
+    }
+
+    private bool TrySendToBuildBuffer(Vector3 dropWorldPoint)
+    {
+        MeatTransferBuffer transferBuffer = FindFirstObjectByType<MeatTransferBuffer>();
+        if (transferBuffer == null)
+            return false;
+
+        return transferBuffer.TryQueueFromGrillToBuild(this, dropWorldPoint);
     }
 
     protected override void HandleHeldInput()
