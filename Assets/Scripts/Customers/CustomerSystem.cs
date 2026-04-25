@@ -8,11 +8,25 @@ public class CustomerSystem : MonoBehaviour
     [Header("Order Cuts")]
     [SerializeField] private List<MeatCutSO> availableOrderCuts = new List<MeatCutSO>();
 
+    [Header("Optional: Catalog-driven order generation")]
+    [SerializeField] private FoodAvailabilityService availabilityService;
+
     private OrderSystem orderSystem;
 
     void Start()
     {
-        orderSystem = new OrderSystem(availableOrderCuts);
+        List<MeatCutSO> cuts = availableOrderCuts;
+
+        if (availabilityService != null)
+        {
+            var catalogCuts = availabilityService.GetAvailableCuts();
+            if (catalogCuts != null && catalogCuts.Count > 0)
+                cuts = new List<MeatCutSO>(catalogCuts);
+            else
+                Debug.LogWarning("[CustomerSystem] FoodAvailabilityService returned no available cuts. Falling back to availableOrderCuts.");
+        }
+
+        orderSystem = new OrderSystem(cuts);
         SpawnCustomer();
     }
 
@@ -43,6 +57,9 @@ public class CustomerSystem : MonoBehaviour
 
         currentCustomer.Init(order, 30f);
 
-        Debug.Log("Nuevo cliente pide: " + order.meat.cutName);
+        string modoStr = order.IsSandwich
+            ? " [Sándwich con " + (order.bread?.breadName ?? "pan desconocido") + "]"
+            : " [Al plato]";
+        Debug.Log("Nuevo cliente pide: " + order.PrimaryCut?.cutName + modoStr);
     }
 }

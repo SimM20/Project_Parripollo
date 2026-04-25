@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1405610c36759ba479e08c316fd0cc0e, type: 3}
-  m_Name: Tira de asado
-  m_EditorClassIdentifier: Assembly-CSharp::MeatCutSO
-  cutName: Tira de asado
+  m_Name: Costillita de cerdo
+  m_EditorClassIdentifier: 
+  cutName: Costillita de cerdo
   price: 0
-  meatSpriteA: {fileID: 21300000, guid: 41a6c8f48b0138843991a82dec6fe8c9, type: 3}
+  meatSpriteA: {fileID: 0}
   meatSpriteB: {fileID: 0}
-  timeHeatA: 10
-  timeHeatB: 10
-  grillSpace: {x: 2, y: 2}
+  timeHeatA: 0
+  timeHeatB: 0
+  grillSpace: {x: 0, y: 0}
   servingMode: 0
   requiredBread: {fileID: 0}
   isUnlocked: 1

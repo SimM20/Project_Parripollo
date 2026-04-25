@@ -57,6 +57,24 @@ public class MeatCutSO : ScriptableObject
     public Sprite cutSprite => GetDefaultSprite();
     public float cookTimePerSide => GetHeatTimeForSide(true);
 
+    [Header("Serving Rules")]
+    [Tooltip("Defines how this cut can be served: plated, sandwich, or both.")]
+    [SerializeField] public ServingMode servingMode = ServingMode.PlatedOnly;
+
+    [Tooltip("Required bread for sandwich variants. Null for plated-only cuts.")]
+    [SerializeField] public BreadSO requiredBread;
+
+    [Header("Unlock")]
+    [Tooltip("Whether this cut is currently available to the player.")]
+    [SerializeField] public bool isUnlocked = true;
+
+    [Header("Sell Prices")]
+    [Tooltip("Sell price when served plated. Placeholder - configure in Inspector.")]
+    [SerializeField] public float sellPricePlate; // [PLACEHOLDER]
+
+    [Tooltip("Sell price when served as sandwich. 0 if not applicable. Placeholder.")]
+    [SerializeField] public float sellPriceSandwich; // [PLACEHOLDER]
+
     void OnValidate()
     {
         timeHeatA = Mathf.Max(0f, timeHeatA);

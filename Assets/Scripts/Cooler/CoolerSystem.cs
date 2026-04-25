@@ -9,6 +9,7 @@ public class CoolerSystem : MonoBehaviour
     [SerializeField] private List<CoolerStockEntry> initialStock = new List<CoolerStockEntry>();
 
     public event Action OnInventoryChanged;
+    public event Action<MeatCutSO> OnMissingCutRequested;
 
     private readonly Dictionary<MeatCutSO, int> stockByCut = new Dictionary<MeatCutSO, int>();
 
@@ -72,6 +73,13 @@ public class CoolerSystem : MonoBehaviour
         stockByCut[cut] = current - amount;
         OnInventoryChanged?.Invoke();
         return true;
+    }
+
+    public void InformMissingCut(MeatCutSO cut)
+    {
+        if (cut == null) return;
+        Debug.Log("[CoolerSystem] Corte no disponible: " + cut.cutName);
+        OnMissingCutRequested?.Invoke(cut);
     }
 
     public string GetDebugStockString()
