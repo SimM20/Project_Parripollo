@@ -13,7 +13,18 @@ public class OrderSystem
     public Order GenerateOrder()
     {
         Order order = new Order();
-        order.meat = GetRandomMeat();
+        MeatCutSO cut = GetRandomMeat();
+        if (cut == null)
+            return order;
+
+        order.SetSingleCut(cut);
+
+        bool makeSandwich = cut.servingMode == ServingMode.SandwichOnly
+                         || (cut.servingMode == ServingMode.Both && Random.value < 0.5f);
+
+        if (makeSandwich && cut.requiredBread != null)
+            order.bread = cut.requiredBread;
+
         return order;
     }
 

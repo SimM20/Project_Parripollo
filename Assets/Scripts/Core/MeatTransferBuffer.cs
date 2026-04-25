@@ -5,6 +5,7 @@ public class MeatTransferBuffer : MonoBehaviour
 {
     [Header("Systems")]
     [SerializeField] private GrillSystem grillSystem;
+    [SerializeField] private BuildStationSystem buildStationSystem;
 
     [Header("Anchors")]
     [SerializeField] private Transform toGrillAnchor;
@@ -162,10 +163,27 @@ public class MeatTransferBuffer : MonoBehaviour
         RefreshVisuals();
     }
 
+    public void ClearBuildMeatHolder()
+    {
+        buildMeatHolderCuts.Clear();
+        buildMeatHolderLocalPositions.Clear();
+        RefreshVisuals();
+    }
+
     public void MoveToBuildMeatHolder()
     {
         if (toBuildCuts.Count == 0)
             return;
+
+        if (buildStationSystem != null)
+        {
+            buildStationSystem.ClearAssembly();
+            foreach (var entry in toBuildCuts)
+            {
+                if (entry?.cut != null)
+                    buildStationSystem.AddCut(entry.cut);
+            }
+        }
 
         buildMeatHolderCuts.AddRange(toBuildCuts);
         buildMeatHolderLocalPositions.AddRange(toBuildLocalPositions);

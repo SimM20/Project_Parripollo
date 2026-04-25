@@ -8,6 +8,8 @@ public class GameManager : MonoBehaviour
     public ViewManager viewManager;
     public MonoBehaviour meatTransferBuffer;
     public BuildStationSystem buildStationSystem;
+    public FoodCatalogSO catalog;
+    public FoodAvailabilityService foodAvailabilityService;
 
     private ViewType lastView;
 
@@ -47,6 +49,57 @@ public class GameManager : MonoBehaviour
 
         if (currentView == ViewType.Build && Input.GetKeyDown(KeyCode.Space))
             TryServeBuild();
+
+        if (currentView == ViewType.Build)
+        {
+            var customer = customerSystem?.currentCustomer;
+            var order = customer?.order;
+
+            // B — set bread for sandwich orders
+            if (Input.GetKeyDown(KeyCode.B) && buildStationSystem != null && order != null)
+            {
+                if (order.IsSandwich && order.bread != null)
+                {
+                    buildStationSystem.SetBread(order.bread);
+                    Debug.Log("[Build] Pan asignado: " + order.bread.breadName);
+                }
+                else
+                    Debug.Log("[Build] El pedido no requiere pan.");
+            }
+
+            // S — add first available side
+            if (Input.GetKeyDown(KeyCode.S) && buildStationSystem != null && catalog != null)
+            {
+                var sides = catalog.GetAvailableSides();
+                if (sides.Count > 0)
+                {
+                    buildStationSystem.AddSide(sides[0]);
+                    Debug.Log("[Build] Acompañamiento agregado: " + sides[0].sideName);
+                }
+            }
+
+            // T — add first available topping
+            if (Input.GetKeyDown(KeyCode.T) && buildStationSystem != null && catalog != null)
+            {
+                var toppings = catalog.GetAvailableToppings();
+                if (toppings.Count > 0)
+                {
+                    buildStationSystem.AddTopping(toppings[0]);
+                    Debug.Log("[Build] Topping agregado: " + toppings[0].toppingName);
+                }
+            }
+
+            // M — inform missing cut (prefer FoodAvailabilityService; fall back to CoolerSystem)
+            if (Input.GetKeyDown(KeyCode.M) && order?.PrimaryCut != null)
+            {
+                if (foodAvailabilityService != null)
+                    foodAvailabilityService.InformMissingCut(order.PrimaryCut);
+                else
+                    coolerSystem?.InformMissingCut(order.PrimaryCut);
+
+                Debug.Log("[Build] Corte faltante informado: " + order.PrimaryCut.cutName);
+            }
+        }
     }
 
     void TryServe()
@@ -70,9 +123,12 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // NOTE: TryServeBuild requires buildStationSystem.AddCut() to be called from the
-    // Build view's MeatHolder placement logic (not yet implemented). Until that wiring
-    // exists, HasAnyCut will always be false and this path will not deliver orders.
+    void ClearBuildAssembly()
+    {
+        buildStationSystem.ClearAssembly();
+        meatTransferBuffer.SendMessage("ClearBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
+    }
+
     void TryServeBuild()
     {
         if (buildStationSystem == null)
@@ -95,6 +151,7 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("❌ Corte incorrecto. Pedido: " + customer.order.PrimaryCut?.cutName
                       + " | Armado: " + assembled.cutName);
+            ClearBuildAssembly();
             return;
         }
 
@@ -106,10 +163,11 @@ public class GameManager : MonoBehaviour
         if (!valid)
         {
             Debug.Log("❌ " + reason);
+            ClearBuildAssembly();
             return;
         }
 
-        buildStationSystem.ClearAssembly();
+        ClearBuildAssembly();
         customerSystem.SpawnCustomer();
         Debug.Log("✔ Pedido entregado desde Build");
     }

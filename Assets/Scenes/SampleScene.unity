@@ -1218,6 +1218,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 347894491}
     - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: buildStationSystem
+      value: 
+      objectReference: {fileID: 34340692}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
       propertyPath: buildMeatHolderAnchor
       value: 
       objectReference: {fileID: 1999899239}
@@ -1989,6 +1993,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2114612667}
     - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
+      propertyPath: catalog
+      value: 
+      objectReference: {fileID: 11400000, guid: c47218184b1c40747b898decc4e587c8, type: 2}
+    - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
       propertyPath: grillSystem
       value: 
       objectReference: {fileID: 1141140570}
@@ -2008,6 +2016,10 @@ PrefabInstance:
       propertyPath: meatTransferBuffer
       value: 
       objectReference: {fileID: 1918444612}
+    - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
+      propertyPath: foodAvailabilityService
+      value: 
+      objectReference: {fileID: 1159028469}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

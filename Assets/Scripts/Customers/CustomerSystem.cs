@@ -57,6 +57,9 @@ public class CustomerSystem : MonoBehaviour
 
         currentCustomer.Init(order, 30f);
 
-        Debug.Log("Nuevo cliente pide: " + order.meat.cutName);
+        string modoStr = order.IsSandwich
+            ? " [Sándwich con " + (order.bread?.breadName ?? "pan desconocido") + "]"
+            : " [Al plato]";
+        Debug.Log("Nuevo cliente pide: " + order.PrimaryCut?.cutName + modoStr);
     }
 }
