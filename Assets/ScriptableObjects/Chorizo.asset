@@ -19,3 +19,8 @@ MonoBehaviour:
   timeHeatA: 10
   timeHeatB: 10
   grillSpace: {x: 1, y: 2}
+  servingMode: 2
+  requiredBread: {fileID: 11400000, guid: 829722caacc1e9745856c2faeb47f743, type: 2}
+  isUnlocked: 1
+  sellPricePlate: 100
+  sellPriceSandwich: 100

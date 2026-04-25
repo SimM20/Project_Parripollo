@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour
     public CoolerSystem coolerSystem;
     public ViewManager viewManager;
     public MonoBehaviour meatTransferBuffer;
+    public BuildStationSystem buildStationSystem;
 
     private ViewType lastView;
 
@@ -41,11 +42,11 @@ public class GameManager : MonoBehaviour
 
         lastView = currentView;
 
-        if (currentView != ViewType.Grill)
-            return;
-
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (currentView == ViewType.Grill && Input.GetKeyDown(KeyCode.Space))
             TryServe();
+
+        if (currentView == ViewType.Build && Input.GetKeyDown(KeyCode.Space))
+            TryServeBuild();
     }
 
     void TryServe()
@@ -67,5 +68,49 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("❌ Carne incorrecta o no lista");
         }
+    }
+
+    // NOTE: TryServeBuild requires buildStationSystem.AddCut() to be called from the
+    // Build view's MeatHolder placement logic (not yet implemented). Until that wiring
+    // exists, HasAnyCut will always be false and this path will not deliver orders.
+    void TryServeBuild()
+    {
+        if (buildStationSystem == null)
+        {
+            Debug.Log("[TryServeBuild] BuildStationSystem no asignado en GameManager.");
+            return;
+        }
+
+        var customer = customerSystem?.currentCustomer;
+        if (customer == null) return;
+
+        if (!buildStationSystem.HasAnyCut)
+        {
+            Debug.Log("❌ Sin corte en el armado. (Recordá agregar corte al plato en Build view)");
+            return;
+        }
+
+        MeatCutSO assembled = buildStationSystem.AssembledCuts[0];
+        if (assembled != customer.order.PrimaryCut)
+        {
+            Debug.Log("❌ Corte incorrecto. Pedido: " + customer.order.PrimaryCut?.cutName
+                      + " | Armado: " + assembled.cutName);
+            return;
+        }
+
+        string reason;
+        bool valid = customer.order.IsSandwich
+            ? buildStationSystem.TryBuildSandwich(out reason) != null
+            : buildStationSystem.TryBuildPlatedDish(out reason) != null;
+
+        if (!valid)
+        {
+            Debug.Log("❌ " + reason);
+            return;
+        }
+
+        buildStationSystem.ClearAssembly();
+        customerSystem.SpawnCustomer();
+        Debug.Log("✔ Pedido entregado desde Build");
     }
 }
