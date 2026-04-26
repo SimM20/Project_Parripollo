@@ -116,6 +116,7 @@ public class GameManager : MonoBehaviour
 
             grillSystem.RemoveMeat(meat);
             customerSystem.SpawnCustomer();
+            customerSystem.CompleteCustomer(customer);
         }
         else
         {
@@ -168,7 +169,7 @@ public class GameManager : MonoBehaviour
         }
 
         ClearBuildAssembly();
-        customerSystem.SpawnCustomer();
+        customerSystem.CompleteCustomer(customer);
         Debug.Log("✔ Pedido entregado desde Build");
     }
 }
