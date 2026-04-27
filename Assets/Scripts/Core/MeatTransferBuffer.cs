@@ -26,6 +26,13 @@ public class MeatTransferBuffer : MonoBehaviour
     [SerializeField] private int toBuildSortingBase = 300;
     [SerializeField] private int buildMeatHolderSortingBase = 400;
 
+    [Header("Build Meat Holder Layout")]
+    [Min(1)]
+    [SerializeField] private int maxBuildMeatHolder = 2;
+    [Min(0.01f)]
+    [SerializeField] private float buildMeatHolderWorldSpacing = 1.5f;
+    [SerializeField] private Vector3 buildMeatHolderWorldDirection = Vector3.right;
+
     [Header("Visual Size")]
     [SerializeField] private Vector3 fixedWorldScale = Vector3.one;
 
@@ -99,6 +106,7 @@ public class MeatTransferBuffer : MonoBehaviour
     private readonly List<GameObject> meatHolderVisuals = new List<GameObject>();
     private readonly List<GameObject> toBuildVisuals = new List<GameObject>();
     private readonly List<GameObject> buildMeatHolderVisuals = new List<GameObject>();
+    private readonly List<GameObject> plateMeatVisuals = new List<GameObject>();
     private readonly List<GridSlot> meatHolderHoverSlots = new List<GridSlot>();
 
     void Start()
@@ -170,23 +178,55 @@ public class MeatTransferBuffer : MonoBehaviour
         RefreshVisuals();
     }
 
+    public void ConsumeBuildMeatEntry(int entryId, GameObject go)
+    {
+        if (entryId >= 0 && entryId < buildMeatHolderCuts.Count)
+            buildMeatHolderCuts.RemoveAt(entryId);
+
+        if (entryId >= 0 && entryId < buildMeatHolderLocalPositions.Count)
+            buildMeatHolderLocalPositions.RemoveAt(entryId);
+
+        buildMeatHolderVisuals.Remove(go);
+
+        if (go != null)
+        {
+            go.transform.SetParent(null, true);
+            plateMeatVisuals.Add(go);
+
+            BuildMeatHolderDraggableMeat drag = go.GetComponent<BuildMeatHolderDraggableMeat>();
+            if (drag != null)
+                Destroy(drag);
+        }
+
+        RefreshVisuals();
+    }
+
+    public void ClearPlateMeatVisuals()
+    {
+        for (int i = 0; i < plateMeatVisuals.Count; i++)
+        {
+            if (plateMeatVisuals[i] != null)
+                Destroy(plateMeatVisuals[i]);
+        }
+
+        plateMeatVisuals.Clear();
+    }
+
     public void MoveToBuildMeatHolder()
     {
         if (toBuildCuts.Count == 0)
             return;
 
-        if (buildStationSystem != null)
+        int startIndex = buildMeatHolderCuts.Count;
+        int slots = Mathf.Max(0, maxBuildMeatHolder - startIndex);
+        int toAdd = Mathf.Min(toBuildCuts.Count, slots);
+
+        for (int i = 0; i < toAdd; i++)
         {
-            buildStationSystem.ClearAssembly();
-            foreach (var entry in toBuildCuts)
-            {
-                if (entry?.cut != null)
-                    buildStationSystem.AddCut(entry.cut);
-            }
+            buildMeatHolderCuts.Add(toBuildCuts[i]);
+            buildMeatHolderLocalPositions.Add(GetBuildMeatHolderLocalPosition(startIndex + i));
         }
 
-        buildMeatHolderCuts.AddRange(toBuildCuts);
-        buildMeatHolderLocalPositions.AddRange(toBuildLocalPositions);
         toBuildCuts.Clear();
         toBuildLocalPositions.Clear();
 
@@ -199,6 +239,7 @@ public class MeatTransferBuffer : MonoBehaviour
         RebuildStack(meatHolderCuts, meatHolderVisuals, meatHolderAnchor, meatHolderSortingBase, true, meatHolderLocalPositions);
         RebuildStack(toBuildCuts, toBuildVisuals, ResolveToBuildAnchor(), toBuildSortingBase, false, toBuildLocalPositions);
         RebuildStack(buildMeatHolderCuts, buildMeatHolderVisuals, ResolveBuildMeatHolderAnchor(), buildMeatHolderSortingBase, false, buildMeatHolderLocalPositions);
+        EnsureBuildMeatHolderDrags();
     }
 
     public bool TryQueueFromGrillToBuild(Meat meat, Vector3 dropWorldPoint)
@@ -585,6 +626,25 @@ public class MeatTransferBuffer : MonoBehaviour
         return direction * stackSpacing * Mathf.Max(0, index);
     }
 
+    private Vector3 GetBuildMeatHolderLocalPosition(int index)
+    {
+        Vector3 dir = buildMeatHolderWorldDirection.sqrMagnitude > 0f
+            ? buildMeatHolderWorldDirection.normalized
+            : Vector3.right;
+
+        Vector3 worldOffset = dir * buildMeatHolderWorldSpacing * Mathf.Max(0, index);
+
+        Transform anchor = ResolveBuildMeatHolderAnchor();
+        if (anchor != null)
+        {
+            Vector3 local = anchor.InverseTransformVector(worldOffset);
+            local.z = 0f;
+            return local;
+        }
+
+        return worldOffset;
+    }
+
     private void ApplyFixedWorldScale(Transform target)
     {
         if (target == null)
@@ -629,6 +689,26 @@ public class MeatTransferBuffer : MonoBehaviour
 
         while (localPositions.Count < targetCount)
             localPositions.Add(GetStackLocalPosition(localPositions.Count));
+    }
+
+    private void EnsureBuildMeatHolderDrags()
+    {
+        for (int i = 0; i < buildMeatHolderVisuals.Count; i++)
+        {
+            GameObject go = buildMeatHolderVisuals[i];
+            if (go == null || i >= buildMeatHolderCuts.Count)
+                continue;
+
+            BufferedMeatData entry = buildMeatHolderCuts[i];
+            if (entry == null || entry.cut == null)
+                continue;
+
+            BuildMeatHolderDraggableMeat drag = go.GetComponent<BuildMeatHolderDraggableMeat>();
+            if (drag == null)
+                drag = go.AddComponent<BuildMeatHolderDraggableMeat>();
+
+            drag.Setup(entry.cut, this, i);
+        }
     }
 
     private void EnsureMeatHolderDrag(GameObject go, BufferedMeatData entry, int entryId)
