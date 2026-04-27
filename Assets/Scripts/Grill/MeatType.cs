@@ -2,12 +2,10 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 [CreateAssetMenu(fileName = "MeatCut", menuName = "Asado/Meat Cut")]
-public class MeatCutSO : ScriptableObject
+public class MeatCutSO : ItemDataSO
 {
-    [Header("Nombre")]
-    public string cutName;
-    [SerializeField] public float price;
-
+    public string cutName => itemName;
+    public float price => basePrice;
 
     [Header("Visual")]
     [FormerlySerializedAs("cutSprite")]
@@ -59,7 +57,7 @@ public class MeatCutSO : ScriptableObject
 
     [Header("Serving Rules")]
     [Tooltip("Defines how this cut can be served: plated, sandwich, or both.")]
-    [SerializeField] public ServingMode servingMode = ServingMode.PlatedOnly;
+    [SerializeField] public ServingMode servingMode;
 
     [Tooltip("Required bread for sandwich variants. Null for plated-only cuts.")]
     [SerializeField] public BreadSO requiredBread;
@@ -70,18 +68,19 @@ public class MeatCutSO : ScriptableObject
 
     [Header("Sell Prices")]
     [Tooltip("Sell price when served plated. Placeholder - configure in Inspector.")]
-    [SerializeField] public float sellPricePlate; // [PLACEHOLDER]
+    [SerializeField] public float sellPricePlate;
 
     [Tooltip("Sell price when served as sandwich. 0 if not applicable. Placeholder.")]
-    [SerializeField] public float sellPriceSandwich; // [PLACEHOLDER]
+    [SerializeField] public float sellPriceSandwich;
 
     void OnValidate()
     {
+        category = ItemType.Meat;
+
         timeHeatA = Mathf.Max(0f, timeHeatA);
         timeHeatB = Mathf.Max(0f, timeHeatB);
 
         grillSpace.x = Mathf.Max(1, grillSpace.x);
         grillSpace.y = Mathf.Max(1, grillSpace.y);
     }
-
 }

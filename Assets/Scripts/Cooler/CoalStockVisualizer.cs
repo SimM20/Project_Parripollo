@@ -2,116 +2,113 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CoolerStockVisualizer : MonoBehaviour
+public class CoalStockVisualizer : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private CoolerSystem inventorySystem;
-    [SerializeField] private MonoBehaviour meatTransferBuffer;
+    // Ahora miramos al gestor central de inventario
+    [SerializeField] private CoolerSystem coolerSystem;
     [SerializeField] private SpriteRenderer toGrillDropArea;
     [SerializeField] private GameObject stockVisualPrefab;
 
     [Header("Stack Config")]
-    [SerializeField] private List<CoolerCutVisualConfig> cutVisuals = new List<CoolerCutVisualConfig>();
+    [SerializeField] private List<CoalVisualConfig> coalVisuals = new List<CoalVisualConfig>();
     [Min(0.01f)]
     [SerializeField] private float defaultSpacing = 0.2f;
 
     [Header("Visual Size")]
     [SerializeField] private Vector3 fixedWorldScale = Vector3.one;
 
-    private readonly Dictionary<MeatCutSO, CoolerCutVisualConfig> configByCut = new Dictionary<MeatCutSO, CoolerCutVisualConfig>();
-    private readonly Dictionary<MeatCutSO, List<GameObject>> spawnedByCut = new Dictionary<MeatCutSO, List<GameObject>>();
-    private readonly HashSet<MeatCutSO> warnedMissingConfig = new HashSet<MeatCutSO>();
+    private readonly Dictionary<CoalSO, CoalVisualConfig> configByCoal = new Dictionary<CoalSO, CoalVisualConfig>();
+    private readonly Dictionary<CoalSO, List<GameObject>> spawnedByCoal = new Dictionary<CoalSO, List<GameObject>>();
+    private readonly HashSet<CoalSO> warnedMissingConfig = new HashSet<CoalSO>();
     private Type draggableType;
 
     void Awake()
     {
         BuildConfigLookup();
-        draggableType = ResolveType("CoolerDraggableMeat");
+        draggableType = ResolveType("DraggableCoal");
     }
 
     void OnEnable()
     {
-        if (inventorySystem != null)
-            inventorySystem.OnInventoryChanged += RefreshVisuals;
+        if (coolerSystem != null)
+            coolerSystem.OnInventoryChanged += RefreshVisuals;
     }
 
     void Start() => RefreshVisuals();
 
     void OnDisable()
     {
-        if (inventorySystem != null)
-            inventorySystem.OnInventoryChanged -= RefreshVisuals;
+        if (coolerSystem != null)
+            coolerSystem.OnInventoryChanged -= RefreshVisuals;
     }
 
     private void BuildConfigLookup()
     {
-        configByCut.Clear();
+        configByCoal.Clear();
 
-        for (int i = 0; i < cutVisuals.Count; i++)
+        for (int i = 0; i < coalVisuals.Count; i++)
         {
-            CoolerCutVisualConfig config = cutVisuals[i];
-            if (config == null || config.cut == null)
+            CoalVisualConfig config = coalVisuals[i];
+            if (config == null || config.coalType == null)
                 continue;
 
-            if (configByCut.ContainsKey(config.cut))
+            if (configByCoal.ContainsKey(config.coalType))
                 continue;
 
-            configByCut.Add(config.cut, config);
+            configByCoal.Add(config.coalType, config);
         }
     }
 
     public void RefreshVisuals()
     {
-        if (inventorySystem == null || stockVisualPrefab == null)
+        if (coolerSystem == null || stockVisualPrefab == null)
             return;
 
         warnedMissingConfig.Clear();
+        HashSet<CoalSO> visitedCoals = new HashSet<CoalSO>();
 
-        HashSet<MeatCutSO> visitedCuts = new HashSet<MeatCutSO>();
-
-        foreach (KeyValuePair<ItemDataSO, int> entry in inventorySystem.EnumerateStock())
+        foreach (KeyValuePair<ItemDataSO, int> entry in coolerSystem.EnumerateStock())
         {
-            if (entry.Key is MeatCutSO cut)
+            if (entry.Key is CoalSO coal)
             {
                 int count = Mathf.Max(0, entry.Value);
-
-                visitedCuts.Add(cut);
-                SyncCutStack(cut, count);
+                visitedCoals.Add(coal);
+                SyncCoalStack(coal, count);
             }
         }
 
-        for (int i = 0; i < cutVisuals.Count; i++)
+        for (int i = 0; i < coalVisuals.Count; i++)
         {
-            CoolerCutVisualConfig config = cutVisuals[i];
-            if (config == null || config.cut == null)
+            CoalVisualConfig config = coalVisuals[i];
+            if (config == null || config.coalType == null)
                 continue;
 
-            if (visitedCuts.Contains(config.cut))
+            if (visitedCoals.Contains(config.coalType))
                 continue;
 
-            SyncCutStack(config.cut, 0);
+            SyncCoalStack(config.coalType, 0);
         }
     }
 
-    private void SyncCutStack(MeatCutSO cut, int targetCount)
+    private void SyncCoalStack(CoalSO coal, int targetCount)
     {
-        if (!configByCut.TryGetValue(cut, out CoolerCutVisualConfig config))
+        if (!configByCoal.TryGetValue(coal, out CoalVisualConfig config))
         {
-            if (!warnedMissingConfig.Contains(cut))
+            if (!warnedMissingConfig.Contains(coal))
             {
-                warnedMissingConfig.Add(cut);
-                string cutName = cut != null ? cut.cutName : "Sin corte";
-                Debug.LogWarning("No hay config visual en CoolerStockVisualizer para el corte: " + cutName);
+                warnedMissingConfig.Add(coal);
+                Debug.LogWarning("No hay config visual para el carbón.");
             }
 
-            ClearCutObjects(cut);
+            ClearCoalObjects(coal);
             return;
         }
 
-        if (!spawnedByCut.TryGetValue(cut, out List<GameObject> instances))
+        if (!spawnedByCoal.TryGetValue(coal, out List<GameObject> instances))
         {
             instances = new List<GameObject>();
-            spawnedByCut.Add(cut, instances);
+            spawnedByCoal.Add(coal, instances);
         }
 
         while (instances.Count < targetCount)
@@ -152,7 +149,7 @@ public class CoolerStockVisualizer : MonoBehaviour
             SpriteRenderer renderer = go.GetComponent<SpriteRenderer>();
             if (renderer != null)
             {
-                renderer.sprite = cut.GetDefaultSprite();
+                renderer.sprite = coal.coalSprite;
                 renderer.sortingOrder = config.baseSortingOrder + i;
             }
 
@@ -162,9 +159,8 @@ public class CoolerStockVisualizer : MonoBehaviour
 
             if (draggable != null)
             {
-                go.SendMessage("SetCut", cut, SendMessageOptions.DontRequireReceiver);
-                go.SendMessage("SetCoolerSystem", inventorySystem, SendMessageOptions.DontRequireReceiver);
-                go.SendMessage("SetTransferBuffer", meatTransferBuffer, SendMessageOptions.DontRequireReceiver);
+                go.SendMessage("SetCoalData", coal, SendMessageOptions.DontRequireReceiver);
+                go.SendMessage("SetCoolerSystem", coolerSystem, SendMessageOptions.DontRequireReceiver);
                 go.SendMessage("SetToGrillDropArea", toGrillDropArea, SendMessageOptions.DontRequireReceiver);
             }
         }
@@ -172,29 +168,22 @@ public class CoolerStockVisualizer : MonoBehaviour
 
     private static Type ResolveType(string typeName)
     {
-        if (string.IsNullOrEmpty(typeName))
-            return null;
-
+        if (string.IsNullOrEmpty(typeName)) return null;
         Type direct = Type.GetType(typeName);
-        if (direct != null)
-            return direct;
+        if (direct != null) return direct;
 
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         for (int i = 0; i < assemblies.Length; i++)
         {
             Type found = assemblies[i].GetType(typeName);
-            if (found != null)
-                return found;
+            if (found != null) return found;
         }
-
         return null;
     }
 
     private void ApplyFixedWorldScale(Transform target)
     {
-        if (target == null)
-            return;
-
+        if (target == null) return;
         Transform parent = target.parent;
         if (parent == null)
         {
@@ -214,9 +203,9 @@ public class CoolerStockVisualizer : MonoBehaviour
         return Mathf.Abs(divisor) > 0.0001f ? value / divisor : value;
     }
 
-    private void ClearCutObjects(MeatCutSO cut)
+    private void ClearCoalObjects(CoalSO coal)
     {
-        if (!spawnedByCut.TryGetValue(cut, out List<GameObject> instances))
+        if (!spawnedByCoal.TryGetValue(coal, out List<GameObject> instances))
             return;
 
         for (int i = 0; i < instances.Count; i++)
@@ -224,15 +213,14 @@ public class CoolerStockVisualizer : MonoBehaviour
             if (instances[i] != null)
                 Destroy(instances[i]);
         }
-
         instances.Clear();
     }
 }
 
 [Serializable]
-public class CoolerCutVisualConfig
+public class CoalVisualConfig
 {
-    public MeatCutSO cut;
+    public CoalSO coalType;
     public Transform anchor;
     [Min(0.01f)] public float spacing = 0.2f;
     public Vector3 stackDirection = Vector3.up;

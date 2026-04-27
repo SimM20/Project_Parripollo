@@ -95,9 +95,7 @@ public class Meat : Item
     protected override void HandleHeldInput()
     {
         if (Input.GetKeyDown(KeyCode.R))
-        {
             ToggleGridRotation();
-        }
     }
 
     protected override void OnPickedUp()
@@ -146,13 +144,9 @@ public class Meat : Item
             return;
 
         if (isSideA)
-        {
             sideACookTime += delta;
-        }
         else
-        {
             sideBCookTime += delta;
-        }
 
         UpdateState();
     }
@@ -166,10 +160,7 @@ public class Meat : Item
         Debug.Log("Flip carne: " + cutName);
     }
 
-    public void FlipSide()
-    {
-        Flip();
-    }
+    public void FlipSide() => Flip();
 
     public void ToggleGridRotation()
     {
@@ -309,10 +300,7 @@ public class Meat : Item
         return CookedPercent01 * 100f;
     }
 
-    void OnDestroy()
-    {
-        ReleaseOccupiedSlots();
-    }
+    void OnDestroy() => ReleaseOccupiedSlots();
 
     void OnValidate()
     {

@@ -2,26 +2,28 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    public CustomerSystem customerSystem;
-    public GrillSystem grillSystem;
-    public CoolerSystem coolerSystem;
-    public ViewManager viewManager;
-    public MonoBehaviour meatTransferBuffer;
-    public BuildStationSystem buildStationSystem;
-    public FoodCatalogSO catalog;
-    public FoodAvailabilityService foodAvailabilityService;
+    [SerializeField] private CustomerSystem customerSystem;
+    [SerializeField] private GrillSystem grillSystem;
+    [SerializeField] private CoolerSystem coolerSystem;
+    [SerializeField] private ViewManager viewManager;
+    [SerializeField] private MonoBehaviour meatTransferBuffer;
+    [SerializeField] private BuildStationSystem buildStationSystem;
+    [SerializeField] private FoodCatalogSO catalog;
+    [SerializeField] private FoodAvailabilityService foodAvailabilityService;
 
     private ViewType lastView;
 
-    void Start()
+    private void Start()
     {
         lastView = viewManager != null ? viewManager.CurrentView : ViewType.Grill;
 
         if (grillSystem != null)
             grillSystem.SetMeatVisualsVisible(lastView == ViewType.Grill);
+
+        customerSystem.OnNightEnded += EndNight;
     }
 
-    void Update()
+    private void Update()
     {
         if (viewManager != null && Input.GetKeyDown(KeyCode.Tab))
         {
@@ -61,14 +63,14 @@ public class GameManager : MonoBehaviour
                 if (foodAvailabilityService != null)
                     foodAvailabilityService.InformMissingCut(order.PrimaryCut);
                 else
-                    coolerSystem?.InformMissingCut(order.PrimaryCut);
+                    coolerSystem?.InformMissingItem(order.PrimaryCut);
 
                 Debug.Log("[Build] Corte faltante informado: " + order.PrimaryCut.cutName);
             }
         }
     }
 
-    void TryServe()
+    private void TryServe()
     {
         var customer = customerSystem.currentCustomer;
 
@@ -84,19 +86,15 @@ public class GameManager : MonoBehaviour
             customerSystem.SpawnCustomer();
             customerSystem.CompleteCustomer(customer);
         }
-        else
-        {
-            Debug.Log("❌ Carne incorrecta o no lista");
-        }
     }
 
-    void ClearBuildAssembly()
+    private void ClearBuildAssembly()
     {
         buildStationSystem.ClearAssembly();
         meatTransferBuffer.SendMessage("ClearBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
     }
 
-    void TryServeBuild()
+    private void TryServeBuild()
     {
         if (buildStationSystem == null)
         {
@@ -108,10 +106,7 @@ public class GameManager : MonoBehaviour
         if (customer == null) return;
 
         if (!buildStationSystem.HasAnyCut)
-        {
-            Debug.Log("❌ Sin corte en el armado. (Recordá agregar corte al plato en Build view)");
             return;
-        }
 
         MeatCutSO assembled = buildStationSystem.AssembledCuts[0];
         if (assembled != customer.order.PrimaryCut)
@@ -138,4 +133,13 @@ public class GameManager : MonoBehaviour
         customerSystem.CompleteCustomer(customer);
         Debug.Log("✔ Pedido entregado desde Build");
     }
+
+    private void EndNight()
+    {
+        customerSystem.OnNightEnded += EndNight;
+
+        //TODO: pantalla de finalizacion del juego
+    }
+
+    private void OnDestroy() => customerSystem.OnNightEnded += EndNight;
 }

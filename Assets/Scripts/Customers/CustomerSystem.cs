@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
+using System;
 
 
 public class CustomerSystem : MonoBehaviour
@@ -12,6 +13,7 @@ public class CustomerSystem : MonoBehaviour
     [Header("Spawning")]
     [SerializeField] private float spawnIntervalSeconds = 6f;
     [SerializeField] private bool autoStartNight = true;
+    public Action OnNightEnded;
 
     [Header("Slots (optional)")]
     [SerializeField] private List<Transform> slots = new List<Transform>();
@@ -38,7 +40,6 @@ public class CustomerSystem : MonoBehaviour
     [Header("Patience")]
     [SerializeField] private float basePatienceSeconds = 30f;
 
-    // Compat: tu GameManager usa esto hoy
     public Customer currentCustomer;
 
     public Customer SelectedCustomer { get; private set; }
@@ -52,7 +53,6 @@ public class CustomerSystem : MonoBehaviour
 
     void Start()
     {
-        // Resolver cuts disponibles (tu lógica actual)
         List<MeatCutSO> cuts = availableOrderCuts;
 
         if (availabilityService != null)
@@ -109,15 +109,15 @@ public class CustomerSystem : MonoBehaviour
 
             SpawnCustomer();
         }
-
-        // Cuando ya spawneaste el máximo, simplemente dejás que termine la cola activa.
-        // Podés disparar un evento cuando activeCustomers.Count llegue a 0.
     }
 
     public void SpawnCustomer()
     {
         if (spawnedTonight >= maxCustomersPerNight)
-            return;
+        {
+            OnNightEnded?.Invoke();
+            return;   
+        }
 
         int slotIndex = GetNextFreeSlotIndex();
         if (slotIndex < 0)
@@ -280,9 +280,9 @@ public class CustomerSystem : MonoBehaviour
             total += Mathf.Max(0f, customerPrefabs[i].spawnWeight);
 
         if (total <= 0.0001f)
-            return customerPrefabs[Random.Range(0, customerPrefabs.Count)];
+            return customerPrefabs[UnityEngine.Random.Range(0, customerPrefabs.Count)];
 
-        float r = Random.value * total;
+        float r = UnityEngine.Random.value * total;
         float acc = 0f;
 
         for (int i = 0; i < customerPrefabs.Count; i++)

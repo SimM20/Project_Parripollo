@@ -10,10 +10,7 @@ public class TrashZone : MonoBehaviour
 
     private static readonly List<TrashZone> ActiveZones = new List<TrashZone>();
 
-    void Awake()
-    {
-        EnsureReferences();
-    }
+    void Awake() => EnsureReferences();
 
     void OnEnable()
     {
@@ -21,14 +18,11 @@ public class TrashZone : MonoBehaviour
             ActiveZones.Add(this);
     }
 
-    void OnDisable()
-    {
-        ActiveZones.Remove(this);
-    }
+    void OnDisable() => ActiveZones.Remove(this);
 
-    public static bool TryConsumeAtWorldPoint(Vector3 worldPoint, Meat meat)
+    public static bool TryConsumeAtWorldPoint(Vector3 worldPoint, Item item)
     {
-        if (meat == null)
+        if (item == null)
             return false;
 
         for (int i = 0; i < ActiveZones.Count; i++)
@@ -43,7 +37,7 @@ public class TrashZone : MonoBehaviour
             if (!zone.ContainsPoint(worldPoint))
                 continue;
 
-            zone.Consume(meat);
+            zone.Consume(item);
             return true;
         }
 
@@ -70,17 +64,27 @@ public class TrashZone : MonoBehaviour
         return targetCollider.OverlapPoint(new Vector2(worldPoint.x, worldPoint.y));
     }
 
-    private void Consume(Meat meat)
+    private void Consume(Item item)
     {
-        if (meat == null)
+        if (item == null)
             return;
 
-        string cutName = meat.cut != null ? meat.cut.cutName : "Sin corte";
+        string itemName = "Item desconocido";
 
-        meat.ReleaseOccupiedSlots();
-        Destroy(meat.gameObject);
+        if (item is Meat meat)
+        {
+            itemName = meat.cut != null ? meat.cut.cutName : "Carne sin corte";
+            meat.ReleaseOccupiedSlots();
+        }
+        else if (item is Coal coal)
+        {
+            itemName = "Carbón";
+            coal.ReleaseOccupiedSlots();
+        }
 
-        Debug.Log("Carne tirada a la basura: " + cutName);
+        Destroy(item.gameObject);
+
+        Debug.Log("Objeto tirado a la basura: " + itemName);
     }
 
     private Collider2D GetZoneCollider()
@@ -101,8 +105,5 @@ public class TrashZone : MonoBehaviour
             viewManager = FindFirstObjectByType<ViewManager>();
     }
 
-    void OnValidate()
-    {
-        EnsureReferences();
-    }
+    void OnValidate() => EnsureReferences();
 }

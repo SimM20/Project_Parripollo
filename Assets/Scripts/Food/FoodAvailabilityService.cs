@@ -75,7 +75,7 @@ public class FoodAvailabilityService : MonoBehaviour
     public void InformMissingCut(MeatCutSO cut)
     {
         if (coolerSystem == null || cut == null) return;
-        coolerSystem.InformMissingCut(cut);
+        coolerSystem.InformMissingItem(cut);
     }
 
     // ── Debug ───────────────────────────────────────────────────────────────

@@ -17,10 +17,7 @@ public class GridSlot : MonoBehaviour
     public bool IsOccupied => currentItem != null;
     public Meat currentMeat => currentItem != null ? currentItem.GetComponent<Meat>() : null;
 
-    void Awake()
-    {
-        EnsureHoverRenderer();
-    }
+    void Awake() => EnsureHoverRenderer();
 
     void Update()
     {
@@ -28,9 +25,10 @@ public class GridSlot : MonoBehaviour
             return;
 
         if (currentItem.TryGetComponent<Meat>(out Meat meat))
-        {
             meat.Cook(1f);
-        }
+
+        if (currentItem.TryGetComponent<Coal>(out Coal coal))
+            coal.Burn();
     }
 
     public bool CanPlaceItem(ItemType incomingType)
@@ -86,10 +84,7 @@ public class GridSlot : MonoBehaviour
         hoverRenderer.color = isActive ? (isValid ? validHoverColor : invalidHoverColor) : baseHoverColor;
     }
 
-    public void ClearHoverPreview()
-    {
-        SetHoverPreview(false, true);
-    }
+    public void ClearHoverPreview() => SetHoverPreview(false, true);
 
     public static bool TryFindContiguousPlacement(
         IList<GridSlot> allSlots,
@@ -292,8 +287,5 @@ public class GridSlot : MonoBehaviour
         }
     }
 
-    void OnValidate()
-    {
-        EnsureHoverRenderer();
-    }
+    void OnValidate() => EnsureHoverRenderer();
 }

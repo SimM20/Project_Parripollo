@@ -6,94 +6,92 @@ using UnityEngine;
 public class CoolerSystem : MonoBehaviour
 {
     [Header("Initial Stock")]
-    [SerializeField] private List<CoolerStockEntry> initialStock = new List<CoolerStockEntry>();
+    [SerializeField] private List<InventoryStockEntry> initialStock = new List<InventoryStockEntry>();
 
     public event Action OnInventoryChanged;
-    public event Action<MeatCutSO> OnMissingCutRequested;
 
-    private readonly Dictionary<MeatCutSO, int> stockByCut = new Dictionary<MeatCutSO, int>();
+    public event Action<ItemDataSO> OnMissingItemRequested;
 
-    void Awake()
-    {
-        BuildInitialStockRuntime();
-    }
+    private readonly Dictionary<ItemDataSO, int> stockByItem = new Dictionary<ItemDataSO, int>();
+
+    void Awake() => BuildInitialStockRuntime();
 
     private void BuildInitialStockRuntime()
     {
-        stockByCut.Clear();
+        stockByItem.Clear();
 
         for (int i = 0; i < initialStock.Count; i++)
         {
-            CoolerStockEntry entry = initialStock[i];
-            if (entry == null || entry.cut == null || entry.amount <= 0)
+            InventoryStockEntry entry = initialStock[i];
+            if (entry == null || entry.item == null || entry.amount <= 0)
                 continue;
 
-            if (!stockByCut.ContainsKey(entry.cut))
-                stockByCut[entry.cut] = 0;
+            if (!stockByItem.ContainsKey(entry.item))
+                stockByItem[entry.item] = 0;
 
-            stockByCut[entry.cut] += entry.amount;
+            stockByItem[entry.item] += entry.amount;
         }
     }
 
-    public int GetCount(MeatCutSO cut)
+    public int GetCount(ItemDataSO item)
     {
-        if (cut == null)
+        if (item == null)
             return 0;
 
-        return stockByCut.TryGetValue(cut, out int count) ? count : 0;
+        return stockByItem.TryGetValue(item, out int count) ? count : 0;
     }
 
-    public IEnumerable<KeyValuePair<MeatCutSO, int>> EnumerateStock()
+    public IEnumerable<KeyValuePair<ItemDataSO, int>> EnumerateStock()
     {
-        return stockByCut;
+        return stockByItem;
     }
 
-    public void Add(MeatCutSO cut, int amount = 1)
+    public void Add(ItemDataSO item, int amount = 1)
     {
-        if (cut == null || amount <= 0) return;
+        if (item == null || amount <= 0) return;
 
-        if (!stockByCut.ContainsKey(cut))
-            stockByCut[cut] = 0;
+        if (!stockByItem.ContainsKey(item))
+            stockByItem[item] = 0;
 
-        stockByCut[cut] += amount;
+        stockByItem[item] += amount;
         OnInventoryChanged?.Invoke();
     }
 
-    public bool TryTake(MeatCutSO cut, int amount = 1)
+    public bool TryTake(ItemDataSO item, int amount = 1)
     {
-        if (cut == null)
+        if (item == null)
             return false;
 
         if (amount <= 0) return true;
 
-        int current = GetCount(cut);
+        int current = GetCount(item);
         if (current < amount)
             return false;
 
-        stockByCut[cut] = current - amount;
+        stockByItem[item] = current - amount;
         OnInventoryChanged?.Invoke();
         return true;
     }
 
-    public void InformMissingCut(MeatCutSO cut)
+    public void InformMissingItem(ItemDataSO item)
     {
-        if (cut == null) return;
-        Debug.Log("[CoolerSystem] Corte no disponible: " + cut.cutName);
-        OnMissingCutRequested?.Invoke(cut);
+        if (item == null) return;
+        Debug.Log("Ítem no disponible: " + item.itemName);
+        OnMissingItemRequested?.Invoke(item);
     }
 
     public string GetDebugStockString()
     {
-        StringBuilder sb = new StringBuilder("Hielera -> ");
+        StringBuilder sb = new StringBuilder("Inventario -> ");
         bool first = true;
 
-        foreach (var kvp in stockByCut)
+        foreach (var kvp in stockByItem)
         {
             if (!first)
                 sb.Append(", ");
 
-            string cutName = kvp.Key != null ? kvp.Key.cutName : "Sin corte";
-            sb.Append(cutName);
+            string name = kvp.Key != null ? kvp.Key.itemName : "Sin ítem";
+            sb.Append(name);
             sb.Append(": ");
             sb.Append(kvp.Value);
             first = false;
@@ -104,8 +102,8 @@ public class CoolerSystem : MonoBehaviour
 }
 
 [Serializable]
-public class CoolerStockEntry
+public class InventoryStockEntry
 {
-    public MeatCutSO cut;
+    public ItemDataSO item;
     [Min(0)] public int amount = 0;
 }
