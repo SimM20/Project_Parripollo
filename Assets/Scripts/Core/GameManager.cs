@@ -38,6 +38,13 @@ public class GameManager : MonoBehaviour
         if (currentView != lastView && grillSystem != null)
             grillSystem.SetMeatVisualsVisible(currentView == ViewType.Grill);
 
+        if (currentView != lastView)
+        {
+            bool buildActive = currentView == ViewType.Build;
+            BuildFoodDropZone.SetActivePlateVisualsVisible(buildActive);
+            meatTransferBuffer?.SendMessage("SetPlateMeatVisualsVisible", buildActive, SendMessageOptions.DontRequireReceiver);
+        }
+
         if (currentView == ViewType.Grill && lastView != ViewType.Grill && meatTransferBuffer != null)
             meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
 
@@ -131,6 +138,7 @@ public class GameManager : MonoBehaviour
 
         ClearBuildAssembly();
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
+        BuildFoodDropZone.ClearActivePlateVisuals();
         customerSystem.CompleteCustomer(customer);
         Debug.Log("✔ Pedido entregado desde Build");
     }

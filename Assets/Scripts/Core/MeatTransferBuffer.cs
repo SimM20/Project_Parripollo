@@ -212,6 +212,15 @@ public class MeatTransferBuffer : MonoBehaviour
         plateMeatVisuals.Clear();
     }
 
+    public void SetPlateMeatVisualsVisible(bool visible)
+    {
+        for (int i = 0; i < plateMeatVisuals.Count; i++)
+        {
+            if (plateMeatVisuals[i] != null)
+                plateMeatVisuals[i].SetActive(visible);
+        }
+    }
+
     public void MoveToBuildMeatHolder()
     {
         if (toBuildCuts.Count == 0)
