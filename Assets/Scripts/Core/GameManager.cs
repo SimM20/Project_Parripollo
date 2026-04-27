@@ -152,7 +152,7 @@ public class GameManager : MonoBehaviour
 
     private void EndNight()
     {
-        customerSystem.OnNightEnded += EndNight;
+        customerSystem.OnNightEnded -= EndNight;
 
         //TODO: pantalla de finalizacion del juego
     }

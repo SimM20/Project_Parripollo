@@ -5345,6 +5345,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 34340692}
     - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
+      propertyPath: coalTransferBuffer
+      value: 
+      objectReference: {fileID: 3838453}
+    - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
       propertyPath: meatTransferBuffer
       value: 
       objectReference: {fileID: 1918444612}
