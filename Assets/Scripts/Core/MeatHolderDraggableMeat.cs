@@ -23,10 +23,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
     private bool isDragging;
     private bool isGridRotated;
 
-    public void SetCut(MeatCutSO setupCut)
-    {
-        cut = setupCut;
-    }
+    public void SetCut(MeatCutSO setupCut) => cut = setupCut;
 
     public void SetTransferBuffer(MonoBehaviour setupTransferBuffer)
     {
@@ -34,10 +31,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
         CacheTransferBufferMethods();
     }
 
-    public void SetTransferEntryId(int setupTransferEntryId)
-    {
-        transferEntryId = setupTransferEntryId;
-    }
+    public void SetTransferEntryId(int setupTransferEntryId) => transferEntryId = setupTransferEntryId;
 
     public void SetInitialGridRotation(bool setupGridRotation)
     {
@@ -55,11 +49,9 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     void OnMouseDown()
     {
-        if (cut == null || transferBuffer == null)
-            return;
+        if (cut == null || transferBuffer == null) return;
 
         isDragging = true;
-
         startPosition = transform.position;
         startParent = transform.parent;
 
@@ -78,8 +70,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     void OnMouseDrag()
     {
-        if (cut == null || transferBuffer == null)
-            return;
+        if (cut == null || transferBuffer == null) return;
 
         transform.position = GetMouseWorldPosition() + dragOffset;
         UpdateHoverPreview(transform.position);
@@ -99,18 +90,14 @@ public class MeatHolderDraggableMeat : MonoBehaviour
             return;
         }
 
-        bool dropped = TryDropToGrill();
-        if (!dropped)
+        if (!TryDropToGrill())
             RestoreStartTransform();
     }
 
     private bool TryDropToGrill()
     {
-        if (dropMethod == null)
-            CacheTransferBufferMethods();
-
-        if (dropMethod == null && dropByIdMethod == null)
-            return false;
+        if (dropMethod == null) CacheTransferBufferMethods();
+        if (dropMethod == null && dropByIdMethod == null) return false;
 
         if (dropByIdMethod != null && transferEntryId >= 0)
         {
@@ -120,12 +107,10 @@ public class MeatHolderDraggableMeat : MonoBehaviour
             else
                 resultById = dropByIdMethod.Invoke(transferBuffer, new object[] { transferEntryId, GetMouseWorldPosition() });
 
-            if (resultById is bool okById && okById)
-                return true;
+            if (resultById is bool okById && okById) return true;
         }
 
-        if (dropMethod == null)
-            return false;
+        if (dropMethod == null) return false;
 
         object result;
         if (dropMethod.GetParameters().Length == 3)
@@ -138,14 +123,9 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     private void UpdateHoverPreview(Vector3 worldPoint)
     {
-        if (transferBuffer == null)
-            return;
-
-        if (updateHoverMethod == null)
-            CacheTransferBufferMethods();
-
-        if (updateHoverMethod == null)
-            return;
+        if (transferBuffer == null) return;
+        if (updateHoverMethod == null) CacheTransferBufferMethods();
+        if (updateHoverMethod == null) return;
 
         if (updateHoverMethod.GetParameters().Length == 3)
             updateHoverMethod.Invoke(transferBuffer, new object[] { cut, worldPoint, isGridRotated });
@@ -155,85 +135,34 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     private void ClearHoverPreview()
     {
-        if (transferBuffer == null)
-            return;
-
-        if (clearHoverMethod == null)
-            CacheTransferBufferMethods();
-
-        if (clearHoverMethod == null)
-            return;
+        if (transferBuffer == null) return;
+        if (clearHoverMethod == null) CacheTransferBufferMethods();
+        if (clearHoverMethod == null) return;
 
         clearHoverMethod.Invoke(transferBuffer, null);
     }
 
     private void CacheTransferBufferMethods()
     {
-        if (transferBuffer == null)
-            return;
-
+        if (transferBuffer == null) return;
         var type = transferBuffer.GetType();
-        dropByIdMethod = type.GetMethod(
-            "TryDropFromMeatHolderById",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new System.Type[] { typeof(int), typeof(Vector3), typeof(bool) },
-            null);
 
-        if (dropByIdMethod == null)
-        {
-            dropByIdMethod = type.GetMethod(
-                "TryDropFromMeatHolderById",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new System.Type[] { typeof(int), typeof(Vector3) },
-                null);
-        }
+        dropByIdMethod = type.GetMethod("TryDropFromMeatHolderById", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new System.Type[] { typeof(int), typeof(Vector3), typeof(bool) }, null)
+                        ?? type.GetMethod("TryDropFromMeatHolderById", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new System.Type[] { typeof(int), typeof(Vector3) }, null);
 
-        dropMethod = type.GetMethod(
-            "TryDropFromMeatHolder",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new System.Type[] { typeof(MeatCutSO), typeof(Vector3), typeof(bool) },
-            null);
+        dropMethod = type.GetMethod("TryDropFromMeatHolder", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new System.Type[] { typeof(MeatCutSO), typeof(Vector3), typeof(bool) }, null)
+                    ?? type.GetMethod("TryDropFromMeatHolder", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new System.Type[] { typeof(MeatCutSO), typeof(Vector3) }, null);
 
-        if (dropMethod == null)
-        {
-            dropMethod = type.GetMethod(
-                "TryDropFromMeatHolder",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new System.Type[] { typeof(MeatCutSO), typeof(Vector3) },
-                null);
-        }
-
-        updateHoverMethod = type.GetMethod(
-            "UpdateMeatHolderHover",
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new System.Type[] { typeof(MeatCutSO), typeof(Vector3), typeof(bool) },
-            null);
-
-        if (updateHoverMethod == null)
-        {
-            updateHoverMethod = type.GetMethod(
-                "UpdateMeatHolderHover",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                null,
-                new System.Type[] { typeof(MeatCutSO), typeof(Vector3) },
-                null);
-        }
+        updateHoverMethod = type.GetMethod("UpdateMeatHolderHover", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new System.Type[] { typeof(MeatCutSO), typeof(Vector3), typeof(bool) }, null)
+                           ?? type.GetMethod("UpdateMeatHolderHover", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new System.Type[] { typeof(MeatCutSO), typeof(Vector3) }, null);
 
         clearHoverMethod = type.GetMethod("ClearMeatHolderHover", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
     }
 
     private void Update()
     {
-        if (!isDragging || cut == null || transferBuffer == null)
-            return;
-
-        if (Input.GetKeyDown(KeyCode.R))
-            ToggleGridRotation();
+        if (!isDragging || cut == null || transferBuffer == null) return;
+        if (Input.GetKeyDown(KeyCode.R)) ToggleGridRotation();
     }
 
     private void ToggleGridRotation()
@@ -245,9 +174,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     private void ApplyGridRotationPreview()
     {
-        if (!rotatePreviewVisual)
-            return;
-
+        if (!rotatePreviewVisual) return;
         Vector3 euler = transform.localEulerAngles;
         euler.z = isGridRotated ? rotatedPreviewAngleZ : 0f;
         transform.localEulerAngles = euler;
@@ -256,9 +183,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
     private Vector3 GetMouseWorldPosition()
     {
         Camera cam = Camera.main;
-        if (cam == null)
-            return transform.position;
-
+        if (cam == null) return transform.position;
         Vector3 pos = Input.mousePosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
@@ -268,18 +193,13 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     private void RestoreStartTransform()
     {
-        if (startParent != null)
-            transform.SetParent(startParent, true);
-
+        if (startParent != null) transform.SetParent(startParent, true);
         transform.position = startPosition;
     }
 
     private void EnsureCollider2D()
     {
-        BoxCollider2D box = GetComponent<BoxCollider2D>();
-        if (box == null)
-            box = gameObject.AddComponent<BoxCollider2D>();
-
+        BoxCollider2D box = GetComponent<BoxCollider2D>() ?? gameObject.AddComponent<BoxCollider2D>();
         box.size = Vector2.one;
     }
 

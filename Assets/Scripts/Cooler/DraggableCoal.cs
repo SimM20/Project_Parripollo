@@ -20,22 +20,11 @@ public class DraggableCoal : MonoBehaviour
 
         EnsureCollider2D();
     }
+    public void SetCoalData(CoalSO setupCoal) => coal = setupCoal;
 
-    // Métodos para recibir la info del CoalStockVisualizer
-    public void SetCoalData(CoalSO setupCoal)
-    {
-        coal = setupCoal;
-    }
+    public void SetCoolerSystem(CoolerSystem setupCoolerSystem) => coolerSystem = setupCoolerSystem;
 
-    public void SetCoolerSystem(CoolerSystem setupCoolerSystem)
-    {
-        coolerSystem = setupCoolerSystem;
-    }
-
-    public void SetToGrillDropArea(SpriteRenderer setupToGrillDropArea)
-    {
-        toGrillDropArea = setupToGrillDropArea;
-    }
+    public void SetToGrillDropArea(SpriteRenderer setupToGrillDropArea) => toGrillDropArea = setupToGrillDropArea;
 
     void OnMouseDown()
     {
@@ -65,33 +54,13 @@ public class DraggableCoal : MonoBehaviour
 
     void OnMouseUp()
     {
-        if (selfRenderer != null)
-            selfRenderer.sortingOrder = startSortingOrder;
-
-        Vector3 dropWorldPoint = transform.position;
-
-        if (!IsOverToGrill(dropWorldPoint))
+        if (IsOverToGrill(transform.position))
         {
-            Destroy(gameObject);
-            return;
-        }
-
-        if (coal != null && coolerSystem != null && coolerSystem.TryTake(coal, 1))
-        {
-            if (coal.coalPrefab != null)
+            if (coolerSystem.TryTake(coal, 1))
             {
-                Transform grillParent = GameObject.Find("GrillView")?.transform;
-                Vector3 spawnPos = dropWorldPoint;
-                spawnPos.z = 0;
-
-                GameObject realCoal = Instantiate(coal.coalPrefab, spawnPos, Quaternion.identity, grillParent);
-
-                Coal coalScript = realCoal.GetComponent<Coal>();
-                if (coalScript != null)
-                {
-                    coalScript.SetInitialPosition(spawnPos);
-                    coalScript.OnMouseUp();
-                }
+                var buffer = FindFirstObjectByType<CoalTransferBuffer>();
+                if (buffer != null)
+                    buffer.EnqueueToGrill(coal);
             }
         }
 
@@ -132,10 +101,7 @@ public class DraggableCoal : MonoBehaviour
 
     private void EnsureCollider2D()
     {
-        BoxCollider2D box = GetComponent<BoxCollider2D>();
-        if (box == null)
-            box = gameObject.AddComponent<BoxCollider2D>();
-
+        BoxCollider2D box = GetComponent<BoxCollider2D>() ?? gameObject.AddComponent<BoxCollider2D>();
         box.size = Vector2.one;
     }
 }
