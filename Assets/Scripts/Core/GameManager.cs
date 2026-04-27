@@ -55,40 +55,6 @@ public class GameManager : MonoBehaviour
             var customer = customerSystem?.currentCustomer;
             var order = customer?.order;
 
-            // B — set bread for sandwich orders
-            if (Input.GetKeyDown(KeyCode.B) && buildStationSystem != null && order != null)
-            {
-                if (order.IsSandwich && order.bread != null)
-                {
-                    buildStationSystem.SetBread(order.bread);
-                    Debug.Log("[Build] Pan asignado: " + order.bread.breadName);
-                }
-                else
-                    Debug.Log("[Build] El pedido no requiere pan.");
-            }
-
-            // S — add first available side
-            if (Input.GetKeyDown(KeyCode.S) && buildStationSystem != null && catalog != null)
-            {
-                var sides = catalog.GetAvailableSides();
-                if (sides.Count > 0)
-                {
-                    buildStationSystem.AddSide(sides[0]);
-                    Debug.Log("[Build] Acompañamiento agregado: " + sides[0].sideName);
-                }
-            }
-
-            // T — add first available topping
-            if (Input.GetKeyDown(KeyCode.T) && buildStationSystem != null && catalog != null)
-            {
-                var toppings = catalog.GetAvailableToppings();
-                if (toppings.Count > 0)
-                {
-                    buildStationSystem.AddTopping(toppings[0]);
-                    Debug.Log("[Build] Topping agregado: " + toppings[0].toppingName);
-                }
-            }
-
             // M — inform missing cut (prefer FoodAvailabilityService; fall back to CoolerSystem)
             if (Input.GetKeyDown(KeyCode.M) && order?.PrimaryCut != null)
             {
