@@ -73,6 +73,28 @@ public class BuildFoodDropZone : MonoBehaviour
             buildStationSystem = FindFirstObjectByType<BuildStationSystem>();
     }
 
+    public static bool TryAcceptMeatAt(Vector3 worldPoint, MeatCutSO cut)
+    {
+        if (cut == null)
+            return false;
+
+        for (int i = 0; i < ActiveZones.Count; i++)
+        {
+            BuildFoodDropZone zone = ActiveZones[i];
+            if (zone == null || zone.zoneCollider == null || zone.buildStationSystem == null)
+                continue;
+
+            if (!zone.zoneCollider.OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
+                continue;
+
+            zone.buildStationSystem.AddCut(cut);
+            Debug.Log("[Build] Carne arrastrada: " + cut.cutName);
+            return true;
+        }
+
+        return false;
+    }
+
     void OnValidate()
     {
         EnsureReferences();

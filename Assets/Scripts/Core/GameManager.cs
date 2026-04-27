@@ -130,6 +130,7 @@ public class GameManager : MonoBehaviour
         }
 
         ClearBuildAssembly();
+        meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         customerSystem.CompleteCustomer(customer);
         Debug.Log("✔ Pedido entregado desde Build");
     }
