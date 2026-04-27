@@ -2842,6 +2842,10 @@ PrefabInstance:
       propertyPath: buildMeatHolderAnchor
       value: 
       objectReference: {fileID: 1999899239}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: variantSpriteRotation.z
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3364667778613331700, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
       propertyPath: m_Name
       value: TransferBuffer
@@ -2938,6 +2942,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   buildStationSystem: {fileID: 34340692}
+  meatTransferBuffer: {fileID: 1918444612}
   zoneCollider: {fileID: 1060480558}
   plateVisualWorldSpacing: 1.2
   plateVisualDirection: {x: 0.8, y: 0, z: 0}

@@ -33,6 +33,10 @@ public class MeatTransferBuffer : MonoBehaviour
     [SerializeField] private float buildMeatHolderWorldSpacing = 1.5f;
     [SerializeField] private Vector3 buildMeatHolderWorldDirection = Vector3.right;
 
+    [Header("Variant Sprite (Plate)")]
+    [SerializeField] private Vector3 variantSpriteScale = new Vector3(0.12f, 0.12f, 0.12f);
+    [SerializeField] private Vector3 variantSpriteRotation = new Vector3(0f, 0f, 90f);
+
     [Header("Visual Size")]
     [SerializeField] private Vector3 fixedWorldScale = Vector3.one;
 
@@ -210,6 +214,23 @@ public class MeatTransferBuffer : MonoBehaviour
         }
 
         plateMeatVisuals.Clear();
+    }
+
+    public void UpdatePlateMeatSprite(Sprite sprite)
+    {
+        if (sprite == null || plateMeatVisuals.Count == 0)
+            return;
+
+        GameObject go = plateMeatVisuals[plateMeatVisuals.Count - 1];
+        if (go == null)
+            return;
+
+        SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
+        if (sr != null)
+            sr.sprite = sprite;
+
+        go.transform.localScale = variantSpriteScale;
+        go.transform.localEulerAngles = variantSpriteRotation;
     }
 
     public void SetPlateMeatVisualsVisible(bool visible)

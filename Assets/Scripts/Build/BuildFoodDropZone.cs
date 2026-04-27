@@ -4,6 +4,7 @@ using UnityEngine;
 public class BuildFoodDropZone : MonoBehaviour
 {
     [SerializeField] private BuildStationSystem buildStationSystem;
+    [SerializeField] private MeatTransferBuffer meatTransferBuffer;
     [SerializeField] private Collider2D zoneCollider;
 
     [Header("Plate Visuals")]
@@ -52,6 +53,11 @@ public class BuildFoodDropZone : MonoBehaviour
             if (item.breadData != null)
             {
                 zone.buildStationSystem.SetBread(item.breadData);
+                ProductVariantSO variant = zone.buildStationSystem.TryResolveVariant();
+                if (variant != null && variant.variantSprite != null)
+                    zone.meatTransferBuffer?.UpdatePlateMeatSprite(variant.variantSprite);
+                else
+                    Debug.LogWarning("[Build] Sin sprite de variante para: " + item.breadData.breadName);
                 Debug.Log("[Build] Pan arrastrado: " + item.breadData.breadName);
             }
             else if (item.sideData != null)
@@ -159,6 +165,9 @@ public class BuildFoodDropZone : MonoBehaviour
 
         if (buildStationSystem == null)
             buildStationSystem = FindFirstObjectByType<BuildStationSystem>();
+
+        if (meatTransferBuffer == null)
+            meatTransferBuffer = FindFirstObjectByType<MeatTransferBuffer>();
     }
 
     void OnValidate()
