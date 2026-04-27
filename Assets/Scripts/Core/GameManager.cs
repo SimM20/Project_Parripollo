@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private CoolerSystem coolerSystem;
     [SerializeField] private ViewManager viewManager;
     [SerializeField] private MonoBehaviour meatTransferBuffer;
+    [SerializeField] private MonoBehaviour coalTransferBuffer;
     [SerializeField] private BuildStationSystem buildStationSystem;
     [SerializeField] private FoodCatalogSO catalog;
     [SerializeField] private FoodAvailabilityService foodAvailabilityService;
@@ -45,8 +46,14 @@ public class GameManager : MonoBehaviour
             meatTransferBuffer?.SendMessage("SetPlateMeatVisualsVisible", buildActive, SendMessageOptions.DontRequireReceiver);
         }
 
-        if (currentView == ViewType.Grill && lastView != ViewType.Grill && meatTransferBuffer != null)
-            meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
+        if (currentView == ViewType.Grill && lastView != ViewType.Grill)
+        {
+            if (meatTransferBuffer != null)
+                meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
+
+            if (coalTransferBuffer != null)
+                coalTransferBuffer.SendMessage("MoveToCoalHolder", SendMessageOptions.DontRequireReceiver);
+        }
 
         if (currentView == ViewType.Build && lastView != ViewType.Build && meatTransferBuffer != null)
             meatTransferBuffer.SendMessage("MoveToBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
