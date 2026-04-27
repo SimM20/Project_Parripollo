@@ -651,6 +651,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1159028469}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: basePatienceSeconds
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customerPrefabs.Array.size
       value: 4
       objectReference: {fileID: 0}
