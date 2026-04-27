@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 public class GrillSystem : MonoBehaviour
@@ -6,6 +7,7 @@ public class GrillSystem : MonoBehaviour
     public List<GridSlot> slots = new List<GridSlot>();
 
     public GameObject meatPrefab;
+    public GameObject coalPrefab;
     [Min(0.05f)] public float slotDropRadius = 0.8f;
 
     public bool SpawnMeat(MeatCutSO cut, bool rotateFootprint = false)
@@ -18,6 +20,45 @@ public class GrillSystem : MonoBehaviour
     {
         Meat unused;
         return TrySpawnMeatAtPoint(cut, worldPoint, out unused, rotateFootprint);
+    }
+
+    public bool TrySpawnCoalAtPoint(CoalSO coalData, Vector3 worldPoint, out Coal spawnedCoal)
+    {
+        spawnedCoal = null;
+
+        GameObject prefabToUse = (coalData.coalPrefab != null) ? coalData.coalPrefab : coalPrefab;
+
+        if (coalData == null || prefabToUse == null)
+        {
+            Debug.LogWarning("Faltan datos de carbón o prefab para spawnear.");
+            return false;
+        }
+
+        GameObject obj = Instantiate(prefabToUse);
+        Coal coal = obj.GetComponent<Coal>();
+
+        if (coal == null) { Destroy(obj); return false; }
+
+        coal.coalData = coalData;
+
+        Vector2Int requiredSize = Vector2Int.one;
+
+        if (!GridSlot.TryFindContiguousPlacement(slots, requiredSize, worldPoint, ItemType.Coal, coal.gameObject, out List<GridSlot> placementSlots))
+        {
+            Debug.Log("No hay espacio para el carbón en esta posición de la grilla.");
+            Destroy(obj);
+            return false;
+        }
+
+        foreach (var slot in placementSlots)
+        {
+            slot.PlaceItem(coal.gameObject);
+            coal.RegisterOccupiedSlot(slot);
+        }
+
+        coal.transform.position = GetCenter(placementSlots);
+        spawnedCoal = coal;
+        return true;
     }
 
     public bool TrySpawnMeatAtPoint(MeatCutSO cut, Vector3 worldPoint, out Meat spawnedMeat, bool rotateFootprint = false)
@@ -69,16 +110,14 @@ public class GrillSystem : MonoBehaviour
 
     public Meat GetCookedMeat(MeatCutSO cut)
     {
-        if (cut == null)
-            return null;
+        if (cut == null) return null;
 
         foreach (var slot in slots)
         {
             if (slot.IsOccupied)
             {
                 var meat = slot.currentMeat;
-                if (meat == null)
-                    continue;
+                if (meat == null) continue;
 
                 if (meat.cut == cut && (meat.state == MeatStates.Hecho || meat.state == MeatStates.Muy_Hecho))
                 {
@@ -95,8 +134,7 @@ public class GrillSystem : MonoBehaviour
         for (int i = 0; i < slots.Count; i++)
         {
             GridSlot slot = slots[i];
-            if (slot == null || !slot.IsOccupied)
-                continue;
+            if (slot == null || !slot.IsOccupied) continue;
 
             if (slot.currentItem.TryGetComponent<Item>(out Item genericItem))
                 SetItemVisible(genericItem, isVisible);
@@ -105,8 +143,7 @@ public class GrillSystem : MonoBehaviour
 
     private static void SetItemVisible(Item item, bool isVisible)
     {
-        if (item == null)
-            return;
+        if (item == null) return;
 
         SpriteRenderer[] renderers = item.GetComponentsInChildren<SpriteRenderer>(true);
         for (int i = 0; i < renderers.Length; i++)
@@ -120,9 +157,7 @@ public class GrillSystem : MonoBehaviour
     public void RemoveMeat(Meat meat)
     {
         if (meat == null) return;
-
         meat.ReleaseOccupiedSlots();
-
         Destroy(meat.gameObject);
     }
 
@@ -131,17 +166,14 @@ public class GrillSystem : MonoBehaviour
         for (int i = 0; i < slots.Count; i++)
         {
             GridSlot slot = slots[i];
-            if (slot != null)
-                return slot.transform.position;
+            if (slot != null) return slot.transform.position;
         }
-
         return transform.position;
     }
 
     private static Vector3 GetCenter(List<GridSlot> placementSlots)
     {
-        if (placementSlots == null || placementSlots.Count == 0)
-            return Vector3.zero;
+        if (placementSlots == null || placementSlots.Count == 0) return Vector3.zero;
 
         Vector3 sum = Vector3.zero;
         for (int i = 0; i < placementSlots.Count; i++)

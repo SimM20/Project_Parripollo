@@ -144,6 +144,125 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0fb06a1292a6e5a45933d8e38a49cabc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
+--- !u!1001 &3838451
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: grillSystem
+      value: 
+      objectReference: {fileID: 1141140570}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: visualPrefab
+      value: 
+      objectReference: {fileID: 2095126157789312800, guid: b3213926a78844c40afe78aa92e62e71, type: 3}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: toBuildAnchor
+      value: 
+      objectReference: {fileID: 2081099981}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: toGrillAnchor
+      value: 
+      objectReference: {fileID: 1740784136}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: toBuildDropArea
+      value: 
+      objectReference: {fileID: 1554420530}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: meatHolderAnchor
+      value: 
+      objectReference: {fileID: 347894491}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: buildStationSystem
+      value: 
+      objectReference: {fileID: 34340692}
+    - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: buildMeatHolderAnchor
+      value: 
+      objectReference: {fileID: 1999899239}
+    - target: {fileID: 3364667778613331700, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_Name
+      value: CoalTransferBuffer
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -1.03446
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.63233
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3364667778613331700, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3838453}
+  m_SourcePrefab: {fileID: 100100000, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+--- !u!1 &3838452 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3364667778613331700, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
+  m_PrefabInstance: {fileID: 3838451}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3838453
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3838452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a6f01cb284fd494d898e2128450bee0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  grillSystem: {fileID: 1141140570}
+  toGrillAnchor: {fileID: 1740784136}
+  coalHolderAnchor: {fileID: 347894491}
+  visualPrefab: {fileID: 2370080711425213798, guid: 060059ed59b5fba4c936a63cdb0be9fb, type: 3}
+  stackSpacing: 0.15
+  stackDirection: {x: 0, y: 1, z: 0}
+  toGrillSortingBase: 100
+  coalHolderSortingBase: 200
+  fixedWorldScale: {x: 0.1, y: 0.1, z: 0.1}
 --- !u!1 &34340691
 GameObject:
   m_ObjectHideFlags: 0
@@ -2844,7 +2963,7 @@ PrefabInstance:
       objectReference: {fileID: 1999899239}
     - target: {fileID: 3364667778613331700, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
       propertyPath: m_Name
-      value: TransferBuffer
+      value: MeatTransferBuffer
       objectReference: {fileID: 0}
     - target: {fileID: 6335881070450259450, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
       propertyPath: m_LocalPosition.x
@@ -5135,6 +5254,7 @@ SceneRoots:
   - {fileID: 606084614}
   - {fileID: 2137234444}
   - {fileID: 1041434599}
+  - {fileID: 3838451}
   - {fileID: 281249050}
   - {fileID: 1564889395}
   - {fileID: 1064083088}

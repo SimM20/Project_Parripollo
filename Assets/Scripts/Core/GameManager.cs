@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private CoolerSystem coolerSystem;
     [SerializeField] private ViewManager viewManager;
     [SerializeField] private MonoBehaviour meatTransferBuffer;
+    [SerializeField] private MonoBehaviour coalTransferBuffer;
     [SerializeField] private BuildStationSystem buildStationSystem;
     [SerializeField] private FoodCatalogSO catalog;
     [SerializeField] private FoodAvailabilityService foodAvailabilityService;
@@ -38,8 +39,14 @@ public class GameManager : MonoBehaviour
         if (currentView != lastView && grillSystem != null)
             grillSystem.SetMeatVisualsVisible(currentView == ViewType.Grill);
 
-        if (currentView == ViewType.Grill && lastView != ViewType.Grill && meatTransferBuffer != null)
-            meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
+        if (currentView == ViewType.Grill && lastView != ViewType.Grill)
+        {
+            if (meatTransferBuffer != null)
+                meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
+
+            if (coalTransferBuffer != null)
+                coalTransferBuffer.SendMessage("MoveToCoalHolder", SendMessageOptions.DontRequireReceiver);
+        }
 
         if (currentView == ViewType.Build && lastView != ViewType.Build && meatTransferBuffer != null)
             meatTransferBuffer.SendMessage("MoveToBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
@@ -73,7 +80,6 @@ public class GameManager : MonoBehaviour
     private void TryServe()
     {
         var customer = customerSystem.currentCustomer;
-
         if (customer == null) return;
 
         var meat = grillSystem.GetCookedMeat(customer.order.meat);
@@ -81,7 +87,6 @@ public class GameManager : MonoBehaviour
         if (meat != null)
         {
             Debug.Log("✔ Pedido correcto");
-
             grillSystem.RemoveMeat(meat);
             customerSystem.SpawnCustomer();
             customerSystem.CompleteCustomer(customer);
@@ -137,7 +142,6 @@ public class GameManager : MonoBehaviour
     private void EndNight()
     {
         customerSystem.OnNightEnded += EndNight;
-
         //TODO: pantalla de finalizacion del juego
     }
 
