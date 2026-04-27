@@ -5,7 +5,6 @@ using UnityEngine;
 public class CoalStockVisualizer : MonoBehaviour
 {
     [Header("References")]
-    // Ahora miramos al gestor central de inventario
     [SerializeField] private CoolerSystem coolerSystem;
     [SerializeField] private SpriteRenderer toGrillDropArea;
     [SerializeField] private GameObject stockVisualPrefab;
@@ -26,6 +25,7 @@ public class CoalStockVisualizer : MonoBehaviour
     void Awake()
     {
         BuildConfigLookup();
+        // Buscamos el cerebro del carbón
         draggableType = ResolveType("DraggableCoal");
     }
 
@@ -159,8 +159,13 @@ public class CoalStockVisualizer : MonoBehaviour
 
             if (draggable != null)
             {
+                // PASO DE DATOS CRÍTICO:
                 go.SendMessage("SetCoalData", coal, SendMessageOptions.DontRequireReceiver);
+
+                // CORRECCIÓN ACÁ: Cambiamos "SetInventorySystem" por "SetCoolerSystem"
                 go.SendMessage("SetCoolerSystem", coolerSystem, SendMessageOptions.DontRequireReceiver);
+
+                // Le pasamos la referencia del cuadro blanco de la izquierda ("ToGrill")
                 go.SendMessage("SetToGrillDropArea", toGrillDropArea, SendMessageOptions.DontRequireReceiver);
             }
         }
