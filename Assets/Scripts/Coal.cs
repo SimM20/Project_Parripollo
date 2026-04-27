@@ -5,8 +5,7 @@ using UnityEngine;
 public class Coal : Item
 {
     [Header("Data")]
-    // Idealmente deberías crear un CoalSO similar a MeatCutSO para definir su sprite, tiempo de quemado, etc.
-    [SerializeField] public ScriptableObject coalData;
+    [SerializeField] public CoalSO coalData;
 
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -18,6 +17,10 @@ public class Coal : Item
     public CoalStates state = CoalStates.Apagado;
 
     private readonly List<GridSlot> occupiedSlots = new List<GridSlot>();
+    public void SetInitialPosition(Vector3 pos)
+    {
+        startPosition = pos;
+    }
 
     public override void OnMouseUp()
     {
@@ -28,7 +31,7 @@ public class Coal : Item
             return;
 
         Vector2Int requiredSize = GetRequiredGridSize();
-        GridSlot[] allSlots = FindObjectsOfType<GridSlot>();
+        GridSlot[] allSlots = FindObjectsByType<GridSlot>(FindObjectsSortMode.None);
 
         if (GridSlot.TryFindContiguousPlacement(allSlots, requiredSize, transform.position, itemType, gameObject, out List<GridSlot> slotsEncontrados))
         {
@@ -42,8 +45,11 @@ public class Coal : Item
 
             currentSlot = slotsEncontrados[0];
             transform.position = CalcCenter(slotsEncontrados);
+
+            startPosition = transform.position;
             return;
         }
+
         transform.position = startPosition;
     }
 
@@ -89,6 +95,16 @@ public class Coal : Item
 
         if (currentBurnTime >= maxBurnTime)
             state = CoalStates.Ceniza;
+    }
+
+    public void SetVisualVisibility(bool isVisible)
+    {
+        if (spriteRenderer != null)
+            spriteRenderer.enabled = isVisible;
+
+        Collider2D col = GetComponent<Collider2D>();
+        if (col != null)
+            col.enabled = isVisible;
     }
 
     public void RegisterOccupiedSlot(GridSlot slot)

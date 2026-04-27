@@ -68,42 +68,31 @@ public class DraggableCoal : MonoBehaviour
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
 
-        if (coal == null || coolerSystem == null)
-        {
-            RestoreStartTransform();
-            return;
-        }
-
         Vector3 dropWorldPoint = transform.position;
 
         if (!IsOverToGrill(dropWorldPoint))
         {
-            RestoreStartTransform();
+            Destroy(gameObject);
             return;
         }
 
-        if (!coolerSystem.TryTake(coal, 1))
+        if (coal != null && coolerSystem != null && coolerSystem.TryTake(coal, 1))
         {
-            RestoreStartTransform();
-            return;
-        }
-
-        if (coal.coalPrefab != null)
-        {
-            GameObject realCoal = Instantiate(coal.coalPrefab, dropWorldPoint, Quaternion.identity);
-
-            Coal coalScript = realCoal.GetComponent<Coal>();
-
-            if (coalScript != null)
+            if (coal.coalPrefab != null)
             {
-                coalScript.OnMouseUp();
-                Debug.Log($"[Carbón] {coal.itemName} colocado en la parrilla.");
+                Transform grillParent = GameObject.Find("GrillView")?.transform;
+                Vector3 spawnPos = dropWorldPoint;
+                spawnPos.z = 0;
+
+                GameObject realCoal = Instantiate(coal.coalPrefab, spawnPos, Quaternion.identity, grillParent);
+
+                Coal coalScript = realCoal.GetComponent<Coal>();
+                if (coalScript != null)
+                {
+                    coalScript.SetInitialPosition(spawnPos);
+                    coalScript.OnMouseUp();
+                }
             }
-        }
-        else
-        {
-            Debug.LogError("[Carbón] Error: No le asignaste el CoalPrefab al CoalSO en el inspector.");
-            coolerSystem.Add(coal, 1);
         }
 
         Destroy(gameObject);

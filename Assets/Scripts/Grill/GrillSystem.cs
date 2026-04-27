@@ -95,23 +95,24 @@ public class GrillSystem : MonoBehaviour
         for (int i = 0; i < slots.Count; i++)
         {
             GridSlot slot = slots[i];
-            if (slot == null || !slot.IsOccupied || slot.currentMeat == null)
+            if (slot == null || !slot.IsOccupied)
                 continue;
 
-            SetMeatVisible(slot.currentMeat, isVisible);
+            if (slot.currentItem.TryGetComponent<Item>(out Item genericItem))
+                SetItemVisible(genericItem, isVisible);
         }
     }
 
-    private static void SetMeatVisible(Meat meat, bool isVisible)
+    private static void SetItemVisible(Item item, bool isVisible)
     {
-        if (meat == null)
+        if (item == null)
             return;
 
-        SpriteRenderer[] renderers = meat.GetComponentsInChildren<SpriteRenderer>(true);
+        SpriteRenderer[] renderers = item.GetComponentsInChildren<SpriteRenderer>(true);
         for (int i = 0; i < renderers.Length; i++)
             renderers[i].enabled = isVisible;
 
-        Collider2D[] colliders = meat.GetComponentsInChildren<Collider2D>(true);
+        Collider2D[] colliders = item.GetComponentsInChildren<Collider2D>(true);
         for (int i = 0; i < colliders.Length; i++)
             colliders[i].enabled = isVisible;
     }
