@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Sandwich de matambre
   m_EditorClassIdentifier: 
   displayName: "S\xE1ndwich de matambre"
+  variantSprite: {fileID: 21300000, guid: 74cd5a9274fef3140a1fbf634311564a, type: 3}
   cut: {fileID: 11400000, guid: 8b8f10511e0bbdd428c59c72eac942b7, type: 2}
   bread: {fileID: 11400000, guid: 829722caacc1e9745856c2faeb47f743, type: 2}
   sellPrice: 100

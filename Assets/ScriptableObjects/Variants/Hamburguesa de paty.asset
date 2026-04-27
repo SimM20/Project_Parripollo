@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Hamburguesa de paty
   m_EditorClassIdentifier: 
   displayName: Hamburguesa de paty
+  variantSprite: {fileID: 21300000, guid: 74cd5a9274fef3140a1fbf634311564a, type: 3}
   cut: {fileID: 11400000, guid: 67dcb7b1588f56f468bf6632f380f22c, type: 2}
   bread: {fileID: 11400000, guid: ad1426bab9d987d409a72bbbe745f760, type: 2}
   sellPrice: 100

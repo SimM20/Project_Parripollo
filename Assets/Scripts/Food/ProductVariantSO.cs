@@ -12,6 +12,9 @@ public class ProductVariantSO : ScriptableObject
     [Tooltip("The exact display name of this product as shown to the player.")]
     public string displayName;
 
+    [Tooltip("Sprite shown on the plate when this variant is assembled.")]
+    public Sprite variantSprite;
+
     [Header("Composition")]
     [Tooltip("The meat cut required for this variant.")]
     public MeatCutSO cut;
