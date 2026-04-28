@@ -11,35 +11,31 @@ public class Meat : Item
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
 
-    [Header("Cooking")]
-    [SerializeField] private float maxCookTime = 5f;
-
     [Header("Grid Rotation")]
     [SerializeField] private bool rotatePreviewVisual = true;
     [SerializeField] private float rotatedPreviewAngleZ = 90f;
 
+    [Header("Cooking State (Heat Units)")]
     public float sideACookTime = 0f;
     public float sideBCookTime = 0f;
     public bool isSideA = true;
     public MeatStates state = MeatStates.Crudo;
 
-    public float SideAHeatTarget => GetHeatTimeForSide(true);
-    public float SideBHeatTarget => GetHeatTimeForSide(false);
-    public float CookTimePerSide => isSideA ? SideAHeatTarget : SideBHeatTarget;
-    public float SideAProgress01 => Mathf.Clamp01(sideACookTime / Mathf.Max(0.0001f, SideAHeatTarget));
-    public float SideBProgress01 => Mathf.Clamp01(sideBCookTime / Mathf.Max(0.0001f, SideBHeatTarget));
-    public float CookedPercent01 => Mathf.Clamp01((sideACookTime + sideBCookTime) / Mathf.Max(0.0001f, SideAHeatTarget + SideBHeatTarget));
-    public bool IsSideAActive => isSideA;
-    public bool IsGridRotated => isGridRotated;
-
     private readonly List<GridSlot> occupiedSlots = new List<GridSlot>();
     private int lastCookFrame = -1;
     private bool isGridRotated;
 
+    public float SideAProgress01 => Mathf.Clamp01(sideACookTime / Mathf.Max(0.0001f, SideAHeatTarget));
+    public float SideBProgress01 => Mathf.Clamp01(sideBCookTime / Mathf.Max(0.0001f, SideBHeatTarget));
+    public float CookedPercent01 => Mathf.Clamp01((sideACookTime + sideBCookTime) / Mathf.Max(0.0001f, SideAHeatTarget + SideBHeatTarget));
+    public float SideAHeatTarget => cut != null ? cut.GetHeatTimeForSide(true) : 10000f;
+    public float SideBHeatTarget => cut != null ? cut.GetHeatTimeForSide(false) : 10000f;
+    public bool IsSideAActive => isSideA;
+    public bool IsGridRotated => isGridRotated;
+
     void Awake()
     {
         itemType = ItemType.Meat;
-
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
 
@@ -50,6 +46,33 @@ public class Meat : Item
     {
         cut = newCut;
         ApplyCutVisual();
+    }
+
+    public void Cook(float heatFromSlot)
+    {
+        if (lastCookFrame == Time.frameCount)
+            return;
+
+        lastCookFrame = Time.frameCount;
+
+        float totalHeatInThisFrame = 0f;
+
+        foreach (var slot in occupiedSlots)
+        {
+            if (slot != null)
+            {
+                totalHeatInThisFrame += slot.totalHeatReceived;
+            }
+        }
+
+        float deltaHeat = totalHeatInThisFrame * Time.deltaTime;
+
+        if (isSideA)
+            sideACookTime += deltaHeat;
+        else
+            sideBCookTime += deltaHeat;
+
+        UpdateState();
     }
 
     public override void OnMouseUp()
@@ -76,7 +99,7 @@ public class Meat : Item
             }
 
             currentSlot = slotsEncontrados[0];
-            //transform.position = CalcCenter(slotsEncontrados);
+
             Vector3 rawOffset = (cut != null) ? cut.visualOffset : Vector3.zero;
             Vector3 rotatedOffset = transform.rotation * rawOffset;
             transform.position = CalcCenter(slotsEncontrados) + rotatedOffset;
@@ -90,9 +113,7 @@ public class Meat : Item
     private bool TrySendToBuildBuffer(Vector3 dropWorldPoint)
     {
         MeatTransferBuffer transferBuffer = FindFirstObjectByType<MeatTransferBuffer>();
-        if (transferBuffer == null)
-            return false;
-
+        if (transferBuffer == null) return false;
         return transferBuffer.TryQueueFromGrillToBuild(this, dropWorldPoint);
     }
 
@@ -136,48 +157,16 @@ public class Meat : Item
         return centro / slots.Count;
     }
 
-    public void Cook(float heat)
-    {
-        if (lastCookFrame == Time.frameCount)
-            return;
-
-        lastCookFrame = Time.frameCount;
-
-        float delta = Time.deltaTime * Mathf.Max(0f, heat);
-        if (delta <= 0f)
-            return;
-
-        if (isSideA)
-            sideACookTime += delta;
-        else
-            sideBCookTime += delta;
-
-        UpdateState();
-    }
-
     public void Flip()
     {
         isSideA = !isSideA;
         ApplyCutVisual();
-
-        string cutName = cut != null ? cut.cutName : "Sin corte";
-        Debug.Log("Flip carne: " + cutName);
     }
-
-    public void FlipSide() => Flip();
 
     public void ToggleGridRotation()
     {
         SetGridRotation(!isGridRotated);
-
-        if (isHeldByMouse)
-            UpdateHoverPreview();
-
-        if (cut != null)
-        {
-            Vector2Int size = GetRequiredGridSize();
-            Debug.Log("Rotacion de grilla: " + cut.cutName + " -> " + size.x + "x" + size.y);
-        }
+        if (isHeldByMouse) UpdateHoverPreview();
     }
 
     public void SetGridRotation(bool rotated)
@@ -188,23 +177,15 @@ public class Meat : Item
 
     public void RegisterOccupiedSlot(GridSlot slot)
     {
-        if (slot == null)
-            return;
-
-        if (!occupiedSlots.Contains(slot))
-            occupiedSlots.Add(slot);
-
-        if (currentSlot == null)
-            currentSlot = slot;
+        if (slot == null) return;
+        if (!occupiedSlots.Contains(slot)) occupiedSlots.Add(slot);
+        if (currentSlot == null) currentSlot = slot;
     }
 
     public void UnregisterOccupiedSlot(GridSlot slot)
     {
-        if (slot == null)
-            return;
-
+        if (slot == null) return;
         occupiedSlots.Remove(slot);
-
         if (currentSlot == slot)
             currentSlot = occupiedSlots.Count > 0 ? occupiedSlots[0] : null;
     }
@@ -217,100 +198,50 @@ public class Meat : Item
             if (slot != null && slot.currentItem == gameObject)
                 slot.ClearSlot();
         }
-
         occupiedSlots.Clear();
         currentSlot = null;
     }
 
     private void UpdateState()
     {
-        float sideAHeatTarget = SideAHeatTarget;
-        float sideBHeatTarget = SideBHeatTarget;
+        float target = isSideA ? SideAHeatTarget : SideBHeatTarget;
 
-        bool sideAReady = sideACookTime >= sideAHeatTarget;
-        bool sideBReady = sideBCookTime >= sideBHeatTarget;
-
-        bool sideABurnt = sideACookTime >= sideAHeatTarget * 1.5f;
-        bool sideBBurnt = sideBCookTime >= sideBHeatTarget * 1.5f;
-        bool sideAOvercooked = sideACookTime >= sideAHeatTarget * 1.2f;
-        bool sideBOvercooked = sideBCookTime >= sideBHeatTarget * 1.2f;
-
-        if (sideABurnt || sideBBurnt)
+        if (sideACookTime >= target && sideBCookTime >= target)
         {
-            state = MeatStates.Pasado;
-            return;
+            state = (sideACookTime > target * 1.3f) ? MeatStates.Muy_Hecho : MeatStates.Hecho;
         }
-
-        if (sideAReady && sideBReady)
+        else if (sideACookTime > 0 || sideBCookTime > 0)
         {
-            state = sideAOvercooked || sideBOvercooked ? MeatStates.Muy_Hecho : MeatStates.Hecho;
-            return;
+            state = MeatStates.Jugoso;
         }
-
-        state = sideACookTime > 0f || sideBCookTime > 0f ? MeatStates.Jugoso : MeatStates.Crudo;
-    }
-
-    private int GetRequiredCellCount()
-    {
-        Vector2Int size = GetRequiredGridSize();
-        return Mathf.Max(1, size.x * size.y);
     }
 
     private Vector2Int GetRequiredGridSize()
     {
-        if (cut == null)
-            return Vector2Int.one;
-
+        if (cut == null) return Vector2Int.one;
         Vector2Int space = cut.GrillSpace;
-        if (isGridRotated)
-            space = new Vector2Int(space.y, space.x);
-
+        if (isGridRotated) space = new Vector2Int(space.y, space.x);
         return new Vector2Int(Mathf.Max(1, space.x), Mathf.Max(1, space.y));
     }
 
     private void ApplyGridRotationPreview()
     {
-        if (!rotatePreviewVisual)
-            return;
-
-        Vector3 euler = transform.eulerAngles;
-        euler.z = isGridRotated ? rotatedPreviewAngleZ : 0f;
-        transform.eulerAngles = euler;
-    }
-
-    private float GetHeatTimeForSide(bool sideA)
-    {
-        if (cut != null)
-            return Mathf.Max(0.0001f, cut.GetHeatTimeForSide(sideA));
-
-        return Mathf.Max(0.0001f, maxCookTime);
+        if (!rotatePreviewVisual) return;
+        transform.eulerAngles = new Vector3(0, 0, isGridRotated ? rotatedPreviewAngleZ : 0f);
     }
 
     private void ApplyCutVisual()
     {
-        if (spriteRenderer == null || cut == null)
-            return;
-
-        Sprite targetSprite = cut.GetSpriteForSide(isSideA);
-        if (targetSprite == null)
-            targetSprite = cut.GetDefaultSprite();
-
-        if (targetSprite != null)
-            spriteRenderer.sprite = targetSprite;
-    }
-
-    public float GetCookedPercent()
-    {
-        return CookedPercent01 * 100f;
+        if (spriteRenderer == null || cut == null) return;
+        Sprite targetSprite = cut.GetSpriteForSide(isSideA) ?? cut.GetDefaultSprite();
+        if (targetSprite != null) spriteRenderer.sprite = targetSprite;
     }
 
     void OnDestroy() => ReleaseOccupiedSlots();
 
     void OnValidate()
     {
-        if (spriteRenderer == null)
-            spriteRenderer = GetComponent<SpriteRenderer>();
-
+        if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
         itemType = ItemType.Meat;
         ApplyCutVisual();
         ApplyGridRotationPreview();

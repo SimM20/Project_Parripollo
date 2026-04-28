@@ -17,18 +17,23 @@ public class Coal : Item
     public CoalStates state = CoalStates.Apagado;
 
     private readonly List<GridSlot> occupiedSlots = new List<GridSlot>();
-    public void SetInitialPosition(Vector3 pos)
+
+    public float GetCurrentHeatOutput()
     {
-        startPosition = pos;
+        if (state != CoalStates.Encendido) return 0f;
+
+        float lifeFactor = Mathf.Clamp01(1f - (currentBurnTime / maxBurnTime));
+        return 6.5f * lifeFactor;
     }
+
+    public void SetInitialPosition(Vector3 pos) => startPosition = pos;
 
     public override void OnMouseUp()
     {
         isHeldByMouse = false;
         ClearHoverPreview();
 
-        if (TrashZone.TryConsumeAtWorldPoint(transform.position, this))
-            return;
+        if (TrashZone.TryConsumeAtWorldPoint(transform.position, this)) return;
 
         Vector2Int requiredSize = GetRequiredGridSize();
         GridSlot[] allSlots = FindObjectsByType<GridSlot>(FindObjectsSortMode.None);
@@ -36,7 +41,6 @@ public class Coal : Item
         if (GridSlot.TryFindContiguousPlacement(allSlots, requiredSize, transform.position, itemType, gameObject, out List<GridSlot> slotsEncontrados))
         {
             ReleaseOccupiedSlots();
-
             foreach (var s in slotsEncontrados)
             {
                 s.PlaceItem(gameObject);
@@ -44,14 +48,11 @@ public class Coal : Item
             }
 
             currentSlot = slotsEncontrados[0];
-            //transform.position = CalcCenter(slotsEncontrados);
             Vector3 offset = (coalData != null) ? coalData.visualOffset : Vector3.zero;
             transform.position = CalcCenter(slotsEncontrados) + offset;
-
             startPosition = transform.position;
             return;
         }
-
         transform.position = startPosition;
     }
 
@@ -74,7 +75,6 @@ public class Coal : Item
             SetHoverPreview(hoveredSlot, false);
             return;
         }
-
         ClearHoverPreview();
     }
 
@@ -87,26 +87,18 @@ public class Coal : Item
 
     public void Burn()
     {
-        if (state == CoalStates.Ceniza)
-            return;
-
-        if (state == CoalStates.Apagado)
-            state = CoalStates.Encendido;
+        if (state == CoalStates.Ceniza) return;
+        if (state == CoalStates.Apagado) state = CoalStates.Encendido;
 
         currentBurnTime += Time.deltaTime;
-
-        if (currentBurnTime >= maxBurnTime)
-            state = CoalStates.Ceniza;
+        if (currentBurnTime >= maxBurnTime) state = CoalStates.Ceniza;
     }
 
     public void SetVisualVisibility(bool isVisible)
     {
-        if (spriteRenderer != null)
-            spriteRenderer.enabled = isVisible;
-
+        if (spriteRenderer != null) spriteRenderer.enabled = isVisible;
         Collider2D col = GetComponent<Collider2D>();
-        if (col != null)
-            col.enabled = isVisible;
+        if (col != null) col.enabled = isVisible;
     }
 
     public void RegisterOccupiedSlot(GridSlot slot)
@@ -121,26 +113,19 @@ public class Coal : Item
         for (int i = occupiedSlots.Count - 1; i >= 0; i--)
         {
             GridSlot slot = occupiedSlots[i];
-            if (slot != null && slot.currentItem == gameObject)
-                slot.ClearSlot();
+            if (slot != null) slot.RemoveCoal(this);
         }
-
         occupiedSlots.Clear();
         currentSlot = null;
     }
 
-    private Vector2Int GetRequiredGridSize()
-    {
-        return Vector2Int.one;
-    }
+    private Vector2Int GetRequiredGridSize() => Vector2Int.one;
 
     void OnDestroy() => ReleaseOccupiedSlots();
 
     void OnValidate()
     {
-        if (spriteRenderer == null)
-            spriteRenderer = GetComponent<SpriteRenderer>();
-
+        if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
         itemType = ItemType.Coal;
     }
 }

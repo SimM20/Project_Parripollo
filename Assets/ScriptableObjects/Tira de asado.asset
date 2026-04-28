@@ -18,8 +18,8 @@ MonoBehaviour:
   _visualOffset: {x: 0, y: -0.5, z: 0}
   meatSpriteA: {fileID: -6260590175029239564, guid: f02800066ac8bcd4d9b406c8166f17a9, type: 3}
   meatSpriteB: {fileID: -6260590175029239564, guid: f02800066ac8bcd4d9b406c8166f17a9, type: 3}
-  timeHeatA: 10
-  timeHeatB: 10
+  timeHeatA: 200
+  timeHeatB: 150
   grillSpace: {x: 2, y: 2}
   servingMode: 0
   requiredBread: {fileID: 0}

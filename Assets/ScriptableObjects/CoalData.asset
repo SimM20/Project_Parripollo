@@ -18,5 +18,5 @@ MonoBehaviour:
   _coalPrefab: {fileID: 2370080711425213798, guid: 396b785bdd8c93b4e96d7f0861c952c6, type: 3}
   _coalSprite: {fileID: 7258142702659648963, guid: f1d81d12e560f384891a5dde81a5b9ad, type: 3}
   _visualOffset: {x: 0, y: -0.3, z: 0}
-  _maxBurnTime: 60
-  _heatPower: 1.5
+  _maxBurnTime: 100
+  _heatPower: 2
