@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine;
 
 public class GrillSystem : MonoBehaviour
@@ -9,6 +8,69 @@ public class GrillSystem : MonoBehaviour
     public GameObject meatPrefab;
     public GameObject coalPrefab;
     [Min(0.05f)] public float slotDropRadius = 0.8f;
+
+    void Update() => UpdateHeatPropagation();
+
+    private void Awake()
+    {
+        List<float> distinctX = new List<float>();
+        List<float> distinctY = new List<float>();
+
+        foreach (var s in slots)
+        {
+            if (s == null) continue;
+            float px = s.transform.position.x;
+            float py = s.transform.position.y;
+
+            bool foundX = false;
+            foreach (float x in distinctX) if (Mathf.Abs(x - px) < 0.1f) foundX = true;
+            if (!foundX) distinctX.Add(px);
+
+            bool foundY = false;
+            foreach (float y in distinctY) if (Mathf.Abs(y - py) < 0.1f) foundY = true;
+            if (!foundY) distinctY.Add(py);
+        }
+
+        distinctX.Sort();
+        distinctY.Sort();
+        distinctY.Reverse();
+
+        foreach (var s in slots)
+        {
+            int x = distinctX.FindIndex(val => Mathf.Abs(val - s.transform.position.x) < 0.1f);
+            int y = distinctY.FindIndex(val => Mathf.Abs(val - s.transform.position.y) < 0.1f);
+            s.SetGridPos(x, y);
+        }
+    }
+
+    private void UpdateHeatPropagation()
+    {
+        foreach (var slot in slots) slot.ResetReceivedHeat();
+
+        foreach (var source in slots)
+        {
+            if (source == null || source.internalHeat <= 0) continue;
+
+            foreach (var target in slots)
+            {
+                if (target == null || source == target) continue;
+
+                int diffX = Mathf.Abs(source.gridX - target.gridX);
+                int diffY = Mathf.Abs(source.gridY - target.gridY);
+
+                if (diffX <= 1 && diffY <= 1)
+                {
+                    float factor = (diffX == 0 || diffY == 0) ? 0.35f : 0.20f;
+                    target.AddExternalHeat(source.internalHeat * factor);
+                }
+                else if (diffX <= 1 && source.gridY > target.gridY && diffY <= 3)
+                {
+                    float verticalFactor = 0.4f / diffY;
+                    target.AddExternalHeat(source.internalHeat * verticalFactor);
+                }
+            }
+        }
+    }
 
     public bool SpawnMeat(MeatCutSO cut, bool rotateFootprint = false)
     {
@@ -56,7 +118,6 @@ public class GrillSystem : MonoBehaviour
             coal.RegisterOccupiedSlot(slot);
         }
 
-        //coal.transform.position = GetCenter(placementSlots);
         Vector3 offset = (coalData != null) ? coalData.visualOffset : Vector3.zero;
         coal.transform.position = GetCenter(placementSlots) + offset;
 
@@ -68,15 +129,9 @@ public class GrillSystem : MonoBehaviour
     {
         spawnedMeat = null;
 
-        if (cut == null)
+        if (cut == null || meatPrefab == null)
         {
-            Debug.LogWarning("Intentaste spawnear una carne sin corte asignado");
-            return false;
-        }
-
-        if (meatPrefab == null)
-        {
-            Debug.LogWarning("No hay meatPrefab asignado en GrillSystem");
+            Debug.LogWarning("Falta cut o meatPrefab");
             return false;
         }
 
@@ -84,7 +139,6 @@ public class GrillSystem : MonoBehaviour
         Meat meat = obj.GetComponent<Meat>();
         if (meat == null)
         {
-            Debug.LogWarning("El prefab de carne no tiene componente Meat");
             Destroy(obj);
             return false;
         }
@@ -98,7 +152,6 @@ public class GrillSystem : MonoBehaviour
 
         if (!GridSlot.TryFindContiguousPlacement(slots, requiredSize, worldPoint, ItemType.Meat, meat.gameObject, out List<GridSlot> placementSlots))
         {
-            Debug.Log("No hay espacio en la parrilla para el tamano requerido");
             Destroy(obj);
             return false;
         }
@@ -106,7 +159,6 @@ public class GrillSystem : MonoBehaviour
         for (int i = 0; i < placementSlots.Count; i++)
             placementSlots[i].PlaceMeat(meat);
 
-        //meat.transform.position = GetCenter(placementSlots);
         Vector3 rotatedOffset = meat.transform.rotation * cut.visualOffset;
         meat.transform.position = GetCenter(placementSlots) + rotatedOffset;
 
@@ -140,10 +192,22 @@ public class GrillSystem : MonoBehaviour
         for (int i = 0; i < slots.Count; i++)
         {
             GridSlot slot = slots[i];
-            if (slot == null || !slot.IsOccupied) continue;
+            if (slot == null) continue;
 
-            if (slot.currentItem.TryGetComponent<Item>(out Item genericItem))
-                SetItemVisible(genericItem, isVisible);
+            if (slot.currentItem != null)
+            {
+                if (slot.currentItem.TryGetComponent<Item>(out Item genericItem))
+                    SetItemVisible(genericItem, isVisible);
+            }
+
+            if (slot.stackedCoals != null)
+            {
+                foreach (var coal in slot.stackedCoals)
+                {
+                    if (coal != null)
+                        SetItemVisible(coal, isVisible);
+                }
+            }
         }
     }
 
@@ -169,11 +233,9 @@ public class GrillSystem : MonoBehaviour
 
     private Vector3 GetDefaultSpawnPoint()
     {
-        for (int i = 0; i < slots.Count; i++)
-        {
-            GridSlot slot = slots[i];
-            if (slot != null) return slot.transform.position;
-        }
+        if (slots.Count > 0 && slots[0] != null)
+            return slots[0].transform.position;
+
         return transform.position;
     }
 

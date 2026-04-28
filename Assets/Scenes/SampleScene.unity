@@ -1234,6 +1234,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 481966722}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -1347,6 +1350,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 517570508}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -2506,6 +2512,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 740704618}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -3604,6 +3613,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 1259137480}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -3706,6 +3718,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 1277700540}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -3880,6 +3895,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 1372259638}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -4299,6 +4317,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 1549522052}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -4609,6 +4630,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 1640044669}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -4949,6 +4973,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 1835417547}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
@@ -5222,6 +5249,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
   acceptsType: 1
   currentItem: {fileID: 0}
+  stackedCoals: []
+  internalHeat: 0
+  totalHeatReceived: 0
   hoverRenderer: {fileID: 2054708168}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
