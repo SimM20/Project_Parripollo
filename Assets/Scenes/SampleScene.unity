@@ -580,6 +580,10 @@ PrefabInstance:
       propertyPath: m_Color.r
       value: 0.3773585
       objectReference: {fileID: 0}
+    - target: {fileID: 1319637171489288145, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1342272047097483334, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_LocalPosition.y
       value: -0.6
@@ -696,6 +700,22 @@ PrefabInstance:
       propertyPath: m_Color.r
       value: 0.3773585
       objectReference: {fileID: 0}
+    - target: {fileID: 3103000706390814393, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3103000706390814393, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3103000706390814393, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -6.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 3103000706390814393, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -4.16
+      objectReference: {fileID: 0}
     - target: {fileID: 3122301846093482408, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_Color.b
       value: 0.35777858
@@ -780,6 +800,22 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4378830565291748871, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 6642030055559639958, guid: a64dffb07803ae84ba0d38d001652456, type: 3}
+    - target: {fileID: 4378830565291748871, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4378830565291748871, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4378830565291748871, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4463377877671873118, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_Color.b
       value: 0.35777858
@@ -806,6 +842,22 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4706048715542727843, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: acceptsType
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4810406208340906770, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -334556269135917317, guid: fde5545d36b2cef479df6cd6e0fc04f1, type: 3}
+    - target: {fileID: 4810406208340906770, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4810406208340906770, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4810406208340906770, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_Color.r
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4811647673126529563, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -871,6 +923,22 @@ PrefabInstance:
     - target: {fileID: 5305633839432174236, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_LocalPosition.y
       value: -2.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5369471723845531888, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5369471723845531888, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5369471723845531888, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 7.02
+      objectReference: {fileID: 0}
+    - target: {fileID: 5369471723845531888, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -4.06
       objectReference: {fileID: 0}
     - target: {fileID: 5383412028083425934, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_LocalPosition.y
@@ -1240,6 +1308,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 481966722}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &481966722
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -1356,6 +1426,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 517570508}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &517570508
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -2518,6 +2590,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 740704618}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &740704618
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -3276,6 +3350,22 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 0.966
       objectReference: {fileID: 0}
+    - target: {fileID: 2531154112571798982, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2531154112571798982, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2531154112571798982, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2531154112571798982, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.97
+      objectReference: {fileID: 0}
     - target: {fileID: 4055507609820535926, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.01532
@@ -3315,6 +3405,54 @@ PrefabInstance:
     - target: {fileID: 4055507609820535926, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4532055502858321665, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 6642030055559639958, guid: a64dffb07803ae84ba0d38d001652456, type: 3}
+    - target: {fileID: 4532055502858321665, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4532055502858321665, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4532055502858321665, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5295918861069825228, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5295918861069825228, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5295918861069825228, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5295918861069825228, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5517415692532710108, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -369825111732216516, guid: 2e786a0b3f75d50418b3d41f4f0a3c43, type: 3}
+    - target: {fileID: 5517415692532710108, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5517415692532710108, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5517415692532710108, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_Color.r
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6220399290136646811, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
       propertyPath: m_Name
@@ -3627,6 +3765,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 1259137480}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &1259137480
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -3732,6 +3872,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 1277700540}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &1277700540
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -3909,6 +4051,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 1372259638}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &1372259638
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -4331,6 +4475,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 1549522052}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &1549522052
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -4433,8 +4579,8 @@ BoxCollider2D:
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
+    pivot: {x: 0.5, y: 0}
+    oldSize: {x: 2, y: 4}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -4463,7 +4609,47 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 78578770399068795, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 5684527882359706339, guid: 37c5d3558e001f342ad81b46c4b78ea3, type: 3}
+    - target: {fileID: 78578770399068795, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_Color.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 78578770399068795, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_Color.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 78578770399068795, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_Color.r
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 78578770399068795, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
       propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3479601023887440867, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3479601023887440867, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3479601023887440867, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -6.51
+      objectReference: {fileID: 0}
+    - target: {fileID: 3479601023887440867, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -4.17
+      objectReference: {fileID: 0}
+    - target: {fileID: 3814520877720512198, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -334556269135917317, guid: fde5545d36b2cef479df6cd6e0fc04f1, type: 3}
+    - target: {fileID: 4089301817683954342, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5557628238307532263, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
@@ -4473,6 +4659,22 @@ PrefabInstance:
     - target: {fileID: 5557628238307532263, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6092785903059638927, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6092785903059638927, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6092785903059638927, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6092785903059638927, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -4
       objectReference: {fileID: 0}
     - target: {fileID: 6290831741835072092, guid: 0790951ecfb0c554d85269a2199b7182, type: 3}
       propertyPath: coolerSystem
@@ -4644,6 +4846,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 1640044669}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &1640044669
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -4987,6 +5191,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 1835417547}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &1835417547
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -5263,6 +5469,8 @@ MonoBehaviour:
   hoverRenderer: {fileID: 2054708168}
   validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
   invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
+  gridX: 0
+  gridY: 0
 --- !u!212 &2054708168
 SpriteRenderer:
   m_ObjectHideFlags: 0
