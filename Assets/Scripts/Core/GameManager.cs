@@ -160,7 +160,7 @@ public class GameManager : MonoBehaviour
     {
         customerSystem.OnNightEnded -= EndNight;
 
-        //TODO: pantalla de finalizacion del juego
+        SceneManagementUtils.LoadSceneByName("EndScene");
     }
 
     private void OnDestroy() => customerSystem.OnNightEnded -= EndNight;

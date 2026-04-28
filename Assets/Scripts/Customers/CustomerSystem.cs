@@ -100,7 +100,7 @@ public class CustomerSystem : MonoBehaviour
 
     IEnumerator SpawnLoop()
     {
-        while (spawnedTonight < maxCustomersPerNight)
+        while (spawnedTonight <= maxCustomersPerNight)
         {
             yield return new WaitForSeconds(spawnIntervalSeconds);
 
