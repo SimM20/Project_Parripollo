@@ -163,5 +163,5 @@ public class GameManager : MonoBehaviour
         //TODO: pantalla de finalizacion del juego
     }
 
-    private void OnDestroy() => customerSystem.OnNightEnded += EndNight;
+    private void OnDestroy() => customerSystem.OnNightEnded -= EndNight;
 }
