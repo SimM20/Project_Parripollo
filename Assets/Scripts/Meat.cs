@@ -76,7 +76,11 @@ public class Meat : Item
             }
 
             currentSlot = slotsEncontrados[0];
-            transform.position = CalcCenter(slotsEncontrados);
+            //transform.position = CalcCenter(slotsEncontrados);
+            Vector3 rawOffset = (cut != null) ? cut.visualOffset : Vector3.zero;
+            Vector3 rotatedOffset = transform.rotation * rawOffset;
+            transform.position = CalcCenter(slotsEncontrados) + rotatedOffset;
+
             return;
         }
 

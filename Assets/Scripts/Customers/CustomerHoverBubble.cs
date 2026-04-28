@@ -7,7 +7,7 @@ public class CustomerHoverBubble : MonoBehaviour
 
     [SerializeField] private SpriteRenderer circleRenderer;
     [SerializeField] private TMP_Text text;
-    [SerializeField] private Vector3 worldOffset = new Vector3(0f, 1.2f, 0f);
+    [SerializeField] private Vector3 worldOffset = new Vector3(0f, 1.2f, -1f);
 
     private Transform followTarget;
 

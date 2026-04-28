@@ -61,7 +61,7 @@ public class GridSlot : MonoBehaviour
             ClearSlot();
 
         currentItem = item;
-        item.transform.position = transform.position;
+        //item.transform.position = transform.position;
 
         if (item.TryGetComponent<Meat>(out Meat meat))
             meat.RegisterOccupiedSlot(this);

@@ -56,7 +56,10 @@ public class GrillSystem : MonoBehaviour
             coal.RegisterOccupiedSlot(slot);
         }
 
-        coal.transform.position = GetCenter(placementSlots);
+        //coal.transform.position = GetCenter(placementSlots);
+        Vector3 offset = (coalData != null) ? coalData.visualOffset : Vector3.zero;
+        coal.transform.position = GetCenter(placementSlots) + offset;
+
         spawnedCoal = coal;
         return true;
     }
@@ -103,7 +106,10 @@ public class GrillSystem : MonoBehaviour
         for (int i = 0; i < placementSlots.Count; i++)
             placementSlots[i].PlaceMeat(meat);
 
-        meat.transform.position = GetCenter(placementSlots);
+        //meat.transform.position = GetCenter(placementSlots);
+        Vector3 rotatedOffset = meat.transform.rotation * cut.visualOffset;
+        meat.transform.position = GetCenter(placementSlots) + rotatedOffset;
+
         spawnedMeat = meat;
         return true;
     }

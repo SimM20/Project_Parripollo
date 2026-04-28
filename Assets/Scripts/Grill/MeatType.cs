@@ -8,6 +8,7 @@ public class MeatCutSO : ItemDataSO
     public float price => basePrice;
 
     [Header("Visual")]
+    [SerializeField] private Vector3 _visualOffset;
     [FormerlySerializedAs("cutSprite")]
     [SerializeField] public Sprite meatSpriteA;
     [SerializeField] public Sprite meatSpriteB;
@@ -51,6 +52,8 @@ public class MeatCutSO : ItemDataSO
 
         return 1f;
     }
+
+    public Vector3 visualOffset => _visualOffset;
 
     public Sprite cutSprite => GetDefaultSprite();
     public float cookTimePerSide => GetHeatTimeForSide(true);

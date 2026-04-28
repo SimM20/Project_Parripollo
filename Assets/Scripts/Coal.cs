@@ -44,7 +44,9 @@ public class Coal : Item
             }
 
             currentSlot = slotsEncontrados[0];
-            transform.position = CalcCenter(slotsEncontrados);
+            //transform.position = CalcCenter(slotsEncontrados);
+            Vector3 offset = (coalData != null) ? coalData.visualOffset : Vector3.zero;
+            transform.position = CalcCenter(slotsEncontrados) + offset;
 
             startPosition = transform.position;
             return;

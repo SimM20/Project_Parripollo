@@ -12,10 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1405610c36759ba479e08c316fd0cc0e, type: 3}
   m_Name: Tira de asado
   m_EditorClassIdentifier: Assembly-CSharp::MeatCutSO
-  cutName: Tira de asado
-  price: 0
-  meatSpriteA: {fileID: 21300000, guid: 41a6c8f48b0138843991a82dec6fe8c9, type: 3}
-  meatSpriteB: {fileID: 0}
+  itemName: Tira de asado
+  basePrice: 0
+  category: 0
+  _visualOffset: {x: 0, y: -0.5, z: 0}
+  meatSpriteA: {fileID: -6260590175029239564, guid: f02800066ac8bcd4d9b406c8166f17a9, type: 3}
+  meatSpriteB: {fileID: -6260590175029239564, guid: f02800066ac8bcd4d9b406c8166f17a9, type: 3}
   timeHeatA: 10
   timeHeatB: 10
   grillSpace: {x: 2, y: 2}
