@@ -7,6 +7,9 @@ public class BuildFoodDropZone : MonoBehaviour
     [SerializeField] private MeatTransferBuffer meatTransferBuffer;
     [SerializeField] private Collider2D zoneCollider;
 
+    /// <summary>Exposes the station so external scripts (e.g. ToppingDraggable) can register items.</summary>
+    public BuildStationSystem BuildStation => buildStationSystem;
+
     [Header("Plate Visuals")]
     [SerializeField] private float plateVisualWorldSpacing = 1.2f;
     [SerializeField] private Vector3 plateVisualDirection = Vector3.right;
@@ -124,7 +127,7 @@ public class BuildFoodDropZone : MonoBehaviour
         }
     }
 
-    private void SpawnPlateVisual(Sprite sprite)
+    public void SpawnPlateVisual(Sprite sprite)
     {
         if (sprite == null)
             return;
