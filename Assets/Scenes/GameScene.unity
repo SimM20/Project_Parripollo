@@ -1174,7 +1174,7 @@ Transform:
   m_GameObject: {fileID: 355625163}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -3.1, z: 0}
+  m_LocalPosition: {x: 0, y: 2.58, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1213,6 +1213,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0fb06a1292a6e5a45933d8e38a49cabc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
+--- !u!1 &404794323
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 404794324}
+  m_Layer: 0
+  m_Name: CriollaSplatterSource
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &404794324
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 404794323}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 6.68, y: -0.99, z: 0}
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2072061848}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &443369538 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8586394087187388182, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -2494,6 +2525,18 @@ MonoBehaviour:
   sauceWidth: 0.2
   sauceLength: 2
   pourOrigin: {fileID: 355625164}
+  streamSegments: 10
+  streamChaseSpeed: 12
+  wobbleAmplitude: 0.04
+  wobbleSpeed: 4
+  streamGrowSpeed: 3
+  splatterInterval: 0.05
+  splatterSize: 0.1
+  splatterSizeVariation: 0.1
+  splatterSpread: 0.3
+  splatterSprite: {fileID: 0}
+  splatterSortingOrder: 5500
+  splatterParent: {fileID: 1865235213}
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
 --- !u!114 &732859051 stripped
 MonoBehaviour:
@@ -4357,7 +4400,7 @@ Transform:
   m_GameObject: {fileID: 1533875614}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.04, z: 0}
+  m_LocalPosition: {x: 0, y: 3.53, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4395,7 +4438,7 @@ BoxCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: -0.00000011920929, y: 0.16994941}
+  m_Offset: {x: 0, y: -1.0429761}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -4406,7 +4449,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 4.4961023, y: 2.2624812}
+  m_Size: {x: 4.4961023, y: 2.219922}
   m_EdgeRadius: 0
 --- !u!114 &1546730782 stripped
 MonoBehaviour:
@@ -5104,7 +5147,7 @@ Transform:
   m_GameObject: {fileID: 1826849857}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -2.46, z: 0}
+  m_LocalPosition: {x: 0, y: 2.06, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5318,11 +5361,54 @@ MonoBehaviour:
   toppingData: {fileID: 11400000, guid: c25de4b6c1ebde54ea0a09036a8f38ec, type: 2}
   rotationZone: {fileID: 1533875616}
   rotationSpeed: 360
-  sauceColor: {r: 0.18, g: 0.54, b: 0.14, a: 1}
+  sauceColor: {r: 0.5411765, g: 0.16202848, b: 0.14117648, a: 1}
   sauceWidth: 0.2
   sauceLength: 2
   pourOrigin: {fileID: 1826849858}
+  streamSegments: 10
+  streamChaseSpeed: 12
+  wobbleAmplitude: 0.04
+  wobbleSpeed: 4
+  streamGrowSpeed: 3
+  splatterInterval: 0.05
+  splatterSize: 0.1
+  splatterSizeVariation: 0.1
+  splatterSpread: 0.2
+  splatterSprite: {fileID: 0}
+  splatterSortingOrder: 5500
+  splatterParent: {fileID: 404794324}
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
+--- !u!1 &1865235212
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1865235213}
+  m_Layer: 0
+  m_Name: ChimichurriSplatterSource
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1865235213
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865235212}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 6.68, y: -0.99, z: 0}
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2072061848}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1918444612 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
@@ -5547,7 +5633,9 @@ Transform:
   - {fileID: 938380004}
   - {fileID: 170925200}
   - {fileID: 1858535411}
+  - {fileID: 404794324}
   - {fileID: 681479457}
+  - {fileID: 1865235213}
   m_Father: {fileID: 1064083089}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2081099980

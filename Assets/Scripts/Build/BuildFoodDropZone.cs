@@ -7,7 +7,6 @@ public class BuildFoodDropZone : MonoBehaviour
     [SerializeField] private MeatTransferBuffer meatTransferBuffer;
     [SerializeField] private Collider2D zoneCollider;
 
-    /// <summary>Exposes the station so external scripts (e.g. ToppingDraggable) can register items.</summary>
     public BuildStationSystem BuildStation => buildStationSystem;
 
     [Header("Plate Visuals")]

@@ -77,6 +77,7 @@ public class GameManager : MonoBehaviour
                 ClearBuildAssembly();
                 meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
                 BuildFoodDropZone.ClearActivePlateVisuals();
+                ToppingDraggable.ClearAllSplatters();
                 Debug.Log("[Build] Plato limpiado.");
             }
 
@@ -152,6 +153,7 @@ public class GameManager : MonoBehaviour
         ClearBuildAssembly();
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
+        ToppingDraggable.ClearAllSplatters();
         customerSystem.CompleteCustomer(customer);
         Debug.Log("✔ Pedido entregado desde Build");
     }

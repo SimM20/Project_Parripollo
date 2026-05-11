@@ -1,23 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Generic Papa's Freezeria-style sauce/topping behaviour.
-///
-/// Flow:
-/// 1. Player clicks and holds → the topping follows the mouse.
-/// 2. While inside the serialized rotationZone, the container rotates toward 180°.
-/// 3. When fully inverted (180°), a sauce "thread" (LineRenderer) appears and
-///    falls from pourOrigin downward, following the container freely.
-/// 4. On mouse release the topping is registered in BuildStationSystem,
-///    the visual is spawned on the plate, and the container returns home.
-///
-/// The script is generic: assign any ToppingSO (Chimichurri, Salsa Criolla, etc.)
-/// and configure color / width per instance.
-/// </summary>
 public class ToppingDraggable : MonoBehaviour
 {
-    // ── Inspector ────────────────────────────────────────────────────────────
-
     [Header("Food Data")]
     [Tooltip("The ToppingSO this container represents (Chimichurri, Salsa Criolla, etc.).")]
     [SerializeField] private ToppingSO toppingData;
@@ -32,9 +17,9 @@ public class ToppingDraggable : MonoBehaviour
 
     [Header("Pour Visual")]
     [Tooltip("Color of the sauce thread. Used for the LineRenderer.")]
-    [SerializeField] private Color sauceColor = new Color(0.18f, 0.54f, 0.14f, 1f); // chimichurri green
+    [SerializeField] private Color sauceColor = new Color(0.18f, 0.54f, 0.14f, 1f);
 
-    [Tooltip("Width of the sauce thread in world units.")]
+    [Tooltip("Width of the sauce thread at the top (pour origin).")]
     [SerializeField] private float sauceWidth = 0.06f;
 
     [Tooltip("Maximum length of the sauce thread downward from the pour origin.")]
@@ -44,11 +29,48 @@ public class ToppingDraggable : MonoBehaviour
              "If null, defaults to this transform's position.")]
     [SerializeField] private Transform pourOrigin;
 
+    [Header("Wobbly Stream")]
+    [Tooltip("Number of points in the sauce stream. More = smoother curve.")]
+    [SerializeField] private int streamSegments = 10;
+
+    [Tooltip("How fast each point chases the one above it. Lower = more delay/trailing.")]
+    [SerializeField] private float streamChaseSpeed = 12f;
+
+    [Tooltip("Horizontal wobble intensity from Perlin noise.")]
+    [SerializeField] private float wobbleAmplitude = 0.04f;
+
+    [Tooltip("Speed of the Perlin noise scroll. Higher = faster wobble.")]
+    [SerializeField] private float wobbleSpeed = 4f;
+
+    [Tooltip("How fast the stream grows to full length when pouring starts.")]
+    [SerializeField] private float streamGrowSpeed = 3f;
+
+    [Header("Sauce Splatters")]
+    [Tooltip("Seconds between each splatter spawn. Lower = denser sauce.")]
+    [SerializeField] private float splatterInterval = 0.05f;
+
+    [Tooltip("Base size of each splatter in world units.")]
+    [SerializeField] private float splatterSize = 0.15f;
+
+    [Tooltip("± random variation added to the base size.")]
+    [SerializeField] private float splatterSizeVariation = 0.05f;
+
+    [Tooltip("± horizontal spread from the impact point.")]
+    [SerializeField] private float splatterSpread = 0.1f;
+
+    [Tooltip("Optional custom sprite for splatters. If null, a circle is generated.")]
+    [SerializeField] private Sprite splatterSprite;
+
+    [Tooltip("Sorting order for splatters (should be above the food sprite).")]
+    [SerializeField] private int splatterSortingOrder = 5500;
+
+    [Tooltip("Parent transform for splatters (e.g. the food GameObject). " +
+             "If null, splatters are spawned in world space.")]
+    [SerializeField] private Transform splatterParent;
+
     [Header("Fallback Visual")]
     [Tooltip("Color used to render a square placeholder when no sprite is assigned.")]
     [SerializeField] private Color placeholderColor = new Color(0.25f, 0.6f, 0.2f, 1f);
-
-    // ── Runtime state ────────────────────────────────────────────────────────
 
     private Vector3 startPosition;
     private Quaternion startRotation;
@@ -57,11 +79,29 @@ public class ToppingDraggable : MonoBehaviour
 
     private bool isDragging;
     private bool isPouring;
-    private bool toppingRegistered; // prevents double-registering on a single drag
+    private bool toppingRegistered; 
 
     private LineRenderer sauceThread;
+    private Vector3[] streamPoints;
+    private float streamCurrentLength;
+    private float perlinSeed;
 
-    // ── Lifecycle ────────────────────────────────────────────────────────────
+    private float lastSplatterTime;
+    private readonly List<GameObject> activeSplatters = new List<GameObject>();
+    private Sprite generatedCircleSprite;
+
+    private static readonly List<ToppingDraggable> ActiveInstances = new List<ToppingDraggable>();
+
+    void OnEnable()
+    {
+        if (!ActiveInstances.Contains(this))
+            ActiveInstances.Add(this);
+    }
+
+    void OnDestroy()
+    {
+        ActiveInstances.Remove(this);
+    }
 
     void Awake()
     {
@@ -69,8 +109,6 @@ public class ToppingDraggable : MonoBehaviour
         EnsureCollider();
         EnsurePlaceholderVisual();
     }
-
-    // ── Mouse events ─────────────────────────────────────────────────────────
 
     void OnMouseDown()
     {
@@ -92,44 +130,43 @@ public class ToppingDraggable : MonoBehaviour
     {
         if (!isDragging) return;
 
-        // ── Follow mouse ─────────────────────────────────────────────────────
         transform.position = GetMouseWorldPos();
 
-        // ── Rotation ─────────────────────────────────────────────────────────
         bool insideZone = IsInsideRotationZone();
 
         float currentZ = NormalizeAngle(transform.eulerAngles.z);
 
         if (insideZone)
         {
-            // Rotate toward 180°
             float newZ = Mathf.MoveTowardsAngle(currentZ, 180f, rotationSpeed * Time.deltaTime);
             transform.rotation = Quaternion.Euler(0f, 0f, newZ);
         }
         else
         {
-            // Rotate back toward 0°
             float newZ = Mathf.MoveTowardsAngle(currentZ, 0f, rotationSpeed * Time.deltaTime);
             transform.rotation = Quaternion.Euler(0f, 0f, newZ);
 
-            // If we left the zone, stop pouring
             if (isPouring)
                 StopPouring();
         }
 
-        // ── Pour check ───────────────────────────────────────────────────────
         float absAngle = Mathf.Abs(NormalizeAngle(transform.eulerAngles.z));
-        bool fullyInverted = absAngle >= 175f; // small tolerance
+        bool fullyInverted = absAngle >= 175f;
 
         if (fullyInverted && insideZone && !isPouring)
         {
             StartPouring();
         }
 
-        // ── Update sauce thread ──────────────────────────────────────────────
-        if (isPouring && sauceThread != null)
+        if (isPouring)
         {
-            UpdateSauceThread();
+            if (sauceThread != null)
+                UpdateSauceThread();
+            if (Time.time - lastSplatterTime >= splatterInterval)
+            {
+                SpawnSplatter();
+                lastSplatterTime = Time.time;
+            }
         }
     }
 
@@ -138,17 +175,14 @@ public class ToppingDraggable : MonoBehaviour
         if (!isDragging) return;
         isDragging = false;
 
-        // If we were pouring, register the topping
         if (isPouring || toppingRegistered)
         {
-            // Only register once per drag
             if (!toppingRegistered)
                 RegisterTopping();
         }
 
         StopPouring();
 
-        // Restore original state
         transform.position = startPosition;
         transform.rotation = startRotation;
 
@@ -156,14 +190,14 @@ public class ToppingDraggable : MonoBehaviour
             selfRenderer.sortingOrder = startSortingOrder;
     }
 
-    // ── Pour control ─────────────────────────────────────────────────────────
-
     private void StartPouring()
     {
         isPouring = true;
+        lastSplatterTime = Time.time;
+        streamCurrentLength = 0f;
+        perlinSeed = Random.Range(0f, 1000f);
         CreateSauceThread();
 
-        // Register topping immediately when pour starts
         if (!toppingRegistered)
             RegisterTopping();
     }
@@ -179,43 +213,175 @@ public class ToppingDraggable : MonoBehaviour
         }
     }
 
-    // ── Sauce thread (LineRenderer) ──────────────────────────────────────────
-
     private void CreateSauceThread()
     {
         if (sauceThread != null) return;
 
+        int segments = Mathf.Max(streamSegments, 2);
+
         GameObject go = new GameObject("SauceThread");
-        // World space — not parented to the rotating container
         sauceThread = go.AddComponent<LineRenderer>();
 
-        sauceThread.positionCount = 2;
+        sauceThread.positionCount = segments;
         sauceThread.startWidth = sauceWidth;
-        sauceThread.endWidth = sauceWidth * 0.6f; // slightly tapers
+        sauceThread.endWidth = sauceWidth * 0.5f;
 
-        // Use a simple unlit material
         sauceThread.material = new Material(Shader.Find("Sprites/Default"));
         sauceThread.startColor = sauceColor;
-        sauceThread.endColor = sauceColor;
+        sauceThread.endColor = new Color(sauceColor.r, sauceColor.g, sauceColor.b, sauceColor.a * 0.7f);
 
         sauceThread.sortingOrder = 5999;
         sauceThread.useWorldSpace = true;
+        sauceThread.numCapVertices = 4;
+        sauceThread.numCornerVertices = 4;
 
-        UpdateSauceThread();
+        streamPoints = new Vector3[segments];
+        Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
+        for (int i = 0; i < segments; i++)
+            streamPoints[i] = origin;
+
+        sauceThread.SetPositions(streamPoints);
     }
 
     private void UpdateSauceThread()
     {
-        if (sauceThread == null) return;
+        if (sauceThread == null || streamPoints == null) return;
 
+        int segments = streamPoints.Length;
         Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
-        Vector3 end = origin + Vector3.down * sauceLength;
 
-        sauceThread.SetPosition(0, origin);
-        sauceThread.SetPosition(1, end);
+        streamCurrentLength = Mathf.MoveTowards(streamCurrentLength, sauceLength, streamGrowSpeed * Time.deltaTime);
+
+        streamPoints[0] = origin;
+
+        float segmentSpacing = streamCurrentLength / (segments - 1);
+        float time = Time.time;
+
+        for (int i = 1; i < segments; i++)
+        {
+            float t = (float)i / (segments - 1);
+
+            Vector3 idealPos = origin + Vector3.down * (segmentSpacing * i);
+
+            float noiseX = Mathf.PerlinNoise(
+                perlinSeed + i * 0.5f,
+                time * wobbleSpeed + i * 0.3f
+            ) - 0.5f;
+            idealPos.x += noiseX * wobbleAmplitude * (1f + t);
+
+            float chaseMultiplier = 1f - t * 0.5f;
+            float chase = streamChaseSpeed * chaseMultiplier * Time.deltaTime;
+            streamPoints[i] = Vector3.Lerp(streamPoints[i], idealPos, Mathf.Clamp01(chase));
+
+            streamPoints[i].z = origin.z;
+        }
+
+        sauceThread.SetPositions(streamPoints);
     }
 
-    // ── Topping registration ─────────────────────────────────────────────────
+    private void SpawnSplatter()
+    {
+        Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
+        Vector3 impactPoint = origin + Vector3.down * sauceLength;
+        float offsetX = Random.Range(-splatterSpread, splatterSpread);
+        impactPoint.x += offsetX;
+
+        GameObject splatterGo = new GameObject("SauceSplatter");
+        splatterGo.transform.position = impactPoint;
+
+        float size = splatterSize + Random.Range(-splatterSizeVariation, splatterSizeVariation);
+        size = Mathf.Max(size, 0.01f);
+        splatterGo.transform.localScale = new Vector3(size, size, 1f);
+
+        splatterGo.transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+
+        if (splatterParent != null)
+            splatterGo.transform.SetParent(splatterParent, true);
+
+        SpriteRenderer sr = splatterGo.AddComponent<SpriteRenderer>();
+        sr.sprite = GetSplatterSprite();
+        sr.sortingOrder = splatterSortingOrder;
+
+        Color c = sauceColor;
+        c.a = Random.Range(0.7f, 1f);
+        sr.color = c;
+
+        activeSplatters.Add(splatterGo);
+    }
+
+    private Sprite GetSplatterSprite()
+    {
+        if (splatterSprite != null)
+            return splatterSprite;
+
+        if (generatedCircleSprite != null)
+            return generatedCircleSprite;
+
+        generatedCircleSprite = GenerateCircleSprite();
+        return generatedCircleSprite;
+    }
+
+    private Sprite GenerateCircleSprite()
+    {
+        const int size = 32;
+        const float radius = size * 0.5f;
+        const float edgeSoftness = 1.5f;
+
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+
+        Color[] pixels = new Color[size * size];
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - radius + 0.5f;
+                float dy = y - radius + 0.5f;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                float alpha;
+                if (dist <= radius - edgeSoftness)
+                    alpha = 1f;
+                else if (dist >= radius)
+                    alpha = 0f;
+                else
+                    alpha = 1f - (dist - (radius - edgeSoftness)) / edgeSoftness;
+
+                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+            }
+        }
+
+        tex.SetPixels(pixels);
+        tex.Apply();
+
+        return Sprite.Create(
+            tex,
+            new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f),
+            size
+        );
+    }
+
+    public void ClearSplatters()
+    {
+        for (int i = 0; i < activeSplatters.Count; i++)
+        {
+            if (activeSplatters[i] != null)
+                Destroy(activeSplatters[i]);
+        }
+
+        activeSplatters.Clear();
+    }
+
+    public static void ClearAllSplatters()
+    {
+        for (int i = 0; i < ActiveInstances.Count; i++)
+        {
+            if (ActiveInstances[i] != null)
+                ActiveInstances[i].ClearSplatters();
+        }
+    }
 
     private void RegisterTopping()
     {
@@ -228,12 +394,10 @@ public class ToppingDraggable : MonoBehaviour
 
         toppingRegistered = true;
 
-        // Find the active drop zone to register in the build system
         BuildFoodDropZone zone = FindDropZone();
 
         if (zone == null)
         {
-            // Fallback: find BuildStationSystem directly
             BuildStationSystem station = FindFirstObjectByType<BuildStationSystem>();
             if (station != null)
             {
@@ -247,23 +411,15 @@ public class ToppingDraggable : MonoBehaviour
             return;
         }
 
-        // Register through the zone
         zone.BuildStation.AddTopping(toppingData);
         zone.SpawnPlateVisual(selfRenderer != null ? selfRenderer.sprite : null);
         Debug.Log("[ToppingDraggable] Topping registrado: " + toppingData.toppingName);
     }
 
-    /// <summary>
-    /// Finds the first active BuildFoodDropZone. 
-    /// We don't need positional overlap here — the pour already happens in the rotation zone
-    /// which is positioned above the food by design.
-    /// </summary>
     private BuildFoodDropZone FindDropZone()
     {
         return FindFirstObjectByType<BuildFoodDropZone>();
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private bool IsInsideRotationZone()
     {
@@ -283,7 +439,6 @@ public class ToppingDraggable : MonoBehaviour
         return world;
     }
 
-    /// <summary>Normalize angle to [-180, 180] range.</summary>
     private float NormalizeAngle(float angle)
     {
         while (angle > 180f) angle -= 360f;
@@ -291,7 +446,6 @@ public class ToppingDraggable : MonoBehaviour
         return angle;
     }
 
-    /// <summary>Ensures a BoxCollider2D exists for mouse events.</summary>
     private void EnsureCollider()
     {
         BoxCollider2D box = GetComponent<BoxCollider2D>();
@@ -309,10 +463,6 @@ public class ToppingDraggable : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// If no sprite is assigned, creates a simple colored square placeholder
-    /// so the object is visible and clickable in the editor and at runtime.
-    /// </summary>
     private void EnsurePlaceholderVisual()
     {
         if (selfRenderer == null)
@@ -320,7 +470,6 @@ public class ToppingDraggable : MonoBehaviour
 
         if (selfRenderer.sprite == null)
         {
-            // Create a 1x1 white texture to use as placeholder
             Texture2D tex = new Texture2D(4, 4);
             Color[] pixels = new Color[16];
             for (int i = 0; i < pixels.Length; i++)
@@ -343,12 +492,5 @@ public class ToppingDraggable : MonoBehaviour
     {
         if (selfRenderer == null)
             selfRenderer = GetComponent<SpriteRenderer>();
-
-        // Update placeholder color in editor
-        if (selfRenderer != null && selfRenderer.sprite != null)
-        {
-            // Only apply placeholder color if using the generated placeholder
-            // (real sprites keep their original color)
-        }
     }
 }
