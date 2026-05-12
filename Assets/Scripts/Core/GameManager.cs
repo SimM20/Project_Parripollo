@@ -13,6 +13,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private FoodAvailabilityService foodAvailabilityService;
     [SerializeField] private ShopSystem shopSystem;
     [SerializeField] private PlayerWallet wallet;
+    [SerializeField] private GrillLayerToggle grillLayerToggle;
 
     private ViewType lastView;
 
@@ -55,6 +56,9 @@ public class GameManager : MonoBehaviour
 
             if (coalTransferBuffer != null)
                 coalTransferBuffer.SendMessage("MoveToCoalHolder", SendMessageOptions.DontRequireReceiver);
+
+            if (grillLayerToggle != null)
+                grillLayerToggle.RefreshVisibility();
         }
 
         if (currentView == ViewType.Build && lastView != ViewType.Build && meatTransferBuffer != null)

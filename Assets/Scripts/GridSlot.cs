@@ -87,6 +87,8 @@ public class GridSlot : MonoBehaviour
 
     public bool CanPlaceItem(ItemType incomingType, GameObject incomingItem)
     {
+        if (!GrillLayerToggle.IsItemTypeAllowed(incomingType)) return false;
+
         if (incomingType != acceptsType) return false;
         if (incomingType == ItemType.Coal) return stackedCoals.Count < MAX_COAL;
         return currentItem == null || currentItem == incomingItem;
