@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Pan flauta
   m_EditorClassIdentifier: 
   breadName: Pan flauta
-  breadSprite: {fileID: 0}
+  breadSprite: {fileID: 21300000, guid: 18d0e81b1ac20f64689f53ffd261e2b7, type: 3}
   purchasePrice: 100

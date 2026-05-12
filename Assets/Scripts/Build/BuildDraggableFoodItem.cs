@@ -92,9 +92,6 @@ public class BuildDraggableFoodItem : MonoBehaviour
 
         if (selfRenderer != null && selfRenderer.sprite != null)
         {
-            // sprite.bounds.size is in local space (before transform scale),
-            // matching BoxCollider2D.size which is also local space.
-            // Multiply by 1.2 for a forgiving hit area slightly larger than the sprite.
             box.size = (Vector2)selfRenderer.sprite.bounds.size * 1.2f;
             box.offset = selfRenderer.sprite.bounds.center;
         }

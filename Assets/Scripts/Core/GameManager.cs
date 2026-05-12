@@ -71,16 +71,15 @@ public class GameManager : MonoBehaviour
             var customer = customerSystem?.currentCustomer;
             var order = customer?.order;
 
-            // R — clear the plate (reset assembly + plate visuals, holder stays)
             if (Input.GetKeyDown(KeyCode.R))
             {
                 ClearBuildAssembly();
                 meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
                 BuildFoodDropZone.ClearActivePlateVisuals();
+                ToppingDraggable.ClearAllSplatters();
                 Debug.Log("[Build] Plato limpiado.");
             }
 
-            // M — inform missing cut (prefer FoodAvailabilityService; fall back to CoolerSystem)
             if (Input.GetKeyDown(KeyCode.M) && order?.PrimaryCut != null)
             {
                 if (foodAvailabilityService != null)
@@ -152,6 +151,7 @@ public class GameManager : MonoBehaviour
         ClearBuildAssembly();
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
+        ToppingDraggable.ClearAllSplatters();
         customerSystem.CompleteCustomer(customer);
         Debug.Log("✔ Pedido entregado desde Build");
     }
