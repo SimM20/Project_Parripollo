@@ -1979,7 +1979,7 @@ MonoBehaviour:
   cellPrefab: {fileID: 8177203300102262650, guid: 8392abaa99030d94c8c2b2f3d7302f05, type: 3}
   detailPanel: {fileID: 3687209077898641605}
   columns: 3
-  cellSpacing: {x: 4.5, y: 3.5}
+  cellSpacing: {x: 4, y: 3.5}
   originOffset: {x: -6.5, y: 0}
 --- !u!1 &5060686598343542373
 GameObject:
