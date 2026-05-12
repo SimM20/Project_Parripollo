@@ -11,10 +11,26 @@ public class CoolerSystem : MonoBehaviour
     public event Action OnInventoryChanged;
 
     public event Action<ItemDataSO> OnMissingItemRequested;
+    
+    public static CoolerSystem Instance { get; private set; }
+
 
     private readonly Dictionary<ItemDataSO, int> stockByItem = new Dictionary<ItemDataSO, int>();
 
-    void Awake() => BuildInitialStockRuntime();
+    void Awake()
+    {
+        Debug.Log("Awake del CoolerSystem");
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        transform.SetParent(null);
+        DontDestroyOnLoad(gameObject);
+        BuildInitialStockRuntime();
+    }
 
     private void BuildInitialStockRuntime()
     {
@@ -98,6 +114,11 @@ public class CoolerSystem : MonoBehaviour
         }
 
         return sb.ToString();
+    }
+    
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 }
 

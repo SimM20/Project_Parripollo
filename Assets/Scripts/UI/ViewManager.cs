@@ -45,5 +45,6 @@ public class ViewManager : MonoBehaviour
 
         if (buildRoot != null)
             buildRoot.SetActive(view == ViewType.Build);
+        
     }
 }

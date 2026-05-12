@@ -2,5 +2,6 @@ public enum ViewType
 {
     Grill,
     Cooler,
-    Build
+    Build,
+    Shop
 }
