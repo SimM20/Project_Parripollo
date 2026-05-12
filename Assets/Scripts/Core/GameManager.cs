@@ -11,6 +11,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private BuildStationSystem buildStationSystem;
     [SerializeField] private FoodCatalogSO catalog;
     [SerializeField] private FoodAvailabilityService foodAvailabilityService;
+    [SerializeField] private ShopSystem shopSystem;
+    [SerializeField] private PlayerWallet wallet;
 
     private ViewType lastView;
 

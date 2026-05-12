@@ -20,6 +20,9 @@ public class CoalSO : ItemDataSO
     public Vector3 visualOffset => _visualOffset;
     public float maxBurnTime => _maxBurnTime;
     public float heatPower => _heatPower;
+    
+    [Tooltip("Cuántas unidades aporta una bolsa")]
+    public int unitsPerBag = 10;
 
     void OnValidate() => category = ItemType.Coal;
 }
