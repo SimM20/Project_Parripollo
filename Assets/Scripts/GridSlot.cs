@@ -126,7 +126,7 @@ public class GridSlot : MonoBehaviour
         List<GridSlot> validSlots = new List<GridSlot>();
         List<float> allX = new List<float>();
         List<float> allY = new List<float>();
-        foreach (var s in allSlots) { if (s != null) { validSlots.Add(s); allX.Add(s.transform.position.x); allY.Add(s.transform.position.y); } }
+        foreach (var s in allSlots) { if (s != null && s.acceptsType == incomingType) { validSlots.Add(s); allX.Add(s.transform.position.x); allY.Add(s.transform.position.y); } }
         if (validSlots.Count == 0) return false;
         List<float> columns = BuildAxisCenters(allX);
         List<float> rows = BuildAxisCenters(allY);
