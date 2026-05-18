@@ -380,6 +380,7 @@ MonoBehaviour:
   meatIcon: {fileID: 0}
   coalIcon: {fileID: 0}
   startLayer: 0
+  inactiveAlpha: 0.2
 --- !u!1 &67541762
 GameObject:
   m_ObjectHideFlags: 0
@@ -12676,6 +12677,10 @@ PrefabInstance:
       propertyPath: customerSystem
       value: 
       objectReference: {fileID: 1644210326}
+    - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
+      propertyPath: grillLayerToggle
+      value: 
+      objectReference: {fileID: 52804346}
     - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
       propertyPath: buildStationSystem
       value: 
