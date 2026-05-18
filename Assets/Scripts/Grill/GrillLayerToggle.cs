@@ -14,6 +14,7 @@ public class GrillLayerToggle : MonoBehaviour
 
     [Header("State")]
     [SerializeField] private GrillLayer startLayer = GrillLayer.Meat;
+    [SerializeField] [Range(0f, 1f)] private float inactiveAlpha = 0.3f;
 
     public GrillLayer CurrentLayer { get; private set; }
 
@@ -78,38 +79,48 @@ public class GrillLayerToggle : MonoBehaviour
         }
     }
 
-    private static void SetSlotVisuals(GridSlot slot, bool visible)
+    private void SetSlotVisuals(GridSlot slot, bool active)
     {
         SpriteRenderer sr = slot.GetComponent<SpriteRenderer>();
-        if (sr != null) sr.enabled = visible;
+        if (sr != null) SetAlpha(sr, active ? 1f : inactiveAlpha);
 
         Collider2D col = slot.GetComponent<Collider2D>();
-        if (col != null) col.enabled = visible;
+        if (col != null) col.enabled = active;
 
         if (slot.currentItem != null)
-            SetGameObjectVisuals(slot.currentItem, visible);
+            SetGameObjectVisuals(slot.currentItem, active);
 
         if (slot.stackedCoals != null)
         {
             foreach (var coal in slot.stackedCoals)
             {
                 if (coal != null)
-                    SetGameObjectVisuals(coal.gameObject, visible);
+                    SetGameObjectVisuals(coal.gameObject, active);
             }
         }
     }
 
-    private static void SetGameObjectVisuals(GameObject obj, bool visible)
+    private void SetGameObjectVisuals(GameObject obj, bool active)
     {
         if (obj == null) return;
 
         SpriteRenderer[] renderers = obj.GetComponentsInChildren<SpriteRenderer>(true);
         for (int i = 0; i < renderers.Length; i++)
-            renderers[i].enabled = visible;
+        {
+            renderers[i].enabled = true;
+            SetAlpha(renderers[i], active ? 1f : inactiveAlpha);
+        }
 
         Collider2D[] colliders = obj.GetComponentsInChildren<Collider2D>(true);
         for (int i = 0; i < colliders.Length; i++)
-            colliders[i].enabled = visible;
+            colliders[i].enabled = active;
+    }
+
+    private static void SetAlpha(SpriteRenderer sr, float alpha)
+    {
+        Color c = sr.color;
+        c.a = alpha;
+        sr.color = c;
     }
 
     private void UpdateButtonIcon()
