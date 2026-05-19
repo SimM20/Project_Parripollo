@@ -11,6 +11,10 @@ public class Meat : Item
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
 
+    [Header("Sound")]
+    [SerializeField] protected AudioClip hardSound;
+    [SerializeField] protected AudioClip softSound;
+
     [Header("Grid Rotation")]
     [SerializeField] private bool rotatePreviewVisual = true;
     [SerializeField] private float rotatedPreviewAngleZ = 90f;
@@ -48,7 +52,7 @@ public class Meat : Item
         ApplyCutVisual();
     }
 
-    public void Cook(float heatFromSlot)
+    public virtual void Cook(float heatFromSlot)
     {
         if (lastCookFrame == Time.frameCount)
             return;

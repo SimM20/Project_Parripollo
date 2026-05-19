@@ -160,6 +160,7 @@ public class GameManager : MonoBehaviour
         ToppingDraggable.ClearAllSplatters();
         customerSystem.CompleteCustomer(customer);
         Debug.Log("✔ Pedido entregado desde Build");
+        AudioManager.Instance.PlayTaskCompleted();
     }
 
     private void EndNight()
