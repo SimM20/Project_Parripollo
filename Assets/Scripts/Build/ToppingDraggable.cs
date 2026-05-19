@@ -72,6 +72,28 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Color used to render a square placeholder when no sprite is assigned.")]
     [SerializeField] private Color placeholderColor = new Color(0.25f, 0.6f, 0.2f, 1f);
 
+    [Header("Sauce Bar")]
+    [Tooltip("Height of the sauce bar in world units.")]
+    [SerializeField] private float barHeight = 0.08f;
+
+    [Tooltip("Width of the sauce bar in world units.")]
+    [SerializeField] private float barWidth = 0.6f;
+
+    [Tooltip("Vertical offset of the bar above the container's center.")]
+    [SerializeField] private float barOffsetY = 0.55f;
+
+    [Tooltip("Background color of the sauce bar.")]
+    [SerializeField] private Color barBackgroundColor = new Color(0.15f, 0.15f, 0.15f, 0.85f);
+
+    [Tooltip("Color of the sauce bar when full.")]
+    [SerializeField] private Color barFullColor = new Color(0.2f, 0.85f, 0.3f, 1f);
+
+    [Tooltip("Color of the sauce bar when empty.")]
+    [SerializeField] private Color barEmptyColor = new Color(0.9f, 0.2f, 0.15f, 1f);
+
+    [Tooltip("Sorting order for the sauce bar visuals.")]
+    [SerializeField] private int barSortingOrder = 6100;
+
     private Vector3 startPosition;
     private Quaternion startRotation;
     private int startSortingOrder;
@@ -89,6 +111,14 @@ public class ToppingDraggable : MonoBehaviour
     private float lastSplatterTime;
     private readonly List<GameObject> activeSplatters = new List<GameObject>();
     private Sprite generatedCircleSprite;
+
+    private float currentSauceAmount;
+    private bool sauceEmpty;
+
+    private GameObject barRoot;
+    private SpriteRenderer barBackground;
+    private SpriteRenderer barFill;
+    private static Sprite cachedPixelSprite;
 
     private static readonly List<ToppingDraggable> ActiveInstances = new List<ToppingDraggable>();
 
@@ -108,6 +138,8 @@ public class ToppingDraggable : MonoBehaviour
         selfRenderer = GetComponent<SpriteRenderer>();
         EnsureCollider();
         EnsurePlaceholderVisual();
+        InitializeSauceAmount();
+        CreateSauceBar();
     }
 
     void OnMouseDown()
@@ -153,13 +185,15 @@ public class ToppingDraggable : MonoBehaviour
         float absAngle = Mathf.Abs(NormalizeAngle(transform.eulerAngles.z));
         bool fullyInverted = absAngle >= 175f;
 
-        if (fullyInverted && insideZone && !isPouring)
+        if (fullyInverted && insideZone && !isPouring && !sauceEmpty)
         {
             StartPouring();
         }
 
         if (isPouring)
         {
+            DrainSauce();
+
             if (sauceThread != null)
                 UpdateSauceThread();
             if (Time.time - lastSplatterTime >= splatterInterval)
@@ -168,6 +202,8 @@ public class ToppingDraggable : MonoBehaviour
                 lastSplatterTime = Time.time;
             }
         }
+
+        UpdateSauceBar();
     }
 
     void OnMouseUp()
@@ -211,6 +247,117 @@ public class ToppingDraggable : MonoBehaviour
             Destroy(sauceThread.gameObject);
             sauceThread = null;
         }
+    }
+
+    private void InitializeSauceAmount()
+    {
+        float max = (toppingData != null) ? toppingData.maxSauceAmount : 100f;
+        currentSauceAmount = max;
+        sauceEmpty = false;
+    }
+
+    private void DrainSauce()
+    {
+        if (sauceEmpty) return;
+
+        float rate = (toppingData != null) ? toppingData.sauceDrainRate : 10f;
+        currentSauceAmount -= rate * Time.deltaTime;
+
+        if (currentSauceAmount <= 0f)
+        {
+            currentSauceAmount = 0f;
+            sauceEmpty = true;
+            StopPouring();
+        }
+    }
+
+    public float GetSauceRatio()
+    {
+        float max = (toppingData != null) ? toppingData.maxSauceAmount : 100f;
+        if (max <= 0f) return 0f;
+        return Mathf.Clamp01(currentSauceAmount / max);
+    }
+
+    public void RefillSauce()
+    {
+        float max = (toppingData != null) ? toppingData.maxSauceAmount : 100f;
+        currentSauceAmount = max;
+        sauceEmpty = false;
+    }
+
+    private void CreateSauceBar()
+    {
+        barRoot = new GameObject("SauceBar");
+        barRoot.transform.SetParent(transform, false);
+        barRoot.transform.localPosition = new Vector3(0f, barOffsetY, 0f);
+        barRoot.transform.localRotation = Quaternion.identity;
+        barRoot.transform.localScale = Vector3.one;
+
+        Sprite pixel = GetPixelSprite();
+
+        GameObject bgGo = new GameObject("BarBG");
+        bgGo.transform.SetParent(barRoot.transform, false);
+        bgGo.transform.localPosition = Vector3.zero;
+        bgGo.transform.localScale = new Vector3(barWidth, barHeight, 1f);
+        barBackground = bgGo.AddComponent<SpriteRenderer>();
+        barBackground.sprite = pixel;
+        barBackground.color = barBackgroundColor;
+        barBackground.sortingOrder = barSortingOrder;
+
+        GameObject fillGo = new GameObject("BarFill");
+        fillGo.transform.SetParent(barRoot.transform, false);
+        fillGo.transform.localPosition = Vector3.zero;
+        fillGo.transform.localScale = new Vector3(barWidth, barHeight, 1f);
+        barFill = fillGo.AddComponent<SpriteRenderer>();
+        barFill.sprite = pixel;
+        barFill.color = barFullColor;
+        barFill.sortingOrder = barSortingOrder + 1;
+
+        barRoot.SetActive(false);
+    }
+
+    private void UpdateSauceBar()
+    {
+        if (barRoot == null || barFill == null) return;
+
+        bool shouldShow = isDragging;
+        if (barRoot.activeSelf != shouldShow)
+            barRoot.SetActive(shouldShow);
+
+        if (!shouldShow) return;
+
+        float ratio = GetSauceRatio();
+
+        barRoot.transform.rotation = Quaternion.identity;
+        barRoot.transform.position = transform.position + new Vector3(0f, barOffsetY, 0f);
+
+        Vector3 fillScale = barFill.transform.localScale;
+        fillScale.x = barWidth * ratio;
+        barFill.transform.localScale = fillScale;
+
+        float fillOffsetX = -(barWidth - barWidth * ratio) * 0.5f;
+        barFill.transform.localPosition = new Vector3(fillOffsetX, 0f, 0f);
+
+        barFill.color = Color.Lerp(barEmptyColor, barFullColor, ratio);
+    }
+
+    private static Sprite GetPixelSprite()
+    {
+        if (cachedPixelSprite != null) return cachedPixelSprite;
+
+        Texture2D tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        tex.SetPixel(0, 0, Color.white);
+        tex.Apply();
+        tex.filterMode = FilterMode.Point;
+
+        cachedPixelSprite = Sprite.Create(
+            tex,
+            new Rect(0, 0, 1, 1),
+            new Vector2(0.5f, 0.5f),
+            1f
+        );
+
+        return cachedPixelSprite;
     }
 
     private void CreateSauceThread()
