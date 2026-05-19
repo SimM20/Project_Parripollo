@@ -1123,7 +1123,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8709902948010522829, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8794960701782342635, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2597,6 +2597,13 @@ MonoBehaviour:
   splatterSortingOrder: 5500
   splatterParent: {fileID: 1865235213}
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
+  barHeight: 0.5
+  barWidth: 5
+  barOffsetY: 1
+  barBackgroundColor: {r: 0.15, g: 0.15, b: 0.15, a: 0.85}
+  barFullColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
+  barEmptyColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
+  barSortingOrder: 6100
 --- !u!114 &732859051 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8902657946571652277, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -3525,7 +3532,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6220399290136646811, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7525696739068074139, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
       propertyPath: m_LocalPosition.x
@@ -5483,6 +5490,13 @@ MonoBehaviour:
   splatterSortingOrder: 5500
   splatterParent: {fileID: 404794324}
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
+  barHeight: 0.5
+  barWidth: 5
+  barOffsetY: 1
+  barBackgroundColor: {r: 0.15, g: 0.15, b: 0.15, a: 0.85}
+  barFullColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
+  barEmptyColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
+  barSortingOrder: 6100
 --- !u!1 &1865235212
 GameObject:
   m_ObjectHideFlags: 0
@@ -5536,6 +5550,7 @@ MonoBehaviour:
   meatIcon: {fileID: 0}
   coalIcon: {fileID: 0}
   startLayer: 0
+  inactiveAlpha: 0.3
 --- !u!61 &1904390519
 BoxCollider2D:
   m_ObjectHideFlags: 0
