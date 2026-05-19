@@ -1,8 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// ScriptableObject that represents a topping (condiment) added to a dish.
-/// </summary>
 [CreateAssetMenu(fileName = "Topping", menuName = "Asado/Topping")]
 public class ToppingSO : ScriptableObject
 {
@@ -12,7 +9,14 @@ public class ToppingSO : ScriptableObject
     [Header("Visual")]
     public Sprite toppingSprite;
 
+    [Header("Sauce Capacity")]
+    [Tooltip("Total amount of sauce this container holds (arbitrary units).")]
+    public float maxSauceAmount = 100f;
+
+    [Tooltip("Amount of sauce consumed per second while pouring.")]
+    public float sauceDrainRate = 10f;
+
     [Header("Economy")]
     [Tooltip("Purchase cost placeholder - configure in Inspector.")]
-    public float purchasePrice; // [PLACEHOLDER]
+    public float purchasePrice;
 }
