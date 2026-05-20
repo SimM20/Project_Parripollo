@@ -5,10 +5,13 @@ public class MeatInstance : Meat
 {
     private AudioSource audioSource;
 
-    private void Start()
+    private void Awake()
     {
         audioSource = GetComponent<AudioSource>();
+    }
 
+    private void Start()
+    {
         audioSource.playOnAwake = false;
         audioSource.loop = true;
     }
