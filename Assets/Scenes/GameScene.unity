@@ -2413,6 +2413,10 @@ PrefabInstance:
       value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: maxCustomersPerNight
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customerPrefabs.Array.size
       value: 4
       objectReference: {fileID: 0}
@@ -3285,6 +3289,50 @@ MonoBehaviour:
   barFullColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
   barEmptyColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
   barSortingOrder: 6100
+--- !u!1 &697905637
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 697905638}
+  - component: {fileID: 697905639}
+  m_Layer: 0
+  m_Name: ToppingStock
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &697905638
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 697905637}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &697905639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 697905637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c8d267ace0679f4ca99385deb88aedc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &732859051 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8902657946571652277, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -5573,6 +5621,50 @@ MonoBehaviour:
   barFullColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
   barEmptyColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
   barSortingOrder: 6100
+--- !u!1 &1862173983
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1862173984}
+  - component: {fileID: 1862173985}
+  m_Layer: 0
+  m_Name: CoalConsumptionTracker
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1862173984
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1862173983}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1862173985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1862173983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bcda3f1737e7f9499df733de17adcef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1865235212
 GameObject:
   m_ObjectHideFlags: 0
@@ -5993,3 +6085,5 @@ SceneRoots:
   - {fileID: 1323139813}
   - {fileID: 52085495}
   - {fileID: 1026675840}
+  - {fileID: 1862173984}
+  - {fileID: 697905638}

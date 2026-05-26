@@ -23,6 +23,38 @@ public class ShopItemCell2D : MonoBehaviour
     private ShopGrid2D grid;
 
     public ItemDataSO Item => item;
+    
+    private ToppingSO toppingItem;   // null si es item normal
+    public ToppingSO ToppingItem => toppingItem;
+
+    public void Bind(ToppingSO topping, ShopGrid2D grid, ShopSystem shop)
+    {
+        this.item = null;
+        this.toppingItem = topping;
+        this.grid = grid;
+
+        if (iconRenderer != null)
+            iconRenderer.sprite = topping != null ? topping.toppingSprite : null;
+
+        if (itemText != null)
+            itemText.text = topping != null ? topping.toppingName : "";
+
+        int currentStock = (topping != null && shop.Toppings != null)
+            ? shop.Toppings.GetCount(topping)
+            : 0;
+        if (stockText != null)
+            stockText.text = currentStock.ToString();
+
+        bool purchasable = shop.IsToppingPurchasable(topping);
+        if (iconRenderer != null)
+            iconRenderer.color = purchasable ? normalIconColor : lockedIconColor;
+        if (lockedOverlay != null)
+            lockedOverlay.enabled = !purchasable;
+
+        int cartQty = shop.GetToppingCartQty(topping);
+        if (cartBadgeRoot != null) cartBadgeRoot.SetActive(cartQty > 0);
+        if (cartBadgeText != null) cartBadgeText.text = "x" + cartQty;
+    }
 
     public void Bind(ItemDataSO item, ShopGrid2D grid, ShopSystem shop)
     {
@@ -56,9 +88,11 @@ public class ShopItemCell2D : MonoBehaviour
 
     void OnMouseUpAsButton()
     {
-        if (grid != null && item != null) grid.SelectItem(item);
-    }
+        if (grid == null) return;
 
+        if (toppingItem != null) grid.SelectTopping(toppingItem);
+        else if (item != null) grid.SelectItem(item);
+    }
     private static Sprite ResolveIcon(ItemDataSO item)
     {
         if (item is CoalSO coal) return coal.coalSprite;

@@ -127,8 +127,8 @@ public class ShopGlobalBar2D : MonoBehaviour
 
         if (confirmButton != null && cfg != null)
         {
-            bool canBuy = shop.CartCoalBags() >= cfg.minCoalPurchase
-                          && shop.MoneyAfterPurchase() >= 0f;
+            bool canBuy = shop.MoneyAfterPurchase() >= 0f
+                          && shop.CartTotal() > 0f;          // hay algo en el carrito
             confirmButton.SetInteractable(canBuy);
         }
     }

@@ -7,45 +7,63 @@ public class ShopSystem : MonoBehaviour
     [Header("References")]
     [SerializeField] private ShopConfigSO config;
     [SerializeField] private FoodCatalogSO catalog;
+    
+    // Carrito paralelo para toppings
+    private readonly Dictionary<ToppingSO, int> toppingCart = new Dictionary<ToppingSO, int>();
 
-    private PlayerWallet wallet;
-    private CoolerSystem coolerSystem;
+    public ToppingStock Toppings => ToppingStock.Instance;
     public ShopConfigSO Config => config;
-    public PlayerWallet Wallet => wallet;
-    public CoolerSystem Cooler => coolerSystem;
     public FoodCatalogSO Catalog => catalog;
+    public PlayerWallet Wallet => PlayerWallet.Instance;
+    public CoolerSystem Cooler => CoolerSystem.Instance;
 
     private readonly Dictionary<ItemDataSO, int> cart = new Dictionary<ItemDataSO, int>();
 
-    public event Action OnCartChanged;
-    public event Action<bool, string> OnPurchaseResult;
-    
-    void Start()
-    {
-        Debug.Log("Start del ShopSystem");
-        
-        wallet = PlayerWallet.Instance;
-        coolerSystem = CoolerSystem.Instance;
+    public ShopTabType CurrentTab { get; private set; } = ShopTabType.Coal;
 
-        if (wallet == null)
-            Debug.LogError("[ShopSystem] No se encontró PlayerWallet.Instance");
-        if (coolerSystem == null)
-            Debug.LogError("[ShopSystem] No se encontró CoolerSystem.Instance");
+    public event Action OnCartChanged;
+    public event Action OnTabChanged;
+    public event Action<bool, string> OnPurchaseResult;
+
+    // ── Tabs ────────────────────────────────────────────────────────────
+    public void SetTab(ShopTabType tab)
+    {
+        if (CurrentTab == tab) return;
+        CurrentTab = tab;
+        OnTabChanged?.Invoke();
     }
 
+    // ── Items visibles según tab ────────────────────────────────────────
+    public IReadOnlyList<ItemDataSO> GetItemsForCurrentTab()
+        => GetItemsForTab(CurrentTab);
 
-    public IReadOnlyList<ItemDataSO> GetShopItems()
+    public IReadOnlyList<ItemDataSO> GetItemsForTab(ShopTabType tab)
     {
         var list = new List<ItemDataSO>();
 
-        if (config != null && config.coal != null)
-            list.Add(config.coal);
-
-        if (catalog != null)
+        switch (tab)
         {
-            var cuts = catalog.GetAllCuts();
-            for (int i = 0; i < cuts.Count; i++)
-                if (cuts[i] != null) list.Add(cuts[i]);
+            case ShopTabType.Coal:
+                if (config != null && config.coal != null) list.Add(config.coal);
+                break;
+
+            case ShopTabType.Meat:
+                if (catalog != null)
+                {
+                    var cuts = catalog.GetAllCuts();
+                    for (int i = 0; i < cuts.Count; i++)
+                        if (cuts[i] != null) list.Add(cuts[i]);
+                }
+                break;
+
+            case ShopTabType.Upgrades:
+                if (catalog != null)
+                {
+                    var upgrades = catalog.GetAllUpgrades();
+                    for (int i = 0; i < upgrades.Count; i++)
+                        if (upgrades[i] != null) list.Add(upgrades[i]);
+                }
+                break;
         }
 
         return list;
@@ -56,9 +74,41 @@ public class ShopSystem : MonoBehaviour
         if (item == null) return false;
         if (item is CoalSO) return true;
         if (item is MeatCutSO cut) return cut.isUnlocked;
+        if (item is UpgradeSO up) return up.isUnlocked && !up.isPurchased;
         return false;
     }
 
+    // ── Sugerencia de carbón ────────────────────────────────────────────
+    /// <summary>
+    /// Unidades sugeridas de carbón = max(0, consumoPromedio - stockActual).
+    /// </summary>
+    public int GetSuggestedCoalUnits()
+    {
+        if (config == null || config.coal == null || Cooler == null) return 0;
+
+        var tracker = CoalConsumptionTracker.Instance;
+        float avgPerDay = tracker != null && tracker.DaysPlayed > 0
+            ? tracker.AverageCoalPerDay
+            : config.estimatedCoalConsumption;   // fallback al valor del GD si no hay datos
+
+        int stock = Cooler.GetCount(config.coal);
+        int needed = Mathf.CeilToInt(avgPerDay) - stock;
+        return Mathf.Max(0, needed);
+    }
+
+    /// <summary>
+    /// Convierte las unidades sugeridas a bolsas (redondeando hacia arriba).
+    /// </summary>
+    public int GetSuggestedCoalBags()
+    {
+        if (config == null || config.coal == null) return 0;
+        int units = GetSuggestedCoalUnits();
+        if (units == 0) return 0;
+        int perBag = Mathf.Max(1, config.coal.unitsPerBag);
+        return Mathf.CeilToInt((float)units / perBag);
+    }
+
+    // ── Estado del carrito ──────────────────────────────────────────────
     public int GetCartQty(ItemDataSO item)
     {
         if (item == null) return 0;
@@ -83,21 +133,26 @@ public class ShopSystem : MonoBehaviour
 
     public void ClearCart()
     {
-        if (cart.Count == 0) return;
+        bool hadItems = cart.Count > 0 || toppingCart.Count > 0;
         cart.Clear();
-        OnCartChanged?.Invoke();
+        toppingCart.Clear();
+        if (hadItems) OnCartChanged?.Invoke();
     }
 
+    // ── Cálculos derivados ──────────────────────────────────────────────
     public float CartTotal()
     {
         float total = 0f;
         foreach (var kv in cart)
             if (kv.Key != null) total += kv.Key.basePrice * kv.Value;
+
+        foreach (var kv in toppingCart)
+            if (kv.Key != null) total += kv.Key.purchasePrice * kv.Value;
+
         return total;
     }
-
     public float MoneyAfterPurchase()
-        => wallet != null ? wallet.Money - CartTotal() : -CartTotal();
+        => Wallet != null ? Wallet.Money - CartTotal() : -CartTotal();
 
     public int CartCoalBags()
     {
@@ -107,57 +162,49 @@ public class ShopSystem : MonoBehaviour
         return bags;
     }
 
-    public int CartCoalUnits()
-    {
-        int units = 0;
-        foreach (var kv in cart)
-            if (kv.Key is CoalSO coal) units += coal.unitsPerBag * kv.Value;
-        return units;
-    }
-
+    // ── Avisos de stock bajo ────────────────────────────────────────────
     public List<MeatCutSO> GetLowStockCuts()
     {
         var result = new List<MeatCutSO>();
-        if (catalog == null || coolerSystem == null || config == null) return result;
+        if (catalog == null || Cooler == null || config == null) return result;
 
         var cuts = catalog.GetUnlockedCuts();
         for (int i = 0; i < cuts.Count; i++)
         {
-            if (coolerSystem.GetCount(cuts[i]) <= config.lowStockThreshold)
+            if (Cooler.GetCount(cuts[i]) <= config.lowStockThreshold)
                 result.Add(cuts[i]);
         }
         return result;
     }
 
+    // ── Transacción ─────────────────────────────────────────────────────
     public bool TryConfirmPurchase(out string message)
     {
-        if (config == null || wallet == null || coolerSystem == null)
+        if (config == null || Wallet == null || Cooler == null)
         {
             message = "Tienda no configurada correctamente.";
-            Debug.Log(message);
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
-        if (CartCoalBags() < config.minCoalPurchase)
+        if (cart.Count == 0 && toppingCart.Count == 0)
         {
-            message = "Tenés que comprar al menos " + config.minCoalPurchase + " bolsa(s) de carbón.";
-            Debug.Log(message);
+            message = "El carrito está vacío.";
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         float total = CartTotal();
-        if (!wallet.CanAfford(total))
+        if (!Wallet.CanAfford(total))
         {
             message = "Plata insuficiente. Total: $" + total.ToString("F0");
-            Debug.Log(message);
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
-        wallet.TrySpend(total);
+        Wallet.TrySpend(total);
 
+        // Items normales (cooler)
         foreach (var kv in cart)
         {
             ItemDataSO item = kv.Key;
@@ -165,17 +212,67 @@ public class ShopSystem : MonoBehaviour
             if (item == null || qty <= 0) continue;
 
             if (item is CoalSO coal)
-                coolerSystem.Add(coal, coal.unitsPerBag * qty);
+                Cooler.Add(coal, coal.unitsPerBag * qty);
+            else if (item is UpgradeSO up)
+                up.isPurchased = true;
             else
-                coolerSystem.Add(item, qty);
+                Cooler.Add(item, qty);
+        }
+
+        // Toppings (stock separado)
+        if (Toppings != null)
+        {
+            foreach (var kv in toppingCart)
+            {
+                if (kv.Key != null && kv.Value > 0)
+                    Toppings.Add(kv.Key, kv.Value);
+            }
         }
 
         cart.Clear();
+        toppingCart.Clear();
         OnCartChanged?.Invoke();
 
         message = "Compra realizada por $" + total.ToString("F0");
-        Debug.Log(message);
         OnPurchaseResult?.Invoke(true, message);
         return true;
+    }    
+    public IReadOnlyList<ToppingSO> GetToppings()
+    {
+        var result = new List<ToppingSO>();
+        if (catalog == null) return result;
+
+        var toppings = catalog.GetAvailableToppings();
+        for (int i = 0; i < toppings.Count; i++)
+            if (toppings[i] != null) result.Add(toppings[i]);
+
+        return result;
     }
+
+    public bool IsToppingPurchasable(ToppingSO topping)
+    {
+        return topping != null;
+    }
+    
+    public int GetToppingCartQty(ToppingSO topping)
+    {
+        if (topping == null) return 0;
+        return toppingCart.TryGetValue(topping, out int qty) ? qty : 0;
+    }
+
+    public void SetToppingQty(ToppingSO topping, int qty)
+    {
+        if (!IsToppingPurchasable(topping)) return;
+
+        qty = Mathf.Max(0, qty);
+        if (qty == 0) toppingCart.Remove(topping);
+        else toppingCart[topping] = qty;
+
+        OnCartChanged?.Invoke();
+    }
+
+    public void IncrementToppingQty(ToppingSO topping, int delta = 1)
+        => SetToppingQty(topping, GetToppingCartQty(topping) + delta);
+    
+    
 }

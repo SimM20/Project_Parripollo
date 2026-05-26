@@ -167,6 +167,8 @@ public class GameManager : MonoBehaviour
     {
         customerSystem.OnNightEnded -= EndNight;
 
+        CoalConsumptionTracker.Instance?.RegisterDayCompleted();
+
         SceneManagementUtils.LoadSceneByName("EndScene");
     }
 

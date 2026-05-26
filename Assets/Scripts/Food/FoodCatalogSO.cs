@@ -25,6 +25,9 @@ public class FoodCatalogSO : ScriptableObject, IFoodCatalogProvider
     [Header("Product Variants")]
     [Tooltip("All sellable product variants. Each variant is a distinct product (e.g. Choripan vs Chorizo al plato).")]
     [SerializeField] private List<ProductVariantSO> allVariants = new List<ProductVariantSO>();
+    
+    [Header("Upgrades")]
+    [SerializeField] private List<UpgradeSO> allUpgrades = new List<UpgradeSO>();
 
     // ── IFoodCatalogProvider ────────────────────────────────────────────────
 
@@ -74,6 +77,19 @@ public class FoodCatalogSO : ScriptableObject, IFoodCatalogProvider
             ProductVariantSO v = allVariants[i];
             if (v != null && v.cut == cut && v.isUnlocked)
                 result.Add(v);
+        }
+        return result;
+    }
+    
+    public IReadOnlyList<UpgradeSO> GetAllUpgrades() => allUpgrades.AsReadOnly();
+    
+    public IReadOnlyList<UpgradeSO> GetAvailableUpgrades()
+    {
+        var result = new List<UpgradeSO>();
+        for (int i = 0; i < allUpgrades.Count; i++)
+        {
+            var u = allUpgrades[i];
+            if (u != null && !u.isPurchased) result.Add(u);
         }
         return result;
     }

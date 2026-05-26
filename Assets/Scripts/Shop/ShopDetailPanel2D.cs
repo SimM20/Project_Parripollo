@@ -23,6 +23,9 @@ public class ShopDetailPanel2D : MonoBehaviour
     [SerializeField] private GameObject emptyRoot;
 
     private ItemDataSO currentItem;
+    
+    private ToppingSO currentTopping;
+
 
     void Awake()
     {
@@ -43,6 +46,7 @@ public class ShopDetailPanel2D : MonoBehaviour
         {
             shop.OnCartChanged += RefreshQty;
             if (shop.Cooler != null) shop.Cooler.OnInventoryChanged += RefreshStock;
+            if (shop.Toppings != null) shop.Toppings.OnStockChanged += RefreshStock;
         }
     }
 
@@ -52,13 +56,16 @@ public class ShopDetailPanel2D : MonoBehaviour
         {
             shop.OnCartChanged -= RefreshQty;
             if (shop.Cooler != null) shop.Cooler.OnInventoryChanged -= RefreshStock;
+            if (shop.Toppings != null) shop.Toppings.OnStockChanged -= RefreshStock;
         }
     }
-
     public void Show(ItemDataSO item)
     {
+        currentTopping = null;
         currentItem = item;
         if (item == null) { ShowEmpty(); return; }
+        
+        
 
         if (contentRoot != null) contentRoot.SetActive(true);
         if (emptyRoot != null) emptyRoot.SetActive(false);
@@ -93,37 +100,71 @@ public class ShopDetailPanel2D : MonoBehaviour
     private void ShowEmpty()
     {
         currentItem = null;
+        currentTopping = null;
         if (contentRoot != null) contentRoot.SetActive(false);
         if (emptyRoot != null) emptyRoot.SetActive(true);
     }
-
+    
     private void OnMinusClicked()
     {
-        Debug.Log("Minus Button Clicked");
-        if (currentItem == null) return;
-        Debug.Log("Minus Button Entered");
-        shop.IncrementQty(currentItem, -1);
+        if (currentTopping != null) shop.IncrementToppingQty(currentTopping, -1);
+        else if (currentItem != null) shop.IncrementQty(currentItem, -1);
     }
 
     private void OnPlusClicked()
     {
-        Debug.Log("Plus Button Clicked");
-        if (currentItem == null) return;
-        Debug.Log("Plus Button Entered");
-        shop.IncrementQty(currentItem, +1);
+        if (currentTopping != null) shop.IncrementToppingQty(currentTopping, +1);
+        else if (currentItem != null) shop.IncrementQty(currentItem, +1);
     }
-
     private void RefreshQty()
     {
-        if (currentItem == null || qtyText == null) return;
-        qtyText.text = shop.GetCartQty(currentItem).ToString();
+        if (qtyText == null) return;
+
+        if (currentTopping != null)
+            qtyText.text = shop.GetToppingCartQty(currentTopping).ToString();
+        else if (currentItem != null)
+            qtyText.text = shop.GetCartQty(currentItem).ToString();
+        else
+            qtyText.text = "0";
     }
 
     private void RefreshStock()
     {
-        if (currentItem == null || stockText == null) return;
-        if (shop == null || shop.Cooler == null) return;
-        stockText.text = "Stock actual: " + shop.Cooler.GetCount(currentItem);
+        if (stockText == null) return;
+        if (shop == null) return;
+
+        int stock = 0;
+        if (currentTopping != null && shop.Toppings != null)
+            stock = shop.Toppings.GetCount(currentTopping);
+        else if (currentItem != null && shop.Cooler != null)
+            stock = shop.Cooler.GetCount(currentItem);
+
+        stockText.text = "Stock actual: " + stock;
+    }
+    
+    public void ShowTopping(ToppingSO topping)
+    {
+        currentItem = null;
+        currentTopping = topping;
+
+        if (topping == null) { ShowEmpty(); return; }
+
+        if (contentRoot != null) contentRoot.SetActive(true);
+        if (emptyRoot != null) emptyRoot.SetActive(false);
+
+        bool purchasable = shop.IsToppingPurchasable(topping);
+        if (lockedBadgeRoot != null) lockedBadgeRoot.SetActive(!purchasable);
+
+        if (iconRenderer != null) iconRenderer.sprite = topping.toppingSprite;
+        if (nameText != null) nameText.text = topping.toppingName;
+        if (priceText != null) priceText.text = "$" + topping.purchasePrice.ToString("F0");
+        if (descriptionText != null) descriptionText.text = "";
+
+        RefreshStock();
+        RefreshQty();
+
+        if (minusButton != null) minusButton.SetInteractable(purchasable);
+        if (plusButton != null) plusButton.SetInteractable(purchasable);
     }
     
 }

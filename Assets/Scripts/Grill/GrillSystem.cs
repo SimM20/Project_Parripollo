@@ -122,6 +122,7 @@ public class GrillSystem : MonoBehaviour
         coal.transform.position = GetCenter(placementSlots) + offset;
 
         spawnedCoal = coal;
+        CoalConsumptionTracker.Instance?.ReportConsumption(1);
         return true;
     }
 
