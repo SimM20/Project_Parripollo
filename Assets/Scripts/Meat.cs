@@ -129,6 +129,9 @@ public class Meat : Item
 
     protected override void OnPickedUp()
     {
+        if (MeatHoverBubble.Instance != null)
+            MeatHoverBubble.Instance.Hide();
+
         ApplyGridRotationPreview();
         UpdateHoverPreview();
     }
@@ -239,6 +242,19 @@ public class Meat : Item
         if (spriteRenderer == null || cut == null) return;
         Sprite targetSprite = cut.GetSpriteForSide(isSideA) ?? cut.GetDefaultSprite();
         if (targetSprite != null) spriteRenderer.sprite = targetSprite;
+    }
+
+    void OnMouseEnter()
+    {
+        if (isHeldByMouse) return;
+        if (MeatHoverBubble.Instance != null)
+            MeatHoverBubble.Instance.Show(this.ToHoverString(), transform);
+    }
+
+    void OnMouseExit()
+    {
+        if (MeatHoverBubble.Instance != null)
+            MeatHoverBubble.Instance.Hide();
     }
 
     void OnDestroy() => ReleaseOccupiedSlots();
