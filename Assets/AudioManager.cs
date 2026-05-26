@@ -30,6 +30,5 @@ public class AudioManager : MonoBehaviour
         audioSource.loop = false;
     }
 
-    [ContextMenu("TEST")]
     public void PlayTaskCompleted() => audioSource.PlayOneShot(taskCompleted);
 }
