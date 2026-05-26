@@ -8,6 +8,7 @@ public class AudioManager : MonoBehaviour
     public static AudioManager Instance { get; private set; }
 
     [SerializeField] private AudioClip taskCompleted;
+    [SerializeField] private AudioClip newClientBell;
 
     private AudioSource audioSource;
 
@@ -31,4 +32,6 @@ public class AudioManager : MonoBehaviour
     }
 
     public void PlayTaskCompleted() => audioSource.PlayOneShot(taskCompleted);
+
+    public void PlayNewClientBell() => audioSource.PlayOneShot(newClientBell);
 }

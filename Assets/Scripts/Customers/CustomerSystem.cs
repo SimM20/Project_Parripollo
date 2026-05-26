@@ -162,6 +162,8 @@ public class CustomerSystem : MonoBehaviour
         if (SelectedCustomer == null)
             SelectCustomer(customer);
 
+        AudioManager.Instance.PlayNewClientBell();
+
         Debug.Log($"[CustomerSystem] Spawn {customer.type} en slot {slotIndex}: {order.PrimaryCut.cutName}");
     }
 
