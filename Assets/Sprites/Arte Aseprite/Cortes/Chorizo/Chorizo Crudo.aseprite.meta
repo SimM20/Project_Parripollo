@@ -156,7 +156,7 @@ ScriptedImporter:
     layerType: 0
     blendMode: 0
     cells:
-    - name: Corte Chorizo
+    - name: Chorizo Crudo
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:

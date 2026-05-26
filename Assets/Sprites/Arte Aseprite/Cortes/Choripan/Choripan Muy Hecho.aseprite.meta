@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 46e276026e3038746b5f0d8288c30168
+guid: 93d4f84458a94b2489f2932a4b099c67
 ScriptedImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -124,15 +124,15 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: Corte Carne Pre  Alpha 1
     originalName: 
-    pivot: {x: 0.5, y: -0.5283019}
+    pivot: {x: 0.48571432, y: -0.06741573}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     rect:
       serializedVersion: 2
       x: 4
       y: 4
-      width: 84
-      height: 53
+      width: 70
+      height: 89
     spriteID: f3f8bf1cc46052944b116711f6df368e
     spriteBone: []
     spriteOutline: []
@@ -156,14 +156,14 @@ ScriptedImporter:
     layerType: 0
     blendMode: 0
     cells:
-    - name: Corte Chorizo Muy Hecho
+    - name: Choripan Muy Hecho
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:
-        x: 8
-        y: 28
-        width: 84
-        height: 53
+        x: 16
+        y: 6
+        width: 70
+        height: 89
       spriteId: f3f8bf1cc46052944b116711f6df368e
     linkedCells: []
     parentIndex: -1
@@ -184,4 +184,4 @@ ScriptedImporter:
   secondarySpriteTextures: []
   spritePackingTag: 
   canvasSize: {x: 100, y: 100}
-  previousTextureSize: {x: 128, y: 64}
+  previousTextureSize: {x: 128, y: 128}
