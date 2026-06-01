@@ -67,6 +67,17 @@ public class CoalHolderDraggableCoal : MonoBehaviour
             RestoreStartTransform();
     }
 
+    void OnDisable()
+    {
+        if (!isDragging) return;
+
+        isDragging = false;
+        if (selfRenderer != null)
+            selfRenderer.sortingOrder = startSortingOrder;
+        if (transferBuffer != null) transferBuffer.ClearCoalHolderHover();
+        RestoreStartTransform();
+    }
+
     private void UpdateHover(Vector3 worldPoint)
     {
         if (transferBuffer != null && coalData != null)
