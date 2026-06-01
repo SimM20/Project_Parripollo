@@ -205,7 +205,12 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     void OnDisable()
     {
+        if (!isDragging) return;
+
         isDragging = false;
+        if (selfRenderer != null)
+            selfRenderer.sortingOrder = startSortingOrder;
         ClearHoverPreview();
+        RestoreStartTransform();
     }
 }
