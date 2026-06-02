@@ -38,7 +38,7 @@ public class ViewManager : MonoBehaviour
         CurrentView = view;
 
         if (grillRoot != null)
-            grillRoot.SetActive(view == ViewType.Grill);
+            SetVisualVisibility(grillRoot, view == ViewType.Grill);
 
         if (coolerRoot != null)
             coolerRoot.SetActive(view == ViewType.Cooler);
@@ -46,5 +46,20 @@ public class ViewManager : MonoBehaviour
         if (buildRoot != null)
             buildRoot.SetActive(view == ViewType.Build);
         
+    }
+
+    private static void SetVisualVisibility(GameObject root, bool visible)
+    {
+        SpriteRenderer[] renderers = root.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+            renderers[i].enabled = visible;
+
+        Collider2D[] colliders = root.GetComponentsInChildren<Collider2D>(true);
+        for (int i = 0; i < colliders.Length; i++)
+            colliders[i].enabled = visible;
+
+        Canvas[] canvases = root.GetComponentsInChildren<Canvas>(true);
+        for (int i = 0; i < canvases.Length; i++)
+            canvases[i].enabled = visible;
     }
 }
