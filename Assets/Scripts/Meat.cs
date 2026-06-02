@@ -211,15 +211,36 @@ public class Meat : Item
 
     private void UpdateState()
     {
-        float target = isSideA ? SideAHeatTarget : SideBHeatTarget;
+        float targetA = SideAHeatTarget;
+        float targetB = SideBHeatTarget;
 
-        if (sideACookTime >= target && sideBCookTime >= target)
+        MeatStates newState;
+
+        if (sideACookTime >= targetA * 1.6f || sideBCookTime >= targetB * 1.6f)
         {
-            state = (sideACookTime > target * 1.3f) ? MeatStates.Muy_Hecho : MeatStates.Hecho;
+            newState = MeatStates.Pasado;
+        }
+        else if (sideACookTime >= targetA * 1.3f || sideBCookTime >= targetB * 1.3f)
+        {
+            newState = MeatStates.Muy_Hecho;
+        }
+        else if (sideACookTime >= targetA && sideBCookTime >= targetB)
+        {
+            newState = MeatStates.Hecho;
         }
         else if (sideACookTime > 0 || sideBCookTime > 0)
         {
-            state = MeatStates.Jugoso;
+            newState = MeatStates.Jugoso;
+        }
+        else
+        {
+            newState = MeatStates.Crudo;
+        }
+
+        if (newState != state)
+        {
+            state = newState;
+            ApplyCutVisual();
         }
     }
 
@@ -240,8 +261,14 @@ public class Meat : Item
     private void ApplyCutVisual()
     {
         if (spriteRenderer == null || cut == null) return;
-        Sprite targetSprite = cut.GetSpriteForSide(isSideA) ?? cut.GetDefaultSprite();
-        if (targetSprite != null) spriteRenderer.sprite = targetSprite;
+
+        Sprite targetSprite = cut.GetSpriteForState(state, isSideA);
+
+        if (targetSprite == null)
+            targetSprite = cut.GetSpriteForSide(isSideA) ?? cut.GetDefaultSprite();
+
+        if (targetSprite != null)
+            spriteRenderer.sprite = targetSprite;
     }
 
     void OnMouseEnter()

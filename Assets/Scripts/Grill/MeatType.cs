@@ -13,6 +13,14 @@ public class MeatCutSO : ItemDataSO
     [SerializeField] public Sprite meatSpriteA;
     [SerializeField] public Sprite meatSpriteB;
 
+    [Header("Cooking Sprites – Side A")]
+    [Tooltip("Sprites for each cooking state when showing side A")]
+    [SerializeField] public CookingSprites cookingSpritesA;
+
+    [Header("Cooking Sprites – Side B")]
+    [Tooltip("Sprites for each cooking state when showing side B")]
+    [SerializeField] public CookingSprites cookingSpritesB;
+
     [Header("Cooking")]
     [FormerlySerializedAs("cookTimePerSide")]
     [SerializeField] public float timeHeatA;
@@ -38,6 +46,23 @@ public class MeatCutSO : ItemDataSO
             return preferred;
 
         return sideA ? meatSpriteB : meatSpriteA;
+    }
+
+    public Sprite GetSpriteForState(MeatStates state, bool sideA)
+    {
+        CookingSprites sprites = sideA ? cookingSpritesA : cookingSpritesB;
+        Sprite result = sprites.GetSpriteForState(state);
+
+        if (result == null)
+        {
+            CookingSprites fallbackSprites = sideA ? cookingSpritesB : cookingSpritesA;
+            result = fallbackSprites.GetSpriteForState(state);
+        }
+
+        if (result == null)
+            result = GetSpriteForSide(sideA);
+
+        return result;
     }
 
     public float GetHeatTimeForSide(bool sideA)

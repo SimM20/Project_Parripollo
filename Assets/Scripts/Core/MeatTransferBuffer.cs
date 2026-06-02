@@ -641,7 +641,7 @@ public class MeatTransferBuffer : MonoBehaviour
             SpriteRenderer renderer = go.GetComponent<SpriteRenderer>();
             if (renderer != null)
             {
-                renderer.sprite = cut.GetDefaultSprite();
+                renderer.sprite = cut.GetSpriteForState(entry.state, entry.isSideA);
                 renderer.sortingOrder = sortingBase + i;
             }
 
