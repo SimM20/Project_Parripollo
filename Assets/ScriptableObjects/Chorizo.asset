@@ -16,8 +16,20 @@ MonoBehaviour:
   basePrice: 0
   category: 0
   _visualOffset: {x: 0, y: 0, z: 0}
-  meatSpriteA: {fileID: 21300000, guid: dac02f87c74bf7d4ba68b6749b561de2, type: 3}
-  meatSpriteB: {fileID: 21300000, guid: dac02f87c74bf7d4ba68b6749b561de2, type: 3}
+  meatSpriteA: {fileID: 21300000, guid: a5e60188c878cca42a25ac42089479f5, type: 3}
+  meatSpriteB: {fileID: 21300000, guid: a5e60188c878cca42a25ac42089479f5, type: 3}
+  cookingSpritesA:
+    crudo: {fileID: 21300000, guid: a5e60188c878cca42a25ac42089479f5, type: 3}
+    jugoso: {fileID: 21300000, guid: d097158349c4b0c4abe3314ac66e9b63, type: 3}
+    hecho: {fileID: 21300000, guid: bf96048357010a74b847db506c45ca54, type: 3}
+    muyHecho: {fileID: 21300000, guid: fd63960d72cb5ba46ab268ff079f927b, type: 3}
+    pasado: {fileID: 21300000, guid: ba9b7613f0f3c71438c89def2f908d4f, type: 3}
+  cookingSpritesB:
+    crudo: {fileID: 21300000, guid: a5e60188c878cca42a25ac42089479f5, type: 3}
+    jugoso: {fileID: 21300000, guid: d097158349c4b0c4abe3314ac66e9b63, type: 3}
+    hecho: {fileID: 21300000, guid: bf96048357010a74b847db506c45ca54, type: 3}
+    muyHecho: {fileID: 21300000, guid: fd63960d72cb5ba46ab268ff079f927b, type: 3}
+    pasado: {fileID: 21300000, guid: ba9b7613f0f3c71438c89def2f908d4f, type: 3}
   timeHeatA: 80
   timeHeatB: 55
   grillSpace: {x: 1, y: 2}
