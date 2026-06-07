@@ -11,7 +11,7 @@ TagManager:
   - Item
   - Water
   - UI
-  - 
+  - HeatFX
   - 
   - 
   - 
@@ -40,4 +40,10 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: EfectoCalor
+    uniqueID: 3954922641
+    locked: 0
+  - name: HeatFX
+    uniqueID: 4127784655
     locked: 0
