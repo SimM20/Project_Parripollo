@@ -41,3 +41,6 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: MeatBubbleOverlay
+    uniqueID: 583324713
+    locked: 0
