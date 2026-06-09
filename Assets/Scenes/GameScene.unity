@@ -6710,7 +6710,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
       propertyPath: buildMeatHolderWorldSpacing
-      value: 0.8
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3364667778613331700, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
       propertyPath: m_Name
@@ -6941,6 +6941,26 @@ PrefabInstance:
     - target: {fileID: 1319961952899155547, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
       propertyPath: m_LocalPosition.y
       value: 4.83
+      objectReference: {fileID: 0}
+    - target: {fileID: 1319961952899155547, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 1319961952899155547, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1319961952899155547, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1319961952899155547, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 1319961952899155547, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -90
       objectReference: {fileID: 0}
     - target: {fileID: 2531154112571798982, guid: 8940edfb16b82aa489d88a0e14b0d926, type: 3}
       propertyPath: m_LocalScale.x
@@ -7245,8 +7265,8 @@ Transform:
   m_GameObject: {fileID: 1205785108}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: -5.6045, y: 2.09, z: 0}
-  m_LocalScale: {x: 1.5637099, y: 4.195991, z: 0.40160003}
+  m_LocalPosition: {x: -5.4441, y: 2.09, z: 0}
+  m_LocalScale: {x: 1.5637099, y: 4.516565, z: 0.40160003}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1064083089}
@@ -8617,6 +8637,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   taskCompleted: {fileID: 8300000, guid: 037843cbf466bf042b308524e29066ee, type: 3}
   newClientBell: {fileID: 8300000, guid: ebe80cd35d6c07c40ae0550850136564, type: 3}
+  toppingShake: {fileID: 0}
 --- !u!82 &2004183797
 AudioSource:
   m_ObjectHideFlags: 0
