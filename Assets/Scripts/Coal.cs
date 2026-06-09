@@ -80,18 +80,23 @@ public class Coal : Item
 
     private Vector3 CalcCenter(List<GridSlot> slots)
     {
-        Vector3 centro = Vector3.zero;
-        foreach (var s in slots) centro += s.transform.position;
-        return centro / slots.Count;
+        Vector3 center = Vector3.zero;
+        foreach (var s in slots) center += s.transform.position;
+        return center / slots.Count;
     }
 
     public void Burn()
     {
-        if (state == CoalStates.Ceniza) return;
-        if (state == CoalStates.Apagado) state = CoalStates.Encendido;
+        spriteRenderer.sprite = coalData.GetSpriteForState(state);
+        if (state == CoalStates.Apagado)
+            state = CoalStates.Encendido;
 
         currentBurnTime += Time.deltaTime;
-        if (currentBurnTime >= maxBurnTime) state = CoalStates.Ceniza;
+
+        if (currentBurnTime >= maxBurnTime)
+            state = CoalStates.Ceniza;
+
+        if (state == CoalStates.Ceniza) return;
     }
 
     public void SetVisualVisibility(bool isVisible)

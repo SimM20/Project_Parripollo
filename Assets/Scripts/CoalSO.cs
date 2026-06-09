@@ -15,6 +15,9 @@ public class CoalSO : ItemDataSO
     [Tooltip("Poder calórico que emite hacia la carne.")]
     [SerializeField] private float _heatPower = 1.5f;
 
+    [Header("Coal Sprites")]
+    [SerializeField] public CoalSprites coalSprites;
+
     public GameObject coalPrefab => _coalPrefab;
     public Sprite coalSprite => _coalSprite;
     public Vector3 visualOffset => _visualOffset;
@@ -25,4 +28,6 @@ public class CoalSO : ItemDataSO
     public int unitsPerBag = 10;
 
     void OnValidate() => category = ItemType.Coal;
+
+    public Sprite GetSpriteForState(CoalStates state) { return coalSprites.GetSpriteForState(state); }
 }

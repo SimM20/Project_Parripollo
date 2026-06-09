@@ -9,6 +9,7 @@ public class AudioManager : MonoBehaviour
 
     [SerializeField] private AudioClip taskCompleted;
     [SerializeField] private AudioClip newClientBell;
+    [SerializeField] private AudioClip toppingShake;
 
     private AudioSource audioSource;
 
@@ -27,11 +28,14 @@ public class AudioManager : MonoBehaviour
     {
         audioSource = GetComponent<AudioSource>();
 
+        if (!audioSource) return;
         audioSource.playOnAwake = false;
         audioSource.loop = false;
     }
 
-    public void PlayTaskCompleted() => audioSource.PlayOneShot(taskCompleted);
+    public void PlayTaskCompleted() => audioSource?.PlayOneShot(taskCompleted);
 
-    public void PlayNewClientBell() => audioSource.PlayOneShot(newClientBell);
+    public void PlayNewClientBell() => audioSource?.PlayOneShot(newClientBell);
+
+    public void PlayOnUseTopping() => audioSource?.PlayOneShot(toppingShake);
 }

@@ -12,13 +12,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1405610c36759ba479e08c316fd0cc0e, type: 3}
   m_Name: Paty
   m_EditorClassIdentifier: 
-  cutName: Paty
-  price: 0
-  meatSpriteA: {fileID: 0}
-  meatSpriteB: {fileID: 0}
+  itemName: Paty
+  basePrice: 0
+  category: 0
+  _visualOffset: {x: 0, y: 0, z: 0}
+  meatSpriteA: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+  meatSpriteB: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+  cookingSpritesA:
+    crudo: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    jugoso: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    hecho: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    muyHecho: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    pasado: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+  cookingSpritesB:
+    crudo: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    jugoso: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    hecho: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    muyHecho: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    pasado: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
   timeHeatA: 0
   timeHeatB: 0
-  grillSpace: {x: 0, y: 0}
+  grillSpace: {x: 1, y: 1}
   servingMode: 1
   requiredBread: {fileID: 11400000, guid: ad1426bab9d987d409a72bbbe745f760, type: 2}
   isUnlocked: 1

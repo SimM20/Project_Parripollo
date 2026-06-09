@@ -29,6 +29,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
     void OnMouseDown()
     {
         startPosition = transform.position;
+        AudioManager.Instance?.PlayOnUseTopping();
 
         if (selfRenderer != null)
         {
@@ -37,11 +38,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
         }
     }
 
-    void OnMouseDrag()
-    {
-        transform.position = GetFoodItemMouseWorldPos();
-    }
-
+    void OnMouseDrag() => transform.position = GetFoodItemMouseWorldPos();
     void OnMouseUp()
     {
         if (!HasExactlyOneData())
@@ -50,9 +47,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
                 " must have exactly one SO assigned (BreadSO, SideSO, or ToppingSO).");
         }
         else
-        {
             BuildFoodDropZone.TryAcceptAt(GetFoodItemMouseWorldPos(), this);
-        }
 
         // Always return to source position — item is reusable, not consumed
         transform.position = startPosition;
@@ -96,9 +91,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
             box.offset = selfRenderer.sprite.bounds.center;
         }
         else
-        {
             box.size = Vector2.one;
-        }
     }
 
     void OnValidate()
