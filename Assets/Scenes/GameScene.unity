@@ -8637,7 +8637,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   taskCompleted: {fileID: 8300000, guid: 037843cbf466bf042b308524e29066ee, type: 3}
   newClientBell: {fileID: 8300000, guid: ebe80cd35d6c07c40ae0550850136564, type: 3}
-  toppingShake: {fileID: 0}
+  toppingShake: {fileID: 8300000, guid: 64c8b3f2860da644496ee7b41cadbf01, type: 3}
 --- !u!82 &2004183797
 AudioSource:
   m_ObjectHideFlags: 0
