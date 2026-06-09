@@ -14,6 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: "Chorip\xE1n"
   variantSprite: {fileID: 21300000, guid: b910001e14d592149a6f56ccb7c44ed7, type: 3}
+  cookingSprites:
+    crudo: {fileID: 21300000, guid: 3252b563925de3a4a90e331fb8eb707a, type: 3}
+    jugoso: {fileID: 21300000, guid: 344a3363ebfc83246a5dc4e24927d8dc, type: 3}
+    hecho: {fileID: 21300000, guid: 73d0f7a3be1e4354c9a4c5c11644e6f0, type: 3}
+    muyHecho: {fileID: 21300000, guid: 89675ca06402885418598c867509a522, type: 3}
+    pasado: {fileID: 21300000, guid: 0203ad8ca2fa3ff42b47fd685ea122d3, type: 3}
   cut: {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
   bread: {fileID: 11400000, guid: 829722caacc1e9745856c2faeb47f743, type: 2}
   sellPrice: 100

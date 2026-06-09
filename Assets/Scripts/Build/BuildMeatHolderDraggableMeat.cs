@@ -3,6 +3,7 @@ using UnityEngine;
 public class BuildMeatHolderDraggableMeat : MonoBehaviour
 {
     private MeatCutSO cut;
+    private MeatStates state;
     private MeatTransferBuffer buffer;
     private int entryId;
 
@@ -11,9 +12,10 @@ public class BuildMeatHolderDraggableMeat : MonoBehaviour
     private int startSortingOrder;
     private SpriteRenderer selfRenderer;
 
-    public void Setup(MeatCutSO setupCut, MeatTransferBuffer setupBuffer, int setupEntryId)
+    public void Setup(MeatCutSO setupCut, MeatStates setupState, MeatTransferBuffer setupBuffer, int setupEntryId)
     {
         cut = setupCut;
+        state = setupState;
         buffer = setupBuffer;
         entryId = setupEntryId;
     }
@@ -60,7 +62,7 @@ public class BuildMeatHolderDraggableMeat : MonoBehaviour
             return;
         }
 
-        bool dropped = BuildFoodDropZone.TryAcceptMeatAt(GetMouseWorldPos(), cut);
+        bool dropped = BuildFoodDropZone.TryAcceptMeatAt(GetMouseWorldPos(), cut, state);
 
         if (dropped)
             buffer.ConsumeBuildMeatEntry(entryId, gameObject);

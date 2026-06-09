@@ -737,7 +737,7 @@ public class MeatTransferBuffer : MonoBehaviour
             if (drag == null)
                 drag = go.AddComponent<BuildMeatHolderDraggableMeat>();
 
-            drag.Setup(entry.cut, this, i);
+            drag.Setup(entry.cut, entry.state, this, i);
         }
     }
 

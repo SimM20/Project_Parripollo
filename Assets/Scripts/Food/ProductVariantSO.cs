@@ -1,10 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// Represents a distinct sellable product variant.
-/// A variant is the combination of a cooked cut with an optional bread.
-/// Examples: "Chorizo al plato", "Choripan", "Hamburguesa de paty", "Sandwich de vacio".
-/// </summary>
 [CreateAssetMenu(fileName = "ProductVariant", menuName = "Asado/Product Variant")]
 public class ProductVariantSO : ScriptableObject
 {
@@ -15,6 +10,18 @@ public class ProductVariantSO : ScriptableObject
     [Tooltip("Sprite shown on the plate when this variant is assembled.")]
     public Sprite variantSprite;
 
+    [Header("Visual by Cooking State")]
+    [Tooltip("Sprites for each cooking state of the variant.")]
+    public CookingSprites cookingSprites;
+
+    public Sprite GetSpriteForState(MeatStates state)
+    {
+        Sprite result = cookingSprites.GetSpriteForState(state);
+        if (result == null)
+            result = variantSprite;
+        return result;
+    }
+
     [Header("Composition")]
     [Tooltip("The meat cut required for this variant.")]
     public MeatCutSO cut;
@@ -24,19 +31,13 @@ public class ProductVariantSO : ScriptableObject
 
     [Header("Economy")]
     [Tooltip("Sell price placeholder - configure in Inspector.")]
-    public float sellPrice; // [PLACEHOLDER]
+    public float sellPrice; 
 
     [Header("Progression")]
     [Tooltip("Whether this variant is currently available to the player.")]
     public bool isUnlocked = true;
 
-    /// <summary>
-    /// Returns true if this is a sandwich variant (requires bread).
-    /// </summary>
     public bool IsSandwich => bread != null;
 
-    /// <summary>
-    /// Returns true if this is a plated variant (no bread).
-    /// </summary>
     public bool IsPlated => bread == null;
 }
