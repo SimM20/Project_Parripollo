@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   allContainersData:
   - type: 1
-    icon: {fileID: 21300000, guid: 65e077c3ada0850419f3f6cdd57e9528, type: 3}
+    icon: {fileID: 21300000, guid: 484d8da8c9825f140958ba7f506759d6, type: 3}
     defaultText: Day 1
   - type: 2
-    icon: {fileID: 21300000, guid: 65e077c3ada0850419f3f6cdd57e9528, type: 3}
+    icon: {fileID: 21300000, guid: 5078a530ba6290346a92120239d467ca, type: 3}
     defaultText: 0 $
   - type: 3
-    icon: {fileID: 21300000, guid: 65e077c3ada0850419f3f6cdd57e9528, type: 3}
+    icon: {fileID: 21300000, guid: 2eba78db35522b841bcd8592a5170807, type: 3}
     defaultText: 0/0 Customers
