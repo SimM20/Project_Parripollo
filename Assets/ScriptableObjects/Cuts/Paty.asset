@@ -30,9 +30,9 @@ MonoBehaviour:
     hecho: {fileID: 21300000, guid: 850d0e6c67825ad4aaab38e00213e717, type: 3}
     muyHecho: {fileID: 21300000, guid: 97ee150ec73de2244952f005a748d92d, type: 3}
     pasado: {fileID: 21300000, guid: f9e00d03b0a3bf042b55d10c940f53f0, type: 3}
-  timeHeatA: 0
-  timeHeatB: 0
-  grillSpace: {x: 1, y: 1}
+  timeHeatA: 50
+  timeHeatB: 60
+  grillSpace: {x: 2, y: 2}
   servingMode: 1
   requiredBread: {fileID: 11400000, guid: ad1426bab9d987d409a72bbbe745f760, type: 2}
   isUnlocked: 1
