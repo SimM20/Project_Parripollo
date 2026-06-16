@@ -20,16 +20,16 @@ MonoBehaviour:
   meatSpriteB: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
   cookingSpritesA:
     crudo: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    jugoso: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    hecho: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    muyHecho: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    pasado: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    jugoso: {fileID: 21300000, guid: f82f92550ee6b3543a0de68942d4204c, type: 3}
+    hecho: {fileID: 21300000, guid: 850d0e6c67825ad4aaab38e00213e717, type: 3}
+    muyHecho: {fileID: 21300000, guid: 97ee150ec73de2244952f005a748d92d, type: 3}
+    pasado: {fileID: 21300000, guid: f9e00d03b0a3bf042b55d10c940f53f0, type: 3}
   cookingSpritesB:
     crudo: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    jugoso: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    hecho: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    muyHecho: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    pasado: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+    jugoso: {fileID: 21300000, guid: f82f92550ee6b3543a0de68942d4204c, type: 3}
+    hecho: {fileID: 21300000, guid: 850d0e6c67825ad4aaab38e00213e717, type: 3}
+    muyHecho: {fileID: 21300000, guid: 97ee150ec73de2244952f005a748d92d, type: 3}
+    pasado: {fileID: 21300000, guid: f9e00d03b0a3bf042b55d10c940f53f0, type: 3}
   timeHeatA: 0
   timeHeatB: 0
   grillSpace: {x: 1, y: 1}

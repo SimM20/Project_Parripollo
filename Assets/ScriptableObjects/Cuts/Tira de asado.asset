@@ -21,15 +21,15 @@ MonoBehaviour:
   cookingSpritesA:
     crudo: {fileID: 21300000, guid: 8667b429b0a203347af42e5341c8792a, type: 3}
     jugoso: {fileID: 21300000, guid: 733e02c1eae08a84caf4244a454ec64a, type: 3}
-    hecho: {fileID: 0}
-    muyHecho: {fileID: 0}
-    pasado: {fileID: 0}
+    hecho: {fileID: 21300000, guid: c243da0675935124081d674c379dddc2, type: 3}
+    muyHecho: {fileID: 21300000, guid: 8f7d625d61ca42b4a8ebbe529dd9b31e, type: 3}
+    pasado: {fileID: 21300000, guid: 4f186dccec4e7ba4a9d5b4f97d1a2c7e, type: 3}
   cookingSpritesB:
     crudo: {fileID: 21300000, guid: 8667b429b0a203347af42e5341c8792a, type: 3}
     jugoso: {fileID: 21300000, guid: 733e02c1eae08a84caf4244a454ec64a, type: 3}
-    hecho: {fileID: 0}
-    muyHecho: {fileID: 0}
-    pasado: {fileID: 0}
+    hecho: {fileID: 21300000, guid: c243da0675935124081d674c379dddc2, type: 3}
+    muyHecho: {fileID: 21300000, guid: 8f7d625d61ca42b4a8ebbe529dd9b31e, type: 3}
+    pasado: {fileID: 21300000, guid: 4f186dccec4e7ba4a9d5b4f97d1a2c7e, type: 3}
   timeHeatA: 200
   timeHeatB: 150
   grillSpace: {x: 2, y: 2}
