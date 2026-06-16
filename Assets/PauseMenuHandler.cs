@@ -34,9 +34,6 @@ public class PauseMenuHandler : MonoBehaviour
         // Need to implement mixer groups! It cant be used yet.
     }
 
-    [ContextMenu("ContinueGame")]
-    public void ContinueGame() => UIManager.Instance?.UnPauseGame();
-
     private void EndGame()
     {
         if (!endGameButtton) return;
@@ -53,6 +50,6 @@ public class PauseMenuHandler : MonoBehaviour
     private void RestartDay()
     {
         if (!restartButtton) return;
-        SceneManagementUtils.ReLoadScene();
+        UIManager.Instance?.UnPauseGame();
     }
 }
