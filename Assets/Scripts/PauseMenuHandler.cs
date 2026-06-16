@@ -44,7 +44,7 @@ public class PauseMenuHandler : MonoBehaviour
     private void BackToMenu()
     {
         if (!backToMenuButtton) return;
-        SceneManagementUtils.LoadSceneByName("MainMenuScene");
+        SceneManagementUtils.ReturnToMainMenu();
     }
 
     private void RestartDay()

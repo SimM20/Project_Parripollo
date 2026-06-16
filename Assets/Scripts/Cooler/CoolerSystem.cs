@@ -11,15 +11,18 @@ public class CoolerSystem : MonoBehaviour
     public event Action OnInventoryChanged;
 
     public event Action<ItemDataSO> OnMissingItemRequested;
-    
+
     public static CoolerSystem Instance { get; private set; }
 
+    // Static backup survives DDOL destruction; cleared explicitly on ReturnToMainMenu
+    private static Dictionary<ItemDataSO, int> stockBackup = null;
+    private static bool clearBackupOnNextInit = false;
 
     private readonly Dictionary<ItemDataSO, int> stockByItem = new Dictionary<ItemDataSO, int>();
 
     void Awake()
     {
-        Debug.Log("Awake del CoolerSystem");
+        Debug.Log("[CoolerSystem] Awake â€” Instance is " + (Instance != null ? Instance.GetInstanceID().ToString() : "null"));
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -32,8 +35,30 @@ public class CoolerSystem : MonoBehaviour
         BuildInitialStockRuntime();
     }
 
+    // Call before destroying CoolerSystem on ReturnToMainMenu so the next
+    // new-game start gets a clean initialStock instead of the old run's data.
+    public static void PrepareForNewGame()
+    {
+        clearBackupOnNextInit = true;
+        stockBackup = null;
+    }
+
     private void BuildInitialStockRuntime()
     {
+        if (stockBackup != null && !clearBackupOnNextInit)
+        {
+            // DDOL was destroyed unexpectedly â€” restore saved stock instead of resetting
+            stockByItem.Clear();
+            foreach (var kv in stockBackup)
+                stockByItem[kv.Key] = kv.Value;
+            stockBackup = null;
+            Debug.Log("[CoolerSystem] Stock restaurado desde backup.");
+            return;
+        }
+
+        clearBackupOnNextInit = false;
+        stockBackup = null;
+
         stockByItem.Clear();
 
         for (int i = 0; i < initialStock.Count; i++)
@@ -92,7 +117,7 @@ public class CoolerSystem : MonoBehaviour
     public void InformMissingItem(ItemDataSO item)
     {
         if (item == null) return;
-        Debug.Log("Ítem no disponible: " + item.itemName);
+        Debug.Log("ï¿½tem no disponible: " + item.itemName);
         OnMissingItemRequested?.Invoke(item);
     }
 
@@ -106,7 +131,7 @@ public class CoolerSystem : MonoBehaviour
             if (!first)
                 sb.Append(", ");
 
-            string name = kvp.Key != null ? kvp.Key.itemName : "Sin ítem";
+            string name = kvp.Key != null ? kvp.Key.itemName : "Sin ï¿½tem";
             sb.Append(name);
             sb.Append(": ");
             sb.Append(kvp.Value);
@@ -118,7 +143,13 @@ public class CoolerSystem : MonoBehaviour
     
     void OnDestroy()
     {
-        if (Instance == this) Instance = null;
+        if (Instance == this)
+        {
+            if (!clearBackupOnNextInit)
+                stockBackup = new Dictionary<ItemDataSO, int>(stockByItem);
+            clearBackupOnNextInit = false;
+            Instance = null;
+        }
     }
 }
 

@@ -14,7 +14,7 @@ public class EndScreen : MonoBehaviour
         GetNewMoney();
         UpdateUI(newMoney);
     }
-    public void GoToMainMenu() => SceneManagementUtils.LoadSceneByName("MainMenuScene");
+    public void GoToMainMenu() => SceneManagementUtils.ReturnToMainMenu();
 
     public void RetryGame() => SceneManagementUtils.LoadSceneByName("GameScene");
 
@@ -26,7 +26,7 @@ public class EndScreen : MonoBehaviour
 
     public void GetNewMoney()
     {
-
+        newMoney = PlayerWallet.Instance != null ? PlayerWallet.Instance.Money : 0f;
     }
 
     public void UpdateUI(float newMoney) { moneyText.text = newMoney.ToString(); }
