@@ -44,7 +44,7 @@ public class HudManager : MonoBehaviour
         foreach (var container in containers)
         {
             if (container != null && container.GetContainerType() == HudContainers.Day)
-                container.UpdateText("DIA " + value.ToString());
+                container.UpdateText("DÍA " + value.ToString());
         }
     }
 
