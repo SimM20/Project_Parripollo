@@ -8,6 +8,9 @@ public class UIManager : MonoBehaviour
 
     [SerializeField] private HudManager hudManager;
     [SerializeField] private GameObject pauseCanvasPrefab;
+
+    [SerializeField] private GameObject prototypeControls;
+
     private GameObject pauseCanvasInstance;
 
     private int actualCustomers;
@@ -88,4 +91,14 @@ public class UIManager : MonoBehaviour
     public int GetActualMoney() { return actualMoney; }
     public int GetTotalCustomersPerDay() { return totalCustomers; }
     public int GetActualCustomers() { return actualCustomers; }
+
+
+    // Prototype controls
+
+    public void ShowPrototypeControls()
+    {
+        if (!prototypeControls) return;
+
+        prototypeControls.SetActive(!prototypeControls.activeInHierarchy);
+    }
 }
