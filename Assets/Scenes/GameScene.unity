@@ -7832,6 +7832,7 @@ MonoBehaviour:
   - {fileID: 1508660382}
   - {fileID: 1659614316}
   - {fileID: 583758130}
+  pauseButton: {fileID: 828843323}
 --- !u!114 &1228276919 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6338182058511020721, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -7921,6 +7922,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hudManager: {fileID: 1219608615}
+  pauseCanvasPrefab: {fileID: 4411120392363534055, guid: 80cbd1623a8f1094abfdae428b0ca67c, type: 3}
 --- !u!114 &1309260579 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4476350155445803131, guid: 9491b763193b0954487dedc1580658d3, type: 3}

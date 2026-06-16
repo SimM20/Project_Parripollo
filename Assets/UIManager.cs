@@ -7,6 +7,8 @@ public class UIManager : MonoBehaviour
     public static UIManager Instance { get; private set; }
 
     [SerializeField] private HudManager hudManager;
+    [SerializeField] private GameObject pauseCanvasPrefab;
+    private GameObject pauseCanvasInstance;
 
     private int actualCustomers;
     private int totalCustomers;
@@ -37,6 +39,21 @@ public class UIManager : MonoBehaviour
     {
         if (PlayerWallet.Instance != null)
             PlayerWallet.Instance.OnMoneyChanged -= SetActualMoney;
+    }
+
+    public void PauseGame()
+    {
+        if (!pauseCanvasInstance)
+            pauseCanvasInstance = Instantiate(pauseCanvasPrefab);
+
+        pauseCanvasInstance.SetActive(true);
+    }
+
+    public void UnPauseGame()
+    {
+        if (!pauseCanvasInstance) return;
+
+        pauseCanvasInstance.SetActive(false);
     }
 
     public void SetActualDay(int newDay)

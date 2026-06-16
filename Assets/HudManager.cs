@@ -1,9 +1,13 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class HudManager : MonoBehaviour
 {
     [SerializeField] private HudContainer[] containers;
 
+    [SerializeField] private Button pauseButton;
+
+    private void Awake() => pauseButton?.onClick.AddListener(UIManager.Instance.PauseGame);
     private void Start() => AutoUpdateTexts();
     private void OnEnable() => AutoUpdateTexts();
 
@@ -65,4 +69,6 @@ public class HudManager : MonoBehaviour
                 container.UpdateText(value1.ToString() + "/" + value2.ToString());
         }
     }
+
+    private void OnDisable() => pauseButton.onClick.RemoveAllListeners();
 }
