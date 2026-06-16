@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Fritas
   m_EditorClassIdentifier: 
   sideName: Fritas
-  sideSprite: {fileID: 0}
+  sideSprite: {fileID: 21300000, guid: c1837d0cb6c17f743ab3895c4407e15a, type: 3}
   purchasePrice: 100

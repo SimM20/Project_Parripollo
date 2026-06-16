@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Ensalada verde
   m_EditorClassIdentifier: 
   sideName: Ensalada verde
-  sideSprite: {fileID: 0}
+  sideSprite: {fileID: 21300000, guid: f78c6921ff4d4504288075363cf946b8, type: 3}
   purchasePrice: 100

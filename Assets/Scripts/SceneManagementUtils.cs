@@ -34,4 +34,14 @@ public static class SceneManagementUtils
     public static void ReLoadScene() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
 
     public static string GetCurrentName() => SceneManager.GetActiveScene().name;
+
+    public static void ReturnToMainMenu()
+    {
+        CoolerSystem.PrepareForNewGame(); // clears backup so next new game starts clean
+        if (PlayerWallet.Instance != null) UnityEngine.Object.Destroy(PlayerWallet.Instance.gameObject);
+        if (CoalConsumptionTracker.Instance != null) UnityEngine.Object.Destroy(CoalConsumptionTracker.Instance.gameObject);
+        if (CoolerSystem.Instance != null) UnityEngine.Object.Destroy(CoolerSystem.Instance.gameObject);
+        if (ToppingStock.Instance != null) UnityEngine.Object.Destroy(ToppingStock.Instance.gameObject);
+        LoadSceneByName("MainMenuScene");
+    }
 }

@@ -201,7 +201,7 @@ public class CoalTransferBuffer : MonoBehaviour
             SpriteRenderer renderer = go.GetComponent<SpriteRenderer>();
             if (renderer != null)
             {
-                renderer.sprite = entry.coalType.coalSprite;
+                renderer.sprite = entry.coalType.GetSpriteForState(entry.state);
                 renderer.sortingOrder = sortingBase + i;
             }
 

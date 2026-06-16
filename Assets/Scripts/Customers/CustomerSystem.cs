@@ -70,6 +70,8 @@ public class CustomerSystem : MonoBehaviour
 
         if (autoStartNight)
             StartNight();
+
+        UIManager.Instance?.SetTotalCustomers(maxCustomersPerNight);
     }
 
     void Update()
@@ -91,6 +93,8 @@ public class CustomerSystem : MonoBehaviour
     {
         ClearAllCustomers();
         spawnedTonight = 0;
+
+        UIManager.Instance?.SetActualCustomers(spawnedTonight);
 
         if (spawnRoutine != null)
             StopCoroutine(spawnRoutine);
@@ -163,6 +167,8 @@ public class CustomerSystem : MonoBehaviour
             SelectCustomer(customer);
 
         AudioManager.Instance.PlayNewClientBell();
+
+        UIManager.Instance?.SetActualCustomers(spawnedTonight);
 
         Debug.Log($"[CustomerSystem] Spawn {customer.type} en slot {slotIndex}: {order.PrimaryCut.cutName}");
     }

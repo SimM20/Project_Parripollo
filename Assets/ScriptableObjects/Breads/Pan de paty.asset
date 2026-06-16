@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Pan de paty
   m_EditorClassIdentifier: 
   breadName: Pan de paty
-  breadSprite: {fileID: 21300000, guid: d86fd4bd4b89da940b604255ec0fffa7, type: 3}
+  breadSprite: {fileID: 21300000, guid: 9943696c2c72b4a4bbf088fa51e29630, type: 3}
   purchasePrice: 100

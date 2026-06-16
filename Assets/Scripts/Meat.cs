@@ -64,9 +64,7 @@ public class Meat : Item
         foreach (var slot in occupiedSlots)
         {
             if (slot != null)
-            {
                 totalHeatInThisFrame += slot.totalHeatReceived;
-            }
         }
 
         float deltaHeat = totalHeatInThisFrame * Time.deltaTime;
@@ -217,25 +215,19 @@ public class Meat : Item
         MeatStates newState;
 
         if (sideACookTime >= targetA * 1.6f || sideBCookTime >= targetB * 1.6f)
-        {
             newState = MeatStates.Pasado;
-        }
+
         else if (sideACookTime >= targetA * 1.3f || sideBCookTime >= targetB * 1.3f)
-        {
             newState = MeatStates.Muy_Hecho;
-        }
+
         else if (sideACookTime >= targetA && sideBCookTime >= targetB)
-        {
             newState = MeatStates.Hecho;
-        }
+
         else if (sideACookTime > 0 || sideBCookTime > 0)
-        {
             newState = MeatStates.Jugoso;
-        }
+
         else
-        {
             newState = MeatStates.Crudo;
-        }
 
         if (newState != state)
         {

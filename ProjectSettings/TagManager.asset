@@ -11,7 +11,7 @@ TagManager:
   - Item
   - Water
   - UI
-  - HeatFX
+  - 
   - 
   - 
   - 
@@ -41,9 +41,6 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: EfectoCalor
-    uniqueID: 3954922641
-    locked: 0
-  - name: HeatFX
-    uniqueID: 4127784655
+  - name: MeatBubbleOverlay
+    uniqueID: 583324713
     locked: 0

@@ -56,10 +56,22 @@ public class BuildFoodDropZone : MonoBehaviour
             {
                 zone.buildStationSystem.SetBread(item.breadData);
                 ProductVariantSO variant = zone.buildStationSystem.TryResolveVariant();
-                if (variant != null && variant.variantSprite != null)
-                    zone.meatTransferBuffer?.UpdatePlateMeatSprite(variant.variantSprite);
+                if (variant != null)
+                {
+                    MeatStates meatState = MeatStates.Crudo;
+                    if (zone.buildStationSystem.AssembledCutStates.Count > 0)
+                        meatState = zone.buildStationSystem.AssembledCutStates[0];
+
+                    Sprite variantSprite = variant.GetSpriteForState(meatState);
+                    if (variantSprite != null)
+                        zone.meatTransferBuffer?.UpdatePlateMeatSprite(variantSprite);
+                    else
+                        Debug.LogWarning("[Build] Sin sprite de variante para: " + item.breadData.breadName);
+                }
                 else
+                {
                     Debug.LogWarning("[Build] Sin sprite de variante para: " + item.breadData.breadName);
+                }
                 Debug.Log("[Build] Pan arrastrado: " + item.breadData.breadName);
             }
             else if (item.sideData != null)
@@ -83,6 +95,11 @@ public class BuildFoodDropZone : MonoBehaviour
 
     public static bool TryAcceptMeatAt(Vector3 worldPoint, MeatCutSO cut)
     {
+        return TryAcceptMeatAt(worldPoint, cut, MeatStates.Crudo);
+    }
+
+    public static bool TryAcceptMeatAt(Vector3 worldPoint, MeatCutSO cut, MeatStates state)
+    {
         if (cut == null)
             return false;
 
@@ -95,8 +112,8 @@ public class BuildFoodDropZone : MonoBehaviour
             if (!zone.zoneCollider.OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
                 continue;
 
-            zone.buildStationSystem.AddCut(cut);
-            Debug.Log("[Build] Carne arrastrada: " + cut.cutName);
+            zone.buildStationSystem.AddCut(cut, state);
+            Debug.Log("[Build] Carne arrastrada: " + cut.cutName + " con estado " + state);
             return true;
         }
 

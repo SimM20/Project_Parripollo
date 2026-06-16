@@ -2,48 +2,44 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Lightweight container for the dish being assembled at the Build station.
-/// Holds the current assembled state (cuts, optional bread, sides, toppings)
-/// and provides validation via DishValidator.
-/// Does not implement new drag/drop behavior — only tracks what has been placed.
-/// </summary>
 public class BuildStationSystem : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private FoodCatalogSO catalog;
 
-    // Runtime assembled state
     private readonly List<MeatCutSO> assembledCuts = new List<MeatCutSO>();
+    private readonly List<MeatStates> assembledCutStates = new List<MeatStates>();
     private BreadSO assembledBread = null;
     private readonly List<SideSO> assembledSides = new List<SideSO>();
     private readonly List<ToppingSO> assembledToppings = new List<ToppingSO>();
 
     public event Action OnAssemblyChanged;
 
-    // ── Assembly state ──────────────────────────────────────────────────────
 
     public IReadOnlyList<MeatCutSO> AssembledCuts => assembledCuts;
+    public IReadOnlyList<MeatStates> AssembledCutStates => assembledCutStates;
     public BreadSO AssembledBread => assembledBread;
     public IReadOnlyList<SideSO> AssembledSides => assembledSides;
     public IReadOnlyList<ToppingSO> AssembledToppings => assembledToppings;
     public bool HasAnyCut => assembledCuts.Count > 0;
     public bool HasBread => assembledBread != null;
 
-    // ── Add / Remove ────────────────────────────────────────────────────────
 
-    public void AddCut(MeatCutSO cut)
+    public void AddCut(MeatCutSO cut, MeatStates state = MeatStates.Crudo)
     {
         if (cut == null) return;
         assembledCuts.Add(cut);
+        assembledCutStates.Add(state);
         OnAssemblyChanged?.Invoke();
-        Debug.Log("[BuildStation] Corte agregado: " + cut.cutName);
+        Debug.Log("[BuildStation] Corte agregado: " + cut.cutName + " (Estado: " + state + ")");
     }
 
     public void RemoveLastCut()
     {
         if (assembledCuts.Count == 0) return;
         assembledCuts.RemoveAt(assembledCuts.Count - 1);
+        if (assembledCutStates.Count > assembledCuts.Count)
+            assembledCutStates.RemoveAt(assembledCutStates.Count - 1);
         OnAssemblyChanged?.Invoke();
     }
 
@@ -72,6 +68,7 @@ public class BuildStationSystem : MonoBehaviour
     public void ClearAssembly()
     {
         assembledCuts.Clear();
+        assembledCutStates.Clear();
         assembledBread = null;
         assembledSides.Clear();
         assembledToppings.Clear();
@@ -79,12 +76,6 @@ public class BuildStationSystem : MonoBehaviour
         Debug.Log("[BuildStation] Armado limpiado.");
     }
 
-    // ── Build and validate ──────────────────────────────────────────────────
-
-    /// <summary>
-    /// Builds and validates the current assembly as a PlatedDish.
-    /// Returns null if invalid.
-    /// </summary>
     public PlatedDish TryBuildPlatedDish(out string reason)
     {
         if (assembledCuts.Count == 0)
@@ -104,10 +95,6 @@ public class BuildStationSystem : MonoBehaviour
         return dish;
     }
 
-    /// <summary>
-    /// Builds and validates the current assembly as a Sandwich.
-    /// Returns null if invalid.
-    /// </summary>
     public Sandwich TryBuildSandwich(out string reason)
     {
         if (assembledCuts.Count == 0)
@@ -131,10 +118,6 @@ public class BuildStationSystem : MonoBehaviour
         return sandwich;
     }
 
-    /// <summary>
-    /// Resolves the matching ProductVariantSO for the current assembly (plated or sandwich).
-    /// Returns null if not resolvable.
-    /// </summary>
     public ProductVariantSO TryResolveVariant()
     {
         if (catalog == null || !HasAnyCut) return null;
@@ -152,7 +135,6 @@ public class BuildStationSystem : MonoBehaviour
         }
     }
 
-    // ── Debug ───────────────────────────────────────────────────────────────
 
     [ContextMenu("Debug: Print Assembly")]
     public void DebugPrintAssembly()
