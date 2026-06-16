@@ -25,6 +25,9 @@ public class GameManager : MonoBehaviour
             grillSystem.SetMeatVisualsVisible(lastView == ViewType.Grill);
 
         customerSystem.OnNightEnded += EndNight;
+
+        int currentDay = (CoalConsumptionTracker.Instance?.DaysPlayed ?? 0) + 1;
+        UIManager.Instance?.SetActualDay(currentDay);
     }
 
     private void Update()
@@ -111,6 +114,7 @@ public class GameManager : MonoBehaviour
             Debug.Log("✔ Pedido correcto");
 
             grillSystem.RemoveMeat(meat);
+            PlayerWallet.Instance?.Add(customer.order.PrimaryCut.sellPricePlate);
             customerSystem.SpawnCustomer();
             customerSystem.CompleteCustomer(customer);
         }
@@ -158,6 +162,8 @@ public class GameManager : MonoBehaviour
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
         ToppingDraggable.ClearAllSplatters();
+        float sellPrice = customer.order.IsSandwich ? assembled.sellPriceSandwich : assembled.sellPricePlate;
+        PlayerWallet.Instance?.Add(sellPrice);
         customerSystem.CompleteCustomer(customer);
         Debug.Log("✔ Pedido entregado desde Build");
         AudioManager.Instance.PlayTaskCompleted();

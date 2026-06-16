@@ -31,6 +31,12 @@ public class CoolerStockVisualizer : MonoBehaviour
 
     void OnEnable()
     {
+        if (inventorySystem == null || inventorySystem != CoolerSystem.Instance)
+        {
+            if (inventorySystem != null)
+                inventorySystem.OnInventoryChanged -= RefreshVisuals;
+            inventorySystem = CoolerSystem.Instance;
+        }
         if (inventorySystem != null)
             inventorySystem.OnInventoryChanged += RefreshVisuals;
     }

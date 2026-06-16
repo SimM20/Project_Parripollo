@@ -25,12 +25,18 @@ public class CoalStockVisualizer : MonoBehaviour
     void Awake()
     {
         BuildConfigLookup();
-        // Buscamos el cerebro del carbón
+        // Buscamos el cerebro del carbï¿½n
         draggableType = ResolveType("DraggableCoal");
     }
 
     void OnEnable()
     {
+        if (coolerSystem == null || coolerSystem != CoolerSystem.Instance)
+        {
+            if (coolerSystem != null)
+                coolerSystem.OnInventoryChanged -= RefreshVisuals;
+            coolerSystem = CoolerSystem.Instance;
+        }
         if (coolerSystem != null)
             coolerSystem.OnInventoryChanged += RefreshVisuals;
     }
@@ -98,7 +104,7 @@ public class CoalStockVisualizer : MonoBehaviour
             if (!warnedMissingConfig.Contains(coal))
             {
                 warnedMissingConfig.Add(coal);
-                Debug.LogWarning("No hay config visual para el carbón.");
+                Debug.LogWarning("No hay config visual para el carbï¿½n.");
             }
 
             ClearCoalObjects(coal);
@@ -159,10 +165,10 @@ public class CoalStockVisualizer : MonoBehaviour
 
             if (draggable != null)
             {
-                // PASO DE DATOS CRÍTICO:
+                // PASO DE DATOS CRï¿½TICO:
                 go.SendMessage("SetCoalData", coal, SendMessageOptions.DontRequireReceiver);
 
-                // CORRECCIÓN ACÁ: Cambiamos "SetInventorySystem" por "SetCoolerSystem"
+                // CORRECCIï¿½N ACï¿½: Cambiamos "SetInventorySystem" por "SetCoolerSystem"
                 go.SendMessage("SetCoolerSystem", coolerSystem, SendMessageOptions.DontRequireReceiver);
 
                 // Le pasamos la referencia del cuadro blanco de la izquierda ("ToGrill")
