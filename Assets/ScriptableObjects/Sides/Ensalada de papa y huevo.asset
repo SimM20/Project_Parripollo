@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Ensalada de papa y huevo
   m_EditorClassIdentifier: 
   sideName: Ensalada de papa y huevo
-  sideSprite: {fileID: 0}
+  sideSprite: {fileID: 21300000, guid: c2e334a22fdcf2b46a105e300fc8d80f, type: 3}
   purchasePrice: 100
