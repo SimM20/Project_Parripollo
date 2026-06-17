@@ -7046,7 +7046,7 @@ MonoBehaviour:
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -9503,6 +9503,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   hudManager: {fileID: 1219608615}
   pauseCanvasPrefab: {fileID: 4411120392363534055, guid: 80cbd1623a8f1094abfdae428b0ca67c, type: 3}
+  prototypeControls: {fileID: 0}
 --- !u!114 &1309260579 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4476350155445803131, guid: 9491b763193b0954487dedc1580658d3, type: 3}
