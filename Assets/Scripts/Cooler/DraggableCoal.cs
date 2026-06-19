@@ -52,21 +52,34 @@ public class DraggableCoal : MonoBehaviour
         transform.position = GetMouseWorldPosition() + dragOffset;
     }
 
-    void OnMouseUp()
-    {
-        if (IsOverToGrill(transform.position))
-        {
-            if (coolerSystem.TryTake(coal, 1))
-            {
-                var buffer = FindFirstObjectByType<CoalTransferBuffer>();
-                if (buffer != null)
-                    buffer.EnqueueToGrill(coal);
-            }
-        }
+void OnMouseUp()
+{
+    bool wasConsumed = false;
 
-        Destroy(gameObject);
+    if (IsOverToGrill(transform.position))
+    {
+        if (coolerSystem.TryTake(coal, 1))
+        {
+            var buffer = FindFirstObjectByType<CoalTransferBuffer>();
+            if (buffer != null)
+                buffer.EnqueueToGrill(coal);
+
+            wasConsumed = true;
+        }
     }
 
+    if (wasConsumed)
+    {
+        Destroy(gameObject);
+    }
+    else
+    {
+        // Restaurar visual al estado original
+        if (selfRenderer != null)
+            selfRenderer.sortingOrder = startSortingOrder;
+        RestoreStartTransform();
+    }
+}
     private bool IsOverToGrill(Vector3 worldPoint)
     {
         if (toGrillDropArea == null)
