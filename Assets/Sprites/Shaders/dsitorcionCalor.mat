@@ -48,18 +48,18 @@ Material:
     - _Alpha: 0.45
     - _BandFrequency: 30
     - _BandSharpness: 5
-    - _DistortionStrength: 0.0073
+    - _DistortionStrength: 0.0093
     - _EdgeFade: 0.18
     - _EnableExternalAlpha: 0
     - _NoiseScale: 20
-    - _Opacity: 0.695
+    - _Opacity: 0.39
     - _Pulse: 1
     - _Softness: 1.2
-    - _Speed: 1.39
+    - _Speed: 0.55
     - _TintAmount: 0.25
-    - _VerticalDistortion: 0
-    - _VerticalPower: 1.38
-    - _WaveFrequency: 4.6
+    - _VerticalDistortion: 0.0222
+    - _VerticalPower: 2.1
+    - _WaveFrequency: 1.4
     - _XWarp: 0.045
     - _YFlow: 0.8
     m_Colors:

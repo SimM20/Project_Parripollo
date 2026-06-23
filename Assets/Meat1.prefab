@@ -642,6 +642,10 @@ MonoBehaviour:
   itemType: 0
   cut: {fileID: 0}
   spriteRenderer: {fileID: -7293428179474734505}
+  heatPrefab: {fileID: 7020299529566551088, guid: 04a0dc99c0d2aa047bceb2ac0a68283e, type: 3}
+  smokePrefab: {fileID: 5878067639910304575, guid: 155625f257985ea40a9588c1861b7903, type: 3}
+  heatOffset: {x: 0, y: 0, z: 0}
+  smokeOffset: {x: 0, y: 0.8, z: -0.1}
   hardSound: {fileID: 8300000, guid: f9664a6745285f54bb5c333b900cf4cf, type: 3}
   softSound: {fileID: 8300000, guid: 0a0deacb0d624ff48a0c7774b659d3b5, type: 3}
   rotatePreviewVisual: 1

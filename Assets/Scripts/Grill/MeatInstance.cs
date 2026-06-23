@@ -5,8 +5,9 @@ public class MeatInstance : Meat
 {
     private AudioSource audioSource;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         audioSource = GetComponent<AudioSource>();
     }
 

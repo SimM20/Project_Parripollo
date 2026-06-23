@@ -11,6 +11,15 @@ public class Meat : Item
     [Header("Visual")]
     [SerializeField] private SpriteRenderer spriteRenderer;
 
+    [Header("Visual Effects Prefabs")]
+    [SerializeField] private GameObject heatPrefab;
+    [SerializeField] private GameObject smokePrefab;
+    [SerializeField] private Vector3 heatOffset = Vector3.zero;
+    [SerializeField] private Vector3 smokeOffset = new Vector3(0f, 0.8f, -0.1f);
+
+    private GameObject heatInstance;
+    private GameObject smokeInstance;
+
     [Header("Sound")]
     [SerializeField] protected AudioClip hardSound;
     [SerializeField] protected AudioClip softSound;
@@ -37,13 +46,67 @@ public class Meat : Item
     public bool IsSideAActive => isSideA;
     public bool IsGridRotated => isGridRotated;
 
-    void Awake()
+    protected virtual void Awake()
     {
         itemType = ItemType.Meat;
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
 
         ApplyCutVisual();
+    }
+
+    protected override void Update()
+    {
+        base.Update();
+        UpdateEffects();
+    }
+
+    private void UpdateEffects()
+    {
+        bool showHeat = IsCurrentlyCooking();
+        bool isBurned = (state == MeatStates.Pasado);
+
+        if (heatInstance != null)
+        {
+            if (heatInstance.activeSelf != showHeat)
+                heatInstance.SetActive(showHeat);
+        }
+        else if (heatPrefab != null && showHeat)
+        {
+            heatInstance = Instantiate(heatPrefab, transform);
+            heatInstance.transform.localPosition = heatOffset;
+            heatInstance.transform.localRotation = Quaternion.identity;
+            heatInstance.SetActive(true);
+        }
+
+        if (smokeInstance != null)
+        {
+            if (smokeInstance.activeSelf != isBurned)
+                smokeInstance.SetActive(isBurned);
+        }
+        else if (smokePrefab != null && isBurned)
+        {
+            smokeInstance = Instantiate(smokePrefab, transform);
+            smokeInstance.transform.localPosition = smokeOffset;
+            smokeInstance.transform.localRotation = Quaternion.identity;
+            smokeInstance.SetActive(true);
+        }
+    }
+
+    private bool IsCurrentlyCooking()
+    {
+        if (occupiedSlots.Count == 0 || isHeldByMouse)
+            return false;
+
+        for (int i = 0; i < occupiedSlots.Count; i++)
+        {
+            GridSlot slot = occupiedSlots[i];
+            if (slot != null && slot.totalHeatReceived > 0.01f)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void SetCut(MeatCutSO newCut)
