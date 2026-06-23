@@ -32,6 +32,22 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (UIManager.Instance != null)
+            {
+                if (UIManager.Instance.IsPaused)
+                    UIManager.Instance.UnPauseGame();
+                else
+                    UIManager.Instance.PauseGame();
+            }
+        }
+
+        if (UIManager.Instance != null && UIManager.Instance.IsPaused)
+        {
+            return;
+        }
+
         if (viewManager != null && Input.GetKeyDown(KeyCode.Tab))
         {
             viewManager.Toggle();
