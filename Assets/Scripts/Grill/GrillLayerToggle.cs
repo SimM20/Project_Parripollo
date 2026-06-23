@@ -12,6 +12,11 @@ public class GrillLayerToggle : MonoBehaviour
     [SerializeField] private Sprite meatIcon;
     [SerializeField] private Sprite coalIcon;
 
+    [Header("Sprite Toggle Settings")]
+    [SerializeField] private SpriteRenderer targetToggleRenderer;
+    [SerializeField] private Sprite buttonVariable1;
+    [SerializeField] private Sprite buttonVariable2;
+
     [Header("State")]
     [SerializeField] private GrillLayer startLayer = GrillLayer.Meat;
     [SerializeField] [Range(0f, 1f)] private float inactiveAlpha = 0.3f;
@@ -39,6 +44,12 @@ public class GrillLayerToggle : MonoBehaviour
 
     void Start()
     {
+        if (targetToggleRenderer == null)
+            targetToggleRenderer = GetComponent<SpriteRenderer>();
+
+        if (targetToggleRenderer != null && buttonVariable1 != null)
+            targetToggleRenderer.sprite = buttonVariable1;
+
         ShowLayer(startLayer);
     }
 
@@ -50,6 +61,23 @@ public class GrillLayerToggle : MonoBehaviour
     public void Toggle()
     {
         ShowLayer(CurrentLayer == GrillLayer.Meat ? GrillLayer.Coal : GrillLayer.Meat);
+        ToggleSprite();
+    }
+
+    private void ToggleSprite()
+    {
+        if (targetToggleRenderer == null) return;
+
+        if (targetToggleRenderer.sprite == buttonVariable1)
+        {
+            if (buttonVariable2 != null)
+                targetToggleRenderer.sprite = buttonVariable2;
+        }
+        else
+        {
+            if (buttonVariable1 != null)
+                targetToggleRenderer.sprite = buttonVariable1;
+        }
     }
 
     public void ShowLayer(GrillLayer layer)

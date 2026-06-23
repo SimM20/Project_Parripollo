@@ -1568,6 +1568,18 @@ PrefabInstance:
       propertyPath: grillSystem
       value: 
       objectReference: {fileID: 1141140570}
+    - target: {fileID: 2623028508749985151, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: buttonVariable1
+      value: 
+      objectReference: {fileID: 21300000, guid: a5818a54d7f00674a8acf722e3376aef, type: 3}
+    - target: {fileID: 2623028508749985151, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: buttonVariable2
+      value: 
+      objectReference: {fileID: 21300000, guid: 4f85a3b20b2af9046893efed6690e5e4, type: 3}
+    - target: {fileID: 2623028508749985151, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: targetToggleRenderer
+      value: 
+      objectReference: {fileID: 1829056362}
     - target: {fileID: 2661358596664454557, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.5728091
@@ -2427,7 +2439,7 @@ PrefabInstance:
     - target: {fileID: 5302745844320771486, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 21300000, guid: 52df367b3962b964d9948dd89dc0bc11, type: 3}
+      objectReference: {fileID: 21300000, guid: a5818a54d7f00674a8acf722e3376aef, type: 3}
     - target: {fileID: 5302745844320771486, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_Color.b
       value: 1
@@ -9157,6 +9169,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1858535411}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &1829056362 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 5302745844320771486, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+  m_PrefabInstance: {fileID: 281249050}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1858535410
 GameObject:
   m_ObjectHideFlags: 0

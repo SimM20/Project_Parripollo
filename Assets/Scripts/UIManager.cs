@@ -41,6 +41,8 @@ public class UIManager : MonoBehaviour
             PlayerWallet.Instance.OnMoneyChanged -= SetActualMoney;
     }
 
+    public bool IsPaused => pauseCanvasInstance != null && pauseCanvasInstance.activeSelf;
+
     public void PauseGame()
     {
         if (!pauseCanvasInstance)
