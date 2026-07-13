@@ -79,6 +79,17 @@ public class CoalTransferBuffer : MonoBehaviour
         RebuildStack(toGrillCoals, toGrillVisuals, toGrillAnchor, toGrillSortingBase, false, toGrillLocalPositions);
     }
 
+    public bool EnqueueToGrillAtPoint(CoalSO coalSO, Vector3 worldPoint)
+    {
+        BufferedCoalData entry = BufferedCoalData.FromSO(coalSO);
+        if (entry == null) return false;
+
+        toGrillCoals.Add(entry);
+        toGrillLocalPositions.Add(WorldToAnchorLocalPosition(worldPoint, toGrillAnchor));
+        RebuildStack(toGrillCoals, toGrillVisuals, toGrillAnchor, toGrillSortingBase, false, toGrillLocalPositions);
+        return true;
+    }
+
     public void UpdateCoalHolderHover(CoalSO coal, Vector3 worldPoint)
     {
         if (coal == null || grillSystem == null)
@@ -221,6 +232,14 @@ public class CoalTransferBuffer : MonoBehaviour
     }
 
     private Vector3 GetStackLocalPosition(int index) => stackDirection.normalized * stackSpacing * Mathf.Max(0, index);
+
+    private static Vector3 WorldToAnchorLocalPosition(Vector3 worldPoint, Transform anchor)
+    {
+        if (anchor == null) return worldPoint;
+        Vector3 localPoint = anchor.InverseTransformPoint(worldPoint);
+        localPoint.z = 0f;
+        return localPoint;
+    }
 
     private void SyncPositionList(List<Vector3> localPositions, int targetCount)
     {
