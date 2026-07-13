@@ -56,13 +56,15 @@ void OnMouseUp()
 {
     bool wasConsumed = false;
 
-    if (IsOverToGrill(transform.position))
+    Vector3 dropWorldPoint = transform.position;
+
+    if (IsOverToGrill(dropWorldPoint))
     {
         if (coolerSystem.TryTake(coal, 1))
         {
             var buffer = FindFirstObjectByType<CoalTransferBuffer>();
             if (buffer != null)
-                buffer.EnqueueToGrill(coal);
+                buffer.EnqueueToGrillAtPoint(coal, dropWorldPoint);
 
             wasConsumed = true;
         }
