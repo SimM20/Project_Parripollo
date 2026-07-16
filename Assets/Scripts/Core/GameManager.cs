@@ -83,20 +83,42 @@ public class GameManager : MonoBehaviour
         if (currentView == ViewType.Build && lastView != ViewType.Build && meatTransferBuffer != null)
             meatTransferBuffer.SendMessage("MoveToBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
 
+        if (currentView != lastView && currentView != ViewType.Build
+            && customerSystem != null && customerSystem.IsDeliverySelectionActive)
+        {
+            customerSystem.EndDeliverySelection();
+        }
+
         lastView = currentView;
 
         if (currentView == ViewType.Grill && Input.GetKeyDown(KeyCode.Space))
             TryServe();
 
         if (currentView == ViewType.Build && Input.GetKeyDown(KeyCode.Space))
-            TryServeBuild();
+        {
+            if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
+                ConfirmDeliverySelection();
+            else
+                TryEnterDeliverySelection();
+        }
 
         if (currentView == ViewType.Build)
         {
+            bool selectingCustomer = customerSystem != null && customerSystem.IsDeliverySelectionActive;
+
+            if (selectingCustomer)
+            {
+                if (Input.GetKeyDown(KeyCode.A))
+                    customerSystem.SelectAdjacentCustomer(-1);
+
+                if (Input.GetKeyDown(KeyCode.D))
+                    customerSystem.SelectAdjacentCustomer(1);
+            }
+
             var customer = customerSystem?.currentCustomer;
             var order = customer?.order;
 
-            if (Input.GetKeyDown(KeyCode.R))
+            if (!selectingCustomer && Input.GetKeyDown(KeyCode.R))
             {
                 ClearBuildAssembly();
                 meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
@@ -105,7 +127,7 @@ public class GameManager : MonoBehaviour
                 Debug.Log("[Build] Plato limpiado.");
             }
 
-            if (Input.GetKeyDown(KeyCode.M) && order?.PrimaryCut != null)
+            if (!selectingCustomer && Input.GetKeyDown(KeyCode.M) && order?.PrimaryCut != null)
             {
                 if (foodAvailabilityService != null)
                     foodAvailabilityService.InformMissingCut(order.PrimaryCut);
@@ -141,25 +163,50 @@ public class GameManager : MonoBehaviour
         buildStationSystem.ClearAssembly();
     }
 
-    private void TryServeBuild()
+    private void TryEnterDeliverySelection()
     {
         if (buildStationSystem == null)
         {
-            Debug.Log("[TryServeBuild] BuildStationSystem no asignado en GameManager.");
+            Debug.Log("[TryEnterDeliverySelection] BuildStationSystem no asignado en GameManager.");
             return;
         }
 
-        var customer = customerSystem?.currentCustomer;
-        if (customer == null) return;
-
         if (!buildStationSystem.HasAnyCut)
+        {
+            DeliveryFeedbackText.Instance?.Show("No hay nada preparado para entregar.");
             return;
+        }
+
+        if (customerSystem == null || !customerSystem.BeginDeliverySelection())
+            DeliveryFeedbackText.Instance?.Show("No hay clientes esperando.");
+    }
+
+    private void ConfirmDeliverySelection()
+    {
+        var customer = customerSystem.SelectedCustomer;
+
+        if (customer == null)
+        {
+            DeliveryFeedbackText.Instance?.Show("No hay un cliente seleccionado.");
+            customerSystem.EndDeliverySelection();
+            return;
+        }
+
+        if (buildStationSystem == null || !buildStationSystem.HasAnyCut)
+        {
+            DeliveryFeedbackText.Instance?.Show("No hay nada preparado para entregar.");
+            customerSystem.EndDeliverySelection();
+            return;
+        }
 
         MeatCutSO assembled = buildStationSystem.AssembledCuts[0];
         if (assembled != customer.order.PrimaryCut)
         {
             Debug.Log("❌ Corte incorrecto. Pedido: " + customer.order.PrimaryCut?.cutName
                       + " | Armado: " + assembled.cutName);
+            DeliveryFeedbackText.Instance?.Show("Corte incorrecto. El cliente pidió: "
+                      + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".");
+            customerSystem.EndDeliverySelection();
             return;
         }
 
@@ -171,6 +218,8 @@ public class GameManager : MonoBehaviour
         if (!valid)
         {
             Debug.Log("❌ " + reason);
+            DeliveryFeedbackText.Instance?.Show(reason);
+            customerSystem.EndDeliverySelection();
             return;
         }
 
@@ -181,6 +230,7 @@ public class GameManager : MonoBehaviour
         float sellPrice = customer.order.IsSandwich ? assembled.sellPriceSandwich : assembled.sellPricePlate;
         PlayerWallet.Instance?.Add(sellPrice);
         customerSystem.CompleteCustomer(customer);
+        customerSystem.EndDeliverySelection();
         Debug.Log("✔ Pedido entregado desde Build");
         AudioManager.Instance.PlayTaskCompleted();
     }
