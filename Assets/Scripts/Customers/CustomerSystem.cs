@@ -44,6 +44,8 @@ public class CustomerSystem : MonoBehaviour
 
     public Customer SelectedCustomer { get; private set; }
 
+    public bool IsDeliverySelectionActive { get; private set; }
+
     private OrderSystem orderSystem;
     private readonly List<Customer> activeCustomers = new List<Customer>();
     private CustomerView[] slotViews;
@@ -180,12 +182,107 @@ public class CustomerSystem : MonoBehaviour
         SelectedCustomer = customer;
         currentCustomer = customer; // compat con GameManager
 
-        // Refresh selection visuals
+        RefreshSelectionVisuals();
+    }
+
+    /// <summary>Entra al modo de selección de cliente para entregar. Arranca en el primer cliente disponible.</summary>
+    public bool BeginDeliverySelection()
+    {
+        var first = GetFirstActiveCustomer();
+        if (first == null) return false;
+
+        IsDeliverySelectionActive = true;
+        SelectCustomer(first);
+        return true;
+    }
+
+    public void EndDeliverySelection()
+    {
+        IsDeliverySelectionActive = false;
+        RefreshSelectionVisuals();
+        CustomerHoverBubble.Instance?.Hide();
+    }
+
+    /// <summary>Navega al cliente ocupado siguiente (+1) o anterior (-1) por orden de slot, con wrap.</summary>
+    public void SelectAdjacentCustomer(int direction)
+    {
+        if (SelectedCustomer == null)
+        {
+            var first = GetFirstActiveCustomer();
+            if (first != null) SelectCustomer(first);
+            return;
+        }
+
+        int n = slotViews.Length;
+        int start = SelectedCustomer.slotIndex;
+
+        for (int step = 1; step < n; step++)
+        {
+            int idx = ((start + direction * step) % n + n) % n;
+            if (slotViews[idx] != null)
+            {
+                SelectCustomer(slotViews[idx].Customer);
+                return;
+            }
+        }
+    }
+
+    private void RefreshSelectionVisuals()
+    {
+        if (slotViews == null) return;
+
+        CustomerView selectedView = null;
+
         for (int i = 0; i < slotViews.Length; i++)
         {
             if (slotViews[i] == null) continue;
-            slotViews[i].RefreshSelection(slotViews[i].Customer == SelectedCustomer);
+
+            bool isSelected = IsDeliverySelectionActive && slotViews[i].Customer == SelectedCustomer;
+            slotViews[i].RefreshSelection(isSelected);
+
+            if (isSelected)
+                selectedView = slotViews[i];
         }
+
+        if (selectedView != null)
+        {
+            CustomerSelectionFrame.Instance?.ShowOver(selectedView);
+            ShowSelectedOrderBubble();
+        }
+        else
+        {
+            CustomerSelectionFrame.Instance?.Hide();
+        }
+    }
+
+    /// <summary>
+    /// Muestra la burbuja de pedido sobre el cliente seleccionado si el modo de
+    /// selección de entrega está activo; si no, la oculta. También la usa
+    /// CustomerView al salir el mouse del hover para restaurar la burbuja.
+    /// </summary>
+    public void ShowSelectedOrderBubble()
+    {
+        if (CustomerHoverBubble.Instance == null) return;
+
+        var view = IsDeliverySelectionActive ? GetSelectedView() : null;
+
+        if (view != null && view.Customer?.order != null)
+            CustomerHoverBubble.Instance.Show(view.Customer.order.ToHoverString(), view.transform);
+        else
+            CustomerHoverBubble.Instance.Hide();
+    }
+
+    private CustomerView GetSelectedView()
+    {
+        if (slotViews == null || SelectedCustomer == null) return null;
+
+        for (int i = 0; i < slotViews.Length; i++)
+        {
+            if (slotViews[i] != null && slotViews[i].Customer == SelectedCustomer)
+                return slotViews[i];
+        }
+
+        return null;
     }
 
     public void CompleteCustomer(Customer customer)
@@ -216,6 +313,8 @@ public class CustomerSystem : MonoBehaviour
             var next = GetFirstActiveCustomer();
             if (next != null)
                 SelectCustomer(next);
+            else if (IsDeliverySelectionActive)
+                EndDeliverySelection();
         }
 
         Debug.Log("[CustomerSystem] Remove: " + reason);
@@ -319,5 +418,8 @@ public class CustomerSystem : MonoBehaviour
         activeCustomers.Clear();
         SelectedCustomer = null;
         currentCustomer = null;
+        IsDeliverySelectionActive = false;
+        CustomerSelectionFrame.Instance?.Hide();
+        CustomerHoverBubble.Instance?.Hide();
     }
 }

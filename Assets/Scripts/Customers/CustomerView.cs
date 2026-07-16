@@ -45,7 +45,11 @@ public class CustomerView : MonoBehaviour
 
     void OnMouseExit()
     {
-        if (CustomerHoverBubble.Instance != null)
+        // En modo selección de entrega, restaura la burbuja del cliente seleccionado
+        // en vez de ocultarla; fuera del modo, la oculta como siempre.
+        if (system != null)
+            system.ShowSelectedOrderBubble();
+        else if (CustomerHoverBubble.Instance != null)
             CustomerHoverBubble.Instance.Hide();
     }
 
