@@ -51,6 +51,9 @@ public class MeatTransferBuffer : MonoBehaviour
         public MeatStates state;
         public bool isGridRotated;
 
+        public MeatStates SideAState => cut != null ? cut.GetStateForHeat(sideACookTime) : MeatStates.Crudo;
+        public MeatStates SideBState => cut != null ? cut.GetStateForHeat(sideBCookTime) : MeatStates.Crudo;
+
         public static BufferedMeatData FromCut(MeatCutSO sourceCut)
         {
             if (sourceCut == null)
@@ -91,9 +94,9 @@ public class MeatTransferBuffer : MonoBehaviour
             meat.sideACookTime = Mathf.Max(0f, sideACookTime);
             meat.sideBCookTime = Mathf.Max(0f, sideBCookTime);
             meat.isSideA = isSideA;
-            meat.state = state;
             meat.SetGridRotation(rotateFootprint);
             meat.SetCut(cut);
+            meat.RefreshState();
         }
     }
 
@@ -203,6 +206,21 @@ public class MeatTransferBuffer : MonoBehaviour
         }
 
         RefreshVisuals();
+    }
+
+    /// <summary>
+    /// Elimina el visual del plato en 'index' (alineado con el orden en que se consumieron los cortes).
+    /// Usado por el descarte contextual de quemados. Best-effort: ignora índices fuera de rango.
+    /// </summary>
+    public void RemovePlateMeatVisualAt(int index)
+    {
+        if (index < 0 || index >= plateMeatVisuals.Count)
+            return;
+
+        if (plateMeatVisuals[index] != null)
+            Destroy(plateMeatVisuals[index]);
+
+        plateMeatVisuals.RemoveAt(index);
     }
 
     public void ClearPlateMeatVisuals()
@@ -737,7 +755,7 @@ public class MeatTransferBuffer : MonoBehaviour
             if (drag == null)
                 drag = go.AddComponent<BuildMeatHolderDraggableMeat>();
 
-            drag.Setup(entry.cut, entry.state, this, i);
+            drag.Setup(entry.cut, entry.state, entry.SideAState, entry.SideBState, this, i);
         }
     }
 

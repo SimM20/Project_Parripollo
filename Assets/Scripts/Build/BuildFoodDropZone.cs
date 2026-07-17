@@ -100,6 +100,11 @@ public class BuildFoodDropZone : MonoBehaviour
 
     public static bool TryAcceptMeatAt(Vector3 worldPoint, MeatCutSO cut, MeatStates state)
     {
+        return TryAcceptMeatAt(worldPoint, cut, state, state, state);
+    }
+
+    public static bool TryAcceptMeatAt(Vector3 worldPoint, MeatCutSO cut, MeatStates state, MeatStates sideAState, MeatStates sideBState)
+    {
         if (cut == null)
             return false;
 
@@ -112,8 +117,9 @@ public class BuildFoodDropZone : MonoBehaviour
             if (!zone.zoneCollider.OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
                 continue;
 
-            zone.buildStationSystem.AddCut(cut, state);
-            Debug.Log("[Build] Carne arrastrada: " + cut.cutName + " con estado " + state);
+            zone.buildStationSystem.AddCut(cut, state, sideAState, sideBState);
+            Debug.Log("[Build] Carne arrastrada: " + cut.cutName + " con estado " + state
+                      + " (A: " + sideAState + " | B: " + sideBState + ")");
             return true;
         }
 

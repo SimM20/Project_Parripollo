@@ -26,6 +26,11 @@ public class MeatCutSO : ItemDataSO
     [SerializeField] public float timeHeatA;
     [SerializeField] public float timeHeatB;
 
+    [Tooltip("Escala total de calor por cara (S). Se divide en 6 bandas iguales: " +
+             "Crudo, Jugoso, Hecho, Bien Hecho, Pasado, Quemado. " +
+             "Si es 0, se deriva de timeHeat (S = 3 * timeHeat) para que Hecho arranque en el target anterior.")]
+    [SerializeField] public float heatScale;
+
     [Header("Espaciado")]
     [SerializeField] private Vector2Int grillSpace;
 
@@ -83,6 +88,43 @@ public class MeatCutSO : ItemDataSO
     public Sprite cutSprite => GetDefaultSprite();
     public float cookTimePerSide => GetHeatTimeForSide(true);
 
+    // ── Escala de cocción por caras (6 bandas iguales) ──────────────────────
+
+    /// <summary>Escala total S por cara. Misma para ambas caras.</summary>
+    public float GetHeatScale()
+    {
+        if (heatScale > 0f)
+            return heatScale;
+
+        return GetHeatTimeForSide(true) * 3f;
+    }
+
+    /// <summary>Ancho de cada banda de estado: S / 6.</summary>
+    public float GetStateBandHeat() => GetHeatScale() / 6f;
+
+    /// <summary>Umbral de entrada a Quemado: (5 * S) / 6. Máximo efectivo de acumulación.</summary>
+    public float GetBurnThreshold() => (5f * GetHeatScale()) / 6f;
+
+    /// <summary>
+    /// Convierte calor acumulado a estado. Intervalos cerrados por izquierda, abiertos por derecha.
+    /// Alcanzar exactamente un límite entra al estado siguiente; alcanzar burnThreshold entra a Quemado.
+    /// </summary>
+    public MeatStates GetStateForHeat(float accumulatedHeat)
+    {
+        float band = GetStateBandHeat();
+        if (band <= 0f)
+            return MeatStates.Crudo;
+
+        float clamped = Mathf.Clamp(accumulatedHeat, 0f, GetBurnThreshold());
+        int stateIndex = Mathf.Min(Mathf.FloorToInt(clamped / band), 5);
+
+        // Corrección de precisión: si el valor sin clamp alcanzó el umbral de Quemado, es Quemado.
+        if (accumulatedHeat >= GetBurnThreshold())
+            stateIndex = 5;
+
+        return (MeatStates)stateIndex;
+    }
+
     [Header("Serving Rules")]
     [Tooltip("Defines how this cut can be served: plated, sandwich, or both.")]
     [SerializeField] public ServingMode servingMode;
@@ -107,6 +149,7 @@ public class MeatCutSO : ItemDataSO
 
         timeHeatA = Mathf.Max(0f, timeHeatA);
         timeHeatB = Mathf.Max(0f, timeHeatB);
+        heatScale = Mathf.Max(0f, heatScale);
 
         grillSpace.x = Mathf.Max(1, grillSpace.x);
         grillSpace.y = Mathf.Max(1, grillSpace.y);

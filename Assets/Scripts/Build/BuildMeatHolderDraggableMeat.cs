@@ -4,6 +4,8 @@ public class BuildMeatHolderDraggableMeat : MonoBehaviour
 {
     private MeatCutSO cut;
     private MeatStates state;
+    private MeatStates sideAState;
+    private MeatStates sideBState;
     private MeatTransferBuffer buffer;
     private int entryId;
 
@@ -12,10 +14,12 @@ public class BuildMeatHolderDraggableMeat : MonoBehaviour
     private int startSortingOrder;
     private SpriteRenderer selfRenderer;
 
-    public void Setup(MeatCutSO setupCut, MeatStates setupState, MeatTransferBuffer setupBuffer, int setupEntryId)
+    public void Setup(MeatCutSO setupCut, MeatStates setupState, MeatStates setupSideAState, MeatStates setupSideBState, MeatTransferBuffer setupBuffer, int setupEntryId)
     {
         cut = setupCut;
         state = setupState;
+        sideAState = setupSideAState;
+        sideBState = setupSideBState;
         buffer = setupBuffer;
         entryId = setupEntryId;
     }
@@ -62,7 +66,7 @@ public class BuildMeatHolderDraggableMeat : MonoBehaviour
             return;
         }
 
-        bool dropped = BuildFoodDropZone.TryAcceptMeatAt(GetMouseWorldPos(), cut, state);
+        bool dropped = BuildFoodDropZone.TryAcceptMeatAt(GetMouseWorldPos(), cut, state, sideAState, sideBState);
 
         if (dropped)
             buffer.ConsumeBuildMeatEntry(entryId, gameObject);

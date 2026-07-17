@@ -12,9 +12,10 @@ public enum MeatTypes
 
 public enum MeatStates
 {
-    Crudo,
-    Jugoso,
-    Hecho,
-    Muy_Hecho,
-    Pasado
+    Crudo,      // 0 - no entregable
+    Jugoso,     // 1 - solicitable
+    Hecho,      // 2 - solicitable
+    Muy_Hecho,  // 3 - solicitable ("Bien Hecho" en UI)
+    Pasado,     // 4 - solicitable, último punto válido
+    Quemado     // 5 - irreversible, no entregable
 }

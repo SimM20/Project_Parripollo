@@ -38,11 +38,17 @@ public class Meat : Item
     private int lastCookFrame = -1;
     private bool isGridRotated;
 
-    public float SideAProgress01 => Mathf.Clamp01(sideACookTime / Mathf.Max(0.0001f, SideAHeatTarget));
-    public float SideBProgress01 => Mathf.Clamp01(sideBCookTime / Mathf.Max(0.0001f, SideBHeatTarget));
-    public float CookedPercent01 => Mathf.Clamp01((sideACookTime + sideBCookTime) / Mathf.Max(0.0001f, SideAHeatTarget + SideBHeatTarget));
-    public float SideAHeatTarget => cut != null ? cut.GetHeatTimeForSide(true) : 10000f;
-    public float SideBHeatTarget => cut != null ? cut.GetHeatTimeForSide(false) : 10000f;
+    public float SideAProgress01 => HeatScale > 0f ? Mathf.Clamp(sideACookTime, 0f, BurnThreshold) / HeatScale : 0f;
+    public float SideBProgress01 => HeatScale > 0f ? Mathf.Clamp(sideBCookTime, 0f, BurnThreshold) / HeatScale : 0f;
+    public float CookedPercent01 => Mathf.Clamp01((sideACookTime + sideBCookTime) / Mathf.Max(0.0001f, HeatScale * 2f));
+    public float HeatScale => cut != null ? cut.GetHeatScale() : 10000f;
+    public float BurnThreshold => cut != null ? cut.GetBurnThreshold() : 10000f;
+    public MeatStates SideAState => cut != null ? cut.GetStateForHeat(sideACookTime) : MeatStates.Crudo;
+    public MeatStates SideBState => cut != null ? cut.GetStateForHeat(sideBCookTime) : MeatStates.Crudo;
+    public MeatStates ActiveSideState => isSideA ? SideAState : SideBState;
+    public float ActiveSideProgress01 => isSideA ? SideAProgress01 : SideBProgress01;
+    public bool IsAnySideBurned => SideAState == MeatStates.Quemado || SideBState == MeatStates.Quemado;
+    public bool IsOnGrill => occupiedSlots.Count > 0 && !isHeldByMouse;
     public bool IsSideAActive => isSideA;
     public bool IsGridRotated => isGridRotated;
 
@@ -64,7 +70,7 @@ public class Meat : Item
     private void UpdateEffects()
     {
         bool showHeat = IsCurrentlyCooking();
-        bool isBurned = (state == MeatStates.Pasado);
+        bool isBurned = IsAnySideBurned;
 
         if (heatInstance != null)
         {
@@ -132,12 +138,15 @@ public class Meat : Item
 
         float deltaHeat = totalHeatInThisFrame * Time.deltaTime;
 
-        if (isSideA)
-            sideACookTime += deltaHeat;
-        else
-            sideBCookTime += deltaHeat;
+        // Solo acumula la cara apoyada; al alcanzar el umbral de Quemado deja de acumular (clamp).
+        float burnThreshold = BurnThreshold;
 
-        UpdateState();
+        if (isSideA)
+            sideACookTime = Mathf.Min(sideACookTime + deltaHeat, burnThreshold);
+        else
+            sideBCookTime = Mathf.Min(sideBCookTime + deltaHeat, burnThreshold);
+
+        RefreshState();
     }
 
     public override void OnMouseUp()
@@ -193,6 +202,9 @@ public class Meat : Item
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();
 
+        if (MeatCookHoverBar.Instance != null)
+            MeatCookHoverBar.Instance.HideIfTarget(this);
+
         ApplyGridRotationPreview();
         UpdateHoverPreview();
     }
@@ -228,6 +240,7 @@ public class Meat : Item
     public void Flip()
     {
         isSideA = !isSideA;
+        state = ActiveSideState;
         ApplyCutVisual();
     }
 
@@ -270,27 +283,13 @@ public class Meat : Item
         currentSlot = null;
     }
 
-    private void UpdateState()
+    /// <summary>
+    /// Deriva el estado visible desde el calor acumulado de la cara activa.
+    /// Los estados por cara siempre se derivan de los floats (SideAState/SideBState).
+    /// </summary>
+    public void RefreshState()
     {
-        float targetA = SideAHeatTarget;
-        float targetB = SideBHeatTarget;
-
-        MeatStates newState;
-
-        if (sideACookTime >= targetA * 1.6f || sideBCookTime >= targetB * 1.6f)
-            newState = MeatStates.Pasado;
-
-        else if (sideACookTime >= targetA * 1.3f || sideBCookTime >= targetB * 1.3f)
-            newState = MeatStates.Muy_Hecho;
-
-        else if (sideACookTime >= targetA && sideBCookTime >= targetB)
-            newState = MeatStates.Hecho;
-
-        else if (sideACookTime > 0 || sideBCookTime > 0)
-            newState = MeatStates.Jugoso;
-
-        else
-            newState = MeatStates.Crudo;
+        MeatStates newState = ActiveSideState;
 
         if (newState != state)
         {
@@ -331,15 +330,27 @@ public class Meat : Item
         if (isHeldByMouse) return;
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Show(this.ToHoverString(), transform);
+
+        if (IsOnGrill && MeatCookHoverBar.Instance != null)
+            MeatCookHoverBar.Instance.Show(this);
     }
 
     void OnMouseExit()
     {
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();
+
+        if (MeatCookHoverBar.Instance != null)
+            MeatCookHoverBar.Instance.HideIfTarget(this);
     }
 
-    void OnDestroy() => ReleaseOccupiedSlots();
+    void OnDestroy()
+    {
+        ReleaseOccupiedSlots();
+
+        if (MeatCookHoverBar.Instance != null)
+            MeatCookHoverBar.Instance.HideIfTarget(this);
+    }
 
     void OnValidate()
     {

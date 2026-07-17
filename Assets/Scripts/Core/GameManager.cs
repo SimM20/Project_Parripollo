@@ -17,6 +17,10 @@ public class GameManager : MonoBehaviour
 
     private ViewType lastView;
 
+    // Contexto de descarte de quemados: solo activo tras un intento de entrega bloqueado por quemados.
+    private bool discardContextActive;
+    private readonly System.Collections.Generic.List<int> discardBurnedIndices = new System.Collections.Generic.List<int>();
+
     private void Start()
     {
         lastView = viewManager != null ? viewManager.CurrentView : ViewType.Grill;
@@ -83,10 +87,12 @@ public class GameManager : MonoBehaviour
         if (currentView == ViewType.Build && lastView != ViewType.Build && meatTransferBuffer != null)
             meatTransferBuffer.SendMessage("MoveToBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
 
-        if (currentView != lastView && currentView != ViewType.Build
-            && customerSystem != null && customerSystem.IsDeliverySelectionActive)
+        if (currentView != lastView && currentView != ViewType.Build)
         {
-            customerSystem.EndDeliverySelection();
+            ClearDiscardContext();
+
+            if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
+                customerSystem.EndDeliverySelection();
         }
 
         lastView = currentView;
@@ -117,6 +123,9 @@ public class GameManager : MonoBehaviour
 
             var customer = customerSystem?.currentCustomer;
             var order = customer?.order;
+
+            if (Input.GetKeyDown(KeyCode.X))
+                TryDiscardBurnedCuts();
 
             if (!selectingCustomer && Input.GetKeyDown(KeyCode.R))
             {
@@ -160,7 +169,49 @@ public class GameManager : MonoBehaviour
 
     private void ClearBuildAssembly()
     {
+        ClearDiscardContext();
         buildStationSystem.ClearAssembly();
+    }
+
+    private void ClearDiscardContext()
+    {
+        discardContextActive = false;
+        discardBurnedIndices.Clear();
+    }
+
+    /// <summary>
+    /// Descarta los cortes quemados detectados en el último intento bloqueado y revalida la entrega.
+    /// Fuera del contexto de una entrega bloqueada por quemados, X no hace nada.
+    /// </summary>
+    private void TryDiscardBurnedCuts()
+    {
+        if (!discardContextActive || discardBurnedIndices.Count == 0)
+            return;
+
+        // Eliminar de mayor a menor índice para no invalidar los índices restantes.
+        discardBurnedIndices.Sort();
+        for (int i = discardBurnedIndices.Count - 1; i >= 0; i--)
+        {
+            int index = discardBurnedIndices[i];
+            buildStationSystem.RemoveCutAt(index);
+            meatTransferBuffer?.SendMessage("RemovePlateMeatVisualAt", index, SendMessageOptions.DontRequireReceiver);
+        }
+
+        int discarded = discardBurnedIndices.Count;
+        ClearDiscardContext();
+        Debug.Log("[Build] Cortes quemados descartados: " + discarded);
+
+        if (!buildStationSystem.HasAnyCut)
+        {
+            DeliveryFeedbackText.Instance?.Show("Se descartaron los cortes quemados. No queda nada para entregar.");
+            if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
+                customerSystem.EndDeliverySelection();
+            return;
+        }
+
+        // Revalidar el intento: si sigue habiendo crudos, se bloquea de nuevo con el mensaje actualizado.
+        if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
+            ConfirmDeliverySelection();
     }
 
     private void TryEnterDeliverySelection()
@@ -207,6 +258,7 @@ public class GameManager : MonoBehaviour
             DeliveryFeedbackText.Instance?.Show("Corte incorrecto. El cliente pidió: "
                       + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".");
             customerSystem.EndDeliverySelection();
+            ClearDiscardContext();
             return;
         }
 
@@ -220,18 +272,71 @@ public class GameManager : MonoBehaviour
             Debug.Log("❌ " + reason);
             DeliveryFeedbackText.Instance?.Show(reason);
             customerSystem.EndDeliverySelection();
+            ClearDiscardContext();
             return;
+        }
+
+        // ── Validación de cocción: Crudo/Quemado bloquean la entrega completa (atómica) ──
+        var validation = CookingDeliveryEvaluator.Validate(buildStationSystem.AssembledCutSideStates);
+
+        if (validation.IsBlocked)
+        {
+            string blockedMessage = CookingDeliveryEvaluator.BuildBlockedMessage(validation.rawCount, validation.burnedCount);
+            DeliveryFeedbackText.Instance?.Show(blockedMessage);
+            Debug.Log("❌ Entrega bloqueada. Crudos: " + validation.rawCount + " | Quemados: " + validation.burnedCount);
+
+            // Habilitar X solo si hay quemados descartables en este intento.
+            discardBurnedIndices.Clear();
+            if (validation.burnedCount > 0)
+            {
+                discardBurnedIndices.AddRange(validation.burnedIndices);
+                discardContextActive = true;
+            }
+            else
+            {
+                discardContextActive = false;
+            }
+
+            // La selección de cliente queda activa: tras descartar con X se revalida el mismo intento.
+            return;
+        }
+
+        // ── Evaluación económica por corte: peor desfase de ambas caras ──
+        var cuts = buildStationSystem.AssembledCuts;
+        var sideStates = buildStationSystem.AssembledCutSideStates;
+        bool isSandwich = customer.order.IsSandwich;
+
+        float totalPayment = 0f;
+        float totalTips = 0f;
+
+        for (int i = 0; i < cuts.Count; i++)
+        {
+            MeatCutSO cut = cuts[i];
+            if (cut == null) continue;
+
+            float basePrice = isSandwich ? cut.sellPriceSandwich : cut.sellPricePlate;
+            MeatStates requested = customer.order.GetRequestedState(i < customer.order.requestedStates.Count ? i : 0);
+
+            var cutResult = CookingDeliveryEvaluator.EvaluateCut(sideStates[i].sideA, sideStates[i].sideB, requested, basePrice);
+            totalPayment += cutResult.price;
+
+            if (cutResult.tipEligible)
+                totalTips += CookingDeliveryEvaluator.CalculateTip(basePrice, customer.Patience01);
+
+            Debug.Log("[Entrega] " + cut.cutName + " | Pedido: " + requested
+                      + " | A: " + sideStates[i].sideA + " | B: " + sideStates[i].sideB
+                      + " | Desfase: " + cutResult.worstOffset
+                      + " | Pago: " + cutResult.price + " | Propina: " + (cutResult.tipEligible ? "sí" : "no"));
         }
 
         ClearBuildAssembly();
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
         ToppingDraggable.ClearAllSplatters();
-        float sellPrice = customer.order.IsSandwich ? assembled.sellPriceSandwich : assembled.sellPricePlate;
-        PlayerWallet.Instance?.Add(sellPrice);
+        PlayerWallet.Instance?.Add(totalPayment + totalTips);
         customerSystem.CompleteCustomer(customer);
         customerSystem.EndDeliverySelection();
-        Debug.Log("✔ Pedido entregado desde Build");
+        Debug.Log("✔ Pedido entregado desde Build. Pago: " + totalPayment + " | Propinas: " + totalTips);
         AudioManager.Instance.PlayTaskCompleted();
     }
 
