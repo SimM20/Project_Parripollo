@@ -70,7 +70,14 @@ public class CoolerSystem : MonoBehaviour
             if (!stockByItem.ContainsKey(entry.item))
                 stockByItem[entry.item] = 0;
 
-            stockByItem[entry.item] += entry.amount;
+            if (entry.item is CoalSO)
+            {
+                stockByItem[entry.item] = Mathf.Min(stockByItem[entry.item] + entry.amount, 40);
+            }
+            else
+            {
+                stockByItem[entry.item] += entry.amount;
+            }
         }
     }
 
@@ -94,7 +101,15 @@ public class CoolerSystem : MonoBehaviour
         if (!stockByItem.ContainsKey(item))
             stockByItem[item] = 0;
 
-        stockByItem[item] += amount;
+        int current = stockByItem[item];
+        int newAmount = current + amount;
+
+        if (item is CoalSO)
+        {
+            newAmount = Mathf.Min(newAmount, 40);
+        }
+
+        stockByItem[item] = newAmount;
         OnInventoryChanged?.Invoke();
     }
 

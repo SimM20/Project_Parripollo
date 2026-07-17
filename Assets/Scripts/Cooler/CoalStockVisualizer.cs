@@ -14,6 +14,10 @@ public class CoalStockVisualizer : MonoBehaviour
     [Min(0.01f)]
     [SerializeField] private float defaultSpacing = 0.2f;
 
+    [Header("Limits Config")]
+    [SerializeField] private int minIndex = 0;
+    [SerializeField] private int maxIndex = 20;
+
     [Header("Visual Size")]
     [SerializeField] private Vector3 fixedWorldScale = Vector3.one;
 
@@ -79,8 +83,9 @@ public class CoalStockVisualizer : MonoBehaviour
             if (entry.Key is CoalSO coal)
             {
                 int count = Mathf.Max(0, entry.Value);
+                int targetCount = Mathf.Clamp(count - minIndex, 0, maxIndex - minIndex);
                 visitedCoals.Add(coal);
-                SyncCoalStack(coal, count);
+                SyncCoalStack(coal, targetCount);
             }
         }
 
