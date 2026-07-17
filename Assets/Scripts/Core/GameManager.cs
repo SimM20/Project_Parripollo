@@ -48,12 +48,14 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (viewManager != null && Input.GetKeyDown(KeyCode.Tab))
+        if (viewManager != null)
         {
-            viewManager.Toggle();
+            if (Input.GetKeyDown(KeyCode.Q)) viewManager.Show(ViewType.Cooler);
+            if (Input.GetKeyDown(KeyCode.W)) viewManager.Show(ViewType.Grill);
+            if (Input.GetKeyDown(KeyCode.E)) viewManager.Show(ViewType.Build);
 
-            if (coolerSystem != null && viewManager.CurrentView == ViewType.Cooler)
-                Debug.Log(coolerSystem.GetDebugStockString());
+            if (Input.GetKeyDown(KeyCode.LeftArrow)) viewManager.PreviousView();
+            if (Input.GetKeyDown(KeyCode.RightArrow)) viewManager.NextView();
         }
 
         ViewType currentView = viewManager != null ? viewManager.CurrentView : ViewType.Grill;

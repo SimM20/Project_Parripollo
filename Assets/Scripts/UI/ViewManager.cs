@@ -12,9 +12,22 @@ public class ViewManager : MonoBehaviour
 
     public ViewType CurrentView { get; private set; }
 
-    void Start()
+    void Start() => Show(startView);
+
+    public void NextView()
     {
-        Show(startView);
+        if (CurrentView == ViewType.Cooler)
+            Show(ViewType.Grill);
+        else if (CurrentView == ViewType.Grill)
+            Show(ViewType.Build);
+    }
+
+    public void PreviousView()
+    {
+        if (CurrentView == ViewType.Build)
+            Show(ViewType.Grill);
+        else if (CurrentView == ViewType.Grill)
+            Show(ViewType.Cooler);
     }
 
     public void Toggle()
