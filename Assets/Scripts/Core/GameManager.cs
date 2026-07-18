@@ -44,9 +44,7 @@ public class GameManager : MonoBehaviour
         }
 
         if (UIManager.Instance != null && UIManager.Instance.IsPaused)
-        {
             return;
-        }
 
         if (viewManager != null)
         {
@@ -70,20 +68,30 @@ public class GameManager : MonoBehaviour
             meatTransferBuffer?.SendMessage("SetPlateMeatVisualsVisible", buildActive, SendMessageOptions.DontRequireReceiver);
         }
 
-        if (currentView == ViewType.Grill && lastView != ViewType.Grill)
+        if (currentView == ViewType.Grill)
         {
-            if (meatTransferBuffer != null)
-                meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
+            if (Input.GetKeyDown(KeyCode.Space))
+                TryServe();
 
-            if (coalTransferBuffer != null)
-                coalTransferBuffer.SendMessage("MoveToCoalHolder", SendMessageOptions.DontRequireReceiver);
+            if (Input.GetKeyDown(KeyCode.R))
+                CleanAshes();
 
-            if (grillLayerToggle != null)
-                grillLayerToggle.RefreshVisibility();
+            if (lastView != ViewType.Grill)
+            {
+                if (meatTransferBuffer != null)
+                    meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
+
+                if (coalTransferBuffer != null)
+                    coalTransferBuffer.SendMessage("MoveToCoalHolder", SendMessageOptions.DontRequireReceiver);
+
+                if (grillLayerToggle != null)
+                    grillLayerToggle.RefreshVisibility();
+            }
         }
 
         if (currentView == ViewType.Build && lastView != ViewType.Build && meatTransferBuffer != null)
             meatTransferBuffer.SendMessage("MoveToBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
+
 
         if (currentView != lastView && currentView != ViewType.Build
             && customerSystem != null && customerSystem.IsDeliverySelectionActive)
@@ -93,19 +101,17 @@ public class GameManager : MonoBehaviour
 
         lastView = currentView;
 
-        if (currentView == ViewType.Grill && Input.GetKeyDown(KeyCode.Space))
-            TryServe();
-
-        if (currentView == ViewType.Build && Input.GetKeyDown(KeyCode.Space))
-        {
-            if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
-                ConfirmDeliverySelection();
-            else
-                TryEnterDeliverySelection();
-        }
-
+        // Build Selected
         if (currentView == ViewType.Build)
         {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
+                    ConfirmDeliverySelection();
+                else
+                    TryEnterDeliverySelection();
+            }
+
             bool selectingCustomer = customerSystem != null && customerSystem.IsDeliverySelectionActive;
 
             if (selectingCustomer)
@@ -133,6 +139,7 @@ public class GameManager : MonoBehaviour
             {
                 if (foodAvailabilityService != null)
                     foodAvailabilityService.InformMissingCut(order.PrimaryCut);
+
                 else
                     coolerSystem?.InformMissingItem(order.PrimaryCut);
 
@@ -140,7 +147,6 @@ public class GameManager : MonoBehaviour
             }
         }
     }
-
     private void TryServe()
     {
         var customer = customerSystem.currentCustomer;
@@ -152,7 +158,6 @@ public class GameManager : MonoBehaviour
         if (meat != null)
         {
             Debug.Log("✔ Pedido correcto");
-
             grillSystem.RemoveMeat(meat);
             PlayerWallet.Instance?.Add(customer.order.PrimaryCut.sellPricePlate);
             customerSystem.SpawnCustomer();
@@ -160,9 +165,30 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void ClearBuildAssembly()
+    private void ClearBuildAssembly() => buildStationSystem.ClearAssembly();
+
+    private void CleanAshes()
     {
-        buildStationSystem.ClearAssembly();
+        int cleanedCount = 0;
+
+        for (int i = Coal.ActiveCoals.Count - 1; i >= 0; i--)
+        {
+            Coal coal = Coal.ActiveCoals[i];
+
+            if (coal != null && coal.state == CoalStates.Ceniza)
+            {
+                coal.ReleaseOccupiedSlots();
+
+                Destroy(coal.gameObject);
+
+                cleanedCount++;
+            }
+        }
+
+        if (cleanedCount > 0)
+        {
+            Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
+        }
     }
 
     private void TryEnterDeliverySelection()
@@ -202,17 +228,21 @@ public class GameManager : MonoBehaviour
         }
 
         MeatCutSO assembled = buildStationSystem.AssembledCuts[0];
+
         if (assembled != customer.order.PrimaryCut)
         {
-            Debug.Log("❌ Corte incorrecto. Pedido: " + customer.order.PrimaryCut?.cutName
-                      + " | Armado: " + assembled.cutName);
-            DeliveryFeedbackText.Instance?.Show("Corte incorrecto. El cliente pidió: "
-                      + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".");
+            Debug.Log("❌ Corte incorrecto. Pedido: " + customer.order.PrimaryCut?.cutName 
+                + " | Armado: " + assembled.cutName);
+
+            DeliveryFeedbackText.Instance?.Show("Corte incorrecto. El cliente pidió: " 
+                + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".");
+
             customerSystem.EndDeliverySelection();
             return;
         }
 
         string reason;
+
         bool valid = customer.order.IsSandwich
             ? buildStationSystem.TryBuildSandwich(out reason) != null
             : buildStationSystem.TryBuildPlatedDish(out reason) != null;
@@ -240,9 +270,7 @@ public class GameManager : MonoBehaviour
     private void EndNight()
     {
         customerSystem.OnNightEnded -= EndNight;
-
         CoalConsumptionTracker.Instance?.RegisterDayCompleted();
-
         SceneManagementUtils.LoadSceneByName("EndScene");
     }
 
