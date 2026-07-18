@@ -214,6 +214,16 @@ public class TutorialManager : MonoBehaviour
         if (Instance != null) Instance.OnCoalPlacedOnGrill(coal);
     }
 
+    public static void NotifyMeatFlipped(MeatCutSO cut)
+    {
+        if (Instance != null) Instance.OnMeatFlipped(cut);
+    }
+
+    public static void NotifyMeatStateChanged(MeatCutSO cut, MeatStates newState)
+    {
+        if (Instance != null) Instance.OnMeatStateChanged(cut, newState);
+    }
+
     // ── Notification Handlers ─────────────────────────────────────────
     private void OnMeatDraggedToGrill(MeatCutSO cut)
     {
@@ -307,6 +317,63 @@ public class TutorialManager : MonoBehaviour
             {
                 Debug.Log($"[TutorialManager] DragCoalToGrillSlots condition met.");
                 AdvanceStep();
+            }
+        }
+    }
+
+    private void OnMeatFlipped(MeatCutSO cut)
+    {
+        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count)
+            return;
+
+        TutorialStepSO step = tutorialSteps[currentStepIndex];
+        if (step.conditionType == TutorialConditionType.FlipMeat)
+        {
+            if (step.requiredMeatCut == null || step.requiredMeatCut == cut)
+            {
+                Debug.Log($"[TutorialManager] FlipMeat condition met with cut: {cut.cutName}");
+                AdvanceStep();
+            }
+        }
+    }
+
+    private void OnMeatStateChanged(MeatCutSO cut, MeatStates newState)
+    {
+        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count)
+            return;
+
+        TutorialStepSO step = tutorialSteps[currentStepIndex];
+        if (step.conditionType == TutorialConditionType.MeatReachesDoneness)
+        {
+            // Resolve required cut and required state
+            MeatCutSO targetCut = step.requiredMeatCut;
+            MeatStates targetState = step.requiredMeatState;
+
+            if (step.checkCustomerOrderState)
+            {
+                CustomerSystem cs = FindFirstObjectByType<CustomerSystem>();
+                if (cs != null && cs.ActiveCustomers.Count > 0)
+                {
+                    Customer firstCustomer = cs.ActiveCustomers[0];
+                    if (firstCustomer != null && firstCustomer.order != null)
+                    {
+                        targetCut = firstCustomer.order.meat;
+                        if (firstCustomer.order.requestedStates.Count > 0)
+                        {
+                            targetState = firstCustomer.order.requestedStates[0];
+                        }
+                    }
+                }
+            }
+
+            // Check if matches
+            if (targetCut == null || targetCut == cut)
+            {
+                if (newState == targetState)
+                {
+                    Debug.Log($"[TutorialManager] MeatReachesDoneness condition met: {cut.cutName} reaches state {newState}");
+                    AdvanceStep();
+                }
             }
         }
     }

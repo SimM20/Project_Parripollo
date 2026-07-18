@@ -48,6 +48,7 @@ public class CustomerSystem : MonoBehaviour
 
     private OrderSystem orderSystem;
     private readonly List<Customer> activeCustomers = new List<Customer>();
+    public IReadOnlyList<Customer> ActiveCustomers => activeCustomers;
     private CustomerView[] slotViews;
 
     private int spawnedTonight;

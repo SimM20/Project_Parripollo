@@ -16,6 +16,7 @@ MonoBehaviour:
   panelPrefab: {fileID: 2322837393960651236, guid: d20f9999c007a30499925d1d24668927, type: 3}
   conditionType: 5
   requiredView: 0
-  requiredMeatCut: {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
+  requiredMeatCut: {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
   requiredCoal: {fileID: 0}
+  requiredGrillLayer: 0
   startAction: 0

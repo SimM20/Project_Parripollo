@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
-  m_Name: 10.DragCarne
+  m_Name: 20.FlipCarne
   m_EditorClassIdentifier: 
   instructionText: 
-  panelPrefab: {fileID: 2322837393960651236, guid: e30e2611ccf893c40bc4d89c99c5627c, type: 3}
-  conditionType: 2
+  panelPrefab: {fileID: 2322837393960651236, guid: a10bb5c2237cc1942a87235e8e05c499, type: 3}
+  conditionType: 8
   requiredView: 0
   requiredMeatCut: {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
   requiredCoal: {fileID: 0}

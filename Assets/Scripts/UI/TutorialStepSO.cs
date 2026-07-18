@@ -9,7 +9,9 @@ public enum TutorialConditionType
     DragCoalToGrill,
     DragMeatToGrillSlots,
     ToggleGrillLayer,
-    DragCoalToGrillSlots
+    DragCoalToGrillSlots,
+    FlipMeat,
+    MeatReachesDoneness
 }
 
 public enum TutorialStartAction
@@ -38,6 +40,10 @@ public class TutorialStepSO : ScriptableObject
 
     [Header("Grill Layer Settings")]
     public GrillLayerToggle.GrillLayer requiredGrillLayer; // Used if condition is ToggleGrillLayer
+
+    [Header("Doneness Condition Settings")]
+    public MeatStates requiredMeatState; // Used if condition is MeatReachesDoneness
+    public bool checkCustomerOrderState; // If true, matches active customer's ordered cut & doneness state
 
     [Header("Action on Step Start")]
     public TutorialStartAction startAction; // Triggers action when this tutorial step begins

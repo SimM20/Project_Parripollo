@@ -242,6 +242,7 @@ public class Meat : Item
         isSideA = !isSideA;
         state = ActiveSideState;
         ApplyCutVisual();
+        TutorialManager.NotifyMeatFlipped(cut);
     }
 
     public void ToggleGridRotation()
@@ -295,6 +296,7 @@ public class Meat : Item
         {
             state = newState;
             ApplyCutVisual();
+            TutorialManager.NotifyMeatStateChanged(cut, state);
         }
     }
 

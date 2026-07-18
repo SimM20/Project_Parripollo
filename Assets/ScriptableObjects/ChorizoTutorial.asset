@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1405610c36759ba479e08c316fd0cc0e, type: 3}
+  m_Name: ChorizoTutorial
+  m_EditorClassIdentifier: Assembly-CSharp::MeatCutSO
+  itemName: Chorizo
+  basePrice: 100
+  category: 0
+  _visualOffset: {x: 0, y: 0, z: 0}
+  meatSpriteA: {fileID: 21300000, guid: a5e60188c878cca42a25ac42089479f5, type: 3}
+  meatSpriteB: {fileID: 21300000, guid: a5e60188c878cca42a25ac42089479f5, type: 3}
+  cookingSpritesA:
+    crudo: {fileID: 21300000, guid: da97b655637c0754f84452fa38d8a92a, type: 3}
+    jugoso: {fileID: 21300000, guid: bc3fd957f2f41f7468c9b8068ed052a8, type: 3}
+    hecho: {fileID: 21300000, guid: e27fc8fe27303754d88f6327f229a5f6, type: 3}
+    muyHecho: {fileID: 21300000, guid: 0046be8b1f113fb47ba07ac6fd4c9391, type: 3}
+    pasado: {fileID: 21300000, guid: 5fcbcd1fe0a9acf4ca610bb157db271b, type: 3}
+    quemado: {fileID: 0}
+  cookingSpritesB:
+    crudo: {fileID: 21300000, guid: da97b655637c0754f84452fa38d8a92a, type: 3}
+    jugoso: {fileID: 21300000, guid: bc3fd957f2f41f7468c9b8068ed052a8, type: 3}
+    hecho: {fileID: 21300000, guid: e27fc8fe27303754d88f6327f229a5f6, type: 3}
+    muyHecho: {fileID: 21300000, guid: 0046be8b1f113fb47ba07ac6fd4c9391, type: 3}
+    pasado: {fileID: 21300000, guid: 5fcbcd1fe0a9acf4ca610bb157db271b, type: 3}
+    quemado: {fileID: 0}
+  timeHeatA: 80
+  timeHeatB: 55
+  heatScale: 0
+  grillSpace: {x: 1, y: 2}
+  servingMode: 0
+  requiredBread: {fileID: 0}
+  isUnlocked: 1
+  sellPricePlate: 100
+  sellPriceSandwich: 100

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4200854759556145658}
   - component: {fileID: 6761205989246734688}
   m_Layer: 0
-  m_Name: InfoCarne
+  m_Name: FlipCarne
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -158,10 +158,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "La carne tiene un tiempo determinado en el que va pasando por diferentes
-    estados (Crudo, Jugoso, Hecho, Muy Hecho y Pasado) - La carne se cocinar\xE1
-    hasta llegar a diferentes estados. Si dejas el cursor por encima de la carne
-    podr\xE1s ver su estado."
+  m_text: "Tambi\xE9n deber\xE1s revisar los lados de la carne. Haciendole click
+    a la misma puedes cambiar el lado para comenzar la cocci\xF3n. Lo ideal seria
+    mantener un balance entre ambos lados"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

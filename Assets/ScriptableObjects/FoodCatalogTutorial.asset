@@ -13,13 +13,11 @@ MonoBehaviour:
   m_Name: FoodCatalogTutorial
   m_EditorClassIdentifier: 
   allCuts:
-  - {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
-  availableBreads:
-  - {fileID: 11400000, guid: ad1426bab9d987d409a72bbbe745f760, type: 2}
+  - {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
+  availableBreads: []
   availableSides:
-  - {fileID: 11400000, guid: da3ad8a5b5e46e942aeb55f3196950da, type: 2}
+  - {fileID: 11400000, guid: 17ba11f30c190ab4a88577531933d6a4, type: 2}
   availableToppings:
   - {fileID: 11400000, guid: c25de4b6c1ebde54ea0a09036a8f38ec, type: 2}
-  allVariants:
-  - {fileID: 11400000, guid: d5fd4da21e1c10e4597239baf71a1b49, type: 2}
+  allVariants: []
   allUpgrades: []
