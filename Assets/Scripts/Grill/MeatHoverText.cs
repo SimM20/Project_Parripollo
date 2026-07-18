@@ -12,24 +12,23 @@ public static class MeatHoverText
         string cutName = meat.cut != null ? meat.cut.cutName : "Carne";
         sb.Append(cutName);
 
+        // Solo la cara activa; sin etiquetas A/B (regla de la barra de hover).
         sb.Append("\nEstado: ");
-        sb.Append(GetStateDisplayName(meat.state));
-
-        sb.Append("\nLado: ");
-        sb.Append(meat.isSideA ? "A" : "B");
+        sb.Append(GetStateDisplayName(meat.ActiveSideState));
 
         return sb.ToString();
     }
 
-    private static string GetStateDisplayName(MeatStates state)
+    public static string GetStateDisplayName(MeatStates state)
     {
         switch (state)
         {
             case MeatStates.Crudo:      return "Crudo";
             case MeatStates.Jugoso:     return "Jugoso";
             case MeatStates.Hecho:      return "Hecho";
-            case MeatStates.Muy_Hecho:  return "Muy Hecho";
+            case MeatStates.Muy_Hecho:  return "Bien Hecho";
             case MeatStates.Pasado:     return "Pasado";
+            case MeatStates.Quemado:    return "Quemado";
             default:                    return state.ToString();
         }
     }

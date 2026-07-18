@@ -4,11 +4,28 @@ using UnityEngine;
 
 public class BuildStationSystem : MonoBehaviour
 {
+    /// <summary>Estado de cocción de ambas caras de un corte armado.</summary>
+    public struct CutSideStates
+    {
+        public MeatStates sideA;
+        public MeatStates sideB;
+
+        public CutSideStates(MeatStates a, MeatStates b)
+        {
+            sideA = a;
+            sideB = b;
+        }
+
+        public bool IsBurned => sideA == MeatStates.Quemado || sideB == MeatStates.Quemado;
+        public bool IsRaw => !IsBurned && (sideA == MeatStates.Crudo || sideB == MeatStates.Crudo);
+    }
+
     [Header("References")]
     [SerializeField] private FoodCatalogSO catalog;
 
     private readonly List<MeatCutSO> assembledCuts = new List<MeatCutSO>();
     private readonly List<MeatStates> assembledCutStates = new List<MeatStates>();
+    private readonly List<CutSideStates> assembledCutSideStates = new List<CutSideStates>();
     private BreadSO assembledBread = null;
     private readonly List<SideSO> assembledSides = new List<SideSO>();
     private readonly List<ToppingSO> assembledToppings = new List<ToppingSO>();
@@ -18,6 +35,7 @@ public class BuildStationSystem : MonoBehaviour
 
     public IReadOnlyList<MeatCutSO> AssembledCuts => assembledCuts;
     public IReadOnlyList<MeatStates> AssembledCutStates => assembledCutStates;
+    public IReadOnlyList<CutSideStates> AssembledCutSideStates => assembledCutSideStates;
     public BreadSO AssembledBread => assembledBread;
     public IReadOnlyList<SideSO> AssembledSides => assembledSides;
     public IReadOnlyList<ToppingSO> AssembledToppings => assembledToppings;
@@ -27,11 +45,18 @@ public class BuildStationSystem : MonoBehaviour
 
     public void AddCut(MeatCutSO cut, MeatStates state = MeatStates.Crudo)
     {
+        AddCut(cut, state, state, state);
+    }
+
+    public void AddCut(MeatCutSO cut, MeatStates state, MeatStates sideAState, MeatStates sideBState)
+    {
         if (cut == null) return;
         assembledCuts.Add(cut);
         assembledCutStates.Add(state);
+        assembledCutSideStates.Add(new CutSideStates(sideAState, sideBState));
         OnAssemblyChanged?.Invoke();
-        Debug.Log("[BuildStation] Corte agregado: " + cut.cutName + " (Estado: " + state + ")");
+        Debug.Log("[BuildStation] Corte agregado: " + cut.cutName + " (Estado: " + state
+                  + " | A: " + sideAState + " | B: " + sideBState + ")");
     }
 
     public void RemoveLastCut()
@@ -40,6 +65,20 @@ public class BuildStationSystem : MonoBehaviour
         assembledCuts.RemoveAt(assembledCuts.Count - 1);
         if (assembledCutStates.Count > assembledCuts.Count)
             assembledCutStates.RemoveAt(assembledCutStates.Count - 1);
+        if (assembledCutSideStates.Count > assembledCuts.Count)
+            assembledCutSideStates.RemoveAt(assembledCutSideStates.Count - 1);
+        OnAssemblyChanged?.Invoke();
+    }
+
+    /// <summary>Elimina un corte puntual del armado (descarte de quemados). No toca pan, sides ni toppings.</summary>
+    public void RemoveCutAt(int index)
+    {
+        if (index < 0 || index >= assembledCuts.Count) return;
+        assembledCuts.RemoveAt(index);
+        if (index < assembledCutStates.Count)
+            assembledCutStates.RemoveAt(index);
+        if (index < assembledCutSideStates.Count)
+            assembledCutSideStates.RemoveAt(index);
         OnAssemblyChanged?.Invoke();
     }
 
@@ -69,6 +108,7 @@ public class BuildStationSystem : MonoBehaviour
     {
         assembledCuts.Clear();
         assembledCutStates.Clear();
+        assembledCutSideStates.Clear();
         assembledBread = null;
         assembledSides.Clear();
         assembledToppings.Clear();

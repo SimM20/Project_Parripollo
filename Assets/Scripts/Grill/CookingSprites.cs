@@ -15,8 +15,11 @@ public struct CookingSprites
     [Tooltip("Sprite when the meat is well done (Muy Hecho)")]
     public Sprite muyHecho;
 
-    [Tooltip("Sprite when the meat is overcooked/burnt (Pasado)")]
+    [Tooltip("Sprite when the meat is overcooked (Pasado). Still deliverable.")]
     public Sprite pasado;
+
+    [Tooltip("Sprite when the meat is burnt (Quemado). Not deliverable.")]
+    public Sprite quemado;
 
     public Sprite GetSpriteForState(MeatStates state)
     {
@@ -27,6 +30,7 @@ public struct CookingSprites
             case MeatStates.Hecho:     return hecho;
             case MeatStates.Muy_Hecho: return muyHecho;
             case MeatStates.Pasado:    return pasado;
+            case MeatStates.Quemado:   return quemado != null ? quemado : pasado;
             default:                   return crudo;
         }
     }

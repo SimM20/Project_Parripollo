@@ -17,7 +17,7 @@ public class OrderSystem
         if (cut == null)
             return order;
 
-        order.SetSingleCut(cut);
+        order.SetSingleCut(cut, GetRandomRequestedState());
 
         bool makeSandwich = cut.servingMode == ServingMode.SandwichOnly
                          || (cut.servingMode == ServingMode.Both && Random.value < 0.5f);
@@ -26,6 +26,12 @@ public class OrderSystem
             order.bread = cut.requiredBread;
 
         return order;
+    }
+
+    /// <summary>Punto solicitable: Jugoso a Pasado. Nunca Crudo ni Quemado.</summary>
+    static MeatStates GetRandomRequestedState()
+    {
+        return (MeatStates)Random.Range((int)MeatStates.Jugoso, (int)MeatStates.Pasado + 1);
     }
 
     MeatCutSO GetRandomMeat()

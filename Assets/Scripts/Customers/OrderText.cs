@@ -15,10 +15,13 @@ public static class OrderText
         var cutName = order.PrimaryCut != null ? order.PrimaryCut.cutName : "Sin corte";
         sb.Append(cutName);
 
+        if (order.PrimaryCut != null)
+            sb.Append("\nPunto: " + MeatHoverText.GetStateDisplayName(order.GetRequestedState(0)));
+
         if (order.IsSandwich)
         {
             var bread = order.bread != null ? order.bread.breadName : "Pan";
-            sb.Append("\nSándwich (" + bread + ")");
+            sb.Append("\nSï¿½ndwich (" + bread + ")");
         }
         else
         {
