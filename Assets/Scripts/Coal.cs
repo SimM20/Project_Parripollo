@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Coal : Item
 {
+    public static readonly List<Coal> ActiveCoals = new List<Coal>();
+
     [Header("Data")]
     [SerializeField] public CoalSO coalData;
 
@@ -17,6 +19,17 @@ public class Coal : Item
     public CoalStates state = CoalStates.Apagado;
 
     private readonly List<GridSlot> occupiedSlots = new List<GridSlot>();
+
+    void OnEnable()
+    {
+        if (!ActiveCoals.Contains(this))
+            ActiveCoals.Add(this);
+    }
+    public override void OnDisable()
+    {
+        base.OnDisable();
+        ActiveCoals.Remove(this);
+    }
 
     public float GetCurrentHeatOutput()
     {

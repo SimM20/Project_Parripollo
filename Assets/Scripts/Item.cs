@@ -149,7 +149,7 @@ public class Item : MonoBehaviour
         hoveredSlots.Clear();
     }
 
-    protected virtual void OnDisable()
+    public virtual void OnDisable()
     {
         isHeldByMouse = false;
         ClearHoverPreview();
