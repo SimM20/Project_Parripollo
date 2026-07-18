@@ -103,6 +103,7 @@ public class CoolerDraggableMeat : MonoBehaviour
 
         string cutName = cut != null ? cut.cutName : "Sin corte";
         Debug.Log("Arrastraste a ToGrill: " + cutName + " | " + coolerSystem.GetDebugStockString());
+        TutorialManager.NotifyMeatDraggedToGrill(cut);
     }
 
     private bool IsOverToGrill(Vector3 worldPoint)

@@ -85,6 +85,7 @@ public class GrillLayerToggle : MonoBehaviour
         CurrentLayer = layer;
         ApplyVisibility();
         UpdateButtonIcon();
+        TutorialManager.NotifyGrillLayerChanged(layer);
     }
 
     public void RefreshVisibility()

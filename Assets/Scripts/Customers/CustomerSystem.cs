@@ -106,7 +106,7 @@ public class CustomerSystem : MonoBehaviour
 
     IEnumerator SpawnLoop()
     {
-        while (spawnedTonight <= maxCustomersPerNight)
+        while (spawnedTonight < maxCustomersPerNight)
         {
             yield return new WaitForSeconds(spawnIntervalSeconds);
 
@@ -120,10 +120,7 @@ public class CustomerSystem : MonoBehaviour
     public void SpawnCustomer()
     {
         if (spawnedTonight >= maxCustomersPerNight)
-        {
-            OnNightEnded?.Invoke();
-            return;   
-        }
+            return;
 
         int slotIndex = GetNextFreeSlotIndex();
         if (slotIndex < 0)
@@ -321,6 +318,11 @@ public class CustomerSystem : MonoBehaviour
 
         // opcional: compactar slots (corrés a la izquierda para no dejar huecos)
         CompactSlots();
+
+        if (spawnedTonight >= maxCustomersPerNight && activeCustomers.Count == 0)
+        {
+            OnNightEnded?.Invoke();
+        }
     }
 
     private void CompactSlots()

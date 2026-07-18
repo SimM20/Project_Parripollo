@@ -67,6 +67,7 @@ void OnMouseUp()
                 buffer.EnqueueToGrillAtPoint(coal, dropWorldPoint);
 
             wasConsumed = true;
+            TutorialManager.NotifyCoalDraggedToGrill(coal);
         }
     }
 

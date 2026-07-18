@@ -290,6 +290,7 @@ public class MeatTransferBuffer : MonoBehaviour
 
         string cutName = cut != null ? cut.cutName : "Sin corte";
         Debug.Log("Mandaste a Build desde la parrilla: " + cutName);
+        TutorialManager.NotifyMeatDraggedToBuild(cut);
         return true;
     }
 
@@ -336,6 +337,7 @@ public class MeatTransferBuffer : MonoBehaviour
 
         string cutName = entry.cut != null ? entry.cut.cutName : "Sin corte";
         Debug.Log("Mandaste a la parrilla desde MeatHolder: " + cutName + " | Estado: " + entry.state);
+        TutorialManager.NotifyMeatPlacedOnGrill(entry.cut);
         return true;
     }
 

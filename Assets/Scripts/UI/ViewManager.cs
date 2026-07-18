@@ -11,6 +11,7 @@ public class ViewManager : MonoBehaviour
     [SerializeField] private ViewType startView = ViewType.Grill;
 
     public ViewType CurrentView { get; private set; }
+    public event System.Action<ViewType> OnViewChanged;
 
     void Start() => Show(startView);
 
@@ -48,6 +49,7 @@ public class ViewManager : MonoBehaviour
 
     public void Show(ViewType view)
     {
+        ViewType oldView = CurrentView;
         CurrentView = view;
 
         if (grillRoot != null)
@@ -59,6 +61,10 @@ public class ViewManager : MonoBehaviour
         if (buildRoot != null)
             buildRoot.SetActive(view == ViewType.Build);
         
+        if (oldView != view)
+        {
+            OnViewChanged?.Invoke(view);
+        }
     }
 
     private static void SetVisualVisibility(GameObject root, bool visible)

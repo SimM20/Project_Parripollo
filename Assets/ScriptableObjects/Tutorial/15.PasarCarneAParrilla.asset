@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
+  m_Name: 15.PasarCarneAParrilla
+  m_EditorClassIdentifier: 
+  instructionText: 
+  panelPrefab: {fileID: 2322837393960651236, guid: d20f9999c007a30499925d1d24668927, type: 3}
+  conditionType: 5
+  requiredView: 0
+  requiredMeatCut: {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
+  requiredCoal: {fileID: 0}
+  startAction: 0

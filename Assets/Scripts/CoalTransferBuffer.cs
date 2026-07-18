@@ -180,6 +180,7 @@ public class CoalTransferBuffer : MonoBehaviour
             if (entryId < coalHolderLocalPositions.Count) coalHolderLocalPositions.RemoveAt(entryId);
 
             RefreshVisuals();
+            TutorialManager.NotifyCoalPlacedOnGrill(entry.coalType);
             return true;
         }
         return false;
