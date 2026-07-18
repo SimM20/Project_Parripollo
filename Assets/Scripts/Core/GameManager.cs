@@ -179,6 +179,30 @@ public class GameManager : MonoBehaviour
         buildStationSystem.ClearAssembly();
     }
 
+    private void CleanAshes()
+    {
+        int cleanedCount = 0;
+
+        for (int i = Coal.ActiveCoals.Count - 1; i >= 0; i--)
+        {
+            Coal coal = Coal.ActiveCoals[i];
+
+            if (coal != null && coal.state == CoalStates.Ceniza)
+            {
+                coal.ReleaseOccupiedSlots();
+
+                Destroy(coal.gameObject);
+
+                cleanedCount++;
+            }
+        }
+
+        if (cleanedCount > 0)
+        {
+            Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
+        }
+    }
+
     private void ClearDiscardContext()
     {
         discardContextActive = false;
