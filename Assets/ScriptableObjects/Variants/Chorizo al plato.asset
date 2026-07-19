@@ -13,6 +13,13 @@ MonoBehaviour:
   m_Name: Chorizo al plato
   m_EditorClassIdentifier: 
   displayName: Chorizo al plato
+  variantSprite: {fileID: 915945715893875097, guid: 94f51f7abcbab2546b327e096fa585b0, type: 3}
+  cookingSprites:
+    crudo: {fileID: 0}
+    jugoso: {fileID: 0}
+    hecho: {fileID: 0}
+    muyHecho: {fileID: 0}
+    pasado: {fileID: 0}
   cut: {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
   bread: {fileID: 0}
   sellPrice: 100

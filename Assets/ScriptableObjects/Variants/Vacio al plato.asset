@@ -13,6 +13,13 @@ MonoBehaviour:
   m_Name: Vacio al plato
   m_EditorClassIdentifier: 
   displayName: "Vac\xEDo al plato"
+  variantSprite: {fileID: 21300000, guid: 130fcf45a0e926f4bb5102b6fa08bb28, type: 3}
+  cookingSprites:
+    crudo: {fileID: 0}
+    jugoso: {fileID: 0}
+    hecho: {fileID: 0}
+    muyHecho: {fileID: 0}
+    pasado: {fileID: 0}
   cut: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
   bread: {fileID: 0}
   sellPrice: 100

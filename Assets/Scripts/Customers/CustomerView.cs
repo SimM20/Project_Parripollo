@@ -39,10 +39,22 @@ public class CustomerView : MonoBehaviour
     void OnMouseEnter()
     {
         if (customer?.order == null) return;
-        if (CustomerHoverBubble.Instance != null)
-            CustomerHoverBubble.Instance.Show(customer.order.ToHoverString(), transform);
+        if (CustomerHoverBubble.Instance == null) return;
+
+        Sprite dishSprite = ResolveDishSprite(customer.order);
+
+        CustomerHoverBubble.Instance.Show(
+            customer.order.ToHoverString(),
+            transform,
+            dishSprite);
     }
 
+    private Sprite ResolveDishSprite(Order order)
+    {
+        if (system == null || system.Catalog == null) return null;
+        var variant = system.Catalog.GetVariantForOrder(order);
+        return variant != null ? variant.variantSprite : null;
+    }
     void OnMouseExit()
     {
         if (CustomerHoverBubble.Instance != null)

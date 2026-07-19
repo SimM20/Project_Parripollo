@@ -178,4 +178,129 @@ public class ShopSystem : MonoBehaviour
         OnPurchaseResult?.Invoke(true, message);
         return true;
     }
+<<<<<<< Updated upstream
+=======
+
+    public bool IsToppingPurchasable(ToppingSO topping)
+    {
+        return topping != null;
+    }
+    
+    public int GetToppingCartQty(ToppingSO topping)
+    {
+        if (topping == null) return 0;
+        return toppingCart.TryGetValue(topping, out int qty) ? qty : 0;
+    }
+
+    public void SetToppingQty(ToppingSO topping, int qty)
+    {
+        if (!IsToppingPurchasable(topping)) return;
+
+        qty = Mathf.Max(0, qty);
+        if (qty == 0) toppingCart.Remove(topping);
+        else toppingCart[topping] = qty;
+
+        OnCartChanged?.Invoke();
+    }
+
+    public void IncrementToppingQty(ToppingSO topping, int delta = 1)
+        => SetToppingQty(topping, GetToppingCartQty(topping) + delta);
+ 
+    
+    /// <summary>
+/// Compra inmediata de un item con la cantidad especificada.
+/// No usa carrito. Valida plata y ejecuta la transacción atómica.
+/// </summary>
+public bool TryBuyNow(ItemDataSO item, int qty, out string message)
+{
+    if (item == null || qty <= 0)
+    {
+        message = "Cantidad inválida.";
+        OnPurchaseResult?.Invoke(false, message);
+        return false;
+    }
+
+    if (!IsPurchasable(item))
+    {
+        message = "Este ítem no está disponible.";
+        OnPurchaseResult?.Invoke(false, message);
+        return false;
+    }
+
+    if (Wallet == null || Cooler == null)
+    {
+        message = "Tienda no configurada.";
+        OnPurchaseResult?.Invoke(false, message);
+        return false;
+    }
+
+    float cost = item.basePrice * qty;
+    if (!Wallet.CanAfford(cost))
+    {
+        message = "Plata insuficiente.";
+        OnPurchaseResult?.Invoke(false, message);
+        return false;
+    }
+
+    Wallet.TrySpend(cost);
+
+    if (item is CoalSO coal)
+        Cooler.Add(coal, coal.unitsPerBag * qty);
+    else if (item is UpgradeSO up)
+        up.isPurchased = true;
+    else
+        Cooler.Add(item, qty);
+
+    message = $"Compraste {qty}x {ResolveItemName(item)} por ${cost:F0}.";
+    OnPurchaseResult?.Invoke(true, message);
+    return true;
+}
+
+/// <summary>Versión para toppings (carrito y stock separados).</summary>
+public bool TryBuyToppingNow(ToppingSO topping, int qty, out string message)
+{
+    if (topping == null || qty <= 0)
+    {
+        message = "Cantidad inválida.";
+        OnPurchaseResult?.Invoke(false, message);
+        return false;
+    }
+
+    if (!IsToppingPurchasable(topping))
+    {
+        message = "Este topping no está disponible.";
+        OnPurchaseResult?.Invoke(false, message);
+        return false;
+    }
+
+    if (Wallet == null || Toppings == null)
+    {
+        message = "Tienda no configurada.";
+        OnPurchaseResult?.Invoke(false, message);
+        return false;
+    }
+
+    float cost = topping.purchasePrice * qty;
+    if (!Wallet.CanAfford(cost))
+    {
+        message = "Plata insuficiente.";
+        OnPurchaseResult?.Invoke(false, message);
+        return false;
+    }
+
+    Wallet.TrySpend(cost);
+    Toppings.Add(topping, qty);
+
+    message = $"Compraste {qty}x {topping.toppingName} por ${cost:F0}.";
+    OnPurchaseResult?.Invoke(true, message);
+    return true;
+}
+
+private static string ResolveItemName(ItemDataSO item)
+{
+    if (item is MeatCutSO cut) return cut.cutName;
+    return item != null ? item.itemName : "";
+}
+    
+>>>>>>> Stashed changes
 }
