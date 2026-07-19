@@ -13,6 +13,13 @@ MonoBehaviour:
   m_Name: Tira de asado al plato
   m_EditorClassIdentifier: 
   displayName: Tira de asado al plato
+  variantSprite: {fileID: 21300000, guid: c243da0675935124081d674c379dddc2, type: 3}
+  cookingSprites:
+    crudo: {fileID: 0}
+    jugoso: {fileID: 0}
+    hecho: {fileID: 0}
+    muyHecho: {fileID: 0}
+    pasado: {fileID: 0}
   cut: {fileID: 11400000, guid: 6e4b78453eb534d44aabcf530fc12f21, type: 2}
   bread: {fileID: 0}
   sellPrice: 100

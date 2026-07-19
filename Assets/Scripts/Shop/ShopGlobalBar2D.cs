@@ -1,58 +1,26 @@
-using System.Text;
 using TMPro;
 using UnityEngine;
 
-public class ShopGlobalBar2D : MonoBehaviour
+public class ShopHeader2D : MonoBehaviour
 {
     [SerializeField] private ShopSystem shop;
-
-    [Header("Texts")]
+    [SerializeField] private TextMeshPro shopNameText;
     [SerializeField] private TextMeshPro moneyText;
-    [SerializeField] private TextMeshPro coalPriceText;
-    [SerializeField] private TextMeshPro coalStockText;
-    [SerializeField] private TextMeshPro estimatedConsumptionText;
-    [SerializeField] private TextMeshPro recommendedText;
-    [SerializeField] private TextMeshPro cartTotalText;
-    [SerializeField] private TextMeshPro afterPurchaseText;
     [SerializeField] private TextMeshPro statusText;
-    [SerializeField] private TextMeshPro lowStockText;
+    [SerializeField] private string shopName = "Parrilla 40";
 
-    [Header("Confirm")]
-    [SerializeField] private ShopButton2D confirmButton;
-    [SerializeField] private ShopButton2D continueButton;
-
-    [Header("Colors")]
-    [SerializeField] private Color normalColor = Color.white;
-    [SerializeField] private Color warningColor = new Color(1f, 0.5f, 0.4f);
-    
-    private bool started = false;
-
-    void Awake()
-    {
-        if (confirmButton != null) confirmButton.OnClicked += OnConfirmClicked;
-        
-        if (continueButton != null) continueButton.OnClicked += OnContinueClicked;
-    }
-
-    void OnDestroy()
-    {
-        if (confirmButton != null) confirmButton.OnClicked -= OnConfirmClicked;
-        
-        if (continueButton != null) continueButton.OnClicked -= OnContinueClicked;
-    }
+    private bool started;
 
     void OnEnable()
     {
-        if (shop == null) return;
-
-        shop.OnCartChanged += Refresh;
-        shop.OnPurchaseResult += HandleResult;
-
-        if (shop.Wallet != null) shop.Wallet.OnMoneyChanged += OnMoneyChanged;
-        if (shop.Cooler != null) shop.Cooler.OnInventoryChanged += Refresh;
-
+        if (shop != null)
+        {
+            shop.OnPurchaseResult += HandleResult;
+            if (shop.Wallet != null) shop.Wallet.OnMoneyChanged += OnMoneyChanged;
+        }
         if (started) Refresh();
     }
+
     void Start()
     {
         started = true;
@@ -61,36 +29,23 @@ public class ShopGlobalBar2D : MonoBehaviour
 
     void OnDisable()
     {
-        if (shop == null) return;
-
-        shop.OnCartChanged -= Refresh;
-        shop.OnPurchaseResult -= HandleResult;
-
-        if (shop.Wallet != null) shop.Wallet.OnMoneyChanged -= OnMoneyChanged;
-        if (shop.Cooler != null) shop.Cooler.OnInventoryChanged -= Refresh;
+        if (shop != null)
+        {
+            shop.OnPurchaseResult -= HandleResult;
+            if (shop.Wallet != null) shop.Wallet.OnMoneyChanged -= OnMoneyChanged;
+        }
     }
+
     private void OnMoneyChanged(float _) => Refresh();
 
-    private void OnConfirmClicked()
+    private void HandleResult(bool ok, string msg)
     {
-        Debug.Log("Confirmed Button Clicked");
-        shop.TryConfirmPurchase(out _);
-    }
-
-    private void OnContinueClicked()
-    {
-        SceneManagementUtils.LoadSceneByName("GameScene");
-    }
-
-    private void HandleResult(bool success, string message)
-    {
-        if (statusText == null) return;
-        statusText.text = message;
-        statusText.color = success ? normalColor : warningColor;
+        if (statusText != null) statusText.text = msg;
     }
 
     private void Refresh()
     {
+<<<<<<< Updated upstream
         if (shop == null) return;
         
         if (shop.Wallet == null || shop.Cooler == null) return;
@@ -147,5 +102,10 @@ public class ShopGlobalBar2D : MonoBehaviour
             sb.Append(low[i].cutName);
         }
         lowStockText.text = sb.ToString();
+=======
+        if (shopNameText != null) shopNameText.text = shopName;
+        if (moneyText != null && shop != null && shop.Wallet != null)
+            moneyText.text = $"${shop.Wallet.Money:F0}";
+>>>>>>> Stashed changes
     }
 }

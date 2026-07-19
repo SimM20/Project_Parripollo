@@ -38,16 +38,12 @@ public class CoalSuggestionText2D : MonoBehaviour
 
     private void Refresh()
     {
-        Debug.Log("Entre al Refresh");
         if (shop == null) return;
-        Debug.Log("Pase el Shop = null");
         bool isCoalTab = shop.CurrentTab == ShopTabType.Coal;
         if (root != null) root.SetActive(isCoalTab);
         if (!isCoalTab) return;
-        Debug.Log("Pase el !isCoalTab");
 
         if (text == null) return;
-        Debug.Log("Pase el text = null");
 
         int units = shop.GetSuggestedCoalUnits();
         int bags = shop.GetSuggestedCoalBags();

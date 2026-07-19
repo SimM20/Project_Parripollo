@@ -69,6 +69,12 @@ public class ShopSystem : MonoBehaviour
         return list;
     }
 
+    public IReadOnlyList<ToppingSO> GetToppings()
+    {
+        if (catalog == null) return Array.Empty<ToppingSO>();
+        return catalog.GetAvailableToppings();
+    }
+
     public bool IsPurchasable(ItemDataSO item)
     {
         if (item == null) return false;
@@ -76,6 +82,11 @@ public class ShopSystem : MonoBehaviour
         if (item is MeatCutSO cut) return cut.isUnlocked;
         if (item is UpgradeSO up) return up.isUnlocked && !up.isPurchased;
         return false;
+    }
+
+    public bool IsToppingPurchasable(ToppingSO topping)
+    {
+        return topping != null;
     }
 
     // ── Sugerencia de carbón ────────────────────────────────────────────
@@ -122,6 +133,7 @@ public class ShopSystem : MonoBehaviour
         if (!IsPurchasable(item)) return;
 
         qty = Mathf.Max(0, qty);
+        if (item is UpgradeSO && qty > 1) qty = 1;
         if (qty == 0) cart.Remove(item);
         else cart[item] = qty;
 
@@ -130,6 +142,26 @@ public class ShopSystem : MonoBehaviour
 
     public void IncrementQty(ItemDataSO item, int delta = 1)
         => SetQty(item, GetCartQty(item) + delta);
+
+    public int GetToppingCartQty(ToppingSO topping)
+    {
+        if (topping == null) return 0;
+        return toppingCart.TryGetValue(topping, out int qty) ? qty : 0;
+    }
+
+    public void SetToppingQty(ToppingSO topping, int qty)
+    {
+        if (!IsToppingPurchasable(topping)) return;
+
+        qty = Mathf.Max(0, qty);
+        if (qty == 0) toppingCart.Remove(topping);
+        else toppingCart[topping] = qty;
+
+        OnCartChanged?.Invoke();
+    }
+
+    public void IncrementToppingQty(ToppingSO topping, int delta = 1)
+        => SetToppingQty(topping, GetToppingCartQty(topping) + delta);
 
     public void ClearCart()
     {
@@ -202,7 +234,12 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
-        Wallet.TrySpend(total);
+        if (!Wallet.TrySpend(total))
+        {
+            message = "No se pudo procesar el pago.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
 
         // Items normales (cooler)
         foreach (var kv in cart)
@@ -236,43 +273,89 @@ public class ShopSystem : MonoBehaviour
         message = "Compra realizada por $" + total.ToString("F0");
         OnPurchaseResult?.Invoke(true, message);
         return true;
-    }    
-    public IReadOnlyList<ToppingSO> GetToppings()
-    {
-        var result = new List<ToppingSO>();
-        if (catalog == null) return result;
-
-        var toppings = catalog.GetAvailableToppings();
-        for (int i = 0; i < toppings.Count; i++)
-            if (toppings[i] != null) result.Add(toppings[i]);
-
-        return result;
     }
 
-    public bool IsToppingPurchasable(ToppingSO topping)
+    public bool TryBuyNow(ItemDataSO item, int qty, out string message)
     {
-        return topping != null;
+        if (config == null || Wallet == null || Cooler == null)
+        {
+            message = "Tienda no configurada correctamente.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        if (!IsPurchasable(item))
+        {
+            message = "Ese item no se puede comprar.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        qty = Mathf.Max(1, qty);
+        if (item is UpgradeSO) qty = 1;
+
+        float total = item.basePrice * qty;
+        if (!Wallet.CanAfford(total))
+        {
+            message = "Plata insuficiente. Total: $" + total.ToString("F0");
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        if (!Wallet.TrySpend(total))
+        {
+            message = "No se pudo procesar el pago.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        if (item is CoalSO coal)
+            Cooler.Add(coal, coal.unitsPerBag * qty);
+        else if (item is UpgradeSO up)
+            up.isPurchased = true;
+        else
+            Cooler.Add(item, qty);
+
+        message = "Compra realizada por $" + total.ToString("F0");
+        OnPurchaseResult?.Invoke(true, message);
+        return true;
     }
-    
-    public int GetToppingCartQty(ToppingSO topping)
+
+    public bool TryBuyToppingNow(ToppingSO topping, int qty, out string message)
     {
-        if (topping == null) return 0;
-        return toppingCart.TryGetValue(topping, out int qty) ? qty : 0;
+        if (Wallet == null || Toppings == null)
+        {
+            message = "Tienda no configurada correctamente.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        if (!IsToppingPurchasable(topping))
+        {
+            message = "Ese topping no se puede comprar.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        qty = Mathf.Max(1, qty);
+        float total = topping.purchasePrice * qty;
+        if (!Wallet.CanAfford(total))
+        {
+            message = "Plata insuficiente. Total: $" + total.ToString("F0");
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        if (!Wallet.TrySpend(total))
+        {
+            message = "No se pudo procesar el pago.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        Toppings.Add(topping, qty);
+        message = "Compra realizada por $" + total.ToString("F0");
+        OnPurchaseResult?.Invoke(true, message);
+        return true;
     }
-
-    public void SetToppingQty(ToppingSO topping, int qty)
-    {
-        if (!IsToppingPurchasable(topping)) return;
-
-        qty = Mathf.Max(0, qty);
-        if (qty == 0) toppingCart.Remove(topping);
-        else toppingCart[topping] = qty;
-
-        OnCartChanged?.Invoke();
-    }
-
-    public void IncrementToppingQty(ToppingSO topping, int delta = 1)
-        => SetToppingQty(topping, GetToppingCartQty(topping) + delta);
-    
-    
 }

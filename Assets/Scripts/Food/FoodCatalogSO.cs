@@ -118,7 +118,23 @@ public class FoodCatalogSO : ScriptableObject, IFoodCatalogProvider
         }
         return result;
     }
+    
+    public ProductVariantSO GetVariantForOrder(Order order)
+    {
+        if (order == null || order.PrimaryCut == null) return null;
 
+        var variants = GetVariantsForCut(order.PrimaryCut);
+        for (int i = 0; i < variants.Count; i++)
+        {
+            var v = variants[i];
+            if (v == null) continue;
+
+            if (order.IsSandwich == v.IsSandwich)
+                return v;
+        }
+
+        return null;
+    }
     // ── Editor helpers ──────────────────────────────────────────────────────
 
     /// <summary>Returns all registered cuts (editor/debug use).</summary>
