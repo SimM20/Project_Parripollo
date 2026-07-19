@@ -6944,7 +6944,7 @@ MonoBehaviour:
     stackDirection: {x: 0, y: 1, z: 0}
     baseSortingOrder: 0
   defaultSpacing: 0.2
-  minIndex: 20
+  minIndex: 21
   maxIndex: 40
   fixedWorldScale: {x: 0.5, y: 0.5, z: 0.5}
 --- !u!1 &681479456
