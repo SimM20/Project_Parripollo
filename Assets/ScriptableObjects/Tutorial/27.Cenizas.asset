@@ -10,13 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
-  m_Name: 21.ToBuild
+  m_Name: 27.Cenizas
   m_EditorClassIdentifier: 
   instructionText: 
-  panelPrefab: {fileID: 0}
-  conditionType: 3
+  panelPrefab: {fileID: 2322837393960651236, guid: 40968633076d2ad49acb58a2e451109b, type: 3}
+  conditionType: 1
   requiredView: 0
-  requiredMeatCut: {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
+  requiredMeatCut: {fileID: 0}
   requiredCoal: {fileID: 0}
   requiredGrillLayer: 0
+  requiredMeatState: 0
+  checkCustomerOrderState: 0
+  checkBothSides: 0
+  pauseCooking: 0
   startAction: 0

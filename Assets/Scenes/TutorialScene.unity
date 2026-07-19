@@ -5734,7 +5734,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: maxCustomersPerNight
-      value: 1
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: spawnIntervalSeconds
@@ -7690,8 +7690,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 0}
-  m_sharedMaterial: {fileID: 0}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -7710,7 +7710,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -7758,7 +7758,7 @@ MonoBehaviour:
   _SortingLayerID: 0
   _SortingOrder: 0
   m_hasFontAssetChanged: 0
-  m_renderer: {fileID: 0}
+  m_renderer: {fileID: 958655820}
   m_maskType: 0
 --- !u!23 &958655820
 MeshRenderer:
@@ -7768,8 +7768,8 @@ MeshRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 958655816}
   m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
@@ -7780,7 +7780,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -10999,6 +10999,19 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 030d2c0184759924ea87ab6f214260d1, type: 2}
   - {fileID: 11400000, guid: 5544bf3d71584f4448c9711a04ffe159, type: 2}
   - {fileID: 11400000, guid: 95804ca887f9640478d2ed973a54300a, type: 2}
+  - {fileID: 11400000, guid: 40c3ad59f95a5e349b0d2cfa59332e84, type: 2}
+  - {fileID: 11400000, guid: de8990c66ccf03b4f99d595ced724472, type: 2}
+  - {fileID: 11400000, guid: 64c8b2dd450d49b4bbebc236906106bf, type: 2}
+  - {fileID: 11400000, guid: fc352bbc796d5ca4eb68c6ea57630735, type: 2}
+  - {fileID: 11400000, guid: 0c19d9031396d4948ac990209ee324aa, type: 2}
+  - {fileID: 11400000, guid: 2f674ac067fb31c49ae5fb8603fc7992, type: 2}
+  - {fileID: 11400000, guid: 3bf8351d0a2ba404f8ee9590855f36e8, type: 2}
+  - {fileID: 11400000, guid: 333f284cf703a634a9e9cbfe9bee1cc7, type: 2}
+  - {fileID: 11400000, guid: 801ce7e6f6658cc4a92f62a37a724bc7, type: 2}
+  - {fileID: 11400000, guid: 352c548fb36c8c049a90b6077d0d2a14, type: 2}
+  chorizoItem: {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
+  tiraAsadoItem: {fileID: 11400000, guid: 6e4b78453eb534d44aabcf530fc12f21, type: 2}
+  chorizoTutorialItem: {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
 --- !u!114 &1999034582 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4953675367217624768, guid: 9491b763193b0954487dedc1580658d3, type: 3}

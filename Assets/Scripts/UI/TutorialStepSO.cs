@@ -11,7 +11,11 @@ public enum TutorialConditionType
     ToggleGrillLayer,
     DragCoalToGrillSlots,
     FlipMeat,
-    MeatReachesDoneness
+    MeatReachesDoneness,
+    DragMeatToMeatHolder,
+    BeginDeliverySelection,
+    DeliverProduct,
+    DragMeatToBuildZone
 }
 
 public enum TutorialStartAction
@@ -44,6 +48,10 @@ public class TutorialStepSO : ScriptableObject
     [Header("Doneness Condition Settings")]
     public MeatStates requiredMeatState; // Used if condition is MeatReachesDoneness
     public bool checkCustomerOrderState; // If true, matches active customer's ordered cut & doneness state
+    public bool checkBothSides; // If true, both side A and side B must reach the target state
+
+    [Header("Cooking Control")]
+    public bool pauseCooking; // If true, pauses cooking on the grill while this step is active
 
     [Header("Action on Step Start")]
     public TutorialStartAction startAction; // Triggers action when this tutorial step begins

@@ -372,6 +372,7 @@ public class GameManager : MonoBehaviour
         customerSystem.EndDeliverySelection();
         Debug.Log("✔ Pedido entregado desde Build. Pago: " + totalPayment + " | Propinas: " + totalTips);
         AudioManager.Instance.PlayTaskCompleted();
+        TutorialManager.NotifyProductDelivered();
     }
 
     private void EndNight()

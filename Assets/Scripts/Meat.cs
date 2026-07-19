@@ -123,6 +123,9 @@ public class Meat : Item
 
     public virtual void Cook(float heatFromSlot)
     {
+        if (TutorialManager.IsCookingPaused)
+            return;
+
         if (lastCookFrame == Time.frameCount)
             return;
 
@@ -296,7 +299,7 @@ public class Meat : Item
         {
             state = newState;
             ApplyCutVisual();
-            TutorialManager.NotifyMeatStateChanged(cut, state);
+            TutorialManager.NotifyMeatStateChanged(this);
         }
     }
 

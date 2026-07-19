@@ -113,6 +113,13 @@ public class CoolerSystem : MonoBehaviour
         OnInventoryChanged?.Invoke();
     }
 
+    public void SetStockDirectly(ItemDataSO item, int count)
+    {
+        if (item == null) return;
+        stockByItem[item] = Mathf.Max(0, count);
+        OnInventoryChanged?.Invoke();
+    }
+
     public bool TryTake(ItemDataSO item, int amount = 1)
     {
         if (item == null)

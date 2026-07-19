@@ -7,6 +7,7 @@ using UnityEngine.UI;
 public class TutorialManager : MonoBehaviour
 {
     public static TutorialManager Instance { get; private set; }
+    public static bool IsCookingPaused { get; private set; } = false;
 
     [Header("References")]
     [SerializeField] private Transform canvasParent; // Where to instantiate panel prefabs
@@ -14,10 +15,59 @@ public class TutorialManager : MonoBehaviour
     [Header("Tutorial Sequence")]
     [SerializeField] private List<TutorialStepSO> tutorialSteps = new List<TutorialStepSO>();
 
+    [Header("Stock Configuration")]
+    [SerializeField] private ItemDataSO chorizoItem;
+    [SerializeField] private ItemDataSO tiraAsadoItem;
+    [SerializeField] private ItemDataSO chorizoTutorialItem;
+
+    private readonly Dictionary<ItemDataSO, int> tutorialStockBackup = new Dictionary<ItemDataSO, int>();
     private int currentStepIndex = -1;
     private GameObject currentPanelInstance;
     private ViewManager viewManager;
     private bool isTutorialActive = false;
+    private bool pausedByDonenessCompletion = false;
+
+    private void BackupAndSetTutorialStock()
+    {
+        if (CoolerSystem.Instance == null)
+        {
+            Debug.LogWarning("[TutorialManager] CoolerSystem.Instance not found. Cannot configure tutorial stock.");
+            return;
+        }
+
+        tutorialStockBackup.Clear();
+
+        // 1. Back up current values
+        if (chorizoItem != null)
+            tutorialStockBackup[chorizoItem] = CoolerSystem.Instance.GetCount(chorizoItem);
+        if (tiraAsadoItem != null)
+            tutorialStockBackup[tiraAsadoItem] = CoolerSystem.Instance.GetCount(tiraAsadoItem);
+        if (chorizoTutorialItem != null)
+            tutorialStockBackup[chorizoTutorialItem] = CoolerSystem.Instance.GetCount(chorizoTutorialItem);
+
+        // 2. Adjust stock in CoolerSystem
+        if (chorizoItem != null)
+            CoolerSystem.Instance.SetStockDirectly(chorizoItem, 0);
+        if (tiraAsadoItem != null)
+            CoolerSystem.Instance.SetStockDirectly(tiraAsadoItem, 0);
+        if (chorizoTutorialItem != null)
+            CoolerSystem.Instance.SetStockDirectly(chorizoTutorialItem, 10);
+
+        Debug.Log("[TutorialManager] Tutorial stock set up: Chorizo=0, Tira de Asado=0, ChorizoTutorial=10.");
+    }
+
+    private void RestoreTutorialStock()
+    {
+        if (CoolerSystem.Instance == null) return;
+
+        foreach (var kvp in tutorialStockBackup)
+        {
+            CoolerSystem.Instance.SetStockDirectly(kvp.Key, kvp.Value);
+        }
+
+        tutorialStockBackup.Clear();
+        Debug.Log("[TutorialManager] Restored stock from tutorial backup.");
+    }
 
     void Awake()
     {
@@ -50,6 +100,11 @@ public class TutorialManager : MonoBehaviour
         {
             viewManager.OnViewChanged -= OnViewChanged;
         }
+
+        if (tutorialStockBackup.Count > 0)
+        {
+            RestoreTutorialStock();
+        }
     }
 
     public void StartTutorial()
@@ -68,6 +123,8 @@ public class TutorialManager : MonoBehaviour
             eventSystemGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
             Debug.Log("[TutorialManager] EventSystem was missing in the scene. Created one dynamically.");
         }
+
+        BackupAndSetTutorialStock();
 
         isTutorialActive = true;
         ShowStep(0);
@@ -101,6 +158,22 @@ public class TutorialManager : MonoBehaviour
         {
             Debug.LogError($"[TutorialManager] Step at index {index} is null.");
             return;
+        }
+
+        if (pausedByDonenessCompletion)
+        {
+            IsCookingPaused = false;
+            pausedByDonenessCompletion = false;
+            Debug.Log("[TutorialManager] Resumed cooking after advancing past the post-doneness step.");
+        }
+        else
+        {
+            IsCookingPaused = step.pauseCooking;
+        }
+
+        if (step.pauseCooking)
+        {
+            IsCookingPaused = true;
         }
 
         // Execute start action (e.g. Spawn customer) before showing panel
@@ -219,9 +292,24 @@ public class TutorialManager : MonoBehaviour
         if (Instance != null) Instance.OnMeatFlipped(cut);
     }
 
-    public static void NotifyMeatStateChanged(MeatCutSO cut, MeatStates newState)
+    public static void NotifyMeatStateChanged(Meat meat)
     {
-        if (Instance != null) Instance.OnMeatStateChanged(cut, newState);
+        if (Instance != null) Instance.OnMeatStateChanged(meat);
+    }
+
+    public static void NotifyDeliverySelectionBegun()
+    {
+        if (Instance != null) Instance.OnDeliverySelectionBegun();
+    }
+
+    public static void NotifyProductDelivered()
+    {
+        if (Instance != null) Instance.OnProductDelivered();
+    }
+
+    public static void NotifyMeatPlacedOnBuildZone(MeatCutSO cut)
+    {
+        if (Instance != null) Instance.OnMeatPlacedOnBuildZone(cut);
     }
 
     // ── Notification Handlers ─────────────────────────────────────────
@@ -231,11 +319,12 @@ public class TutorialManager : MonoBehaviour
             return;
 
         TutorialStepSO step = tutorialSteps[currentStepIndex];
-        if (step.conditionType == TutorialConditionType.DragMeatToGrill)
+        if (step.conditionType == TutorialConditionType.DragMeatToGrill ||
+            step.conditionType == TutorialConditionType.DragMeatToMeatHolder)
         {
             if (step.requiredMeatCut == null || step.requiredMeatCut == cut)
             {
-                Debug.Log($"[TutorialManager] DragMeatToGrill condition met with cut: {cut.cutName}");
+                Debug.Log($"[TutorialManager] DragMeatToGrill/DragMeatToMeatHolder condition met with cut: {cut.cutName}");
                 AdvanceStep();
             }
         }
@@ -337,9 +426,9 @@ public class TutorialManager : MonoBehaviour
         }
     }
 
-    private void OnMeatStateChanged(MeatCutSO cut, MeatStates newState)
+    private void OnMeatStateChanged(Meat meat)
     {
-        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count)
+        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count || meat == null)
             return;
 
         TutorialStepSO step = tutorialSteps[currentStepIndex];
@@ -367,19 +456,74 @@ public class TutorialManager : MonoBehaviour
             }
 
             // Check if matches
-            if (targetCut == null || targetCut == cut)
+            if (targetCut == null || targetCut == meat.cut)
             {
-                if (newState == targetState)
+                bool condMet = false;
+                if (step.checkBothSides)
                 {
-                    Debug.Log($"[TutorialManager] MeatReachesDoneness condition met: {cut.cutName} reaches state {newState}");
+                    condMet = (meat.SideAState == targetState && meat.SideBState == targetState);
+                }
+                else
+                {
+                    condMet = (meat.state == targetState);
+                }
+
+                if (condMet)
+                {
+                    Debug.Log($"[TutorialManager] MeatReachesDoneness condition met (both={step.checkBothSides}): {meat.cut.cutName} reaches state {targetState}. Pausing cooking.");
+                    IsCookingPaused = true;
+                    pausedByDonenessCompletion = true;
                     AdvanceStep();
                 }
             }
         }
     }
 
+    private void OnDeliverySelectionBegun()
+    {
+        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count)
+            return;
+
+        TutorialStepSO step = tutorialSteps[currentStepIndex];
+        if (step.conditionType == TutorialConditionType.BeginDeliverySelection)
+        {
+            Debug.Log("[TutorialManager] BeginDeliverySelection condition met.");
+            AdvanceStep();
+        }
+    }
+
+    private void OnProductDelivered()
+    {
+        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count)
+            return;
+
+        TutorialStepSO step = tutorialSteps[currentStepIndex];
+        if (step.conditionType == TutorialConditionType.DeliverProduct)
+        {
+            Debug.Log("[TutorialManager] DeliverProduct condition met.");
+            AdvanceStep();
+        }
+    }
+
+    private void OnMeatPlacedOnBuildZone(MeatCutSO cut)
+    {
+        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count)
+            return;
+
+        TutorialStepSO step = tutorialSteps[currentStepIndex];
+        if (step.conditionType == TutorialConditionType.DragMeatToBuildZone)
+        {
+            if (step.requiredMeatCut == null || step.requiredMeatCut == cut)
+            {
+                Debug.Log($"[TutorialManager] DragMeatToBuildZone condition met with cut: {cut.cutName}");
+                AdvanceStep();
+            }
+        }
+    }
+
     private void EndTutorial()
     {
+        RestoreTutorialStock();
         isTutorialActive = false;
         if (currentPanelInstance != null)
         {

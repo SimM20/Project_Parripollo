@@ -191,6 +191,7 @@ public class CustomerSystem : MonoBehaviour
 
         IsDeliverySelectionActive = true;
         SelectCustomer(first);
+        TutorialManager.NotifyDeliverySelectionBegun();
         return true;
     }
 

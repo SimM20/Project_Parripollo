@@ -69,7 +69,10 @@ public class BuildMeatHolderDraggableMeat : MonoBehaviour
         bool dropped = BuildFoodDropZone.TryAcceptMeatAt(GetMouseWorldPos(), cut, state, sideAState, sideBState);
 
         if (dropped)
+        {
             buffer.ConsumeBuildMeatEntry(entryId, gameObject);
+            TutorialManager.NotifyMeatPlacedOnBuildZone(cut);
+        }
         else
             RestoreStartTransform();
     }
