@@ -462,11 +462,10 @@ namespace AmplifyShaderEditor
 						EditorApplication.update -= closureCallback;
 					}
 				}
-				catch( Exception ex )
+				catch( Exception )
 				{
 					if( end != null )
 						end();
-					Debug.LogException( ex );
 					EditorApplication.update -= closureCallback;
 				}
 			};
