@@ -186,7 +186,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
-<<<<<<< Updated upstream
 --- !u!1001 &107891372
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -199,10 +198,6 @@ PrefabInstance:
       propertyPath: shop
       value: 
       objectReference: {fileID: 528961429}
-    - target: {fileID: 1887820450571727646, guid: 80c2f1b32ffb9244a849c31ae05b2e5e, type: 3}
-      propertyPath: continueButton
-      value: 
-      objectReference: {fileID: 107891374}
     - target: {fileID: 3687209077898641605, guid: 80c2f1b32ffb9244a849c31ae05b2e5e, type: 3}
       propertyPath: shop
       value: 
@@ -264,10 +259,7 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 80c2f1b32ffb9244a849c31ae05b2e5e, type: 3}
---- !u!1 &107891373 stripped
-=======
 --- !u!1 &90941700
->>>>>>> Stashed changes
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -319,8 +311,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-<<<<<<< Updated upstream
-=======
   m_Navigation:
     m_Mode: 3
     m_WrapAround: 0
@@ -584,7 +574,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
->>>>>>> Stashed changes
 --- !u!1 &151632599
 GameObject:
   m_ObjectHideFlags: 0
