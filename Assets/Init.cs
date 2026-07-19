@@ -60,14 +60,26 @@ public class Init : MonoBehaviour
     private void ApplySettings()
     {
         if (configData.TryGetValue("TargetFPS", out string fpsString) && int.TryParse(fpsString, out int targetFps))
-        {
             Application.targetFrameRate = targetFps;
-        }
+
         else
-        {
-            // Fallback por si alguien edita mal el .cfg
-            Application.targetFrameRate = 120;
-        }
+            Application.targetFrameRate = 120; // Fallback
+
+
+        int resX = 1920;
+        int resY = 1080;
+        bool isFullscreen = true;
+
+        if (configData.TryGetValue("ResolutionX", out string xStr) && int.TryParse(xStr, out int parsedX))
+            resX = parsedX;
+
+        if (configData.TryGetValue("ResolutionY", out string yStr) && int.TryParse(yStr, out int parsedY))
+            resY = parsedY;
+
+        if (configData.TryGetValue("Fullscreen", out string fsStr) && bool.TryParse(fsStr, out bool parsedFs))
+            isFullscreen = parsedFs;
+
+        Screen.SetResolution(resX, resY, isFullscreen);
     }
 
     public string GetValue(string key, string defaultValue = "")
