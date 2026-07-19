@@ -1234,7 +1234,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 745859596}
         m_TargetAssemblyTypeName: MainMenuPanel, Assembly-CSharp
-        m_MethodName: StartNewGame
+        m_MethodName: ExitGame
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
