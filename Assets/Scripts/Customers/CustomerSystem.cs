@@ -39,6 +39,8 @@ public class CustomerSystem : MonoBehaviour
 
     [Header("Patience")]
     [SerializeField] private float basePatienceSeconds = 30f;
+    
+    public FoodCatalogSO Catalog => availabilityService != null ? availabilityService.Catalog : null;
 
     public Customer currentCustomer;
 
