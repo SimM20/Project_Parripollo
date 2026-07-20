@@ -521,6 +521,29 @@ public class ToppingDraggable : MonoBehaviour
         activeSplatters.Clear();
     }
 
+    /// <summary>Destruye los splatters desde el índice indicado en adelante. Usado por el undo de una vertida.</summary>
+    public void RemoveSplattersFrom(int startIndex)
+    {
+        if (startIndex < 0)
+            startIndex = 0;
+
+        for (int i = activeSplatters.Count - 1; i >= startIndex; i--)
+        {
+            if (activeSplatters[i] != null)
+                Destroy(activeSplatters[i]);
+
+            activeSplatters.RemoveAt(i);
+        }
+    }
+
+    /// <summary>Restaura la cantidad de salsa del frasco. Usado por el undo de una vertida.</summary>
+    public void SetSauceAmount(float amount)
+    {
+        float max = (toppingData != null) ? toppingData.maxSauceAmount : 100f;
+        currentSauceAmount = Mathf.Clamp(amount, 0f, max);
+        sauceEmpty = currentSauceAmount <= 0f;
+    }
+
     public static void ClearAllSplatters()
     {
         for (int i = 0; i < ActiveInstances.Count; i++)
@@ -549,6 +572,8 @@ public class ToppingDraggable : MonoBehaviour
             if (station != null)
             {
                 station.AddTopping(toppingData);
+                BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
+                    station, null, toppingData, false, this, activeSplatters.Count, currentSauceAmount));
                 Debug.Log("[ToppingDraggable] Topping registrado (fallback): " + toppingData.toppingName);
             }
             else
@@ -559,7 +584,9 @@ public class ToppingDraggable : MonoBehaviour
         }
 
         zone.BuildStation.AddTopping(toppingData);
-        zone.SpawnPlateVisual(selfRenderer != null ? selfRenderer.sprite : null);
+        bool visualSpawned = zone.SpawnPlateVisual(selfRenderer != null ? selfRenderer.sprite : null);
+        BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
+            zone.BuildStation, zone, toppingData, visualSpawned, this, activeSplatters.Count, currentSauceAmount));
         Debug.Log("[ToppingDraggable] Topping registrado: " + toppingData.toppingName);
     }
 
