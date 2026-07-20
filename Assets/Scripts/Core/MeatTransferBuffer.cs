@@ -263,6 +263,46 @@ public class MeatTransferBuffer : MonoBehaviour
         go.transform.localEulerAngles = variantSpriteRotation;
     }
 
+    /// <summary>
+    /// Captura el estado visual del último visual de carne del plato (sprite, escala, rotación)
+    /// antes de que un pan lo transforme. Usado por el undo. Devuelve false si no hay visual.
+    /// </summary>
+    public bool TryCaptureLastPlateMeatVisual(out GameObject visual, out Sprite sprite, out Vector3 scale, out Vector3 euler)
+    {
+        visual = null;
+        sprite = null;
+        scale = Vector3.one;
+        euler = Vector3.zero;
+
+        if (plateMeatVisuals.Count == 0)
+            return false;
+
+        GameObject go = plateMeatVisuals[plateMeatVisuals.Count - 1];
+        if (go == null)
+            return false;
+
+        visual = go;
+        SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
+        sprite = sr != null ? sr.sprite : null;
+        scale = go.transform.localScale;
+        euler = go.transform.localEulerAngles;
+        return true;
+    }
+
+    /// <summary>Restaura sprite, escala y rotación de un visual de carne del plato. Usado por el undo. Tolera visual destruido.</summary>
+    public void RestorePlateMeatVisual(GameObject visual, Sprite sprite, Vector3 scale, Vector3 euler)
+    {
+        if (visual == null)
+            return;
+
+        SpriteRenderer sr = visual.GetComponent<SpriteRenderer>();
+        if (sr != null)
+            sr.sprite = sprite;
+
+        visual.transform.localScale = scale;
+        visual.transform.localEulerAngles = euler;
+    }
+
     public void SetPlateMeatVisualsVisible(bool visible)
     {
         for (int i = 0; i < plateMeatVisuals.Count; i++)
