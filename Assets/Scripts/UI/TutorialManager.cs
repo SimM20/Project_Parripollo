@@ -22,6 +22,7 @@ public class TutorialManager : MonoBehaviour
     [SerializeField] private ItemDataSO chorizoItem;
     [SerializeField] private ItemDataSO tiraAsadoItem;
     [SerializeField] private ItemDataSO chorizoTutorialItem;
+    [SerializeField] private ItemDataSO coalItem;
 
     private readonly Dictionary<ItemDataSO, int> tutorialStockBackup = new Dictionary<ItemDataSO, int>();
     private int currentStepIndex = -1;
@@ -49,6 +50,8 @@ public class TutorialManager : MonoBehaviour
             tutorialStockBackup[tiraAsadoItem] = CoolerSystem.Instance.GetCount(tiraAsadoItem);
         if (chorizoTutorialItem != null)
             tutorialStockBackup[chorizoTutorialItem] = CoolerSystem.Instance.GetCount(chorizoTutorialItem);
+        if (coalItem != null)
+            tutorialStockBackup[coalItem] = CoolerSystem.Instance.GetCount(coalItem);
 
         // 2. Adjust stock in CoolerSystem
         if (chorizoItem != null)
@@ -56,9 +59,11 @@ public class TutorialManager : MonoBehaviour
         if (tiraAsadoItem != null)
             CoolerSystem.Instance.SetStockDirectly(tiraAsadoItem, 0);
         if (chorizoTutorialItem != null)
-            CoolerSystem.Instance.SetStockDirectly(chorizoTutorialItem, 10);
+            CoolerSystem.Instance.SetStockDirectly(chorizoTutorialItem, 3);
+        if (coalItem != null)
+            CoolerSystem.Instance.SetStockDirectly(coalItem, 3);
 
-        Debug.Log("[TutorialManager] Tutorial stock set up: Chorizo=0, Tira de Asado=0, ChorizoTutorial=10.");
+        Debug.Log("[TutorialManager] Tutorial stock set up: Chorizo=0, Tira de Asado=0, ChorizoTutorial=3.");
     }
 
     private void RestoreTutorialStock()

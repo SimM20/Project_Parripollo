@@ -11018,6 +11018,7 @@ MonoBehaviour:
   chorizoItem: {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
   tiraAsadoItem: {fileID: 11400000, guid: 6e4b78453eb534d44aabcf530fc12f21, type: 2}
   chorizoTutorialItem: {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
+  coalItem: {fileID: 11400000, guid: 9eaa56d6afb63b140989ce44c6b336c1, type: 2}
 --- !u!114 &1999034582 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4953675367217624768, guid: 9491b763193b0954487dedc1580658d3, type: 3}
