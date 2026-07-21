@@ -329,7 +329,12 @@ public class GameManager : MonoBehaviour
         }
 
         // ── Validación de cocción: Crudo/Quemado bloquean la entrega completa (atómica) ──
-        var validation = CookingDeliveryEvaluator.Validate(buildStationSystem.AssembledCutSideStates);
+        // El tutorial exime al chorizo tutorial quemado para evitar un softlock; en GameScene
+        // no hay TutorialManager, así que el predicado siempre es false y nada cambia.
+        var validation = CookingDeliveryEvaluator.Validate(
+            buildStationSystem.AssembledCutSideStates,
+            buildStationSystem.AssembledCuts,
+            TutorialManager.IsBurnedDeliveryExempt);
 
         if (validation.IsBlocked)
         {

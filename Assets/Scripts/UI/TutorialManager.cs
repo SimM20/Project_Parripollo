@@ -321,6 +321,21 @@ public class TutorialManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Excepción exclusiva del tutorial: permite entregar el chorizo tutorial SO aunque esté
+    /// quemado, evitando el softlock del paso de entrega. Solo aplica cuando existe TutorialManager
+    /// (escena de tutorial) y únicamente para el chorizo tutorial configurado en el inspector.
+    /// En GameScene no hay TutorialManager (Instance == null), por lo que siempre devuelve false
+    /// y el gameplay normal no cambia.
+    /// </summary>
+    public static bool IsBurnedDeliveryExempt(MeatCutSO cut)
+    {
+        return Instance != null
+            && cut != null
+            && Instance.chorizoTutorialItem != null
+            && cut == Instance.chorizoTutorialItem;
+    }
+
     // ── Static Notifications ───────────────────────────────────────────
     public static void NotifyMeatDraggedToGrill(MeatCutSO cut)
     {

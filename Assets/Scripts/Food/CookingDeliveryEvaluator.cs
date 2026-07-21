@@ -35,6 +35,19 @@ public static class CookingDeliveryEvaluator
     /// </summary>
     public static DeliveryValidation Validate(IReadOnlyList<BuildStationSystem.CutSideStates> sideStates)
     {
+        return Validate(sideStates, null, null);
+    }
+
+    /// <summary>
+    /// Igual que Validate, pero con una excepción opcional por corte para piezas quemadas:
+    /// si isBurnedExempt(cut) es true, esa pieza quemada se considera entregable y no bloquea
+    /// la entrega (usado por el tutorial). Sin el predicado, el comportamiento es el normal.
+    /// </summary>
+    public static DeliveryValidation Validate(
+        IReadOnlyList<BuildStationSystem.CutSideStates> sideStates,
+        IReadOnlyList<MeatCutSO> cuts,
+        System.Func<MeatCutSO, bool> isBurnedExempt)
+    {
         var result = new DeliveryValidation { burnedIndices = new List<int>() };
 
         if (sideStates == null)
@@ -44,6 +57,10 @@ public static class CookingDeliveryEvaluator
         {
             if (sideStates[i].IsBurned)
             {
+                // Excepción de entrega (tutorial): quemados eximidos no bloquean ni se descartan.
+                if (isBurnedExempt != null && cuts != null && i < cuts.Count && isBurnedExempt(cuts[i]))
+                    continue;
+
                 result.burnedCount++;
                 result.burnedIndices.Add(i);
             }
