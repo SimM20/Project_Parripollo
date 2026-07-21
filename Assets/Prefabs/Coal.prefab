@@ -146,6 +146,6 @@ MonoBehaviour:
   itemType: 1
   coalData: {fileID: 11400000, guid: 9eaa56d6afb63b140989ce44c6b336c1, type: 2}
   spriteRenderer: {fileID: 9042051490471350608}
-  maxBurnTime: 60
+  maxBurnTime: 85
   currentBurnTime: 0
   state: 0
