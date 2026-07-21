@@ -54,6 +54,15 @@ public class BuildFoodDropZone : MonoBehaviour
 
             if (item.breadData != null)
             {
+                BreadSO previousBread = zone.buildStationSystem.AssembledBread;
+                GameObject plateMeatVisual = null;
+                Sprite previousSprite = null;
+                Vector3 previousScale = Vector3.one;
+                Vector3 previousEuler = Vector3.zero;
+                bool visualCaptured = zone.meatTransferBuffer != null
+                    && zone.meatTransferBuffer.TryCaptureLastPlateMeatVisual(
+                        out plateMeatVisual, out previousSprite, out previousScale, out previousEuler);
+
                 zone.buildStationSystem.SetBread(item.breadData);
                 ProductVariantSO variant = zone.buildStationSystem.TryResolveVariant();
                 if (variant != null)
@@ -72,18 +81,25 @@ public class BuildFoodDropZone : MonoBehaviour
                 {
                     Debug.LogWarning("[Build] Sin sprite de variante para: " + item.breadData.breadName);
                 }
+                BuildUndoHistory.Instance?.Push(new SetBreadUndoAction(
+                    zone.buildStationSystem, zone.meatTransferBuffer, previousBread,
+                    visualCaptured ? plateMeatVisual : null, previousSprite, previousScale, previousEuler));
                 Debug.Log("[Build] Pan arrastrado: " + item.breadData.breadName);
             }
             else if (item.sideData != null)
             {
                 zone.buildStationSystem.AddSide(item.sideData);
-                zone.SpawnPlateVisual(item.GetComponent<SpriteRenderer>()?.sprite);
+                bool sideVisualSpawned = zone.SpawnPlateVisual(item.GetComponent<SpriteRenderer>()?.sprite);
+                BuildUndoHistory.Instance?.Push(new AddSideUndoAction(
+                    zone.buildStationSystem, zone, item.sideData, sideVisualSpawned));
                 Debug.Log("[Build] Acompañamiento arrastrado: " + item.sideData.sideName);
             }
             else if (item.toppingData != null)
             {
                 zone.buildStationSystem.AddTopping(item.toppingData);
-                zone.SpawnPlateVisual(item.GetComponent<SpriteRenderer>()?.sprite);
+                bool toppingVisualSpawned = zone.SpawnPlateVisual(item.GetComponent<SpriteRenderer>()?.sprite);
+                BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
+                    zone.buildStationSystem, zone, item.toppingData, toppingVisualSpawned, null, 0, 0f));
                 Debug.Log("[Build] Topping arrastrado: " + item.toppingData.toppingName);
             }
 
@@ -149,10 +165,10 @@ public class BuildFoodDropZone : MonoBehaviour
         }
     }
 
-    public void SpawnPlateVisual(Sprite sprite)
+    public bool SpawnPlateVisual(Sprite sprite)
     {
         if (sprite == null)
-            return;
+            return false;
 
         Vector3 dir = plateVisualDirection.sqrMagnitude > 0f
             ? plateVisualDirection.normalized
@@ -170,6 +186,21 @@ public class BuildFoodDropZone : MonoBehaviour
         sr.sortingOrder = plateVisualSortingOrder;
 
         plateSideTopVisuals.Add(go);
+        return true;
+    }
+
+    /// <summary>Quita el último visual de acompañamiento/topping del plato. Usado por el undo.</summary>
+    public void RemoveLastPlateVisual()
+    {
+        int last = plateSideTopVisuals.Count - 1;
+        if (last < 0)
+            return;
+
+        GameObject go = plateSideTopVisuals[last];
+        plateSideTopVisuals.RemoveAt(last);
+
+        if (go != null)
+            Destroy(go);
     }
 
     private void ClearPlateItemVisuals()

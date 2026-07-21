@@ -7,6 +7,7 @@ public class CustomerHoverBubble : MonoBehaviour
 
     [SerializeField] private SpriteRenderer circleRenderer;
     [SerializeField] private TMP_Text text;
+    [SerializeField] private SpriteRenderer dishRenderer;    // NUEVO
     [SerializeField] private Vector3 worldOffset = new Vector3(0f, 1.2f, -1f);
 
     private Transform followTarget;
@@ -23,16 +24,30 @@ public class CustomerHoverBubble : MonoBehaviour
             transform.position = followTarget.position + worldOffset;
     }
 
-    public void Show(string message, Transform target)
+    public void Show(string message, Transform target, Sprite dishSprite = null)
     {
         followTarget = target;
         if (text != null) text.text = message;
+
+        if (dishRenderer != null)
+        {
+            dishRenderer.sprite = dishSprite;
+            dishRenderer.enabled = dishSprite != null;
+        }
+
         gameObject.SetActive(true);
     }
 
     public void Hide()
     {
         followTarget = null;
+
+        if (dishRenderer != null)
+        {
+            dishRenderer.sprite = null;
+            dishRenderer.enabled = false;
+        }
+
         gameObject.SetActive(false);
     }
 }

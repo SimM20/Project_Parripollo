@@ -162,18 +162,30 @@ public class MeatTransferBuffer : MonoBehaviour
         toBuildCuts.Add(entry);
         toBuildLocalPositions.Add(WorldToAnchorLocalPosition(worldPoint, anchor));
         RebuildStack(toBuildCuts, toBuildVisuals, anchor, toBuildSortingBase, false, toBuildLocalPositions);
+        EnsureToBuildDrags();
         return true;
     }
 
     public void MoveToMeatHolder()
     {
-        if (toGrillCuts.Count == 0)
-            return;
+        if (toGrillCuts.Count > 0)
+        {
+            meatHolderCuts.AddRange(toGrillCuts);
+            meatHolderLocalPositions.AddRange(toGrillLocalPositions);
+            toGrillCuts.Clear();
+            toGrillLocalPositions.Clear();
+        }
 
-        meatHolderCuts.AddRange(toGrillCuts);
-        meatHolderLocalPositions.AddRange(toGrillLocalPositions);
-        toGrillCuts.Clear();
-        toGrillLocalPositions.Clear();
+        if (buildMeatHolderCuts.Count > 0)
+        {
+            for (int i = 0; i < buildMeatHolderCuts.Count; i++)
+            {
+                toBuildCuts.Add(buildMeatHolderCuts[i]);
+                toBuildLocalPositions.Add(GetStackLocalPosition(toBuildCuts.Count - 1));
+            }
+            buildMeatHolderCuts.Clear();
+            buildMeatHolderLocalPositions.Clear();
+        }
 
         RefreshVisuals();
     }
@@ -251,6 +263,46 @@ public class MeatTransferBuffer : MonoBehaviour
         go.transform.localEulerAngles = variantSpriteRotation;
     }
 
+    /// <summary>
+    /// Captura el estado visual del último visual de carne del plato (sprite, escala, rotación)
+    /// antes de que un pan lo transforme. Usado por el undo. Devuelve false si no hay visual.
+    /// </summary>
+    public bool TryCaptureLastPlateMeatVisual(out GameObject visual, out Sprite sprite, out Vector3 scale, out Vector3 euler)
+    {
+        visual = null;
+        sprite = null;
+        scale = Vector3.one;
+        euler = Vector3.zero;
+
+        if (plateMeatVisuals.Count == 0)
+            return false;
+
+        GameObject go = plateMeatVisuals[plateMeatVisuals.Count - 1];
+        if (go == null)
+            return false;
+
+        visual = go;
+        SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
+        sprite = sr != null ? sr.sprite : null;
+        scale = go.transform.localScale;
+        euler = go.transform.localEulerAngles;
+        return true;
+    }
+
+    /// <summary>Restaura sprite, escala y rotación de un visual de carne del plato. Usado por el undo. Tolera visual destruido.</summary>
+    public void RestorePlateMeatVisual(GameObject visual, Sprite sprite, Vector3 scale, Vector3 euler)
+    {
+        if (visual == null)
+            return;
+
+        SpriteRenderer sr = visual.GetComponent<SpriteRenderer>();
+        if (sr != null)
+            sr.sprite = sprite;
+
+        visual.transform.localScale = scale;
+        visual.transform.localEulerAngles = euler;
+    }
+
     public void SetPlateMeatVisualsVisible(bool visible)
     {
         for (int i = 0; i < plateMeatVisuals.Count; i++)
@@ -287,6 +339,7 @@ public class MeatTransferBuffer : MonoBehaviour
         RebuildStack(meatHolderCuts, meatHolderVisuals, meatHolderAnchor, meatHolderSortingBase, true, meatHolderLocalPositions);
         RebuildStack(toBuildCuts, toBuildVisuals, ResolveToBuildAnchor(), toBuildSortingBase, false, toBuildLocalPositions);
         RebuildStack(buildMeatHolderCuts, buildMeatHolderVisuals, ResolveBuildMeatHolderAnchor(), buildMeatHolderSortingBase, false, buildMeatHolderLocalPositions);
+        EnsureToBuildDrags();
         EnsureBuildMeatHolderDrags();
     }
 
@@ -357,6 +410,68 @@ public class MeatTransferBuffer : MonoBehaviour
         Debug.Log("Mandaste a la parrilla desde MeatHolder: " + cutName + " | Estado: " + entry.state);
         TutorialManager.NotifyMeatPlacedOnGrill(entry.cut);
         return true;
+    }
+
+    public bool TryDropFromToBuild(MeatCutSO cut, Vector3 dropWorldPoint)
+    {
+        return TryDropFromToBuild(cut, dropWorldPoint, false);
+    }
+
+    public bool TryDropFromToBuild(MeatCutSO cut, Vector3 dropWorldPoint, bool rotateFootprint)
+    {
+        if (cut == null)
+            return false;
+
+        return TryDropFromToBuildById(FindToBuildIndexByCut(cut), dropWorldPoint, rotateFootprint);
+    }
+
+    public bool TryDropFromToBuildById(int entryId, Vector3 dropWorldPoint)
+    {
+        return TryDropFromToBuildById(entryId, dropWorldPoint, false);
+    }
+
+    public bool TryDropFromToBuildById(int entryId, Vector3 dropWorldPoint, bool rotateFootprint)
+    {
+        if (grillSystem == null)
+            return false;
+
+        if (entryId < 0 || entryId >= toBuildCuts.Count)
+            return false;
+
+        BufferedMeatData entry = toBuildCuts[entryId];
+        if (entry == null || entry.cut == null)
+            return false;
+
+        if (!grillSystem.TrySpawnMeatAtPoint(entry.cut, dropWorldPoint, out Meat spawnedMeat, rotateFootprint))
+            return false;
+
+        entry.ApplyTo(spawnedMeat, rotateFootprint);
+        toBuildCuts.RemoveAt(entryId);
+
+        if (entryId >= 0 && entryId < toBuildLocalPositions.Count)
+            toBuildLocalPositions.RemoveAt(entryId);
+
+        RefreshVisuals();
+
+        string cutName = entry.cut != null ? entry.cut.cutName : "Sin corte";
+        Debug.Log("Mandaste a la parrilla desde ToBuild: " + cutName + " | Estado: " + entry.state);
+        TutorialManager.NotifyMeatPlacedOnGrill(entry.cut);
+        return true;
+    }
+
+    private int FindToBuildIndexByCut(MeatCutSO cut)
+    {
+        if (cut == null)
+            return -1;
+
+        for (int i = 0; i < toBuildCuts.Count; i++)
+        {
+            BufferedMeatData entry = toBuildCuts[i];
+            if (entry != null && entry.cut == cut)
+                return i;
+        }
+
+        return -1;
     }
 
     private int FindMeatHolderIndexByCut(MeatCutSO cut)
@@ -739,6 +854,26 @@ public class MeatTransferBuffer : MonoBehaviour
 
         while (localPositions.Count < targetCount)
             localPositions.Add(GetStackLocalPosition(localPositions.Count));
+    }
+
+    private void EnsureToBuildDrags()
+    {
+        for (int i = 0; i < toBuildVisuals.Count; i++)
+        {
+            GameObject go = toBuildVisuals[i];
+            if (go == null || i >= toBuildCuts.Count)
+                continue;
+
+            BufferedMeatData entry = toBuildCuts[i];
+            if (entry == null || entry.cut == null)
+                continue;
+
+            ToBuildDraggableMeat drag = go.GetComponent<ToBuildDraggableMeat>();
+            if (drag == null)
+                drag = go.AddComponent<ToBuildDraggableMeat>();
+
+            drag.Setup(entry.cut, this, i, entry.isGridRotated);
+        }
     }
 
     private void EnsureBuildMeatHolderDrags()

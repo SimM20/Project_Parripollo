@@ -32,6 +32,9 @@ public class BuildStationSystem : MonoBehaviour
 
     public event Action OnAssemblyChanged;
 
+    /// <summary>Disparado al limpiar el armado completo (entrega o reinicio). Usado para invalidar el historial de undo.</summary>
+    public event Action OnAssemblyCleared;
+
 
     public IReadOnlyList<MeatCutSO> AssembledCuts => assembledCuts;
     public IReadOnlyList<MeatStates> AssembledCutStates => assembledCutStates;
@@ -103,6 +106,38 @@ public class BuildStationSystem : MonoBehaviour
         OnAssemblyChanged?.Invoke();
     }
 
+    /// <summary>Quita la última aparición del acompañamiento indicado. Usado por el undo. No toca cortes.</summary>
+    public void RemoveLastSide(SideSO side)
+    {
+        if (side == null) return;
+
+        for (int i = assembledSides.Count - 1; i >= 0; i--)
+        {
+            if (assembledSides[i] == side)
+            {
+                assembledSides.RemoveAt(i);
+                OnAssemblyChanged?.Invoke();
+                return;
+            }
+        }
+    }
+
+    /// <summary>Quita la última aparición del topping indicado. Usado por el undo. No toca cortes.</summary>
+    public void RemoveLastTopping(ToppingSO topping)
+    {
+        if (topping == null) return;
+
+        for (int i = assembledToppings.Count - 1; i >= 0; i--)
+        {
+            if (assembledToppings[i] == topping)
+            {
+                assembledToppings.RemoveAt(i);
+                OnAssemblyChanged?.Invoke();
+                return;
+            }
+        }
+    }
+
     /// <summary>Clears all assembled items.</summary>
     public void ClearAssembly()
     {
@@ -112,6 +147,7 @@ public class BuildStationSystem : MonoBehaviour
         assembledBread = null;
         assembledSides.Clear();
         assembledToppings.Clear();
+        OnAssemblyCleared?.Invoke();
         OnAssemblyChanged?.Invoke();
         Debug.Log("[BuildStation] Armado limpiado.");
     }
