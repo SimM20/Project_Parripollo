@@ -46,10 +46,14 @@ public class TutorialStepSO : ScriptableObject
     public GrillLayerToggle.GrillLayer requiredGrillLayer; // Used if condition is ToggleGrillLayer
 
     [Header("Doneness Condition Settings")]
-    public MeatStates requiredMeatState; // Used if condition is MeatReachesDoneness
-    public bool checkCustomerOrderState; // If true, matches active customer's ordered cut & doneness state
-    public bool checkBothSides; // If true, both side A and side B must reach the target state
-
+    public MeatStates requiredMeatState;
+    public bool checkCustomerOrderState;
+    public bool checkBothSides;
+    [Tooltip("Si está activo, un estado más cocido que el pedido también cuenta como alcanzado.")]
+    public bool acceptHigherDonenessAsReached;
+    [Min(1)]
+    [Tooltip("Cantidad de niveles menos cocidos que también se aceptan. Usar 1 para permitir un nivel menos.")]
+    public int allowedLowerDonenessSteps = 4;
     [Header("Cooking Control")]
     public bool pauseCooking; // If true, pauses cooking on the grill while this step is active
 

@@ -1,3 +1,6 @@
+
+
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -26,6 +29,8 @@ public class TutorialManager : MonoBehaviour
     private ViewManager viewManager;
     private bool isTutorialActive = false;
     private bool pausedByDonenessCompletion = false;
+    private Coroutine pulseRoutine;
+    private Coroutine spawnCustomerRoutine;
 
     private void BackupAndSetTutorialStock()
     {
@@ -139,6 +144,19 @@ public class TutorialManager : MonoBehaviour
 
     private void ShowStep(int index)
     {
+        // Cancel pending tutorial-only coroutines from the previous step.
+        if (spawnCustomerRoutine != null)
+        {
+            StopCoroutine(spawnCustomerRoutine);
+            spawnCustomerRoutine = null;
+        }
+
+        if (pulseRoutine != null)
+        {
+            StopCoroutine(pulseRoutine);
+            pulseRoutine = null;
+        }
+
         // Clean up previous panel
         if (currentPanelInstance != null)
         {
@@ -184,7 +202,7 @@ public class TutorialManager : MonoBehaviour
         {
             Transform parent = canvasParent != null ? canvasParent : FindCanvasTransform();
             currentPanelInstance = Instantiate(step.panelPrefab, parent);
-            
+
             // If the prefab itself is a Canvas, ensure it has a GraphicRaycaster for click support
             Canvas canvasComp = currentPanelInstance.GetComponent<Canvas>();
             if (canvasComp != null && currentPanelInstance.GetComponent<GraphicRaycaster>() == null)
@@ -219,9 +237,9 @@ public class TutorialManager : MonoBehaviour
                 }
             }
 
-            // Animate
-            StopAllCoroutines();
-            StartCoroutine(PulseAnimation(currentPanelInstance));
+            // Animate only this panel. Do not use StopAllCoroutines here,
+            // because it would also cancel the delayed customer spawn.
+            pulseRoutine = StartCoroutine(PulseAnimation(currentPanelInstance));
         }
     }
 
@@ -230,18 +248,60 @@ public class TutorialManager : MonoBehaviour
         switch (action)
         {
             case TutorialStartAction.SpawnCustomer:
-                CustomerSystem customerSystem = FindFirstObjectByType<CustomerSystem>();
-                if (customerSystem != null)
+                if (spawnCustomerRoutine != null)
                 {
-                    customerSystem.SpawnCustomer();
-                    Debug.Log("[TutorialManager] Forced customer spawn.");
+                    StopCoroutine(spawnCustomerRoutine);
                 }
-                else
-                {
-                    Debug.LogWarning("[TutorialManager] Cannot force customer spawn: CustomerSystem not found in the scene.");
-                }
+
+                spawnCustomerRoutine = StartCoroutine(SpawnTutorialCustomerWhenReady());
                 break;
         }
+    }
+
+    private IEnumerator SpawnTutorialCustomerWhenReady()
+    {
+        // TutorialManager.Start and CustomerSystem.Start can run in either order.
+        // Waiting one frame ensures CustomerSystem has calculated the night target
+        // and initialized its OrderSystem before SpawnCustomer is called.
+        yield return null;
+
+        const float timeoutSeconds = 5f;
+        float elapsed = 0f;
+
+        while (elapsed < timeoutSeconds)
+        {
+            CustomerSystem customerSystem = FindFirstObjectByType<CustomerSystem>();
+
+            if (customerSystem != null)
+            {
+                int customersBefore = customerSystem.ActiveCustomers != null
+                    ? customerSystem.ActiveCustomers.Count
+                    : 0;
+
+                customerSystem.SpawnCustomer();
+
+                int customersAfter = customerSystem.ActiveCustomers != null
+                    ? customerSystem.ActiveCustomers.Count
+                    : 0;
+
+                if (customersAfter > customersBefore)
+                {
+                    Debug.Log("[TutorialManager] Forced customer spawn.");
+                    spawnCustomerRoutine = null;
+                    yield break;
+                }
+            }
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        Debug.LogWarning(
+            "[TutorialManager] Cannot force customer spawn: " +
+            "CustomerSystem was not ready or had no free customer slot within the timeout."
+        );
+
+        spawnCustomerRoutine = null;
     }
 
     private void OnViewChanged(ViewType newView)
@@ -428,57 +488,131 @@ public class TutorialManager : MonoBehaviour
 
     private void OnMeatStateChanged(Meat meat)
     {
-        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count || meat == null)
+        if (!isTutorialActive ||
+            currentStepIndex < 0 ||
+            currentStepIndex >= tutorialSteps.Count ||
+            meat == null)
+        {
             return;
+        }
 
         TutorialStepSO step = tutorialSteps[currentStepIndex];
-        if (step.conditionType == TutorialConditionType.MeatReachesDoneness)
-        {
-            // Resolve required cut and required state
-            MeatCutSO targetCut = step.requiredMeatCut;
-            MeatStates targetState = step.requiredMeatState;
 
-            if (step.checkCustomerOrderState)
+        if (step.conditionType != TutorialConditionType.MeatReachesDoneness)
+            return;
+
+        // Estado y corte configurados directamente en el TutorialStep.
+        MeatCutSO targetCut = step.requiredMeatCut;
+        MeatStates targetState = step.requiredMeatState;
+
+        // Cuando está activo, toma el corte y el punto pedido
+        // por el primer cliente del tutorial.
+        if (step.checkCustomerOrderState)
+        {
+            CustomerSystem customerSystem =
+                FindFirstObjectByType<CustomerSystem>();
+
+            if (customerSystem == null ||
+                customerSystem.ActiveCustomers == null ||
+                customerSystem.ActiveCustomers.Count == 0)
             {
-                CustomerSystem cs = FindFirstObjectByType<CustomerSystem>();
-                if (cs != null && cs.ActiveCustomers.Count > 0)
-                {
-                    Customer firstCustomer = cs.ActiveCustomers[0];
-                    if (firstCustomer != null && firstCustomer.order != null)
-                    {
-                        targetCut = firstCustomer.order.meat;
-                        if (firstCustomer.order.requestedStates.Count > 0)
-                        {
-                            targetState = firstCustomer.order.requestedStates[0];
-                        }
-                    }
-                }
+                return;
             }
 
-            // Check if matches
-            if (targetCut == null || targetCut == meat.cut)
-            {
-                bool condMet = false;
-                if (step.checkBothSides)
-                {
-                    condMet = (meat.SideAState == targetState && meat.SideBState == targetState);
-                }
-                else
-                {
-                    condMet = (meat.state == targetState);
-                }
+            Customer firstCustomer =
+                customerSystem.ActiveCustomers[0];
 
-                if (condMet)
-                {
-                    Debug.Log($"[TutorialManager] MeatReachesDoneness condition met (both={step.checkBothSides}): {meat.cut.cutName} reaches state {targetState}. Pausing cooking.");
-                    IsCookingPaused = true;
-                    pausedByDonenessCompletion = true;
-                    AdvanceStep();
-                }
+            if (firstCustomer == null ||
+                firstCustomer.order == null)
+            {
+                return;
+            }
+
+            targetCut = firstCustomer.order.meat;
+
+            if (firstCustomer.order.requestedStates != null &&
+                firstCustomer.order.requestedStates.Count > 0)
+            {
+                targetState =
+                    firstCustomer.order.requestedStates[0];
             }
         }
-    }
 
+        // Ignorar otros cortes que no sean el objetivo del tutorial.
+        if (targetCut != null && targetCut != meat.cut)
+            return;
+
+        bool conditionMet;
+
+        if (step.checkBothSides)
+        {
+            bool sideAReached = HasReachedRequiredDoneness(
+     meat.SideAState,
+     targetState,
+     step.acceptHigherDonenessAsReached,
+     step.allowedLowerDonenessSteps
+ );
+
+
+            bool sideBReached = HasReachedRequiredDoneness(
+     meat.SideBState,
+     targetState,
+     step.acceptHigherDonenessAsReached,
+     step.allowedLowerDonenessSteps
+             );
+
+            conditionMet = sideAReached && sideBReached;
+        }
+        else
+        {
+            conditionMet = HasReachedRequiredDoneness(
+    meat.ActiveSideState,
+    targetState,
+    step.acceptHigherDonenessAsReached,
+    step.allowedLowerDonenessSteps
+            );
+        }
+
+        if (!conditionMet)
+            return;
+
+        Debug.Log(
+            "[TutorialManager] MeatReachesDoneness completado." +
+            " Corte: " + meat.cut.cutName +
+            " | Pedido: " + targetState +
+            " | Cara A: " + meat.SideAState +
+            " | Cara B: " + meat.SideBState +
+            " | Acepta pasado: " +
+            step.acceptHigherDonenessAsReached
+        );
+
+        IsCookingPaused = true;
+        pausedByDonenessCompletion = true;
+
+        AdvanceStep();
+    }
+    private bool HasReachedRequiredDoneness(
+     MeatStates currentState,
+     MeatStates targetState,
+     bool acceptHigherState,
+     int allowedLowerSteps)
+    {
+        int currentValue = (int)currentState;
+        int targetValue = (int)targetState;
+
+        // Punto exacto.
+        if (currentValue == targetValue)
+            return true;
+
+        // Más cocido que el pedido.
+        if (currentValue > targetValue)
+            return acceptHigherState;
+
+        // Menos cocido que el pedido, pero dentro de la tolerancia.
+        int difference = targetValue - currentValue;
+
+        return difference <= Mathf.Max(0, allowedLowerSteps);
+    }
     private void OnDeliverySelectionBegun()
     {
         if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count)
@@ -529,9 +663,9 @@ public class TutorialManager : MonoBehaviour
         {
             Destroy(currentPanelInstance);
         }
-        
+
         Debug.Log("[TutorialManager] Tutorial completed!");
-        
+
         // Return to GameScene since they completed the tutorial!
         SceneManagementUtils.LoadSceneByName("GameScene");
     }
@@ -554,7 +688,7 @@ public class TutorialManager : MonoBehaviour
     private IEnumerator PulseAnimation(GameObject panel)
     {
         if (panel == null) yield break;
-        
+
         Vector3 originalScale = panel.transform.localScale;
         float popTime = 0.15f;
         float elapsed = 0f;
@@ -574,6 +708,7 @@ public class TutorialManager : MonoBehaviour
             yield return null;
         }
         panel.transform.localScale = originalScale;
+        pulseRoutine = null;
     }
 
     private Button FindConfirmButton(GameObject panel)

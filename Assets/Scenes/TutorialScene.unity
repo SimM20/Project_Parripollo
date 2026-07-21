@@ -5730,7 +5730,7 @@ PrefabInstance:
       objectReference: {fileID: 1159028469}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: basePatienceSeconds
-      value: 60
+      value: 80
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: maxCustomersPerNight
@@ -5768,6 +5768,10 @@ PrefabInstance:
       propertyPath: customerPrefabs.Array.data[3].type
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: availableOrderCuts.Array.data[0].cut
+      value: 
+      objectReference: {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customerPrefabs.Array.data[0].prefab
       value: 
@@ -9357,6 +9361,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   circleRenderer: {fileID: 1760285816}
   text: {fileID: 1446071144}
+  dishRenderer: {fileID: 0}
   worldOffset: {x: 0, y: 1.2, z: 0}
 --- !u!1 &1446071141
 GameObject:
@@ -10765,6 +10770,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bcda3f1737e7f9499df733de17adcef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  nightTwoCut: {fileID: 0}
 --- !u!1 &1865235212
 GameObject:
   m_ObjectHideFlags: 0

@@ -22,5 +22,7 @@ MonoBehaviour:
   requiredMeatState: 5
   checkCustomerOrderState: 1
   checkBothSides: 1
+  acceptHigherDonenessAsReached: 1
+  allowedLowerDonenessSteps: 1
   pauseCooking: 0
   startAction: 0

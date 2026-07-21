@@ -2,16 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
 using System;
-[System.Serializable]
-public class WeightedOrderCut
-{
-    [Tooltip("Corte que puede aparecer en los pedidos.")]
-    public MeatCutSO cut;
-
-    [Min(0f)]
-    [Tooltip("Peso relativo de aparición. Un peso 0 evita que sea elegido.")]
-    public float weight = 1f;
-}
 
 
 public class CustomerSystem : MonoBehaviour
@@ -88,6 +78,11 @@ public class CustomerSystem : MonoBehaviour
 
     private int spawnedTonight;
     private Coroutine spawnRoutine;
+
+    public bool IsReadyForSpawning =>
+    orderSystem != null &&
+    slotViews != null &&
+    customersTargetTonight > 0;
 
     void Start()
     {
@@ -230,37 +225,37 @@ public class CustomerSystem : MonoBehaviour
         }
     }
 
-    public void SpawnCustomer()
+    public void SpawnCustomer(bool ignoreNightLimit = false)
     {
-        // No generar más clientes cuando se alcanzó
-        // la cantidad calculada para esta noche.
-        if (spawnedTonight >= customersTargetTonight)
-            return;
+        if (!IsReadyForSpawning)
+        {
+            Debug.LogWarning(
+                "[CustomerSystem] No se puede generar un cliente todavía: " +
+                "CustomerSystem no terminó de inicializarse."
+            );
 
-        // Buscar un lugar libre para el nuevo cliente.
+            return;
+        }
+
+        // Los spawns normales respetan el límite de la noche.
+        // El tutorial puede ignorarlo.
+        if (!ignoreNightLimit &&
+            spawnedTonight >= customersTargetTonight)
+        {
+            return;
+        }
+
         int slotIndex = GetNextFreeSlotIndex();
 
         if (slotIndex < 0)
             return;
 
-        // Elegir aleatoriamente el tipo de cliente
-        // según los pesos configurados en Customer Prefabs.
         CustomerPrefabEntry entry = PickCustomerEntry();
 
         if (entry == null || entry.prefab == null)
         {
             Debug.LogWarning(
                 "[CustomerSystem] Falta configurar Customer Prefabs."
-            );
-
-            return;
-        }
-
-        // Generar el pedido.
-        if (orderSystem == null)
-        {
-            Debug.LogError(
-                "[CustomerSystem] OrderSystem no fue inicializado."
             );
 
             return;
@@ -277,7 +272,6 @@ public class CustomerSystem : MonoBehaviour
             return;
         }
 
-        // Crear los datos internos del cliente.
         Customer customer = new Customer();
 
         float patience =
@@ -291,7 +285,6 @@ public class CustomerSystem : MonoBehaviour
             slotIndex
         );
 
-        // Crear visualmente el cliente.
         Vector3 position = GetSlotPosition(slotIndex);
 
         GameObject customerObject = Instantiate(
@@ -317,13 +310,11 @@ public class CustomerSystem : MonoBehaviour
 
         view.Init(customer, this);
 
-        // Registrar al cliente en el slot y en la lista activa.
         slotViews[slotIndex] = view;
         activeCustomers.Add(customer);
 
         spawnedTonight++;
 
-        // Seleccionar automáticamente al primer cliente.
         if (SelectedCustomer == null)
             SelectCustomer(customer);
 
@@ -343,7 +334,8 @@ public class CustomerSystem : MonoBehaviour
             " | Cliente " +
             spawnedTonight +
             "/" +
-            customersTargetTonight
+            customersTargetTonight +
+            (ignoreNightLimit ? " | Spawn forzado" : "")
         );
     }
 
