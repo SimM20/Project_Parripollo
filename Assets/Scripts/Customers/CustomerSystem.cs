@@ -2,13 +2,38 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Collections;
 using System;
+[System.Serializable]
+public class WeightedOrderCut
+{
+    [Tooltip("Corte que puede aparecer en los pedidos.")]
+    public MeatCutSO cut;
+
+    [Min(0f)]
+    [Tooltip("Peso relativo de aparición. Un peso 0 evita que sea elegido.")]
+    public float weight = 1f;
+}
 
 
 public class CustomerSystem : MonoBehaviour
 {
-    [Header("Caps (Editor)")]
+    [Header("Customer Limits")]
+    [Min(1)]
     [SerializeField] private int maxSimultaneousCustomers = 4;
-    [SerializeField] private int maxCustomersPerNight = 20;
+
+    [Header("Customers Per Night")]
+    [Min(1)]
+    [Tooltip("Cantidad de clientes durante la primera noche.")]
+    [SerializeField] private int customersFirstNight = 20;
+
+    [Min(0)]
+    [Tooltip("Cantidad de clientes que se agregan por cada nueva noche.")]
+    [SerializeField] private int customersAddedPerNight = 5;
+
+    [Min(1)]
+    [Tooltip("Máximo absoluto de clientes que puede tener una noche.")]
+    [SerializeField] private int maximumCustomersPerNight = 70;
+
+    private int customersTargetTonight;
 
     [Header("Spawning")]
     [SerializeField] private float spawnIntervalSeconds = 6f;
@@ -34,9 +59,17 @@ public class CustomerSystem : MonoBehaviour
     [SerializeField] private List<CustomerPrefabEntry> customerPrefabs = new List<CustomerPrefabEntry>();
 
     [Header("Order Cuts")]
-    [SerializeField] private List<MeatCutSO> availableOrderCuts = new List<MeatCutSO>();
+    [SerializeField]
+    private List<WeightedOrderCut> availableOrderCuts =
+    new List<WeightedOrderCut>();
     [SerializeField] private FoodAvailabilityService availabilityService;
 
+    [Header("Night Progression")]
+    [SerializeField] private MeatCutSO nightTwoCut;
+    [SerializeField]
+    private List<ProductVariantSO> nightTwoVariants =
+        new List<ProductVariantSO>();
+   
     [Header("Patience")]
     [SerializeField] private float basePatienceSeconds = 30f;
     
@@ -58,27 +91,92 @@ public class CustomerSystem : MonoBehaviour
 
     void Start()
     {
-        List<MeatCutSO> cuts = availableOrderCuts;
+        int currentNight =
+            CoalConsumptionTracker.Instance != null
+                ? CoalConsumptionTracker.Instance.CurrentNight
+                : 1;
 
-        if (availabilityService != null)
+        customersTargetTonight =
+            CalculateCustomersForNight(currentNight);
+
+        Debug.Log(
+            "[CustomerSystem] Iniciando noche " + currentNight +
+            " | Clientes de esta noche: " + customersTargetTonight +
+            " | Máximo configurado: " + maximumCustomersPerNight
+        );
+
+        // Comunica al tracker cuál es el corte desbloqueable.
+        if (CoalConsumptionTracker.Instance != null)
         {
-            var catalogCuts = availabilityService.GetAvailableCuts();
-            if (catalogCuts != null && catalogCuts.Count > 0)
-                cuts = new List<MeatCutSO>(catalogCuts);
-            else
-                Debug.LogWarning("[CustomerSystem] FoodAvailabilityService no devolvió cortes. Uso availableOrderCuts.");
+            CoalConsumptionTracker.Instance.ConfigureNightTwoCut(
+                nightTwoCut
+            );
+        }
+        else
+        {
+            Debug.LogError(
+                "[CustomerSystem] No existe CoalConsumptionTracker."
+            );
+        }
+
+        // Desbloqueo de variantes.
+        bool variantsUnlocked = currentNight >= 2;
+
+        for (int i = 0; i < nightTwoVariants.Count; i++)
+        {
+            ProductVariantSO variant = nightTwoVariants[i];
+
+            if (variant != null)
+                variant.isUnlocked = variantsUnlocked;
+        }
+
+        List<WeightedOrderCut> cuts =
+            GetUnlockedOrderCuts();
+
+        if (cuts.Count == 0)
+        {
+            Debug.LogError(
+                "[CustomerSystem] No hay cortes desbloqueados " +
+                "con peso mayor que cero."
+            );
+        }
+
+        for (int i = 0; i < cuts.Count; i++)
+        {
+            WeightedOrderCut entry = cuts[i];
+
+            Debug.Log(
+                "[CustomerSystem] Disponible para pedidos: " +
+                entry.cut.cutName +
+                " | Peso: " + entry.weight
+            );
         }
 
         orderSystem = new OrderSystem(cuts);
 
-        slotViews = new CustomerView[Mathf.Max(1, maxSimultaneousCustomers)];
+        slotViews = new CustomerView[
+            Mathf.Max(1, maxSimultaneousCustomers)
+        ];
+
+        UIManager.Instance?.SetTotalCustomers(
+            customersTargetTonight
+        );
 
         if (autoStartNight)
             StartNight();
-
-        UIManager.Instance?.SetTotalCustomers(maxCustomersPerNight);
     }
+    private int CalculateCustomersForNight(int nightNumber)
+    {
+        int safeNight = Mathf.Max(1, nightNumber);
+        int safeBase = Mathf.Max(1, customersFirstNight);
+        int safeIncrement = Mathf.Max(0, customersAddedPerNight);
+        int safeMaximum = Mathf.Max(safeBase, maximumCustomersPerNight);
 
+        int calculated =
+            safeBase + ((safeNight - 1) * safeIncrement);
+
+        return Mathf.Min(calculated, safeMaximum);
+    }
     void Update()
     {
         // Tick paciencia + expulsión
@@ -99,19 +197,31 @@ public class CustomerSystem : MonoBehaviour
         ClearAllCustomers();
         spawnedTonight = 0;
 
-        UIManager.Instance?.SetActualCustomers(spawnedTonight);
+        UIManager.Instance?.SetActualCustomers(
+            spawnedTonight
+        );
+
+        UIManager.Instance?.SetTotalCustomers(
+            customersTargetTonight
+        );
 
         if (spawnRoutine != null)
             StopCoroutine(spawnRoutine);
 
         spawnRoutine = StartCoroutine(SpawnLoop());
-    }
 
+        Debug.Log(
+            "[CustomerSystem] Noche iniciada. Objetivo: " +
+            customersTargetTonight + " clientes."
+        );
+    }
     IEnumerator SpawnLoop()
     {
-        while (spawnedTonight < maxCustomersPerNight)
+        while (spawnedTonight < customersTargetTonight)
         {
-            yield return new WaitForSeconds(spawnIntervalSeconds);
+            yield return new WaitForSeconds(
+                spawnIntervalSeconds
+            );
 
             if (activeCustomers.Count >= maxSimultaneousCustomers)
                 continue;
@@ -122,57 +232,119 @@ public class CustomerSystem : MonoBehaviour
 
     public void SpawnCustomer()
     {
-        if (spawnedTonight >= maxCustomersPerNight)
+        // No generar más clientes cuando se alcanzó
+        // la cantidad calculada para esta noche.
+        if (spawnedTonight >= customersTargetTonight)
             return;
 
+        // Buscar un lugar libre para el nuevo cliente.
         int slotIndex = GetNextFreeSlotIndex();
+
         if (slotIndex < 0)
             return;
 
-        var entry = PickCustomerEntry();
+        // Elegir aleatoriamente el tipo de cliente
+        // según los pesos configurados en Customer Prefabs.
+        CustomerPrefabEntry entry = PickCustomerEntry();
+
         if (entry == null || entry.prefab == null)
         {
-            Debug.LogWarning("[CustomerSystem] Falta configurar customerPrefabs.");
+            Debug.LogWarning(
+                "[CustomerSystem] Falta configurar Customer Prefabs."
+            );
+
+            return;
+        }
+
+        // Generar el pedido.
+        if (orderSystem == null)
+        {
+            Debug.LogError(
+                "[CustomerSystem] OrderSystem no fue inicializado."
+            );
+
             return;
         }
 
         Order order = orderSystem.GenerateOrder();
+
         if (order == null || order.PrimaryCut == null)
         {
-            Debug.LogWarning("[CustomerSystem] No hay cortes configurados para generar pedidos.");
+            Debug.LogWarning(
+                "[CustomerSystem] No hay cortes disponibles para generar pedidos."
+            );
+
             return;
         }
 
-        var customer = new Customer();
-        float patience = basePatienceSeconds * Mathf.Max(0.01f, entry.patienceMultiplier);
-        customer.Init(entry.type, order, patience, slotIndex);
+        // Crear los datos internos del cliente.
+        Customer customer = new Customer();
 
-        var pos = GetSlotPosition(slotIndex);
-        var go = Instantiate(entry.prefab, pos, Quaternion.identity, customersParent);
+        float patience =
+            basePatienceSeconds *
+            Mathf.Max(0.01f, entry.patienceMultiplier);
 
-        var view = go.GetComponent<CustomerView>();
+        customer.Init(
+            entry.type,
+            order,
+            patience,
+            slotIndex
+        );
+
+        // Crear visualmente el cliente.
+        Vector3 position = GetSlotPosition(slotIndex);
+
+        GameObject customerObject = Instantiate(
+            entry.prefab,
+            position,
+            Quaternion.identity,
+            customersParent
+        );
+
+        CustomerView view =
+            customerObject.GetComponent<CustomerView>();
+
         if (view == null)
         {
-            Debug.LogWarning("[CustomerSystem] El prefab no tiene CustomerView: " + entry.prefab.name);
-            Destroy(go);
+            Debug.LogWarning(
+                "[CustomerSystem] El prefab no tiene CustomerView: " +
+                entry.prefab.name
+            );
+
+            Destroy(customerObject);
             return;
         }
 
         view.Init(customer, this);
 
+        // Registrar al cliente en el slot y en la lista activa.
         slotViews[slotIndex] = view;
         activeCustomers.Add(customer);
+
         spawnedTonight++;
 
-        // auto-selección
+        // Seleccionar automáticamente al primer cliente.
         if (SelectedCustomer == null)
             SelectCustomer(customer);
 
-        AudioManager.Instance.PlayNewClientBell();
+        AudioManager.Instance?.PlayNewClientBell();
 
-        UIManager.Instance?.SetActualCustomers(spawnedTonight);
+        UIManager.Instance?.SetActualCustomers(
+            spawnedTonight
+        );
 
-        Debug.Log($"[CustomerSystem] Spawn {customer.type} en slot {slotIndex}: {order.PrimaryCut.cutName}");
+        Debug.Log(
+            "[CustomerSystem] Spawn " +
+            customer.type +
+            " en slot " +
+            slotIndex +
+            " | Pedido: " +
+            order.PrimaryCut.cutName +
+            " | Cliente " +
+            spawnedTonight +
+            "/" +
+            customersTargetTonight
+        );
     }
 
     public void SelectCustomer(Customer customer)
@@ -323,7 +495,8 @@ public class CustomerSystem : MonoBehaviour
         // opcional: compactar slots (corrés a la izquierda para no dejar huecos)
         CompactSlots();
 
-        if (spawnedTonight >= maxCustomersPerNight && activeCustomers.Count == 0)
+        if (spawnedTonight >= customersTargetTonight &&
+     activeCustomers.Count == 0)
         {
             OnNightEnded?.Invoke();
         }
@@ -427,5 +600,82 @@ public class CustomerSystem : MonoBehaviour
         IsDeliverySelectionActive = false;
         CustomerSelectionFrame.Instance?.Hide();
         CustomerHoverBubble.Instance?.Hide();
+    }
+  
+    private void ApplyNightUnlocks()
+    {
+        int currentNight =
+            (CoalConsumptionTracker.Instance?.DaysPlayed ?? 0) + 1;
+
+        bool patyUnlocked = currentNight >= 2;
+
+        if (nightTwoCut != null)
+        {
+            nightTwoCut.isUnlocked = patyUnlocked;
+
+            Debug.Log(
+                "[Progression] Noche actual: " + currentNight +
+                " | Paty desbloqueado: " + patyUnlocked
+            );
+        }
+        else
+        {
+            Debug.LogWarning(
+                "[Progression] No se asignó el corte de la noche 2 en CustomerSystem."
+            );
+        }
+    }
+
+    private List<WeightedOrderCut> GetUnlockedOrderCuts()
+    {
+        var result = new List<WeightedOrderCut>();
+
+        Debug.Log(
+            "[CustomerSystem] Cortes configurados: " +
+            availableOrderCuts.Count
+        );
+
+        for (int i = 0; i < availableOrderCuts.Count; i++)
+        {
+            WeightedOrderCut entry = availableOrderCuts[i];
+
+            if (entry == null)
+            {
+                Debug.LogWarning(
+                    "[CustomerSystem] Element " + i +
+                    " de Available Order Cuts está vacío."
+                );
+
+                continue;
+            }
+
+            MeatCutSO cut = entry.cut;
+
+            if (cut == null)
+            {
+                Debug.LogWarning(
+                    "[CustomerSystem] Element " + i +
+                    " no tiene un corte asignado."
+                );
+
+                continue;
+            }
+
+            Debug.Log(
+                "[CustomerSystem] Corte: " + cut.cutName +
+                " | Desbloqueado: " + cut.isUnlocked +
+                " | Peso: " + entry.weight
+            );
+
+            if (!cut.isUnlocked)
+                continue;
+
+            if (entry.weight <= 0f)
+                continue;
+
+            result.Add(entry);
+        }
+
+        return result;
     }
 }

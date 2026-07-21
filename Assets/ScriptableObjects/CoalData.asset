@@ -19,7 +19,7 @@ MonoBehaviour:
   _coalSprite: {fileID: 21300000, guid: b99743242c6d7d9438d369c9f05be734, type: 3}
   _visualOffset: {x: 0, y: 0, z: 0}
   _maxBurnTime: 100
-  _heatPower: 2
+  _heatPower: 3
   coalSprites:
     coalOff: {fileID: 21300000, guid: b99743242c6d7d9438d369c9f05be734, type: 3}
     coalOnn: {fileID: 21300000, guid: 7f4db28dd3a1f334c8a9d44c7b814934, type: 3}

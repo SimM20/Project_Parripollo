@@ -30,8 +30,26 @@ public class GameManager : MonoBehaviour
 
         customerSystem.OnNightEnded += EndNight;
 
-        int currentDay = (CoalConsumptionTracker.Instance?.DaysPlayed ?? 0) + 1;
-        UIManager.Instance?.SetActualDay(currentDay);
+        CoalConsumptionTracker tracker = CoalConsumptionTracker.Instance;
+
+        if (tracker == null)
+        {
+            Debug.LogError(
+                "[GameManager] No se encontró CoalConsumptionTracker al comenzar la partida."
+            );
+
+            UIManager.Instance?.SetActualDay(1);
+        }
+        else
+        {
+            Debug.Log(
+                "[GameManager] Comenzando noche " + tracker.CurrentNight +
+                " | Noches completadas: " + tracker.DaysPlayed
+            );
+
+            UIManager.Instance?.SetActualDay(tracker.CurrentNight);
+        }
+       
     }
 
     private void Update()
@@ -378,7 +396,36 @@ public class GameManager : MonoBehaviour
     private void EndNight()
     {
         customerSystem.OnNightEnded -= EndNight;
-        CoalConsumptionTracker.Instance?.RegisterDayCompleted();
+
+        Debug.Log("[GameManager] Terminando la noche.");
+
+        CoalConsumptionTracker tracker = CoalConsumptionTracker.Instance;
+
+        if (tracker == null)
+        {
+            tracker = FindFirstObjectByType<CoalConsumptionTracker>();
+        }
+
+        if (tracker == null)
+        {
+            Debug.LogError(
+                "[GameManager] No existe ningún CoalConsumptionTracker. " +
+                "La noche terminó, pero no se pudo registrar el progreso."
+            );
+        }
+        else
+        {
+            int nightBefore = tracker.CurrentNight;
+
+            tracker.RegisterDayCompleted();
+
+            Debug.Log(
+                "[GameManager] Noche " + nightBefore +
+                " completada correctamente. " +
+                "Próxima noche: " + tracker.CurrentNight
+            );
+        }
+
         SceneManagementUtils.LoadSceneByName("EndScene");
     }
 

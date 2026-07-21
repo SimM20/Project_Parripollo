@@ -32,6 +32,39 @@ public class ShopSystem : MonoBehaviour
         CurrentTab = tab;
         OnTabChanged?.Invoke();
     }
+    private void Start()
+    {
+        int currentNight =
+            CoalConsumptionTracker.Instance != null
+                ? CoalConsumptionTracker.Instance.CurrentNight
+                : 1;
+
+        Debug.Log(
+            "[Shop] Tienda abierta. Noche actual: " + currentNight
+        );
+
+        if (catalog == null)
+        {
+            Debug.LogError("[Shop] No hay FoodCatalogSO asignado.");
+            return;
+        }
+
+        var cuts = catalog.GetAllCuts();
+
+        for (int i = 0; i < cuts.Count; i++)
+        {
+            MeatCutSO cut = cuts[i];
+
+            if (cut == null)
+                continue;
+
+            Debug.Log(
+                "[Shop] Corte: " + cut.cutName +
+                " | isUnlocked: " + cut.isUnlocked +
+                " | IsPurchasable: " + IsPurchasable(cut)
+            );
+        }
+    }
 
     // ── Items visibles según tab ────────────────────────────────────────
     public IReadOnlyList<ItemDataSO> GetItemsForCurrentTab()
