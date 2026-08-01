@@ -11,37 +11,7 @@ public class GrillSystem : MonoBehaviour
 
     void Update() => UpdateHeatPropagation();
 
-    private void Awake()
-    {
-        List<float> distinctX = new List<float>();
-        List<float> distinctY = new List<float>();
-
-        foreach (var s in slots)
-        {
-            if (s == null) continue;
-            float px = s.transform.position.x;
-            float py = s.transform.position.y;
-
-            bool foundX = false;
-            foreach (float x in distinctX) if (Mathf.Abs(x - px) < 0.1f) foundX = true;
-            if (!foundX) distinctX.Add(px);
-
-            bool foundY = false;
-            foreach (float y in distinctY) if (Mathf.Abs(y - py) < 0.1f) foundY = true;
-            if (!foundY) distinctY.Add(py);
-        }
-
-        distinctX.Sort();
-        distinctY.Sort();
-        distinctY.Reverse();
-
-        foreach (var s in slots)
-        {
-            int x = distinctX.FindIndex(val => Mathf.Abs(val - s.transform.position.x) < 0.1f);
-            int y = distinctY.FindIndex(val => Mathf.Abs(val - s.transform.position.y) < 0.1f);
-            s.SetGridPos(x, y);
-        }
-    }
+    private void Awake() => GridSlot.AssignGridCoordinates(slots);
 
     private void UpdateHeatPropagation()
     {
@@ -92,7 +62,7 @@ public class GrillSystem : MonoBehaviour
 
         if (coalData == null || prefabToUse == null)
         {
-            Debug.LogWarning("Faltan datos de carbón o prefab para spawnear.");
+            Debug.LogWarning("Faltan datos de carbï¿½n o prefab para spawnear.");
             return false;
         }
 
@@ -107,7 +77,7 @@ public class GrillSystem : MonoBehaviour
 
         if (!GridSlot.TryFindContiguousPlacement(slots, requiredSize, worldPoint, ItemType.Coal, coal.gameObject, out List<GridSlot> placementSlots))
         {
-            Debug.Log("No hay espacio para el carbón en esta posición de la grilla.");
+            Debug.Log("No hay espacio para el carbï¿½n en esta posiciï¿½n de la grilla.");
             Destroy(obj);
             return false;
         }

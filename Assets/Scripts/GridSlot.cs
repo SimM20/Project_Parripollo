@@ -117,6 +117,57 @@ public class GridSlot : MonoBehaviour
     public void ClearHoverPreview() => SetHoverPreview(false, true);
 
 
+    public const float AXIS_TOLERANCE = 0.1f;
+
+    // Rows are grouped by world Y, but the column index comes from the left to right order
+    // inside each row. Rows can have their own spacing and centering, so world X is never
+    // comparable between different rows.
+    public static List<List<GridSlot>> BuildLogicalRows(IList<GridSlot> slots)
+    {
+        List<List<GridSlot>> rows = new List<List<GridSlot>>();
+        if (slots == null) return rows;
+
+        List<GridSlot> sorted = new List<GridSlot>();
+        foreach (var s in slots) { if (s != null && s.gameObject.activeInHierarchy) sorted.Add(s); }
+        if (sorted.Count == 0) return rows;
+
+        sorted.Sort((a, b) => b.transform.position.y.CompareTo(a.transform.position.y));
+
+        List<GridSlot> currentRow = null;
+        float lastY = 0f;
+        foreach (var s in sorted)
+        {
+            float y = s.transform.position.y;
+            if (currentRow == null || Mathf.Abs(y - lastY) > AXIS_TOLERANCE)
+            {
+                currentRow = new List<GridSlot>();
+                rows.Add(currentRow);
+            }
+            currentRow.Add(s);
+            lastY = y;
+        }
+
+        foreach (var row in rows) row.Sort((a, b) => a.transform.position.x.CompareTo(b.transform.position.x));
+        return rows;
+    }
+
+    // Each type gets its own column numbering so the nth coal slot of a row always shares
+    // a cell with the nth meat slot of that same row, no matter how the two grids are spaced.
+    public static void AssignGridCoordinates(IList<GridSlot> slots)
+    {
+        List<List<GridSlot>> rows = BuildLogicalRows(slots);
+        for (int r = 0; r < rows.Count; r++)
+        {
+            Dictionary<ItemType, int> nextColumn = new Dictionary<ItemType, int>();
+            foreach (var s in rows[r])
+            {
+                nextColumn.TryGetValue(s.acceptsType, out int column);
+                s.SetGridPos(column, r);
+                nextColumn[s.acceptsType] = column + 1;
+            }
+        }
+    }
+
     public static bool TryFindContiguousPlacement(IList<GridSlot> allSlots, Vector2Int requiredSize, Vector3 worldPoint, ItemType incomingType, GameObject incomingItem, out List<GridSlot> placementSlots)
     {
         placementSlots = null;
@@ -124,31 +175,27 @@ public class GridSlot : MonoBehaviour
         int width = Mathf.Max(1, requiredSize.x);
         int height = Mathf.Max(1, requiredSize.y);
         List<GridSlot> validSlots = new List<GridSlot>();
-        List<float> allX = new List<float>();
-        List<float> allY = new List<float>();
-        foreach (var s in allSlots) { if (s != null && s.acceptsType == incomingType) { validSlots.Add(s); allX.Add(s.transform.position.x); allY.Add(s.transform.position.y); } }
+        foreach (var s in allSlots) { if (s != null && s.acceptsType == incomingType) validSlots.Add(s); }
         if (validSlots.Count == 0) return false;
-        List<float> columns = BuildAxisCenters(allX);
-        List<float> rows = BuildAxisCenters(allY);
-        Dictionary<Vector2Int, GridSlot> slotByCell = new Dictionary<Vector2Int, GridSlot>();
-        foreach (var s in validSlots)
-        {
-            Vector2Int key = new Vector2Int(GetNearestIndex(columns, s.transform.position.x), GetNearestIndex(rows, s.transform.position.y));
-            if (!slotByCell.ContainsKey(key)) slotByCell.Add(key, s);
-        }
+        List<List<GridSlot>> rows = BuildLogicalRows(validSlots);
+        if (rows.Count < height) return false;
         float bestDist = float.MaxValue;
         List<GridSlot> bestBlock = null;
-        for (int c = 0; c <= columns.Count - width; c++)
+        for (int r = 0; r + height <= rows.Count; r++)
         {
-            for (int r = 0; r <= rows.Count - height; r++)
+            int usableColumns = int.MaxValue;
+            for (int y = 0; y < height; y++) usableColumns = Mathf.Min(usableColumns, rows[r + y].Count);
+
+            for (int c = 0; c + width <= usableColumns; c++)
             {
-                List<GridSlot> cand = new List<GridSlot>();
+                List<GridSlot> cand = new List<GridSlot>(width * height);
                 bool ok = true;
-                for (int x = 0; x < width && ok; x++)
+                for (int y = 0; y < height && ok; y++)
                 {
-                    for (int y = 0; y < height; y++)
+                    for (int x = 0; x < width; x++)
                     {
-                        if (!slotByCell.TryGetValue(new Vector2Int(c + x, r + y), out GridSlot s) || !s.CanPlaceItem(incomingType, incomingItem)) { ok = false; break; }
+                        GridSlot s = rows[r + y][c + x];
+                        if (!s.CanPlaceItem(incomingType, incomingItem)) { ok = false; break; }
                         cand.Add(s);
                     }
                 }
@@ -168,27 +215,6 @@ public class GridSlot : MonoBehaviour
         Vector3 sum = Vector3.zero;
         foreach (var s in slots) sum += s.transform.position;
         return sum / slots.Count;
-    }
-
-    private static int GetNearestIndex(List<float> axis, float val)
-    {
-        int best = 0; float d = float.MaxValue;
-        for (int i = 0; i < axis.Count; i++) { float cur = Mathf.Abs(axis[i] - val); if (cur < d) { d = cur; best = i; } }
-        return best;
-    }
-
-    private static List<float> BuildAxisCenters(List<float> raw)
-    {
-        List<float> res = new List<float>();
-        if (raw.Count == 0) return res;
-        List<float> sorted = new List<float>(raw); sorted.Sort();
-        float tol = 0.1f; float sum = sorted[0]; int count = 1;
-        for (int i = 1; i < sorted.Count; i++)
-        {
-            if (Mathf.Abs(sorted[i] - (sum / count)) <= tol) { sum += sorted[i]; count++; }
-            else { res.Add(sum / count); sum = sorted[i]; count = 1; }
-        }
-        res.Add(sum / count); return res;
     }
 
     private void EnsureHoverRenderer()
