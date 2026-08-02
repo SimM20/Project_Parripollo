@@ -1628,7 +1628,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 556729403092702935, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -8.1
+      value: -10.12
       objectReference: {fileID: 0}
     - target: {fileID: 580567616772512150, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_Color.a
