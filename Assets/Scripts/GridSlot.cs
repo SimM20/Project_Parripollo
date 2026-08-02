@@ -116,6 +116,12 @@ public class GridSlot : MonoBehaviour
 
     public void ClearHoverPreview() => SetHoverPreview(false, true);
 
+    public void SetBaseHoverColor(Color color)
+    {
+        baseHoverColor = color;
+        baseHoverColorCached = true;
+    }
+
 
     public const float AXIS_TOLERANCE = 0.1f;
 

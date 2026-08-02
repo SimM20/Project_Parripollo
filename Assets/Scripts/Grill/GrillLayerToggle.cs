@@ -111,7 +111,13 @@ public class GrillLayerToggle : MonoBehaviour
     private void SetSlotVisuals(GridSlot slot, bool active)
     {
         SpriteRenderer sr = slot.GetComponent<SpriteRenderer>();
-        if (sr != null) SetAlpha(sr, active ? 1f : inactiveAlpha);
+        if (sr != null)
+        {
+            Color c = sr.color;
+            c.a = 0f;
+            sr.color = c;
+            slot.SetBaseHoverColor(c);
+        }
 
         Collider2D col = slot.GetComponent<Collider2D>();
         if (col != null) col.enabled = active;
