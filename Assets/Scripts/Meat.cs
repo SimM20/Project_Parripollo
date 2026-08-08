@@ -334,7 +334,7 @@ public class Meat : Item
     {
         if (isHeldByMouse) return;
         if (MeatHoverBubble.Instance != null)
-            MeatHoverBubble.Instance.Show(this.ToHoverString(), transform);
+            MeatHoverBubble.Instance.Show(this);
 
         if (IsOnGrill && MeatCookHoverBar.Instance != null)
             MeatCookHoverBar.Instance.Show(this);

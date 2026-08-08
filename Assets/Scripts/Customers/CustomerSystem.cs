@@ -432,7 +432,7 @@ public class CustomerSystem : MonoBehaviour
         var view = IsDeliverySelectionActive ? GetSelectedView() : null;
 
         if (view != null && view.Customer?.order != null)
-            CustomerHoverBubble.Instance.Show(view.Customer.order.ToHoverString(), view.transform);
+            CustomerHoverBubble.Instance.Show(view.Customer.order.ToHoverString(), view.transform, view.GetDishSprite());
         else
             CustomerHoverBubble.Instance.Hide();
     }

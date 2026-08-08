@@ -41,19 +41,25 @@ public class CustomerView : MonoBehaviour
         if (customer?.order == null) return;
         if (CustomerHoverBubble.Instance == null) return;
 
-        Sprite dishSprite = ResolveDishSprite(customer.order);
-
         CustomerHoverBubble.Instance.Show(
             customer.order.ToHoverString(),
             transform,
-            dishSprite);
+            GetDishSprite());
     }
 
-    private Sprite ResolveDishSprite(Order order)
+    /// <summary>
+    /// Sprite del plato para el pedido actual, resuelto por corte + punto de cocción
+    /// solicitado. Devuelve null si no hay pedido o variante en el catálogo.
+    /// </summary>
+    public Sprite GetDishSprite()
     {
-        if (system == null || system.Catalog == null) return null;
+        Order order = customer?.order;
+        if (order == null || system == null || system.Catalog == null) return null;
+
         var variant = system.Catalog.GetVariantForOrder(order);
-        return variant != null ? variant.variantSprite : null;
+        if (variant == null) return null;
+
+        return variant.GetSpriteForState(order.GetRequestedState(0));
     }
     void OnMouseExit()
     {

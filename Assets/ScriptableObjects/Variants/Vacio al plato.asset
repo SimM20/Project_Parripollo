@@ -15,12 +15,13 @@ MonoBehaviour:
   displayName: "Vac\xEDo al plato"
   variantSprite: {fileID: 21300000, guid: 130fcf45a0e926f4bb5102b6fa08bb28, type: 3}
   cookingSprites:
-    crudo: {fileID: 0}
-    jugoso: {fileID: 0}
-    hecho: {fileID: 0}
-    muyHecho: {fileID: 0}
-    pasado: {fileID: 0}
+    crudo: {fileID: 21300000, guid: a5bfd5a8325b8a140973565e6a79a8f4, type: 3}
+    jugoso: {fileID: 21300000, guid: d440372c0d9090b48b2723ecda226272, type: 3}
+    hecho: {fileID: 21300000, guid: 130fcf45a0e926f4bb5102b6fa08bb28, type: 3}
+    muyHecho: {fileID: 21300000, guid: fe0237e711856bf468a8075954e81304, type: 3}
+    pasado: {fileID: 21300000, guid: c5ec22eaf1f2d6d4ebf02a1b3ba0b036, type: 3}
+    quemado: {fileID: 0}
   cut: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
   bread: {fileID: 0}
   sellPrice: 100
-  isUnlocked: 1
+  isUnlocked: 0
