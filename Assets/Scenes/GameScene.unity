@@ -12023,7 +12023,7 @@ MonoBehaviour:
   text: {fileID: 1446071144}
   dishRenderer: {fileID: 1745359502}
   worldOffset: {x: 0, y: 1.2, z: 0}
-  dishTargetSize: 0.47
+  dishTargetSize: 0.35
 --- !u!1 &1446071141
 GameObject:
   m_ObjectHideFlags: 0
@@ -12058,7 +12058,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.018, y: -0.045}
+  m_AnchoredPosition: {x: -0.018, y: -0.11}
   m_SizeDelta: {x: 20, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1446071144
@@ -12112,7 +12112,7 @@ MonoBehaviour:
   m_fontSizeBase: 2
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 0.15
+  m_fontSizeMin: 1.4
   m_fontSizeMax: 2
   m_fontStyle: 0
   m_HorizontalAlignment: 2
@@ -13336,7 +13336,7 @@ Transform:
   m_GameObject: {fileID: 1745359500}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.235, z: 1.6931394}
+  m_LocalPosition: {x: 0, y: -0.29, z: 1.6931394}
   m_LocalScale: {x: 0.46519873, y: 0.46519873, z: 0.46519873}
   m_ConstrainProportionsScale: 0
   m_Children: []
