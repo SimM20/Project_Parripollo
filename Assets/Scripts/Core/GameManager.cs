@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    public static GameManager Instance { get; private set; }
+
     [SerializeField] private CustomerSystem customerSystem;
     [SerializeField] private GrillSystem grillSystem;
     [SerializeField] private CoolerSystem coolerSystem;
@@ -20,6 +22,17 @@ public class GameManager : MonoBehaviour
     // Contexto de descarte de quemados: solo activo tras un intento de entrega bloqueado por quemados.
     private bool discardContextActive;
     private readonly System.Collections.Generic.List<int> discardBurnedIndices = new System.Collections.Generic.List<int>();
+
+    private void Awake()
+    {
+        if (Instance != null && Instance == this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+    }
 
     private void Start()
     {
@@ -192,10 +205,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void ClearBuildAssembly()
-    {
-        buildStationSystem.ClearAssembly();
-    }
+    private void ClearBuildAssembly() => buildStationSystem.ClearAssembly();
 
     private void CleanAshes()
     {
@@ -216,9 +226,7 @@ public class GameManager : MonoBehaviour
         }
 
         if (cleanedCount > 0)
-        {
             Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
-        }
     }
 
     private void ClearDiscardContext()
@@ -398,7 +406,7 @@ public class GameManager : MonoBehaviour
         TutorialManager.NotifyProductDelivered();
     }
 
-    private void EndNight()
+    public void EndNight()
     {
         customerSystem.OnNightEnded -= EndNight;
 

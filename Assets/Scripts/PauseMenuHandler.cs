@@ -37,8 +37,8 @@ public class PauseMenuHandler : MonoBehaviour
     private void EndGame()
     {
         if (!endGameButtton) return;
-        return;
-        // Need to implement the end game.
+
+        GameManager.Instance?.EndNight();
     }
 
     private void BackToMenu()
