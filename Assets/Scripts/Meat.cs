@@ -37,6 +37,7 @@ public class Meat : Item
     private readonly List<GridSlot> occupiedSlots = new List<GridSlot>();
     private int lastCookFrame = -1;
     private bool isGridRotated;
+    private Collider2D ownCollider;
 
     public float SideAProgress01 => HeatScale > 0f ? Mathf.Clamp(sideACookTime, 0f, BurnThreshold) / HeatScale : 0f;
     public float SideBProgress01 => HeatScale > 0f ? Mathf.Clamp(sideBCookTime, 0f, BurnThreshold) / HeatScale : 0f;
@@ -57,6 +58,8 @@ public class Meat : Item
         itemType = ItemType.Meat;
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
+
+        ownCollider = GetComponent<Collider2D>();
 
         ApplyCutVisual();
     }
@@ -181,10 +184,38 @@ public class Meat : Item
             Vector3 rotatedOffset = transform.rotation * rawOffset;
             transform.position = CalcCenter(slotsEncontrados) + rotatedOffset;
 
+            RestoreHoverIfPointerOver();
             return;
         }
 
         transform.position = startPosition;
+        RestoreHoverIfPointerOver();
+    }
+
+    /// <summary>
+    /// Tras soltar la pieza, reactiva burbuja y barra si el puntero nunca salió del collider
+    /// (Unity no dispara OnMouseEnter de nuevo en ese caso).
+    /// </summary>
+    private void RestoreHoverIfPointerOver()
+    {
+        if (isHeldByMouse || ownCollider == null) return;
+
+        Camera cam = Camera.main;
+        if (cam == null) return;
+
+        Vector3 pointerWorld = cam.ScreenToWorldPoint(Input.mousePosition);
+        if (!ownCollider.OverlapPoint(pointerWorld)) return;
+
+        ShowHover();
+    }
+
+    private void ShowHover()
+    {
+        if (MeatHoverBubble.Instance != null)
+            MeatHoverBubble.Instance.Show(this);
+
+        if (IsOnGrill && MeatCookHoverBar.Instance != null)
+            MeatCookHoverBar.Instance.Show(this);
     }
 
     private bool TrySendToBuildBuffer(Vector3 dropWorldPoint)
@@ -333,11 +364,7 @@ public class Meat : Item
     void OnMouseEnter()
     {
         if (isHeldByMouse) return;
-        if (MeatHoverBubble.Instance != null)
-            MeatHoverBubble.Instance.Show(this);
-
-        if (IsOnGrill && MeatCookHoverBar.Instance != null)
-            MeatCookHoverBar.Instance.Show(this);
+        ShowHover();
     }
 
     void OnMouseExit()
