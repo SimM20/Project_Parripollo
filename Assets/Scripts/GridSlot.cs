@@ -40,10 +40,7 @@ public class GridSlot : MonoBehaviour
         if (acceptsType == ItemType.Meat && currentItem != null)
         {
             if (currentItem.TryGetComponent<Meat>(out Meat meat))
-            {
                 meat.Cook(totalHeatReceived);
-                Debug.Log($"Cocinando {meat.name} con {totalHeatReceived} de calor");
-            }
         }
     }
     public void SetGridPos(int x, int y)
