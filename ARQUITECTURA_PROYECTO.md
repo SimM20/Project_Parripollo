@@ -221,7 +221,7 @@ Bucle de input global y árbitro de la entrega. **No** contiene lógica de cocci
 
 ```csharp
 public void EndNight()   // desuscribe, tracker.RegisterDayCompleted(), carga "EndScene"
-// privados relevantes: TryServe, ClearBuildAssembly, CleanAshes,
+// privados relevantes: TryToggleGrillLayer, ClearBuildAssembly, CleanAshes,
 //                      TryDiscardBurnedCuts, TryEnterDeliverySelection, ConfirmDeliverySelection
 ```
 
@@ -253,8 +253,9 @@ List<GridSlot> slots;  GameObject meatPrefab, coalPrefab;
 bool SpawnMeat(MeatCutSO, bool rotateFootprint = false)
 bool TrySpawnMeatAtPoint(MeatCutSO, Vector3, out Meat, bool rotateFootprint = false)
 bool TrySpawnCoalAtPoint(CoalSO, Vector3, out Coal)   // → CoalConsumptionTracker.ReportConsumption(1)
-Meat GetCookedMeat(MeatCutSO)
-void RemoveMeat(Meat), SetMeatVisualsVisible(bool)
+Meat GetCookedMeat(MeatCutSO)                         // ⚠️ sin llamadores desde que se borró GameManager.TryServe
+void RemoveMeat(Meat)                                 // ⚠️ idem
+void SetMeatVisualsVisible(bool)
 ```
 `Awake` → `GridSlot.AssignGridCoordinates(slots)`. `Update` → `UpdateHeatPropagation()`:
 
@@ -345,6 +346,9 @@ static bool IsItemTypeAllowed(ItemType)   // gatea GridSlot.CanPlaceItem
 void Toggle(), ShowLayer(GrillLayer), RefreshVisibility()
 ```
 La capa inactiva queda visible con `inactiveAlpha` y colliders desactivados.
+Dos entradas para `Toggle()`: el `OnMouseDown` del propio botón en la escena y `Space` desde
+`GameManager.TryToggleGrillLayer()` (**solo en la vista `Grill`**). Ambas pasan por `ShowLayer`,
+así que el icono del botón y `TutorialManager.NotifyGrillLayerChanged` quedan siempre sincronizados.
 
 ---
 
@@ -599,7 +603,7 @@ MainMenuScene (build index 0)
 | `Esc` | Global | Pausa / reanudar |
 | `Q` / `W` / `E` | Global | Cooler / Grill / Build |
 | `←` / `→` | Global | Vista anterior / siguiente |
-| `Space` | Grill | `TryServe()` (camino legacy) |
+| `Space` | Grill | Alterna capa carne ↔ carbón (`GrillLayerToggle.Toggle()`, mismo camino que el botón de la escena). Ignorado si el botón izquierdo del mouse está apretado (drag en curso) |
 | `R` | Grill | `CleanAshes()` — destruye carbones en `Ceniza` |
 | `R` | mientras se arrastra | Rotar footprint del corte |
 | Click derecho | sobre carne en parrilla | `Meat.Flip()` |

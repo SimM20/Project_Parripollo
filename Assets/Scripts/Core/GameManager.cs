@@ -106,7 +106,7 @@ public class GameManager : MonoBehaviour
         if (currentView == ViewType.Grill)
         {
             if (Input.GetKeyDown(KeyCode.Space))
-                TryServe();
+                TryToggleGrillLayer();
 
             if (Input.GetKeyDown(KeyCode.R))
                 CleanAshes();
@@ -187,22 +187,24 @@ public class GameManager : MonoBehaviour
             }
         }
     }
-    private void TryServe()
+    /// <summary>
+    /// Cambia la capa de la parrilla (carne ↔ carbón) por teclado.
+    /// Espejo exacto del botón de la escena: delega en el mismo GrillLayerToggle.Toggle(),
+    /// así que sprite del botón y TutorialManager.NotifyGrillLayerChanged se mantienen sincronizados.
+    /// Solo se invoca desde la vista Grill (ver Update) y nunca mientras se arrastra un item:
+    /// cambiar de capa a mitad de un drag invalidaría el drop y devolvería la pieza a su origen.
+    /// </summary>
+    private void TryToggleGrillLayer()
     {
-        var customer = customerSystem.currentCustomer;
+        if (Input.GetMouseButton(0)) return;
 
-        if (customer == null) return;
-
-        var meat = grillSystem.GetCookedMeat(customer.order.meat);
-
-        if (meat != null)
+        if (grillLayerToggle == null)
         {
-            Debug.Log("✔ Pedido correcto");
-            grillSystem.RemoveMeat(meat);
-            PlayerWallet.Instance?.Add(customer.order.PrimaryCut.sellPricePlate);
-            customerSystem.SpawnCustomer();
-            customerSystem.CompleteCustomer(customer);
+            Debug.LogWarning("[GameManager] No hay GrillLayerToggle asignado: no se puede cambiar de capa con la barra espaciadora.");
+            return;
         }
+
+        grillLayerToggle.Toggle();
     }
 
     private void ClearBuildAssembly() => buildStationSystem.ClearAssembly();
