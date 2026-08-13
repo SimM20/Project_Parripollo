@@ -17,6 +17,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] private PlayerWallet wallet;
     [SerializeField] private GrillLayerToggle grillLayerToggle;
 
+    [Header("Input")]
+    [SerializeField] private KeyCode stockPanelToggleKey = KeyCode.Q;
+
     private ViewType lastView;
 
     // Contexto de descarte de quemados: solo activo tras un intento de entrega bloqueado por quemados.
@@ -83,7 +86,9 @@ public class GameManager : MonoBehaviour
 
         if (viewManager != null)
         {
-            if (Input.GetKeyDown(KeyCode.Q)) viewManager.Show(ViewType.Cooler);
+            if (Input.GetKeyDown(stockPanelToggleKey) && viewManager.CurrentView == ViewType.Grill)
+                StockPanelController.Instance?.Toggle();
+
             if (Input.GetKeyDown(KeyCode.W)) viewManager.Show(ViewType.Grill);
             if (Input.GetKeyDown(KeyCode.E)) viewManager.Show(ViewType.Build);
 

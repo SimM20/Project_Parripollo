@@ -44,13 +44,14 @@ Assets/Scripts/
 | **raíz** | Singletons de sesión (`UIManager`, `AudioManager`, `PlayerWallet`, `CoalConsumptionTracker`), modelo base drag&drop (`Item`), grilla (`GridSlot`), entidades físicas (`Meat`, `Coal`), buffer de carbón, arranque (`Init`), utilidades de escena | `Item.cs`, `GridSlot.cs`, `Meat.cs`, `Coal.cs`, `PlayerWallet.cs`, `CoalConsumptionTracker.cs`, `SceneManagementUtils.cs` |
 | **Core/** | Bucle de partida e input global (`GameManager`), armado del plato (`BuildStationSystem`), staging de carne entre vistas (`MeatTransferBuffer`), draggables inter-vista, basura | `GameManager.cs` (445), `MeatTransferBuffer.cs` (949), `BuildStationSystem.cs` |
 | **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs` |
-| **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL), reconstrucción visual de pilas por evento, drag de heladera → `ToGrill` | `CoolerSystem.cs`, `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs` |
+| **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
 | **Build/** | Zona de drop del plato (`BuildFoodDropZone`), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (670), `BuildUndoHistory.cs`, `BuildUndoActions.cs` |
 | **Customers/** | Spawn ponderado por noche, tick de paciencia, modo selección de entrega, view + burbuja + recuadro | `CustomerSystem.cs` (673), `Customer.cs`, `CustomerView.cs` |
 | **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada | `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Catálogo estático (`FoodCatalogSO`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
 | **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*2D` (world-space, `SpriteRenderer`/`TextMeshPro`, **la activa**) y `*UI` (uGUI/Canvas, legacy) | `ShopSystem.cs`, `ShopGrid2D.cs`, `ShopItemCell2D.cs` |
 | **UI/** | Conmutación de vistas (`ViewManager`), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), notificaciones laterales de parrilla, feedback de entrega | `ViewManager.cs`, `TutorialManager.cs` (749), `GrillNotificationManager.cs` |
+| **UI/StockPanel/** | Panel desplegable de stock dentro de la vista Grill: estado abierto/cerrado y layout (`StockPanelController`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña de toggle (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 
 ### Assets de datos
 
@@ -153,9 +154,9 @@ graph TD
 
 | Emisor | Evento | Consumidores |
 |---|---|---|
-| `ViewManager` | `OnViewChanged(ViewType)` | `TutorialManager`, `GrillNotificationManager` |
+| `ViewManager` | `OnViewChanged(ViewType)` | `TutorialManager`, `GrillNotificationManager`, `StockPanelController` |
 | `CustomerSystem` | `OnNightEnded` (campo `Action`) | `GameManager.EndNight` |
-| `CoolerSystem` | `OnInventoryChanged` | `CoolerStockVisualizer`, `CoalStockVisualizer`, `ShopGrid2D`, `ShopDetailPanel2D`, `ShopHeader2D` |
+| `CoolerSystem` | `OnInventoryChanged` | `StockPanelController`, `ShopGrid2D`, `ShopDetailPanel2D`, `ShopHeader2D` (+ los visualizadores deprecados del cooler) |
 | `CoolerSystem` | `OnMissingItemRequested(ItemDataSO)` | (sin consumidor actual — hook futuro) |
 | `BuildStationSystem` | `OnAssemblyChanged`, `OnAssemblyCleared` | `BuildUndoHistory.Clear` |
 | `BuildUndoHistory` | `OnHistoryChanged` | `RollbackButtonUI` (habilita/deshabilita) |
@@ -166,15 +167,17 @@ graph TD
 | `ShopButton2D` / `ShopTabButton2D` | `OnClicked`, `OnTabClicked(ShopTabType)` | Celdas, barras de tabs |
 | `CoalStock` | `OnChanged(int)` | (clase legacy, sin uso activo) |
 
-### 2.4 Secuencia: de la heladera al cliente
+### 2.4 Secuencia: del stock al cliente
 
 ```
-Cooler ──drag──► ToGrill (buffer)  ──cambio a vista Grill──► MeatHolder
-   │  CoolerDraggableMeat.OnMouseUp                MTB.MoveToMeatHolder()
-   │  → CoolerSystem.TryTake(cut,1)
-   │  → MTB.EnqueueToGrillAtPoint(cut, punto)
+StockPanel (dentro de la vista Grill) ──drag directo──► GridSlot de la parrilla
+   │  StockPanelSlot.OnMouseDown  → spawnea un "fantasma" sin collider que sigue al mouse
+   │  StockPanelSlot.OnMouseUp    → CoolerSystem.TryTake(item,1)
+   │                              → GrillSystem.TrySpawnMeatAtPoint / TrySpawnCoalAtPoint
+   │                              → si el spawn falla: CoolerSystem.Add(item,1)  [rollback]
+   │  Sin buffer intermedio: el retiro y la colocación ocurren en la misma vista.
 
-MeatHolder ──drag──► GridSlot de la parrilla
+MeatHolder ──drag──► GridSlot de la parrilla        [sigue vivo para el round-trip con Build]
    │  MeatHolderDraggableMeat → (reflexión) MTB.TryDropFromMeatHolderById(id, punto, rot)
    │  → GrillSystem.TrySpawnMeatAtPoint → GridSlot.TryFindContiguousPlacement → PlaceMeat
 
@@ -229,10 +232,16 @@ public void EndNight()   // desuscribe, tracker.RegisterDayCompleted(), carga "E
 ```csharp
 ViewType CurrentView { get; }
 event Action<ViewType> OnViewChanged;
-void Show(ViewType), NextView(), PreviousView(), Toggle()
+void Show(ViewType), NextView(), PreviousView()
 ```
 `grillRoot` se oculta desactivando **renderers/colliders/canvases** (queda activo, sigue cocinando);
 `coolerRoot`/`buildRoot` usan `SetActive` real.
+
+⚠️ **La Cooler View está deprecada.** Las vistas navegables son solo `Grill` ↔ `Build`:
+`NextView`/`PreviousView` recorren ese par y `Show(ViewType.Cooler)` **redirige a `Grill`** con un
+warning. El miembro `ViewType.Cooler` se conserva a propósito porque el enum se serializa como `int`
+en los assets de tutorial (`TutorialStepSO.requiredView`) y quitarlo correría `Build` y `Shop`.
+`Toggle()` fue eliminado (no tenía llamadores).
 
 #### `UIManager` — `UIManager.cs` · Singleton
 ```csharp
@@ -364,6 +373,42 @@ void InformMissingItem(ItemDataSO)
 static void PrepareForNewGame()        // invalida el backup estático
 ```
 Guarda un `static stockBackup` en `OnDestroy` para sobrevivir a destrucciones inesperadas del DDOL; `SceneManagementUtils.ReturnToMainMenu()` lo limpia.
+
+#### `StockPanelController` — `UI/StockPanel/StockPanelController.cs` · Singleton
+Panel desplegable de stock, **solo dentro de la vista Grill**. Reemplaza a la Cooler View.
+Vive anidado en `Prefabs/GrillView.prefab` como instancia de `Prefabs/UI/StockPanel.prefab`.
+
+```csharp
+static StockPanelController Instance;
+bool IsOpen, IsAnimating, CanBeginDrag;
+void Toggle(), Open(), Close(bool instant = false)
+void RefreshSlots()
+void NotifyDragStarted(StockPanelSlot), NotifyDragEnded(StockPanelSlot), CancelActiveDrag()
+void SetViewManager(ViewManager)
+bool IsPointOverPanel(Vector3), IsPointInDropArea(Vector3)
+```
+
+- **No duplica stock**: se suscribe a `CoolerSystem.OnInventoryChanged` y repinta. Las cantidades salen siempre de `GetCount`.
+- **Orden de slots determinista**: `FoodCatalogSO.GetAllCuts()` filtrado por `stock > 0`, después los cortes con stock que no estén en el catálogo (ordenados por `itemName` — así aparece `ChorizoTutorial`), y el carbón **siempre último y siempre visible**, gris cuando está en 0. Nunca usar `EnumerateStock()` directo: el orden del `Dictionary` no es determinista.
+- Layout de grilla manual (`columns`, `cellSpacing`, `firstCellLocalOffset`), slots pooleados, sin scroll.
+- Se abre/cierra deslizando `SlidingRoot` en X con una corrutina que usa **`Time.unscaledDeltaTime`** (el diálogo de `TutorialOfferController` pone `Time.timeScale = 0` al entrar a `GameScene`).
+- Arranca **cerrado** en `Start()`: `OnViewChanged` no dispara en el `Show(startView)` inicial porque `ViewManager.Show` solo invoca el evento si la vista cambió.
+- Fuera de la vista Grill hace `SetActive(false)` sobre `SlidingRoot` — necesario porque `ViewManager.SetVisualVisibility` apaga `SpriteRenderer`/`Collider2D`/`Canvas` pero **no** los `MeshRenderer` de TextMeshPro.
+
+#### `StockPanelSlot` — `UI/StockPanel/StockPanelSlot.cs`
+Una celda = una variedad. `Bind(ItemDataSO, count, owner)`, `SetSortingOrder(int)`, `CancelDrag()`.
+Maneja el arrastre completo desde `OnMouseDown` hasta `OnMouseUp` **en el mismo componente**: Unity
+no transfiere `OnMouseDrag`/`OnMouseUp` a otro collider, así que el fantasma que sigue al mouse no
+puede hacerse cargo del drag. `FitIconToSlot()` escala el ícono por `sprite.bounds` para que cortes
+con sprites de distinto tamaño se vean uniformes. `R` rota el footprint (solo carne; el carbón no
+tiene rotación en ninguna parte del proyecto).
+
+Gates del drop, **antes** de cualquier `TryTake`:
+1. Soltar sobre el propio panel cancela siempre (`IsPointOverPanel`).
+2. `requireDropAreaHit` + `dropArea` (opcional, **off** por defecto) exige soltar dentro de un collider concreto. Apagado, el comportamiento es el mismo que los drags del `MeatHolder`.
+
+#### `StockPanelTab` — `UI/StockPanel/StockPanelTab.cs`
+Pestaña lateral con `BoxCollider2D` + `OnMouseDown` → `controller.Toggle()`.
 
 #### `MeatTransferBuffer` — `Core/MeatTransferBuffer.cs` (949 líneas, el archivo más grande)
 Cuatro colas paralelas de `BufferedMeatData` (POCO: `cut`, `sideACookTime`, `sideBCookTime`, `isSideA`, `state`, `isGridRotated`) + sus visuales y posiciones locales.
@@ -597,8 +642,9 @@ MainMenuScene (build index 0)
 | Tecla | Contexto | Acción |
 |---|---|---|
 | `Esc` | Global | Pausa / reanudar |
-| `Q` / `W` / `E` | Global | Cooler / Grill / Build |
-| `←` / `→` | Global | Vista anterior / siguiente |
+| `Q` | Grill | Abre / cierra el **StockPanel** (`stockPanelToggleKey`, configurable en `GameManager`) |
+| `W` / `E` | Global | Grill / Build |
+| `←` / `→` | Global | Vista anterior / siguiente (**solo Grill ↔ Build**) |
 | `Space` | Grill | `TryServe()` (camino legacy) |
 | `R` | Grill | `CleanAshes()` — destruye carbones en `Ceniza` |
 | `R` | mientras se arrastra | Rotar footprint del corte |
@@ -643,6 +689,10 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 8 | `Shop` tiene **dos capas de UI paralelas**: `*2D` (world-space, la que se usa) y `*UI` (uGUI, legacy). `ShopGlobalBar2D.cs` declara la clase `ShopHeader2D` |
 | 9 | `ViewType.Shop` está en el enum pero `ViewManager` no lo maneja — la tienda es una escena aparte |
 | 10 | Clases sin uso activo: `ShopCart`, `CoalStock`, `MeatTypes` (enum), `GridTransformGroup` es `[ExecuteAlways]` solo para layout de editor |
+| 14 | **Cooler View deprecada.** Sus scripts (`CoolerStockVisualizer`, `CoalStockVisualizer`, `CoolerDraggableMeat`, `DraggableCoal`) y sus assets (`Prefabs/CoolerView.prefab`, `StockPrefab.prefab`) siguen en el proyecto pero **ya no se alcanzan**: `Show(Cooler)` redirige a Grill, así que `coolerRoot` queda desactivado desde el primer `Show`. No borrar sin revisar los overrides de escena |
+| 15 | `GrillView` tiene **escala no uniforme `(0.81, 1, 1)`** como override de escena. Cualquier hijo nuevo que deba verse sin deformar necesita contra-escala (`localScale.x = 1/0.81`). Es lo que hace la instancia de `StockPanel` |
+| 16 | **`TutorialScene` está rota** a partir de este cambio: los pasos `2.PrimeraParteCooler`, `9.PasarACooler` y `12.VolverGrillView` usan `ChangeView` hacia/desde `Cooler` y ese evento ya no dispara. Los pasos de arrastre (10/11) sí funcionan porque el drop directo del panel emite las notificaciones existentes. Pendiente de decisión: rehacer esos pasos, saltearlos o sacar la escena del build. Además falta wirear en `TutorialScene` la contra-escala del panel y sus refs (`grillSystem`, `viewManager`, buffers) |
+| 17 | `TutorialOfferController` pone `Time.timeScale = 0` al entrar a `GameScene` hasta que se responde el diálogo. Cualquier animación de UI que deba correr ahí necesita `Time.unscaledDeltaTime` |
 | 11 | Varios archivos tienen **mojibake** por encoding (`carb�n`, `�tem`) en literales y comentarios: `CoalSO.cs`, `CoolerSystem.cs`, `TrashZone.cs`, `HudManager.cs`, `OrderText.cs`, `TutorialStepSO.cs` |
 | 12 | El estado de cocción real vive en los `float sideACookTime/sideBCookTime`; `Meat.state` es solo caché visual derivado por `RefreshState()` |
 | 13 | `GridSlot.Update`, `GrillSystem.UpdateHeatPropagation` y `Meat.Cook` corren **por frame y por slot**: no agregar `Debug.Log` ni allocations ahí |

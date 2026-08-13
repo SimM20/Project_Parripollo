@@ -17,9 +17,7 @@ public class ViewManager : MonoBehaviour
 
     public void NextView()
     {
-        if (CurrentView == ViewType.Cooler)
-            Show(ViewType.Grill);
-        else if (CurrentView == ViewType.Grill)
+        if (CurrentView == ViewType.Grill)
             Show(ViewType.Build);
     }
 
@@ -27,28 +25,16 @@ public class ViewManager : MonoBehaviour
     {
         if (CurrentView == ViewType.Build)
             Show(ViewType.Grill);
-        else if (CurrentView == ViewType.Grill)
-            Show(ViewType.Cooler);
-    }
-
-    public void Toggle()
-    {
-        switch (CurrentView)
-        {
-            case ViewType.Grill:
-                Show(ViewType.Cooler);
-                break;
-            case ViewType.Cooler:
-                Show(ViewType.Build);
-                break;
-            default:
-                Show(ViewType.Grill);
-                break;
-        }
     }
 
     public void Show(ViewType view)
     {
+        if (view == ViewType.Cooler)
+        {
+            Debug.LogWarning("[ViewManager] La Cooler View esta deprecada; el stock vive en el StockPanel de la Vista Parrilla. Redirigiendo a Grill.");
+            view = ViewType.Grill;
+        }
+
         ViewType oldView = CurrentView;
         CurrentView = view;
 

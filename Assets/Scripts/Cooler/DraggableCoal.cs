@@ -1,6 +1,11 @@
 using System.Reflection;
 using UnityEngine;
 
+/// <summary>
+/// DEPRECADO: reemplazado por StockPanelSlot. Ojo si se lo toma como referencia: esta version
+/// descuenta el stock ANTES de verificar que exista el CoalTransferBuffer, sin rollback.
+/// StockPanelSlot si hace rollback. La Cooler View ya no es alcanzable.
+/// </summary>
 public class DraggableCoal : MonoBehaviour
 {
     private CoalSO coal;
