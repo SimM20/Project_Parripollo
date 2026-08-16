@@ -25,7 +25,7 @@ public class CoalSO : ItemDataSO
     public float heatPower => _heatPower;
     
     [Tooltip("Cuántas unidades aporta una bolsa")]
-    public int unitsPerBag = 10;
+    public int unitsPerBag = 1;
 
     void OnValidate() => category = ItemType.Coal;
 

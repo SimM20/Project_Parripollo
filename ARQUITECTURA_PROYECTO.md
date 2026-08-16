@@ -33,7 +33,7 @@ Assets/Scripts/
 ├── Customers/  Clientes: spawn, paciencia, selección, burbujas de pedido
 ├── Orders/     Modelo y generación de pedidos
 ├── Food/       Catálogo (SO), validación de platos, evaluación económica de cocción
-├── Shop/       Tienda (post-noche): carrito, tabs, compra. Dos capas de UI
+├── Shop/       Tienda (post-noche): tabs + breadcrumb, compra individual. Dos capas de UI
 └── UI/         ViewManager, Tutorial, notificaciones de parrilla, HUD SO, feedback
 ```
 
@@ -49,7 +49,7 @@ Assets/Scripts/
 | **Customers/** | Spawn ponderado por noche, tick de paciencia, modo selección de entrega, view + burbuja + recuadro | `CustomerSystem.cs` (673), `Customer.cs`, `CustomerView.cs` |
 | **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada | `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Catálogo estático (`FoodCatalogSO`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
-| **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*2D` (world-space, `SpriteRenderer`/`TextMeshPro`, **la activa**) y `*UI` (uGUI/Canvas, legacy) | `ShopSystem.cs`, `ShopGrid2D.cs`, `ShopItemCell2D.cs` |
+| **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
 | **UI/** | Conmutación de vistas (`ViewManager`), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), notificaciones laterales de parrilla, feedback de entrega | `ViewManager.cs`, `TutorialManager.cs` (749), `GrillNotificationManager.cs` |
 
 ### Assets de datos
@@ -121,7 +121,9 @@ graph TD
     BSS -->|event OnAssemblyCleared| BUH
 
     SHOP --> PW & CS_ & TS & CAT
-    SHOP -->|events OnCartChanged/OnTabChanged/OnPurchaseResult| SUI[Shop*2D / Shop*UI]
+    SHOP -->|events OnTabChanged/OnCartChanged/OnPurchaseResult| SUI["Shop*UI (activa) / Shop*2D (off)"]
+    SUI -->|SetTab| SHOP
+    SUI -->|TryBuyNow / TryBuyToppingNow| SHOP
 
     PW -->|event OnMoneyChanged| UIM & WD[WalletDisplay] & SUI
     UIM --> HUD[HudManager] --> HC[HudContainer]
@@ -155,13 +157,14 @@ graph TD
 |---|---|---|
 | `ViewManager` | `OnViewChanged(ViewType)` | `TutorialManager`, `GrillNotificationManager` |
 | `CustomerSystem` | `OnNightEnded` (campo `Action`) | `GameManager.EndNight` |
-| `CoolerSystem` | `OnInventoryChanged` | `CoolerStockVisualizer`, `CoalStockVisualizer`, `ShopGrid2D`, `ShopDetailPanel2D`, `ShopHeader2D` |
+| `CoolerSystem` | `OnInventoryChanged` | `CoolerStockVisualizer`, `CoalStockVisualizer`, `ShopGridUI`, `ShopHeaderUI`, `ShopSubtitleUI`, (2D: `ShopGrid2D`, `ShopDetailPanel2D`, `ShopHeader2D`) |
 | `CoolerSystem` | `OnMissingItemRequested(ItemDataSO)` | (sin consumidor actual — hook futuro) |
 | `BuildStationSystem` | `OnAssemblyChanged`, `OnAssemblyCleared` | `BuildUndoHistory.Clear` |
 | `BuildUndoHistory` | `OnHistoryChanged` | `RollbackButtonUI` (habilita/deshabilita) |
-| `PlayerWallet` | `OnMoneyChanged(float)` | `UIManager`, `WalletDisplay`, `ShopGrid2D`, `ShopHeader2D`, `ShopHeaderUI` |
-| `ToppingStock` | `OnStockChanged` | `ShopGrid2D`, `ShopDetailPanel2D` |
-| `ShopSystem` | `OnCartChanged`, `OnTabChanged`, `OnPurchaseResult(bool,string)` | `ShopGrid2D`, `ShopTabBar2D`, `ShopHeader2D`, `ShopNextButtonUI`, `ShopBreadcrumb*` |
+| `PlayerWallet` | `OnMoneyChanged(float)` | `UIManager`, `WalletDisplay`, `ShopHeaderUI`, `ShopGridUI` (→ `RefreshVisuals` de cada celda), (2D: `ShopGrid2D`, `ShopHeader2D`) |
+| `ToppingStock` | `OnStockChanged` | `ShopGridUI`, (2D: `ShopGrid2D`, `ShopDetailPanel2D`) |
+| `ShopSystem` | `OnTabChanged` | `ShopGridUI` (rebuild), `ShopBreadcrumbUI`, `ShopSubtitleUI`, `ShopNextButtonUI`, (2D: `ShopTabBar2D`, `ShopGrid2D`) |
+| `ShopSystem` | `OnCartChanged`, `OnPurchaseResult(bool,string)` | Solo la capa 2D. **La UI activa compra directo y no usa carrito** |
 | `SceneManagementUtils` | `OnSceneLoaded` (static) | (disponible; suscrito vía `RuntimeInitializeOnLoadMethod`) |
 | `ShopButton2D` / `ShopTabButton2D` | `OnClicked`, `OnTabClicked(ShopTabType)` | Celdas, barras de tabs |
 | `CoalStock` | `OnChanged(int)` | (clase legacy, sin uso activo) |
@@ -515,20 +518,70 @@ void  ReportConsumption(int), RegisterDayCompleted(), ConfigureNightTwoCut(MeatC
 #### `ShopSystem` — `Shop/ShopSystem.cs`
 Lógica pura, sin UI. Vive en `EndScene` (también hay una copia en `GameScene`).
 ```csharp
-ShopTabType CurrentTab { get; }        // Coal → Meat → Upgrades → Toppings
+ShopTabType CurrentTab { get; } = Coal   // Coal → Meat → Upgrades → Toppings
 event Action OnCartChanged, OnTabChanged;  event Action<bool,string> OnPurchaseResult;
 
-void SetTab(ShopTabType)
+void SetTab(ShopTabType)                                // no-op si ya es el tab actual
 IReadOnlyList<ItemDataSO> GetItemsForCurrentTab() / GetItemsForTab(ShopTabType)
 IReadOnlyList<ToppingSO>  GetToppings()
 bool IsPurchasable(ItemDataSO), IsToppingPurchasable(ToppingSO)
 int  GetSuggestedCoalUnits(), GetSuggestedCoalBags()    // max(0, consumoPromedio − stock)
+int  GetTotalCoalUnits()                                // suma TODO el stock CoalSO del cooler
 int  GetCartQty(ItemDataSO);  void SetQty(...), IncrementQty(...), ClearCart()
 float CartTotal(), MoneyAfterPurchase();  int CartCoalBags()
 List<MeatCutSO> GetLowStockCuts()
-bool TryConfirmPurchase(out string), TryBuyNow(ItemDataSO,int,out string), TryBuyToppingNow(...)
+bool TryConfirmPurchase(out string)                      // carrito completo — solo la capa 2D
+bool TryBuyNow(ItemDataSO, int qty, out string)          // ← compra individual (capa activa)
+bool TryBuyToppingNow(ToppingSO, int qty, out string)    // ← compra individual (capa activa)
+```
+
+**Fuentes de items por tab** (`GetItemsForTab`):
+
+| Tab | Origen | Filtro `IsPurchasable` |
+|---|---|---|
+| `Coal` | `ShopConfigSO.coal` (un solo item) | siempre `true` |
+| `Meat` | `FoodCatalogSO.GetAllCuts()` | `cut.isUnlocked` |
+| `Upgrades` | `FoodCatalogSO.GetAllUpgrades()` | `up.isUnlocked && !up.isPurchased` |
+| `Toppings` | `GetToppings()` → `catalog.GetAvailableToppings()` (devuelve `ToppingSO`, **no** `ItemDataSO`) | siempre `true` |
+
+> El tab `Toppings` es el único que **no** pasa por `GetItemsForTab`: la UI llama a `GetToppings()` y bindea `ToppingSO`. Por eso `ShopGridUI` y `ShopItemCellUI` tienen una rama y un `Bind` por cada tipo.
+
+**Compra individual vs. carrito** — coexisten dos caminos:
+
+```
+Compra individual (capa uGUI, la activa)
+   ShopItemCellUI: −/+ ajustan un `pendingQty` LOCAL de la celda (no toca el carrito)
+   → botón Comprar → ShopSystem.TryBuyNow(item, qty) / TryBuyToppingNow(topping, qty)
+   → valida IsPurchasable → Wallet.CanAfford → Wallet.TrySpend
+   → CoalSO: Cooler.Add(coal, unitsPerBag × qty) · UpgradeSO: up.isPurchased = true · resto: Cooler.Add(item, qty)
+   → OnPurchaseResult(true, msg) + pendingQty vuelve a 1
+   ⚠️ NO emite OnCartChanged. El refresco lo disparan Wallet.OnMoneyChanged y Cooler.OnInventoryChanged
+
+Carrito (capa 2D, desactivada)
+   SetQty/IncrementQty → cart / toppingCart → TryConfirmPurchase() paga todo junto
 ```
 Dos carritos separados: `cart` (`ItemDataSO`) y `toppingCart` (`ToppingSO` → `ToppingStock`).
+`UpgradeSO` está capado a cantidad 1 en ambos caminos.
+
+#### UI de tienda (capa uGUI activa) — `Shop/*UI.cs` · `EndScene`
+
+Todos los componentes cuelgan de un `ShopSystem` asignado por inspector y usan el mismo patrón
+`OnEnable` (suscribir) / `Start` (`started = true` + `Refresh`) / `OnDisable` (desuscribir);
+el flag `started` evita refrescar antes del primer `Start`.
+
+| Componente | Rol |
+|---|---|
+| `ShopBreadcrumbUI` | Puente entre los 4 `ShopTabButtonUI` y el `ShopSystem`. Se suscribe a `OnTabClicked` de cada botón → `shop.SetTab(tab)`; con `OnTabChanged` repinta cuál está activo (`SetActiveState`) |
+| `ShopTabButtonUI` | `[RequireComponent(Button)]`. Expone `ShopTabType Tab` y `Action<ShopTabType> OnTabClicked`. `SetActiveState(bool)` cambia color de `background` y `label` (activo/inactivo) |
+| `ShopHeaderUI` | Header: nombre de la tienda, plata (`$N0`) y **total de carbón** (`"Carbon: {GetTotalCoalUnits()} u."`). Se suscribe a `Wallet.OnMoneyChanged` **y** `Cooler.OnInventoryChanged` |
+| `ShopGridUI` | Reconstruye la grilla al cambiar de tab. `AdjustCellCount` instancia/destruye celdas (`ShopItemCell 1.prefab`) bajo el `Content` del ScrollView y las bindea. Ante cambios de stock/plata solo llama `RefreshVisuals()` de cada celda (no reconstruye) |
+| `ShopItemCellUI` | Celda: icono, nombre, descripción, precio, `pendingQty`, subtotal. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. `lockedOverlay` + icono atenuado para lo bloqueado |
+| `ShopSubtitleUI` | Título + detalle por tab. En `Coal` el detalle es dinámico: `"USASTE {AverageCoalPerDay} UNIDADES DE CARBÓN"`, o `"PRIMERA NOCHE — SIN DATOS DE CONSUMO"` si `DaysPlayed == 0` |
+| `ShopNextButtonUI` | Avanza `Coal → Meat → Upgrades → Toppings` cambiando el label; en `Toppings` el botón carga `GameScene` |
+
+Navegación por tabs: **dos entradas** — el breadcrumb (salto directo a cualquier tab) y el botón
+"Siguiente" (avance secuencial). Ambas terminan en `ShopSystem.SetTab`, así que el estado visual
+queda sincronizado por el evento `OnTabChanged`.
 
 ---
 
@@ -623,8 +676,12 @@ GameScene ──[último cliente atendido/expulsado]──► CustomerSystem.OnN
 
 EndScene
    ├─ EndScreen        muestra el dinero · botones: MainMenu / Retry / GoShopping
-   └─ ShopSystem       tabs Coal → Meat → Upgrades → Toppings
-         └─ ShopNextButtonUI: en el último tab → SceneManager.LoadScene("GameScene")
+   ├─ ShopSystem       tabs Coal → Meat → Upgrades → Toppings  (arranca en Coal)
+   │     Header:     nombre de tienda · plata · total de carbón en el cooler
+   │     Breadcrumb: 4 ShopTabButtonUI → SetTab (salto directo a cualquier tab)
+   │     Grid:       celdas con −/+ y botón Comprar → TryBuyNow / TryBuyToppingNow (pago inmediato)
+   │     Next:       avance secuencial de tab; en Toppings → SceneManager.LoadScene("GameScene")
+   └─ ShopRoot        prefab de la capa 2D — presente en la escena pero con m_IsActive = 0
 
 SceneManagementUtils.ReturnToMainMenu()   ← reset total
    destruye PlayerWallet, CoalConsumptionTracker, CoolerSystem, ToppingStock (los 4 DDOL)
@@ -644,9 +701,13 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 5 | Los `ScriptableObject` **mutan en runtime** (`isUnlocked`, `isPurchased`, `ProductVariantSO.isUnlocked`) → el estado se filtra entre sesiones del Editor |
 | 6 | Todos los singletons usan el mismo guard en `Awake`: `if (Instance != null && Instance != this) { Destroy(gameObject); return; } Instance = this;`. Mantener esa forma al agregar nuevos |
 | 7 | Vista `Grill`: el root **no se desactiva** — se apagan renderers/colliders/canvases, así que la parrilla **sigue cocinando en segundo plano** (por diseño). Por eso existen las notificaciones de `GrillNotificationManager` |
-| 8 | `Shop` tiene **dos capas de UI paralelas**: `*2D` (world-space, la que se usa) y `*UI` (uGUI, legacy). `ShopGlobalBar2D.cs` declara la clase `ShopHeader2D` |
+| 8 | `Shop` tiene **dos capas de UI paralelas**. La activa hoy es **`*UI` (uGUI, en `EndScene`)**; la capa `*2D` sigue en la escena dentro del prefab `ShopRoot` pero **desactivada** (`m_IsActive: 0`) — al tocar la tienda, editar los `*UI`. `ShopGlobalBar2D.cs` declara la clase `ShopHeader2D` |
+| 8b | La capa activa **no usa el carrito**: cada celda compra por su cuenta con `TryBuyNow`/`TryBuyToppingNow`, que **no emiten `OnCartChanged`**. `cart`/`toppingCart`, `CartTotal()`, `TryConfirmPurchase()` y `OnCartChanged` quedan vivos solo para la capa 2D |
+| 8c | `ShopItemCellUI.pendingQty` es estado **local de la celda** y se resetea a 1 tras comprar o rebindear; no sobrevive a un cambio de tab, porque `ShopGridUI.RebuildAll` rebindea todas las celdas |
+| 8d | `ShopTabButtonUI` y `ShopGridUI` tienen `Debug.Log` de diagnóstico (`Awake`, `HandleClick`, `RebuildAll`) — quitarlos antes de release |
 | 9 | `ViewType.Shop` está en el enum pero `ViewManager` no lo maneja — la tienda es una escena aparte |
-| 10 | Clases sin uso activo: `ShopCart`, `CoalStock`, `MeatTypes` (enum), `GridTransformGroup` es `[ExecuteAlways]` solo para layout de editor |
+| 10 | Clases sin uso activo: `ShopCart`, `CoalStock`, `MeatTypes` (enum), `ShopBreadcrumbBar2D` (ni en prefab ni en escena), `ShopItemCell2D` (solo referenciado desde `ShopItemCell.prefab`); `GridTransformGroup` es `[ExecuteAlways]` solo para layout de editor |
 | 11 | Varios archivos tienen **mojibake** por encoding (`carb�n`, `�tem`) en literales y comentarios: `CoalSO.cs`, `CoolerSystem.cs`, `TrashZone.cs`, `HudManager.cs`, `OrderText.cs`, `TutorialStepSO.cs` |
 | 12 | El estado de cocción real vive en los `float sideACookTime/sideBCookTime`; `Meat.state` es solo caché visual derivado por `RefreshState()` |
 | 13 | `GridSlot.Update`, `GrillSystem.UpdateHeatPropagation` y `Meat.Cook` corren **por frame y por slot**: no agregar `Debug.Log` ni allocations ahí |
+| 14 | `CoalSO.unitsPerBag` pasó de `10` a **`1`**: una "bolsa" es una unidad, así que `Cooler.Add(coal, unitsPerBag × qty) == qty`. `GetSuggestedCoalBags()` y `CartCoalBags()` siguen razonando en bolsas — si `unitsPerBag` vuelve a subir, revisar también el texto del header (`GetTotalCoalUnits()` cuenta **unidades**, no bolsas) |
