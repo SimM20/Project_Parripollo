@@ -165,6 +165,30 @@ public class BuildFoodDropZone : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Agrega a la lista los visuales de acompañamientos/toppings que están sobre el plato.
+    /// Los usa PlateDeliveryDraggable para arrastrar el plato completo como un bloque.
+    /// </summary>
+    public static void CollectActivePlateVisuals(List<Transform> into)
+    {
+        if (into == null)
+            return;
+
+        for (int i = 0; i < ActiveZones.Count; i++)
+        {
+            BuildFoodDropZone zone = ActiveZones[i];
+            if (zone == null)
+                continue;
+
+            List<GameObject> visuals = zone.plateSideTopVisuals;
+            for (int j = 0; j < visuals.Count; j++)
+            {
+                if (visuals[j] != null && visuals[j].activeInHierarchy)
+                    into.Add(visuals[j].transform);
+            }
+        }
+    }
+
     public bool SpawnPlateVisual(Sprite sprite)
     {
         if (sprite == null)

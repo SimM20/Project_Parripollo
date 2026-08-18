@@ -10,7 +10,7 @@
 |---|---|
 | Motor | Unity **2022.3.62f3**, URP (2D), Input Manager legacy (`Input.GetKeyDown`) |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`) |
-| Código propio | `Assets/Scripts/` — **110 archivos, ~13.7k líneas** |
+| Código propio | `Assets/Scripts/` — **115 archivos, ~15.2k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina: cocinar cortes, armar platos/sándwiches, entregar a clientes por noche |
 | Persistencia | Solo `init.cfg` (resolución/FPS). **No hay savegame**: el progreso vive en objetos `DontDestroyOnLoad` |
@@ -28,8 +28,8 @@ Assets/Scripts/
 ├── (raíz)      Managers globales, modelo base de items/grilla, utilidades
 ├── Core/       Orquestación de partida + transferencia de items entre vistas
 ├── Grill/      Vista Parrilla: cocción, capas carne/carbón, HUD de hover
-├── Cooler/     Vista Heladera: inventario persistente + visualizadores de stock
-├── Build/      Vista Armado: plato, pan/guarniciones/toppings, undo
+├── Cooler/     Stock persistente (CoolerSystem). Vista Heladera DEPRECADA → StockPanel
+├── Build/      Vista Armado: plato, pan/guarniciones/toppings, undo, entrega por arrastre
 ├── Customers/  Clientes: spawn, paciencia, selección, burbujas de pedido
 ├── Orders/     Modelo y generación de pedidos
 ├── Food/       Catálogo (SO), validación de platos, evaluación económica de cocción
@@ -43,9 +43,9 @@ Assets/Scripts/
 |---|---|---|
 | **raíz** | Singletons de sesión (`UIManager`, `AudioManager`, `PlayerWallet`, `CoalConsumptionTracker`), modelo base drag&drop (`Item`), grilla (`GridSlot`), entidades físicas (`Meat`, `Coal`), buffer de carbón, arranque (`Init`), utilidades de escena | `Item.cs`, `GridSlot.cs`, `Meat.cs`, `Coal.cs`, `PlayerWallet.cs`, `CoalConsumptionTracker.cs`, `SceneManagementUtils.cs` |
 | **Core/** | Bucle de partida e input global (`GameManager`), armado del plato (`BuildStationSystem`), staging de carne entre vistas (`MeatTransferBuffer`), draggables inter-vista, basura | `GameManager.cs` (445), `MeatTransferBuffer.cs` (949), `BuildStationSystem.cs` |
-| **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs` |
+| **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `CoalStackCounter.cs` |
 | **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
-| **Build/** | Zona de drop del plato (`BuildFoodDropZone`), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (670), `BuildUndoHistory.cs`, `BuildUndoActions.cs` |
+| **Build/** | Zona de drop del plato (`BuildFoodDropZone`), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command), **entrega del plato por arrastre** (`PlateDeliveryDraggable`) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (670), `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs` |
 | **Customers/** | Spawn ponderado por noche, tick de paciencia, modo selección de entrega, view + burbuja + recuadro | `CustomerSystem.cs` (673), `Customer.cs`, `CustomerView.cs` |
 | **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada | `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Catálogo estático (`FoodCatalogSO`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
@@ -198,14 +198,26 @@ BuildMeatHolder ──drag──► PlateDropZone
    │  → BuildStationSystem.AddCut(cut, state, sideA, sideB)
    │  Pan/Side/Topping → BuildDraggableFoodItem / ToppingDraggable → SetBread/AddSide/AddTopping + Push(undo)
 
-Entrega  [SPACE en vista Build]
+Entrega — dos caminos hacia el MISMO método, GameManager.TryDeliverToCustomer(Customer)
+
+  A) Teclado  [SPACE en vista Build]
    │  GameManager.TryEnterDeliverySelection → CustomerSystem.BeginDeliverySelection()
-   │  A/D navega clientes · SPACE confirma → GameManager.ConfirmDeliverySelection()
+   │  A/D navega clientes · SPACE confirma → ConfirmDeliverySelection() → TryDeliverToCustomer(SelectedCustomer)
+
+  B) Drag & drop  [arrastrar el plato con el mouse, vista Build]
+   │  PlateDeliveryDraggable.OnMouseDown → agarra el plato COMPLETO como bloque
+   │                                       (visuales de carne + sides/toppings) y guarda sus posiciones
+   │  OnMouseDrag → Physics2D.OverlapPointNonAlloc busca CustomerView bajo el mouse
+   │              → CustomerSystem.SetDeliveryDragHover(view) → CustomerSelectionFrame + burbuja de pedido
+   │  OnMouseUp   → si soltó sobre un cliente: TryDeliverToCustomer(view.Customer)
+   │              → si devuelve false (o soltó al vacío): el plato vuelve a la PlateDropZone
+
+  Lógica compartida (TryDeliverToCustomer, devuelve bool):
    │     1. corte armado == order.PrimaryCut ?
    │     2. DishValidator.ValidateSandwich / ValidatePlatedDish
    │     3. CookingDeliveryEvaluator.Validate → Crudo/Quemado BLOQUEAN (X descarta quemados)
    │     4. CookingDeliveryEvaluator.EvaluateCut por corte → pago + propina
-   │     5. PlayerWallet.Add · CustomerSystem.CompleteCustomer · limpiar plato
+   │     5. PlayerWallet.Add · CustomerSystem.CompleteCustomer · limpiar plato → return true
 ```
 
 ---
@@ -223,12 +235,20 @@ Bucle de input global y árbitro de la entrega. **No** contiene lógica de cocci
 | `[SF] MonoBehaviour meatTransferBuffer, coalTransferBuffer` | ⚠️ Tipados como `MonoBehaviour`: se invocan **solo por `SendMessage`** |
 | `ViewType lastView` | Detecta transiciones de vista |
 | `bool discardContextActive` / `List<int> discardBurnedIndices` | Contexto de descarte con `X`; solo activo tras una entrega bloqueada por quemados |
+| `Customer discardCustomer` | Cliente del intento bloqueado. Necesario porque una entrega **por arrastre** no activa el modo de selección: sin esto, la `X` no sabría contra quién revalidar |
 
 ```csharp
+public CustomerSystem Customers { get; }          // acceso para PlateDeliveryDraggable
+public bool TryDeliverToCustomer(Customer)        // ÚNICO lugar con la lógica de entrega
 public void EndNight()   // desuscribe, tracker.RegisterDayCompleted(), carga "EndScene"
 // privados relevantes: TryToggleGrillLayer, ClearBuildAssembly, CleanAshes,
 //                      TryDiscardBurnedCuts, TryEnterDeliverySelection, ConfirmDeliverySelection
 ```
+`ConfirmDeliverySelection()` es un wrapper de una línea sobre `TryDeliverToCustomer(SelectedCustomer)`:
+teclado y arrastre comparten validaciones, mensajes de `DeliveryFeedbackText`, pago y limpieza del plato.
+El `bool` de retorno es **solo** para el arrastre: `false` = entrega rechazada → devolver el plato a la
+`PlateDropZone`. `TryDiscardBurnedCuts` (`X`) revalida contra `SelectedCustomer` si el modo de selección
+está activo, y contra `discardCustomer` si el intento vino de un arrastre.
 
 #### `ViewManager` — `UI/ViewManager.cs`
 ```csharp
@@ -361,6 +381,36 @@ Dos entradas para `Toggle()`: el `OnMouseDown` del propio botón en la escena y 
 `GameManager.TryToggleGrillLayer()` (**solo en la vista `Grill`**). Ambas pasan por `ShowLayer`,
 así que el icono del botón y `TutorialManager.NotifyGrillLayerChanged` quedan siempre sincronizados.
 
+#### `CoalStackCounter` — `Grill/CoalStackCounter.cs`
+
+Contiene también `CoalStackCounterStyle`. Feedback visual del stack de carbón: etiqueta `TextMeshPro`
+(world-space) con el texto `x{N}` en la esquina **inferior derecha** del sprite de cada `GridSlot`
+de tipo `Coal`.
+
+| Aspecto | Detalle |
+|---|---|
+| Creación | `GrillSystem.Start()` → `SetupCoalStackCounters()` engancha un `CoalStackCounter` a cada slot con `acceptsType == ItemType.Coal` (60 en `GameScene`). No hay setup manual por slot |
+| Anclaje | Hijo del slot. `rectTransform.pivot = (1,0)` + `localPosition` calculada desde `spriteRenderer.sprite.bounds` (esquina `max.x`, `min.y`) + offset configurable. Escala heredada del slot |
+| Umbral | Solo visible con **2 o más** carbones apilados (`MIN_VISIBLE_COUNT = 2`). Con 1 o 0 no se muestra texto |
+| Ocultamiento | También se oculta si la capa activa no es Coal (`GrillLayerToggle.IsItemTypeAllowed`) o si la vista no es Grill (`GrillSystem.SetMeatVisualsVisible` → `SetViewVisible`) |
+| Refresco | `LateUpdate` por slot; solo reasigna texto y `SetActive` cuando el conteo o la visibilidad cambian |
+
+**Configuración** (`GrillSystem` → header *Coal Stack Counter*, serializada en `Assets/Prefabs/[SYSTEMS].prefab`,
+del que las escenas son instancias):
+
+| Campo | Valor por defecto |
+|---|---|
+| `font` | `Assets/Fonts/Bungee-Regular SDF.asset` |
+| `fontSize` | `4` (slot ≈ 0.52 × 0.55 unidades de mundo) |
+| `textColor` | Blanco |
+| `offset` | `(-0.06, 0.06)` — unidades locales hacia adentro desde la esquina inferior derecha |
+| `sortingOrder` | `50` — por encima del sprite de carbón (`sortingOrder = 2`) |
+
+**Gotcha (TMP 3.0.7)**: el `TextMeshPro` se agrega con el GameObject todavía en la raíz y **después** se
+parenta al slot. Los slots pueden estar inactivos al arrancar (la partida abre en la vista Shop); si se
+parenta primero, el `Awake` de TMP no corre, `m_renderer` queda null y asignar `.font` tira
+`NullReferenceException` en `TMPro_Private.cs:526`. Por el mismo motivo el setup va en `Start()` y no en `Awake()`.
+
 ---
 
 ### 3.3 Inventario y transferencia
@@ -468,6 +518,29 @@ Sandwich   TryBuildSandwich(out string reason)
 ProductVariantSO TryResolveVariant()
 ```
 
+#### `PlateDeliveryDraggable` — `Build/PlateDeliveryDraggable.cs`
+
+Entrega del plato **arrastrándolo con el mouse** hasta un cliente. Alternativa al flujo por teclado,
+que queda intacto: ambos terminan en `GameManager.TryDeliverToCustomer`.
+
+```csharp
+public void RefreshCollider()   // re-mide el BoxCollider2D contra el sprite actual
+// resto: OnMouseDown/Drag/Up + helpers estáticos
+```
+
+| Aspecto | Detalle |
+|---|---|
+| Creación | **Cero setup de escena.** `MeatTransferBuffer.ConsumeBuildMeatEntry` lo hace `AddComponent` sobre cada visual de carne que queda en la `PlateDropZone`, justo donde destruye el `BuildMeatHolderDraggableMeat` |
+| Qué se arrastra | El plato **completo como bloque**: todas las instancias de `PlateDeliveryDraggable` + los visuales de sides/toppings que devuelve `BuildFoodDropZone.CollectActivePlateVisuals`. Agarrar cualquier sprite mueve todo |
+| Estado del arrastre | `static`: posiciones y `sortingOrder` de origen de cada visual (hay un solo mouse, no hay arrastres concurrentes). El `sortingOrder` sube `+5000` mientras dura y se restaura al soltar |
+| Hover de cliente | `Physics2D.OverlapPointNonAlloc` sobre un buffer estático de 16 (sin GC por frame) → `GetComponentInParent<CustomerView>()` → `CustomerSystem.SetDeliveryDragHover(view)` |
+| Rechazo | Si `TryDeliverToCustomer` devuelve `false`, o si se soltó fuera de un cliente, cada visual vuelve a su posición guardada en la `PlateDropZone`. El mensaje ya lo muestra `GameManager` vía `DeliveryFeedbackText` |
+| Tutorial | `OnMouseDown` dispara `TutorialManager.NotifyDeliverySelectionBegun()`: es el equivalente por mouse de entrar en modo selección, y sin eso el paso `25.BeginDelivery` quedaría colgado si el jugador usa el mouse |
+| Collider | Se re-mide en `Awake` y cada vez que el pan cambia sprite/escala/rotación del visual (`MeatTransferBuffer.UpdatePlateMeatSprite` y `RestorePlateMeatVisual` llaman a `RefreshCollider()`) |
+
+⚠️ Las salpicaduras de salsa (`SauceSplatter`, creadas por `ToppingDraggable`) **no** siguen al plato
+durante el arrastre: quedan en el mostrador y se limpian con `ToppingDraggable.ClearAllSplatters()` en la entrega.
+
 #### `CookingDeliveryEvaluator` — `Food/CookingDeliveryEvaluator.cs` · **static**
 Núcleo de la economía. Constantes: `ReducedPriceMultiplier = 0.5`, `TipPercentOfPrice = 0.2`, `MinimumPerfectTip = 1`.
 
@@ -524,7 +597,13 @@ void SpawnCustomer(bool ignoreNightLimit = false)
 void SelectCustomer(Customer), SelectAdjacentCustomer(int direction)
 bool BeginDeliverySelection();  void EndDeliverySelection()
 void CompleteCustomer(Customer), ShowSelectedOrderBubble()
+bool IsCustomerActive(Customer)             // sigue esperando (no se fue ni fue atendido)
+void SetDeliveryDragHover(CustomerView)     // resaltado durante el arrastre del plato; null limpia
 ```
+`SetDeliveryDragHover` reusa `CustomerSelectionFrame` + `CustomerHoverBubble` sin tocar
+`SelectedCustomer` ni `IsDeliverySelectionActive`: el arrastre y la selección por teclado conviven.
+Al pasar `null` restaura lo que corresponda al modo teclado. Si el cliente resaltado se va enojado
+a mitad del arrastre, `RemoveCustomer` suelta el recuadro antes de destruir la view.
 Clientes por noche: `min(customersFirstNight + (noche−1) × customersAddedPerNight, maximumCustomersPerNight)`
 (por defecto `20 + 5·(n−1)`, cap `70`; máx. `4` simultáneos).
 `Update` descuenta paciencia y expulsa a los `IsAngry`. Al quedar `spawnedTonight >= target && activeCustomers == 0` → `OnNightEnded`.
@@ -692,17 +771,22 @@ MainMenuScene (build index 0)
 | `CustomerSystem` | Descuenta paciencia y expulsa clientes enojados |
 | `GrillNotificationManager` | Si la vista ≠ `Grill`: reagrupa las carnes por `MeatCutSO` y refresca las burbujas |
 | Corrutinas | `CustomerSystem.SpawnLoop` (cada `spawnIntervalSeconds`, def. `6 s`) |
+| `CoalStackCounter` (×60) | **`LateUpdate`**: cuenta el stack del slot; solo toca texto/`SetActive` si el conteo o la visibilidad cambiaron |
 
 ### 4.4 Controles
 
 | Tecla | Contexto | Acción |
 |---|---|---|
 | `Esc` | Global | Pausa / reanudar |
-
+| `Q` | Grill | Abre / cierra el **StockPanel** (`stockPanelToggleKey`, configurable en `GameManager`) |
+| `W` / `E` | Global | Grill / Build |
+| `←` / `→` | Global | Vista anterior / siguiente (**solo Grill ↔ Build**) |
+| `Space` | Grill | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; ignorado si hay un drag activo) |
 | `R` | Grill | `CleanAshes()` — destruye carbones en `Ceniza` |
 | `R` | mientras se arrastra | Rotar footprint del corte |
 | Click derecho | sobre carne en parrilla | `Meat.Flip()` |
 | `Space` | Build | Entrar a selección de cliente / confirmar entrega |
+| Arrastrar el plato | Build | Entrega por **drag & drop**: soltar sobre un cliente entrega; soltar al vacío o entrega rechazada → el plato vuelve a la `PlateDropZone` |
 | `A` / `D` | Build, seleccionando | Cliente anterior / siguiente |
 | `X` | Build, entrega bloqueada | Descartar cortes quemados y revalidar |
 | `R` | Build, sin seleccionar | Limpiar el plato entero |
@@ -748,8 +832,15 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 8c | `ShopItemCellUI.pendingQty` es estado **local de la celda** y se resetea a 1 tras comprar o rebindear; no sobrevive a un cambio de tab, porque `ShopGridUI.RebuildAll` rebindea todas las celdas |
 | 8d | `ShopTabButtonUI` y `ShopGridUI` tienen `Debug.Log` de diagnóstico (`Awake`, `HandleClick`, `RebuildAll`) — quitarlos antes de release |
 | 9 | `ViewType.Shop` está en el enum pero `ViewManager` no lo maneja — la tienda es una escena aparte |
-
+| 10 | Clases sin uso activo: `ShopCart`, `CoalStock`, `MeatTypes` (enum), `GridTransformGroup` es `[ExecuteAlways]` solo para layout de editor |
 | 11 | Varios archivos tienen **mojibake** por encoding (`carb�n`, `�tem`) en literales y comentarios: `CoalSO.cs`, `CoolerSystem.cs`, `TrashZone.cs`, `HudManager.cs`, `OrderText.cs`, `TutorialStepSO.cs` |
 | 12 | El estado de cocción real vive en los `float sideACookTime/sideBCookTime`; `Meat.state` es solo caché visual derivado por `RefreshState()` |
 | 13 | `GridSlot.Update`, `GrillSystem.UpdateHeatPropagation` y `Meat.Cook` corren **por frame y por slot**: no agregar `Debug.Log` ni allocations ahí |
 | 14 | `CoalSO.unitsPerBag` pasó de `10` a **`1`**: una "bolsa" es una unidad, así que `Cooler.Add(coal, unitsPerBag × qty) == qty`. `GetSuggestedCoalBags()` y `CartCoalBags()` siguen razonando en bolsas — si `unitsPerBag` vuelve a subir, revisar también el texto del header (`GetTotalCoalUnits()` cuenta **unidades**, no bolsas) |
+| 15 | **Cooler View deprecada.** Sus scripts (`CoolerStockVisualizer`, `CoalStockVisualizer`, `CoolerDraggableMeat`, `DraggableCoal`) y sus assets (`Prefabs/CoolerView.prefab`, `StockPrefab.prefab`) siguen en el proyecto pero **ya no se alcanzan**: `Show(Cooler)` redirige a Grill, así que `coolerRoot` queda desactivado desde el primer `Show`. Los cuatro scripts llevan cabecera `DEPRECADO`; la de `DraggableCoal` avisa además que descuenta stock **antes** de validar el buffer y **sin rollback**, por si alguien lo copia como referencia. No borrar sin revisar los overrides de escena |
+| 16 | `GrillView` tiene **escala no uniforme `(0.81, 1, 1)`** como override de escena. Cualquier hijo nuevo que deba verse sin deformar necesita contra-escala (`localScale.x = 1/0.81`). Es lo que hace la instancia de `StockPanel` |
+| 17 | **`TutorialScene` está rota** desde el refactor del cooler: los pasos `2.PrimeraParteCooler`, `9.PasarACooler` y `12.VolverGrillView` usan `ChangeView` hacia/desde `Cooler` y ese evento ya no dispara. Los pasos de arrastre (10/11) sí funcionan porque el drop directo del panel emite las notificaciones existentes. Pendiente de decisión: rehacer esos pasos, saltearlos o sacar la escena del build. Además falta wirear en `TutorialScene` la contra-escala del panel y sus refs (`grillSystem`, `viewManager`, buffers) |
+| 18 | `TutorialOfferController` pone `Time.timeScale = 0` al entrar a `GameScene` hasta que se responde el diálogo. Cualquier animación de UI que deba correr ahí necesita `Time.unscaledDeltaTime` |
+| 19 | La entrega tiene **dos entradas y una sola lógica**: `GameManager.TryDeliverToCustomer(Customer)`. Al tocar validaciones, pagos o mensajes, editar **solo ahí** — `ConfirmDeliverySelection` (SPACE) y `PlateDeliveryDraggable` (mouse) son cáscaras. El `bool` de retorno lo consume el arrastre para decidir si devuelve el plato a la `PlateDropZone`: si se agrega un camino de rechazo nuevo, tiene que devolver `false` o el plato desaparece del mostrador |
+| 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.ConsumeBuildMeatEntry`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la `PlateDropZone`, tiene que agregar el componente o ese plato no se podrá arrastrar |
+| 21 | Los clientes se instancian con `customersParent = null` (raíz de escena), así que **no** los alcanza el toggle de `ViewManager` y sus colliders siguen activos en la vista Build. De eso depende el hover de la entrega por arrastre (`Physics2D.OverlapPointNonAlloc`). Si algún día se cuelgan de un root de vista, se rompe el drag & drop de entrega |

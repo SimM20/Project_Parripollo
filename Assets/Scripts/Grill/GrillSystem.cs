@@ -9,9 +9,30 @@ public class GrillSystem : MonoBehaviour
     public GameObject coalPrefab;
     [Min(0.05f)] public float slotDropRadius = 0.8f;
 
+    [Header("Coal Stack Counter")]
+    [SerializeField] private CoalStackCounterStyle coalStackCounterStyle = new CoalStackCounterStyle();
+
+    private readonly List<CoalStackCounter> coalStackCounters = new List<CoalStackCounter>();
+
     void Update() => UpdateHeatPropagation();
 
     private void Awake() => GridSlot.AssignGridCoordinates(slots);
+
+    // Los contadores se crean en Start: TextMeshPro no admite asignar la fuente hasta que su Awake corrio.
+    private void Start() => SetupCoalStackCounters();
+
+    private void SetupCoalStackCounters()
+    {
+        coalStackCounters.Clear();
+
+        foreach (var slot in slots)
+        {
+            if (slot == null || slot.acceptsType != ItemType.Coal) continue;
+
+            CoalStackCounter counter = CoalStackCounter.Attach(slot, coalStackCounterStyle);
+            if (counter != null) coalStackCounters.Add(counter);
+        }
+    }
 
     private void UpdateHeatPropagation()
     {
@@ -160,6 +181,11 @@ public class GrillSystem : MonoBehaviour
 
     public void SetMeatVisualsVisible(bool isVisible)
     {
+        for (int i = 0; i < coalStackCounters.Count; i++)
+        {
+            if (coalStackCounters[i] != null) coalStackCounters[i].SetViewVisible(isVisible);
+        }
+
         for (int i = 0; i < slots.Count; i++)
         {
             GridSlot slot = slots[i];

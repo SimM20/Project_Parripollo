@@ -45,9 +45,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoolerSystem
   initialStock:
-  - cut: {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
+  - item: {fileID: 0}
     amount: 20
-  - cut: {fileID: 11400000, guid: 6e4b78453eb534d44aabcf530fc12f21, type: 2}
+  - item: {fileID: 0}
     amount: 20
 --- !u!1 &3693624490507164874
 GameObject:
@@ -180,7 +180,14 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   meatPrefab: {fileID: 5369905810012751788, guid: a615eaa2579659841ad7c64a5ca183e5, type: 3}
+  coalPrefab: {fileID: 0}
   slotDropRadius: 0.8
+  coalStackCounterStyle:
+    font: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
+    fontSize: 4
+    textColor: {r: 1, g: 1, b: 1, a: 1}
+    offset: {x: -0.06, y: 0.06}
+    sortingOrder: 50
 --- !u!1 &8917083685848211823
 GameObject:
   m_ObjectHideFlags: 0
@@ -225,6 +232,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebf44d133e96948418ae1d7a5982d4d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CustomerSystem
+  maxSimultaneousCustomers: 4
+  customersFirstNight: 20
+  customersAddedPerNight: 5
+  maximumCustomersPerNight: 70
+  spawnIntervalSeconds: 6
+  autoStartNight: 1
+  slots: []
+  autoFirstSlotPos: {x: -6, y: 3.2, z: 0}
+  autoSlotSpacing: 2.6
+  customersParent: {fileID: 0}
+  customerPrefabs: []
   availableOrderCuts:
-  - {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
-  - {fileID: 11400000, guid: 6e4b78453eb534d44aabcf530fc12f21, type: 2}
+  - cut: {fileID: 0}
+    weight: 1
+  - cut: {fileID: 0}
+    weight: 1
+  availabilityService: {fileID: 0}
+  nightTwoCut: {fileID: 0}
+  nightTwoVariants: []
+  basePatienceSeconds: 30

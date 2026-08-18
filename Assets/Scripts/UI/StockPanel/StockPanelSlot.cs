@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -21,6 +21,7 @@ public class StockPanelSlot : MonoBehaviour
 
     [Header("Drag Ghost")]
     [SerializeField] private int ghostSortingOrder = 6000;
+    [Tooltip("Multiplicador sobre la escala del prefab real que se va a spawnear. 1 = mismo tamano que en la parrilla.")]
     [SerializeField] private Vector3 ghostWorldScale = Vector3.one;
     [SerializeField] private bool rotateGhostVisual = true;
     [SerializeField] private float rotatedPreviewAngleZ = 90f;
@@ -335,8 +336,34 @@ public class StockPanelSlot : MonoBehaviour
             ghostRenderer.sortingLayerID = iconRenderer.sortingLayerID;
 
         ghost.transform.position = worldPoint;
-        ghost.transform.localScale = ghostWorldScale;
+        ghost.transform.localScale = ResolveGhostScale(draggingItem);
         ApplyGhostRotation();
+    }
+
+    /// <summary>
+    /// Toma la escala del prefab que GrillSystem va a instanciar (Coal.prefab 0.35, Meat1.prefab ~0.5)
+    /// y le aplica ghostWorldScale como multiplicador, para que el fantasma se vea del mismo tamano
+    /// que el objeto una vez colocado. Sin esto el sprite crudo se arrastra a escala 1 y queda enorme,
+    /// sobre todo el carbon.
+    /// </summary>
+    private Vector3 ResolveGhostScale(ItemDataSO ghostItem)
+    {
+        GameObject reference = null;
+
+        CoalSO coal = ghostItem as CoalSO;
+        if (coal != null)
+            reference = coal.coalPrefab;
+
+        GrillSystem grill = owner != null ? owner.Grill : null;
+        if (reference == null && grill != null)
+            reference = coal != null ? grill.coalPrefab : grill.meatPrefab;
+
+        Vector3 prefabScale = reference != null ? reference.transform.localScale : Vector3.one;
+
+        return new Vector3(
+            prefabScale.x * ghostWorldScale.x,
+            prefabScale.y * ghostWorldScale.y,
+            1f);
     }
 
     private void ApplyGhostRotation()

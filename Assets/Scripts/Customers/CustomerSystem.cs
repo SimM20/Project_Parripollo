@@ -75,6 +75,7 @@ public class CustomerSystem : MonoBehaviour
     private readonly List<Customer> activeCustomers = new List<Customer>();
     public IReadOnlyList<Customer> ActiveCustomers => activeCustomers;
     private CustomerView[] slotViews;
+    private CustomerView dragHoverView;
 
     private int spawnedTonight;
     private Coroutine spawnRoutine;
@@ -392,6 +393,44 @@ public class CustomerSystem : MonoBehaviour
         }
     }
 
+    /// <summary>True si el cliente sigue esperando (no se fue enojado ni fue atendido).</summary>
+    public bool IsCustomerActive(Customer customer)
+    {
+        return customer != null && activeCustomers.Contains(customer);
+    }
+
+    /// <summary>
+    /// Resalta al cliente que está bajo el mouse mientras se arrastra el plato,
+    /// con el mismo recuadro y burbuja que el modo de selección por teclado.
+    /// Pasar null limpia el resaltado y restaura el estado del modo por teclado.
+    /// </summary>
+    public void SetDeliveryDragHover(CustomerView view)
+    {
+        if (dragHoverView == view) return;
+
+        dragHoverView = view;
+
+        if (view != null && view.Customer != null)
+        {
+            CustomerSelectionFrame.Instance?.ShowOver(view);
+
+            if (view.Customer.order != null)
+            {
+                CustomerHoverBubble.Instance?.Show(
+                    view.Customer.order.ToHoverString(),
+                    view.transform,
+                    view.GetDishSprite());
+            }
+
+            return;
+        }
+
+        RefreshSelectionVisuals();
+
+        if (!IsDeliverySelectionActive)
+            CustomerHoverBubble.Instance?.Hide();
+    }
+
     private void RefreshSelectionVisuals()
     {
         if (slotViews == null) return;
@@ -458,6 +497,14 @@ public class CustomerSystem : MonoBehaviour
     private void RemoveCustomer(Customer customer, string reason)
     {
         if (customer == null) return;
+
+        // El cliente resaltado por el arrastre se va: soltar el recuadro antes de destruir la view.
+        if (dragHoverView != null && dragHoverView.Customer == customer)
+        {
+            dragHoverView = null;
+            CustomerSelectionFrame.Instance?.Hide();
+            CustomerHoverBubble.Instance?.Hide();
+        }
 
         // destruir view
         int slotIndex = customer.slotIndex;
@@ -589,6 +636,7 @@ public class CustomerSystem : MonoBehaviour
         activeCustomers.Clear();
         SelectedCustomer = null;
         currentCustomer = null;
+        dragHoverView = null;
         IsDeliverySelectionActive = false;
         CustomerSelectionFrame.Instance?.Hide();
         CustomerHoverBubble.Instance?.Hide();

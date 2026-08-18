@@ -26,6 +26,12 @@ public class GameManager : MonoBehaviour
     private bool discardContextActive;
     private readonly System.Collections.Generic.List<int> discardBurnedIndices = new System.Collections.Generic.List<int>();
 
+    // Cliente del intento bloqueado: permite revalidar con X cuando la entrega vino de un arrastre
+    // (ahí no hay modo de selección activo y SelectedCustomer no es la referencia correcta).
+    private Customer discardCustomer;
+
+    public CustomerSystem Customers => customerSystem;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -239,6 +245,7 @@ public class GameManager : MonoBehaviour
     private void ClearDiscardContext()
     {
         discardContextActive = false;
+        discardCustomer = null;
         discardBurnedIndices.Clear();
     }
 
@@ -261,6 +268,7 @@ public class GameManager : MonoBehaviour
         }
 
         int discarded = discardBurnedIndices.Count;
+        Customer pendingCustomer = discardCustomer;
         ClearDiscardContext();
         Debug.Log("[Build] Cortes quemados descartados: " + discarded);
 
@@ -273,8 +281,13 @@ public class GameManager : MonoBehaviour
         }
 
         // Revalidar el intento: si sigue habiendo crudos, se bloquea de nuevo con el mensaje actualizado.
-        if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
+        if (customerSystem == null)
+            return;
+
+        if (customerSystem.IsDeliverySelectionActive)
             ConfirmDeliverySelection();
+        else if (customerSystem.IsCustomerActive(pendingCustomer))
+            TryDeliverToCustomer(pendingCustomer);
     }
 
     private void TryEnterDeliverySelection()
@@ -297,20 +310,30 @@ public class GameManager : MonoBehaviour
 
     private void ConfirmDeliverySelection()
     {
-        var customer = customerSystem.SelectedCustomer;
+        TryDeliverToCustomer(customerSystem.SelectedCustomer);
+    }
 
+    /// <summary>
+    /// Entrega el plato armado al cliente indicado. Es el único punto donde vive la lógica
+    /// de entrega: lo usan tanto el flujo por teclado (SPACE + A/D) como el arrastre del
+    /// plato con el mouse (PlateDeliveryDraggable).
+    /// Devuelve true solo si la entrega se concretó y el plato quedó consumido; en cualquier
+    /// rechazo devuelve false (el que arrastra usa eso para devolver el plato a la PlateDropZone).
+    /// </summary>
+    public bool TryDeliverToCustomer(Customer customer)
+    {
         if (customer == null)
         {
             DeliveryFeedbackText.Instance?.Show("No hay un cliente seleccionado.");
             customerSystem.EndDeliverySelection();
-            return;
+            return false;
         }
 
         if (buildStationSystem == null || !buildStationSystem.HasAnyCut)
         {
             DeliveryFeedbackText.Instance?.Show("No hay nada preparado para entregar.");
             customerSystem.EndDeliverySelection();
-            return;
+            return false;
         }
 
         MeatCutSO assembled = buildStationSystem.AssembledCuts[0];
@@ -325,7 +348,7 @@ public class GameManager : MonoBehaviour
 
             customerSystem.EndDeliverySelection();
             ClearDiscardContext();
-            return;
+            return false;
         }
 
         string reason;
@@ -340,7 +363,7 @@ public class GameManager : MonoBehaviour
             DeliveryFeedbackText.Instance?.Show(reason);
             customerSystem.EndDeliverySelection();
             ClearDiscardContext();
-            return;
+            return false;
         }
 
         // ── Validación de cocción: Crudo/Quemado bloquean la entrega completa (atómica) ──
@@ -363,14 +386,16 @@ public class GameManager : MonoBehaviour
             {
                 discardBurnedIndices.AddRange(validation.burnedIndices);
                 discardContextActive = true;
+                discardCustomer = customer;
             }
             else
             {
                 discardContextActive = false;
+                discardCustomer = null;
             }
 
-            // La selección de cliente queda activa: tras descartar con X se revalida el mismo intento.
-            return;
+            // El intento queda pendiente: tras descartar con X se revalida contra el mismo cliente.
+            return false;
         }
 
         // ── Evaluación económica por corte: peor desfase de ambas caras ──
@@ -411,6 +436,8 @@ public class GameManager : MonoBehaviour
         Debug.Log("✔ Pedido entregado desde Build. Pago: " + totalPayment + " | Propinas: " + totalTips);
         AudioManager.Instance.PlayTaskCompleted();
         TutorialManager.NotifyProductDelivered();
+        ClearDiscardContext();
+        return true;
     }
 
     public void EndNight()

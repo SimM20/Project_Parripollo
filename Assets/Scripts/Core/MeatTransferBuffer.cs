@@ -215,6 +215,10 @@ public class MeatTransferBuffer : MonoBehaviour
             BuildMeatHolderDraggableMeat drag = go.GetComponent<BuildMeatHolderDraggableMeat>();
             if (drag != null)
                 Destroy(drag);
+
+            // Ya en el plato: habilita entregarlo arrastrándolo hasta un cliente.
+            if (go.GetComponent<PlateDeliveryDraggable>() == null)
+                go.AddComponent<PlateDeliveryDraggable>();
         }
 
         RefreshVisuals();
@@ -261,6 +265,8 @@ public class MeatTransferBuffer : MonoBehaviour
 
         go.transform.localScale = variantSpriteScale;
         go.transform.localEulerAngles = variantSpriteRotation;
+
+        go.GetComponent<PlateDeliveryDraggable>()?.RefreshCollider();
     }
 
     /// <summary>
@@ -301,6 +307,8 @@ public class MeatTransferBuffer : MonoBehaviour
 
         visual.transform.localScale = scale;
         visual.transform.localEulerAngles = euler;
+
+        visual.GetComponent<PlateDeliveryDraggable>()?.RefreshCollider();
     }
 
     public void SetPlateMeatVisualsVisible(bool visible)
