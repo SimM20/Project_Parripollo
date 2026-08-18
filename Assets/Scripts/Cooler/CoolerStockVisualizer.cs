@@ -2,6 +2,11 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// DEPRECADO: reemplazado por StockPanelController. Apilaba un sprite por unidad de stock
+/// dentro de la Cooler View; el panel nuevo usa una celda por variedad con contador numerico.
+/// La Cooler View ya no es alcanzable, asi que este componente no corre en runtime.
+/// </summary>
 public class CoolerStockVisualizer : MonoBehaviour
 {
     [Header("References")]

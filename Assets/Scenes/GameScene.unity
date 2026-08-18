@@ -3113,6 +3113,14 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+    - target: {fileID: 3460233692979752609, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.2345679
+      objectReference: {fileID: 0}
+    - target: {fileID: 3460233692979752609, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -8.148148
+      objectReference: {fileID: 0}
     - target: {fileID: 3461008178173799605, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.5728091
@@ -4477,6 +4485,22 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: -0.7349999
       objectReference: {fileID: 0}
+    - target: {fileID: 6249678548236163508, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: grillSystem
+      value: 
+      objectReference: {fileID: 1141140570}
+    - target: {fileID: 6249678548236163508, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: viewManager
+      value: 
+      objectReference: {fileID: 1648097971}
+    - target: {fileID: 6249678548236163508, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: coalTransferBuffer
+      value: 
+      objectReference: {fileID: 3838453}
+    - target: {fileID: 6249678548236163508, guid: 9491b763193b0954487dedc1580658d3, type: 3}
+      propertyPath: meatTransferBuffer
+      value: 
+      objectReference: {fileID: 1918444612}
     - target: {fileID: 6280517287102490415, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_Color.a
       value: 0

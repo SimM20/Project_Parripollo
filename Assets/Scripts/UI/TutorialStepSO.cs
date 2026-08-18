@@ -49,10 +49,10 @@ public class TutorialStepSO : ScriptableObject
     public MeatStates requiredMeatState;
     public bool checkCustomerOrderState;
     public bool checkBothSides;
-    [Tooltip("Si está activo, un estado más cocido que el pedido también cuenta como alcanzado.")]
+    [Tooltip("Si estï¿½ activo, un estado mï¿½s cocido que el pedido tambiï¿½n cuenta como alcanzado.")]
     public bool acceptHigherDonenessAsReached;
     [Min(1)]
-    [Tooltip("Cantidad de niveles menos cocidos que también se aceptan. Usar 1 para permitir un nivel menos.")]
+    [Tooltip("Cantidad de niveles menos cocidos que tambiï¿½n se aceptan. Usar 1 para permitir un nivel menos.")]
     public int allowedLowerDonenessSteps = 4;
     [Header("Cooking Control")]
     public bool pauseCooking; // If true, pauses cooking on the grill while this step is active

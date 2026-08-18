@@ -2,6 +2,11 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// DEPRECADO: reemplazado por StockPanelController. Mostraba el carbon como dos columnas
+/// de sprites apilados (minIndex/maxIndex) dentro de la Cooler View; el panel nuevo usa
+/// una sola celda con contador. La Cooler View ya no es alcanzable.
+/// </summary>
 public class CoalStockVisualizer : MonoBehaviour
 {
     [Header("References")]

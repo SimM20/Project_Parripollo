@@ -1,6 +1,12 @@
 using System.Reflection;
 using UnityEngine;
 
+/// <summary>
+/// DEPRECADO: reemplazado por StockPanelSlot, que arrastra desde el panel de stock
+/// directo a la parrilla sin pasar por el MeatTransferBuffer. La Cooler View ya no es
+/// alcanzable (ViewManager.Show redirige a Grill), asi que este componente no se agrega mas.
+/// Se conserva hasta limpiar los assets de la Cooler View.
+/// </summary>
 public class CoolerDraggableMeat : MonoBehaviour
 {
     private MeatCutSO cut;
