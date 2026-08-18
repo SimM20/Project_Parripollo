@@ -24,8 +24,9 @@ public class ShopTabButtonUI : MonoBehaviour
     {
         button = GetComponent<Button>();
         button.onClick.AddListener(HandleClick);
+        Debug.Log($"[ShopTabButtonUI] Awake en {gameObject.name}, tab={tab}, button.interactable={button.interactable}");
     }
-
+    
     void OnDestroy()
     {
         if (button != null) button.onClick.RemoveListener(HandleClick);
@@ -41,6 +42,7 @@ public class ShopTabButtonUI : MonoBehaviour
 
     private void HandleClick()
     {
+        Debug.Log($"[ShopTabButtonUI] Click en tab: {tab}, GameObject: {gameObject.name}");
         OnTabClicked?.Invoke(tab);
     }
 }

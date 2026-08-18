@@ -353,6 +353,22 @@ public class ShopSystem : MonoBehaviour
         OnPurchaseResult?.Invoke(true, message);
         return true;
     }
+    
+    /// <summary>
+    /// Suma todas las unidades de carbón en el cooler, sin importar el tipo.
+    /// </summary>
+    public int GetTotalCoalUnits()
+    {
+        if (Cooler == null || catalog == null) return 0;
+
+        int total = 0;
+        foreach (var entry in Cooler.EnumerateStock())
+        {
+            if (entry.Key is CoalSO)
+                total += entry.Value;
+        }
+        return total;
+    }
 
     public bool TryBuyToppingNow(ToppingSO topping, int qty, out string message)
     {
