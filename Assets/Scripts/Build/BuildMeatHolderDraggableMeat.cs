@@ -37,6 +37,9 @@ public class BuildMeatHolderDraggableMeat : MonoBehaviour
         if (cut == null || buffer == null)
             return;
 
+        if (!TutorialManager.CheckBuildAssemblyAllowed())
+            return;
+
         startPosition = transform.position;
         startParent = transform.parent;
 

@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
-  m_Name: 1.IntroStep
+  m_Name: 15.CarneInfo
   m_EditorClassIdentifier: 
   instructionText: ""
-  panelPrefab: {fileID: 2322837393960651236, guid: 6d3731ee396e0824fbc8f6d80f1522f0, type: 3}
+  panelPrefab: {fileID: 2322837393960651236, guid: d7dc50f7645cd9b49a10cc629f338afc, type: 3}
   conditionType: 1
   requiredView: 0
   requiredMeatCut: {fileID: 0}
@@ -24,5 +24,5 @@ MonoBehaviour:
   checkBothSides: 0
   acceptHigherDonenessAsReached: 0
   allowedLowerDonenessSteps: 4
-  pauseCooking: 0
+  pauseCooking: 1
   startAction: 0

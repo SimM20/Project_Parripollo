@@ -60,7 +60,14 @@ public class GrillLayerToggle : MonoBehaviour
 
     public void Toggle()
     {
-        ShowLayer(CurrentLayer == GrillLayer.Meat ? GrillLayer.Coal : GrillLayer.Meat);
+        GrillLayer nextLayer = CurrentLayer == GrillLayer.Meat ? GrillLayer.Coal : GrillLayer.Meat;
+        if (!TutorialManager.CheckGrillLayerToggleAllowed(nextLayer))
+        {
+            Debug.Log($"[GrillLayerToggle] Cambio de capa a {nextLayer} bloqueado por el tutorial.");
+            return;
+        }
+
+        ShowLayer(nextLayer);
         ToggleSprite();
     }
 

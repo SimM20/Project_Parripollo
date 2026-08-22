@@ -33,7 +33,15 @@ public class GridSlot : MonoBehaviour
 
     void Update()
     {
-        foreach (var coal in stackedCoals) coal.Burn();
+        if (stackedCoals != null)
+        {
+            for (int i = 0; i < stackedCoals.Count; i++)
+            {
+                Coal coal = stackedCoals[i];
+                if (coal != null)
+                    coal.Burn();
+            }
+        }
 
         CalculateInternalHeat();
 

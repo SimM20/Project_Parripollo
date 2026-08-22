@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -138,6 +138,12 @@ public class StockPanelSlot : MonoBehaviour
 
         if (CoolerSystem.Instance == null || CoolerSystem.Instance.GetCount(item) <= 0)
             return;
+
+        if (!TutorialManager.CheckStockDragAllowed(item))
+        {
+            Debug.Log($"[StockPanelSlot] Arrastre de {item.itemName} bloqueado por el tutorial.");
+            return;
+        }
 
         draggingItem = item;
         isDragging = true;

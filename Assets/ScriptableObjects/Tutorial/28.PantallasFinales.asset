@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
-  m_Name: 1.IntroStep
+  m_Name: 28.PantallasFinales
   m_EditorClassIdentifier: 
   instructionText: ""
-  panelPrefab: {fileID: 2322837393960651236, guid: 6d3731ee396e0824fbc8f6d80f1522f0, type: 3}
+  panelPrefab: {fileID: 2322837393960651236, guid: 0f152cefb9362504788b98e91f60da89, type: 3}
   conditionType: 1
   requiredView: 0
   requiredMeatCut: {fileID: 0}

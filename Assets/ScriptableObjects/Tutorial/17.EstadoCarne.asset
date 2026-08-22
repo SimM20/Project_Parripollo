@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
-  m_Name: 1.IntroStep
+  m_Name: 17.EstadoCarne
   m_EditorClassIdentifier: 
-  instructionText: ""
-  panelPrefab: {fileID: 2322837393960651236, guid: 6d3731ee396e0824fbc8f6d80f1522f0, type: 3}
-  conditionType: 1
+  instructionText: 
+  panelPrefab: {fileID: 2322837393960651236, guid: e3ce1fb2e516d11498b1680dd8ddc579, type: 3}
+  conditionType: 9
   requiredView: 0
-  requiredMeatCut: {fileID: 0}
+  requiredMeatCut: {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
   requiredCoal: {fileID: 0}
   requiredGrillLayer: 0
-  requiredMeatState: 0
-  checkCustomerOrderState: 0
-  checkBothSides: 0
-  acceptHigherDonenessAsReached: 0
-  allowedLowerDonenessSteps: 4
+  requiredMeatState: 5
+  checkCustomerOrderState: 1
+  checkBothSides: 1
+  acceptHigherDonenessAsReached: 1
+  allowedLowerDonenessSteps: 1
   pauseCooking: 0
   startAction: 0

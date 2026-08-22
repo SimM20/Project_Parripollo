@@ -15,13 +15,20 @@ public enum TutorialConditionType
     DragMeatToMeatHolder,
     BeginDeliverySelection,
     DeliverProduct,
-    DragMeatToBuildZone
+    DragMeatToBuildZone,
+    OpenStockPanel,
+    ShowShop
 }
 
 public enum TutorialStartAction
 {
     None,
-    SpawnCustomer
+    SpawnCustomer,
+    ShowShop,
+    SetShopTabCoal,
+    SetShopTabMeat,
+    SetShopTabUpgrades,
+    SetShopTabToppings
 }
 
 [CreateAssetMenu(fileName = "NewTutorialStep", menuName = "Tutorial/Tutorial Step")]

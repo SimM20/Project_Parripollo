@@ -93,7 +93,10 @@ public class GameManager : MonoBehaviour
         if (viewManager != null)
         {
             if (Input.GetKeyDown(stockPanelToggleKey) && viewManager.CurrentView == ViewType.Grill)
-                StockPanelController.Instance?.Toggle();
+            {
+                if (StockPanelController.Instance != null && (StockPanelController.Instance.IsOpen || TutorialManager.CheckStockPanelOpenAllowed()))
+                    StockPanelController.Instance.Toggle();
+            }
 
             if (Input.GetKeyDown(KeyCode.W)) viewManager.Show(ViewType.Grill);
             if (Input.GetKeyDown(KeyCode.E)) viewManager.Show(ViewType.Build);
@@ -119,7 +122,7 @@ public class GameManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space))
                 TryToggleGrillLayer();
 
-            if (Input.GetKeyDown(KeyCode.R))
+            if (Input.GetKeyDown(KeyCode.R) && TutorialManager.CheckCleanAshesAllowed())
                 CleanAshes();
 
             if (lastView != ViewType.Grill)
@@ -155,9 +158,15 @@ public class GameManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
-                    ConfirmDeliverySelection();
+                {
+                    if (TutorialManager.CheckDeliveryConfirmAllowed())
+                        ConfirmDeliverySelection();
+                }
                 else
-                    TryEnterDeliverySelection();
+                {
+                    if (TutorialManager.CheckDeliveryStartAllowed())
+                        TryEnterDeliverySelection();
+                }
             }
 
             bool selectingCustomer = customerSystem != null && customerSystem.IsDeliverySelectionActive;
@@ -177,7 +186,7 @@ public class GameManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.X))
                 TryDiscardBurnedCuts();
 
-            if (!selectingCustomer && Input.GetKeyDown(KeyCode.R))
+            if (!selectingCustomer && Input.GetKeyDown(KeyCode.R) && TutorialManager.CheckClearBuildPlateAllowed())
             {
                 ClearBuildAssembly();
                 meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);

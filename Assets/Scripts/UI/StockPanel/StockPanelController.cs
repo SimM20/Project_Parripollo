@@ -280,8 +280,15 @@ public class StockPanelController : MonoBehaviour
     /// <summary>Despliega el panel deslizándolo hasta openLocalX.</summary>
     public void Open()
     {
+        if (!TutorialManager.CheckStockPanelOpenAllowed())
+        {
+            Debug.Log("[StockPanelController] Apertura de stock panel bloqueada por el tutorial.");
+            return;
+        }
+
         IsOpen = true;
         StartSlide(openLocalX, false);
+        TutorialManager.NotifyStockPanelOpened();
     }
 
     /// <summary>

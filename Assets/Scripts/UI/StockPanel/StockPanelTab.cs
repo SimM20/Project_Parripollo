@@ -24,6 +24,9 @@ public class StockPanelTab : MonoBehaviour
         if (controller == null)
             return;
 
+        if (!controller.IsOpen && !TutorialManager.CheckStockPanelOpenAllowed())
+            return;
+
         controller.Toggle();
     }
 

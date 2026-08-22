@@ -220,6 +220,9 @@ public class Meat : Item
 
     private bool TrySendToBuildBuffer(Vector3 dropWorldPoint)
     {
+        if (!TutorialManager.CheckMeatDragToBuildAllowed())
+            return false;
+
         MeatTransferBuffer transferBuffer = FindFirstObjectByType<MeatTransferBuffer>();
         if (transferBuffer == null) return false;
         return transferBuffer.TryQueueFromGrillToBuild(this, dropWorldPoint);

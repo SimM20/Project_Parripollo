@@ -97,8 +97,9 @@ public class TutorialManager : MonoBehaviour
             viewManager.OnViewChanged += OnViewChanged;
         }
 
-        // We only run the tutorial if we are in the TutorialScene!
-        if (SceneManagementUtils.GetCurrentName() == "TutorialScene")
+        // We only run the tutorial if we are in the TutorialScene or ShopTutorial!
+        string currentScene = SceneManagementUtils.GetCurrentName();
+        if (currentScene == "TutorialScene" || currentScene == "ShopTutorial")
         {
             StartTutorial();
         }
@@ -248,6 +249,10 @@ public class TutorialManager : MonoBehaviour
         }
     }
 
+    public bool IsTutorialActive => isTutorialActive;
+    public int CurrentStepIndex => currentStepIndex;
+    public TutorialStepSO CurrentStep => (isTutorialActive && currentStepIndex >= 0 && currentStepIndex < tutorialSteps.Count) ? tutorialSteps[currentStepIndex] : null;
+
     private void ExecuteStartAction(TutorialStartAction action)
     {
         switch (action)
@@ -260,6 +265,49 @@ public class TutorialManager : MonoBehaviour
 
                 spawnCustomerRoutine = StartCoroutine(SpawnTutorialCustomerWhenReady());
                 break;
+
+            case TutorialStartAction.ShowShop:
+                SceneManagementUtils.LoadSceneByName("ShopTutorial");
+                break;
+
+            case TutorialStartAction.SetShopTabCoal:
+                SetShopTab(ShopTabType.Coal);
+                break;
+
+            case TutorialStartAction.SetShopTabMeat:
+                SetShopTab(ShopTabType.Meat);
+                break;
+
+            case TutorialStartAction.SetShopTabUpgrades:
+                SetShopTab(ShopTabType.Upgrades);
+                break;
+
+            case TutorialStartAction.SetShopTabToppings:
+                SetShopTab(ShopTabType.Toppings);
+                break;
+        }
+    }
+
+    private void SetShopTab(ShopTabType tab)
+    {
+        ShopSystem shop = FindFirstObjectByType<ShopSystem>();
+        if (shop != null)
+        {
+            shop.SetTab(tab);
+        }
+        else
+        {
+            StartCoroutine(SetShopTabWhenReady(tab));
+        }
+    }
+
+    private IEnumerator SetShopTabWhenReady(ShopTabType tab)
+    {
+        yield return null;
+        ShopSystem shop = FindFirstObjectByType<ShopSystem>();
+        if (shop != null)
+        {
+            shop.SetTab(tab);
         }
     }
 
@@ -315,7 +363,8 @@ public class TutorialManager : MonoBehaviour
             return;
 
         TutorialStepSO step = tutorialSteps[currentStepIndex];
-        if (step.conditionType == TutorialConditionType.ChangeView && newView == step.requiredView)
+        if ((step.conditionType == TutorialConditionType.ChangeView && newView == step.requiredView) ||
+            (step.conditionType == TutorialConditionType.ShowShop && newView == ViewType.Shop))
         {
             ShowStep(currentStepIndex + 1);
         }
@@ -336,7 +385,173 @@ public class TutorialManager : MonoBehaviour
             && cut == Instance.chorizoTutorialItem;
     }
 
+    // ── Gating / Restriction Checks ─────────────────────────────────────
+    public bool IsViewChangeAllowed(ViewType targetView)
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+
+        if (step.conditionType == TutorialConditionType.ChangeView)
+            return step.requiredView == targetView;
+
+        if (step.conditionType == TutorialConditionType.ShowShop)
+            return targetView == ViewType.Shop;
+
+        return false;
+    }
+
+    public bool IsStockPanelOpenAllowed()
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+
+        return step.conditionType == TutorialConditionType.OpenStockPanel ||
+               step.conditionType == TutorialConditionType.DragMeatToGrillSlots ||
+               step.conditionType == TutorialConditionType.DragCoalToGrillSlots ||
+               step.conditionType == TutorialConditionType.DragMeatToGrill ||
+               step.conditionType == TutorialConditionType.DragCoalToGrill ||
+               step.conditionType == TutorialConditionType.MeatReachesDoneness;
+    }
+
+    public bool IsStockDragAllowed(ItemDataSO item)
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+        if (item == null) return false;
+
+        if (item is MeatCutSO cut)
+        {
+            if (step.conditionType == TutorialConditionType.DragMeatToGrillSlots ||
+                step.conditionType == TutorialConditionType.DragMeatToGrill ||
+                step.conditionType == TutorialConditionType.DragMeatToMeatHolder ||
+                step.conditionType == TutorialConditionType.MeatReachesDoneness)
+            {
+                return step.requiredMeatCut == null || step.requiredMeatCut == cut;
+            }
+            return false;
+        }
+
+        if (item is CoalSO coal)
+        {
+            if (step.conditionType == TutorialConditionType.DragCoalToGrillSlots ||
+                step.conditionType == TutorialConditionType.DragCoalToGrill ||
+                step.conditionType == TutorialConditionType.MeatReachesDoneness)
+            {
+                return step.requiredCoal == null || step.requiredCoal == coal;
+            }
+            return false;
+        }
+
+        return false;
+    }
+
+    public bool IsGrillLayerToggleAllowed(GrillLayerToggle.GrillLayer targetLayer)
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+
+        if (step.conditionType == TutorialConditionType.ToggleGrillLayer)
+            return step.requiredGrillLayer == targetLayer;
+
+        if (step.conditionType == TutorialConditionType.MeatReachesDoneness)
+            return true;
+
+        return false;
+    }
+
+    public bool IsMeatFlipAllowed()
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+
+        return step.conditionType == TutorialConditionType.FlipMeat ||
+               step.conditionType == TutorialConditionType.MeatReachesDoneness;
+    }
+
+    public bool IsMeatDragToBuildAllowed()
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+
+        return step.conditionType == TutorialConditionType.DragMeatToBuild;
+    }
+
+    public bool IsBuildAssemblyAllowed()
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+
+        return step.conditionType == TutorialConditionType.DragMeatToBuildZone;
+    }
+
+    public bool IsDeliveryStartAllowed()
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+
+        return step.conditionType == TutorialConditionType.BeginDeliverySelection;
+    }
+
+    public bool IsDeliveryConfirmAllowed()
+    {
+        if (!isTutorialActive) return true;
+        TutorialStepSO step = CurrentStep;
+        if (step == null) return true;
+
+        return step.conditionType == TutorialConditionType.DeliverProduct;
+    }
+
+    public bool IsCleanAshesAllowed()
+    {
+        if (!isTutorialActive) return true;
+        return false;
+    }
+
+    public bool IsClearBuildPlateAllowed()
+    {
+        if (!isTutorialActive) return true;
+        return false;
+    }
+
+    public static bool CheckViewChangeAllowed(ViewType targetView) => Instance == null || Instance.IsViewChangeAllowed(targetView);
+    public static bool CheckStockPanelOpenAllowed() => Instance == null || Instance.IsStockPanelOpenAllowed();
+    public static bool CheckStockDragAllowed(ItemDataSO item) => Instance == null || Instance.IsStockDragAllowed(item);
+    public static bool CheckGrillLayerToggleAllowed(GrillLayerToggle.GrillLayer targetLayer) => Instance == null || Instance.IsGrillLayerToggleAllowed(targetLayer);
+    public static bool CheckMeatFlipAllowed() => Instance == null || Instance.IsMeatFlipAllowed();
+    public static bool CheckMeatDragToBuildAllowed() => Instance == null || Instance.IsMeatDragToBuildAllowed();
+    public static bool CheckBuildAssemblyAllowed() => Instance == null || Instance.IsBuildAssemblyAllowed();
+    public static bool CheckDeliveryStartAllowed() => Instance == null || Instance.IsDeliveryStartAllowed();
+    public static bool CheckDeliveryConfirmAllowed() => Instance == null || Instance.IsDeliveryConfirmAllowed();
+    public static bool CheckCleanAshesAllowed() => Instance == null || Instance.IsCleanAshesAllowed();
+    public static bool CheckClearBuildPlateAllowed() => Instance == null || Instance.IsClearBuildPlateAllowed();
+
     // ── Static Notifications ───────────────────────────────────────────
+    public static void NotifyStockPanelOpened()
+    {
+        if (Instance != null) Instance.OnStockPanelOpened();
+    }
+
+    private void OnStockPanelOpened()
+    {
+        if (!isTutorialActive || currentStepIndex < 0 || currentStepIndex >= tutorialSteps.Count)
+            return;
+
+        TutorialStepSO step = tutorialSteps[currentStepIndex];
+        if (step != null && step.conditionType == TutorialConditionType.OpenStockPanel)
+        {
+            Debug.Log("[TutorialManager] OpenStockPanel condition met.");
+            AdvanceStep();
+        }
+    }
+
     public static void NotifyMeatDraggedToGrill(MeatCutSO cut)
     {
         if (Instance != null) Instance.OnMeatDraggedToGrill(cut);
@@ -566,30 +781,39 @@ public class TutorialManager : MonoBehaviour
 
         if (step.checkBothSides)
         {
-            bool sideAReached = HasReachedRequiredDoneness(
-     meat.SideAState,
-     targetState,
-     step.acceptHigherDonenessAsReached,
-     step.allowedLowerDonenessSteps
- );
+            // Ambas caras deben estar cocinadas en un punto válido (nunca crudo ni quemado)
+            if (meat.SideAState == MeatStates.Crudo || meat.SideBState == MeatStates.Crudo)
+                return;
 
+            if (meat.SideAState == MeatStates.Quemado || meat.SideBState == MeatStates.Quemado)
+                return;
+
+            bool sideAReached = HasReachedRequiredDoneness(
+                meat.SideAState,
+                targetState,
+                step.acceptHigherDonenessAsReached,
+                step.allowedLowerDonenessSteps
+            );
 
             bool sideBReached = HasReachedRequiredDoneness(
-     meat.SideBState,
-     targetState,
-     step.acceptHigherDonenessAsReached,
-     step.allowedLowerDonenessSteps
-             );
+                meat.SideBState,
+                targetState,
+                step.acceptHigherDonenessAsReached,
+                step.allowedLowerDonenessSteps
+            );
 
             conditionMet = sideAReached && sideBReached;
         }
         else
         {
+            if (meat.ActiveSideState == MeatStates.Crudo || meat.ActiveSideState == MeatStates.Quemado)
+                return;
+
             conditionMet = HasReachedRequiredDoneness(
-    meat.ActiveSideState,
-    targetState,
-    step.acceptHigherDonenessAsReached,
-    step.allowedLowerDonenessSteps
+                meat.ActiveSideState,
+                targetState,
+                step.acceptHigherDonenessAsReached,
+                step.allowedLowerDonenessSteps
             );
         }
 
@@ -611,12 +835,17 @@ public class TutorialManager : MonoBehaviour
 
         AdvanceStep();
     }
+
     private bool HasReachedRequiredDoneness(
-     MeatStates currentState,
-     MeatStates targetState,
-     bool acceptHigherState,
-     int allowedLowerSteps)
+        MeatStates currentState,
+        MeatStates targetState,
+        bool acceptHigherState,
+        int allowedLowerSteps)
     {
+        // Ni Crudo ni Quemado son estados válidos alcanzados para la entrega
+        if (currentState == MeatStates.Crudo || currentState == MeatStates.Quemado)
+            return false;
+
         int currentValue = (int)currentState;
         int targetValue = (int)targetState;
 
@@ -624,11 +853,11 @@ public class TutorialManager : MonoBehaviour
         if (currentValue == targetValue)
             return true;
 
-        // Más cocido que el pedido.
+        // Más cocido que el pedido (siempre que acceptHigherState sea true y no esté quemado).
         if (currentValue > targetValue)
-            return acceptHigherState;
+            return acceptHigherState && currentState != MeatStates.Quemado;
 
-        // Menos cocido que el pedido, pero dentro de la tolerancia.
+        // Menos cocido que el pedido, pero dentro de la tolerancia (y nunca Crudo).
         int difference = targetValue - currentValue;
 
         return difference <= Mathf.Max(0, allowedLowerSteps);

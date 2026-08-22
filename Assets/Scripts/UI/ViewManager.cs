@@ -6,12 +6,33 @@ public class ViewManager : MonoBehaviour
     [SerializeField] private GameObject grillRoot;
     [SerializeField] private GameObject coolerRoot;
     [SerializeField] private GameObject buildRoot;
+    [SerializeField] private GameObject shopRoot;
 
     [Header("State")]
     [SerializeField] private ViewType startView = ViewType.Grill;
 
     public ViewType CurrentView { get; private set; }
     public event System.Action<ViewType> OnViewChanged;
+
+    void Awake()
+    {
+        if (shopRoot == null)
+        {
+            GameObject sr = GameObject.Find("ShopRoot");
+            if (sr != null)
+                shopRoot = sr;
+            else
+            {
+                ShopSystem shop = FindFirstObjectByType<ShopSystem>(FindObjectsInactive.Include);
+                if (shop != null && shop.transform != null)
+                {
+                    Transform t = shop.transform.Find("ShopRoot");
+                    if (t != null)
+                        shopRoot = t.gameObject;
+                }
+            }
+        }
+    }
 
     void Start() => Show(startView);
 
@@ -35,6 +56,12 @@ public class ViewManager : MonoBehaviour
             view = ViewType.Grill;
         }
 
+        if (!TutorialManager.CheckViewChangeAllowed(view))
+        {
+            Debug.Log($"[ViewManager] Cambio de vista a {view} bloqueado por el tutorial.");
+            return;
+        }
+
         ViewType oldView = CurrentView;
         CurrentView = view;
 
@@ -46,6 +73,14 @@ public class ViewManager : MonoBehaviour
 
         if (buildRoot != null)
             buildRoot.SetActive(view == ViewType.Build);
+
+        if (shopRoot != null)
+            shopRoot.SetActive(view == ViewType.Shop);
+        else if (view == ViewType.Shop)
+        {
+            GameObject sr = GameObject.Find("ShopRoot");
+            if (sr != null) sr.SetActive(true);
+        }
         
         if (oldView != view)
         {

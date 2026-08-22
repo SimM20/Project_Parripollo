@@ -117,6 +117,13 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
         SetHoveredView(null);
 
+        if (!TutorialManager.CheckDeliveryConfirmAllowed())
+        {
+            RestorePositions();
+            DraggedVisuals.Clear();
+            return;
+        }
+
         bool delivered = dropView != null
             && dropView.Customer != null
             && GameManager.Instance != null
@@ -132,6 +139,9 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
     private void BeginDrag()
     {
+        if (!TutorialManager.CheckDeliveryConfirmAllowed() && !TutorialManager.CheckDeliveryStartAllowed())
+            return;
+
         DraggedVisuals.Clear();
         grabWorldPoint = GetMouseWorldPos();
 

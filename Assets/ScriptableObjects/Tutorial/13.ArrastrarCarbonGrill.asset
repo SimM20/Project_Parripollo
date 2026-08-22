@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
-  m_Name: 1.IntroStep
+  m_Name: 13.ArrastrarCarbonGrill
   m_EditorClassIdentifier: 
   instructionText: ""
-  panelPrefab: {fileID: 2322837393960651236, guid: 6d3731ee396e0824fbc8f6d80f1522f0, type: 3}
-  conditionType: 1
+  panelPrefab: {fileID: 2322837393960651236, guid: 11487548ade044b48b81deb14ea84bac, type: 3}
+  conditionType: 7
   requiredView: 0
   requiredMeatCut: {fileID: 0}
-  requiredCoal: {fileID: 0}
+  requiredCoal: {fileID: 11400000, guid: 9eaa56d6afb63b140989ce44c6b336c1, type: 2}
   requiredGrillLayer: 0
   requiredMeatState: 0
   checkCustomerOrderState: 0

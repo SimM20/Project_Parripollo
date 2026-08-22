@@ -36,14 +36,23 @@ public class GrillSystem : MonoBehaviour
 
     private void UpdateHeatPropagation()
     {
-        foreach (var slot in slots) slot.ResetReceivedHeat();
+        if (slots == null) return;
 
-        foreach (var source in slots)
+        for (int i = 0; i < slots.Count; i++)
         {
+            GridSlot slot = slots[i];
+            if (slot != null)
+                slot.ResetReceivedHeat();
+        }
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            GridSlot source = slots[i];
             if (source == null || source.internalHeat <= 0) continue;
 
-            foreach (var target in slots)
+            for (int j = 0; j < slots.Count; j++)
             {
+                GridSlot target = slots[j];
                 if (target == null || source == target) continue;
 
                 int diffX = Mathf.Abs(source.gridX - target.gridX);
