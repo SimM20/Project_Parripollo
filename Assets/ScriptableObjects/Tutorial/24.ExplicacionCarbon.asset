@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
   m_Name: 24.ExplicacionCarbon
   m_EditorClassIdentifier: 
-  instructionText: "En la tienda podrás comprar bolsas de carbón para abastecer tu parrilla cada noche."
-  panelPrefab: {fileID: 2322837393960651236, guid: 40968633076d2ad49acb58a2e451109b, type: 3}
+  instructionText: 
+  panelPrefab: {fileID: 2322837393960651236, guid: e2d0d60eb1b315f44aac021beabfd24c, type: 3}
   conditionType: 1
   requiredView: 0
   requiredMeatCut: {fileID: 0}

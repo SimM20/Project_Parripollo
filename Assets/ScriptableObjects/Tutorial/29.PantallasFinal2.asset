@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 45256ef8e5be80c41bbb63a8e0ba664d, type: 3}
-  m_Name: 27.ExplicacionSalsas
+  m_Name: 29.PantallasFinal2
   m_EditorClassIdentifier: 
   instructionText: 
-  panelPrefab: {fileID: 2322837393960651236, guid: 27f3d72ff3c299449adec80d487ebafa, type: 3}
+  panelPrefab: {fileID: 2322837393960651236, guid: 4b105865299adb6449cd78d5467ba7bc, type: 3}
   conditionType: 1
   requiredView: 0
   requiredMeatCut: {fileID: 0}
@@ -25,4 +25,4 @@ MonoBehaviour:
   acceptHigherDonenessAsReached: 0
   allowedLowerDonenessSteps: 4
   pauseCooking: 0
-  startAction: 6
+  startAction: 0
