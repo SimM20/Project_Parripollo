@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -23,6 +24,17 @@ public class Meat : Item
     [Header("Sound")]
     [SerializeField] protected AudioClip hardSound;
     [SerializeField] protected AudioClip softSound;
+
+    [Header("Flip Animation")]
+    [SerializeField] private float flipDuration = 0.45f;
+    [SerializeField] private float flipLiftHeight = 0.6f;
+    [SerializeField] private int flipSortingOrderBoost = 50;
+    [SerializeField] private AudioClip flipSound;
+
+    private bool isFlipping = false;
+    private Coroutine flipCoroutine;
+    private Vector3 baseLocalScale = Vector3.one;
+    private int baseSortingOrder = 0;
 
     [Header("Grid Rotation")]
     [SerializeField] private bool rotatePreviewVisual = true;
@@ -52,6 +64,7 @@ public class Meat : Item
     public bool IsOnGrill => occupiedSlots.Count > 0 && !isHeldByMouse;
     public bool IsSideAActive => isSideA;
     public bool IsGridRotated => isGridRotated;
+    public bool IsFlipping => isFlipping;
 
     protected virtual void Awake()
     {
@@ -59,6 +72,10 @@ public class Meat : Item
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
 
+        if (spriteRenderer != null)
+            baseSortingOrder = spriteRenderer.sortingOrder;
+
+        baseLocalScale = transform.localScale;
         ownCollider = GetComponent<Collider2D>();
 
         ApplyCutVisual();
@@ -236,6 +253,9 @@ public class Meat : Item
 
     protected override void OnPickedUp()
     {
+        if (isFlipping)
+            CancelFlipAnimation();
+
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();
 
@@ -276,10 +296,140 @@ public class Meat : Item
 
     public void Flip()
     {
-        isSideA = !isSideA;
-        state = ActiveSideState;
-        ApplyCutVisual();
-        TutorialManager.NotifyMeatFlipped(cut);
+        if (isFlipping) return;
+
+        if (gameObject.activeInHierarchy)
+        {
+            flipCoroutine = StartCoroutine(FlipRoutine());
+        }
+        else
+        {
+            isSideA = !isSideA;
+            state = ActiveSideState;
+            ApplyCutVisual();
+            TutorialManager.NotifyMeatFlipped(cut);
+        }
+    }
+
+    private IEnumerator FlipRoutine()
+    {
+        isFlipping = true;
+
+        Vector3 startPos = transform.position;
+        Vector3 initialLocalScale = (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : transform.localScale;
+        int origSortingOrder = spriteRenderer != null ? spriteRenderer.sortingOrder : baseSortingOrder;
+
+        if (spriteRenderer != null)
+            spriteRenderer.sortingOrder = origSortingOrder + flipSortingOrderBoost;
+
+        PlayFlipSound();
+
+        float elapsed = 0f;
+        bool logicFlipped = false;
+
+        while (elapsed < flipDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / flipDuration);
+
+            // Parabolic lift arc
+            float lift = Mathf.Sin(t * Mathf.PI) * flipLiftHeight;
+            transform.position = startPos + Vector3.up * lift;
+
+            // Horizontal flip scale (compressing towards 0 and expanding back to full width)
+            float cosVal = Mathf.Cos(t * Mathf.PI);
+            float scaleX = Mathf.Abs(cosVal) * initialLocalScale.x;
+
+            // Subtle vertical stretch in flight
+            float scaleY = initialLocalScale.y * (1f + 0.12f * Mathf.Sin(t * Mathf.PI));
+            transform.localScale = new Vector3(scaleX, scaleY, initialLocalScale.z);
+
+            // Mid-air flip point (at peak of the jump / when scaleX reaches 0)
+            if (!logicFlipped && t >= 0.5f)
+            {
+                logicFlipped = true;
+                isSideA = !isSideA;
+                state = ActiveSideState;
+                ApplyCutVisual();
+                TutorialManager.NotifyMeatFlipped(cut);
+            }
+
+            yield return null;
+        }
+
+        // Safety guarantee for logical flip
+        if (!logicFlipped)
+        {
+            isSideA = !isSideA;
+            state = ActiveSideState;
+            ApplyCutVisual();
+            TutorialManager.NotifyMeatFlipped(cut);
+        }
+
+        transform.position = startPos;
+        transform.localScale = initialLocalScale;
+
+        if (spriteRenderer != null)
+            spriteRenderer.sortingOrder = origSortingOrder;
+
+        // Landing bounce / impact juice
+        yield return StartCoroutine(LandingBounce(initialLocalScale));
+
+        isFlipping = false;
+        flipCoroutine = null;
+    }
+
+    private IEnumerator LandingBounce(Vector3 targetScale)
+    {
+        float bounceDuration = 0.08f;
+        float elapsed = 0f;
+        while (elapsed < bounceDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / bounceDuration);
+            float bounceAmount = Mathf.Sin(t * Mathf.PI) * 0.12f;
+            transform.localScale = new Vector3(
+                targetScale.x * (1f + bounceAmount),
+                targetScale.y * (1f - bounceAmount),
+                targetScale.z
+            );
+            yield return null;
+        }
+        transform.localScale = targetScale;
+    }
+
+    public void CancelFlipAnimation()
+    {
+        if (flipCoroutine != null)
+        {
+            StopCoroutine(flipCoroutine);
+            flipCoroutine = null;
+        }
+
+        if (isFlipping)
+        {
+            isFlipping = false;
+            transform.localScale = (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : Vector3.one;
+            if (spriteRenderer != null)
+                spriteRenderer.sortingOrder = baseSortingOrder;
+            ApplyCutVisual();
+        }
+    }
+
+    private void PlayFlipSound()
+    {
+        AudioClip clipToPlay = flipSound != null ? flipSound : softSound;
+        if (clipToPlay == null) return;
+
+        AudioSource src = GetComponent<AudioSource>();
+        if (src != null)
+        {
+            src.PlayOneShot(clipToPlay);
+        }
+        else
+        {
+            AudioSource.PlayClipAtPoint(clipToPlay, transform.position);
+        }
     }
 
     public void ToggleGridRotation()
@@ -362,6 +512,8 @@ public class Meat : Item
 
         if (targetSprite != null)
             spriteRenderer.sprite = targetSprite;
+
+        spriteRenderer.flipX = !isSideA;
     }
 
     void OnMouseEnter()
@@ -379,8 +531,18 @@ public class Meat : Item
             MeatCookHoverBar.Instance.HideIfTarget(this);
     }
 
+    public override void OnDisable()
+    {
+        base.OnDisable();
+        if (isFlipping)
+            CancelFlipAnimation();
+    }
+
     void OnDestroy()
     {
+        if (isFlipping)
+            CancelFlipAnimation();
+
         ReleaseOccupiedSlots();
 
         if (MeatCookHoverBar.Instance != null)

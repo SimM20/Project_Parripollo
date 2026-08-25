@@ -16,6 +16,7 @@ public class MeatClickable : MonoBehaviour
         if (meat == null) return;
         if (!Input.GetMouseButtonDown(RightMouseButton)) return;
         if (!meat.IsOnGrill) return;
+        if (meat.IsFlipping) return;
         if (!TutorialManager.CheckMeatFlipAllowed()) return;
 
         meat.Flip();

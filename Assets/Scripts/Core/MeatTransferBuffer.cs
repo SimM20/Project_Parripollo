@@ -785,6 +785,7 @@ public class MeatTransferBuffer : MonoBehaviour
             if (renderer != null)
             {
                 renderer.sprite = cut.GetSpriteForState(entry.state, entry.isSideA);
+                renderer.flipX = !entry.isSideA;
                 renderer.sortingOrder = sortingBase + i;
             }
 
