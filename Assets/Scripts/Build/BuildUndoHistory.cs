@@ -10,7 +10,7 @@ public interface IBuildUndoAction
 
 /// <summary>
 /// Pila de historial de acciones reversibles del armado.
-/// Solo registra panes, acompañamientos y toppings — nunca la carne.
+/// Registra carnes, panes, acompañamientos y toppings.
 /// Se limpia sola cuando el armado se limpia (entrega o reinicio del plato).
 /// </summary>
 public class BuildUndoHistory : MonoBehaviour

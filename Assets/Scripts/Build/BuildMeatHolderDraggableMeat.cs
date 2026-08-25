@@ -74,6 +74,7 @@ public class BuildMeatHolderDraggableMeat : MonoBehaviour
         if (dropped)
         {
             buffer.ConsumeBuildMeatEntry(entryId, gameObject);
+            BuildUndoHistory.Instance?.Push(new AddMeatUndoAction(buffer, gameObject));
             TutorialManager.NotifyMeatPlacedOnBuildZone(cut);
         }
         else

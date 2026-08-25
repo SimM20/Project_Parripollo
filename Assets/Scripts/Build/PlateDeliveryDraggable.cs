@@ -129,10 +129,20 @@ public class PlateDeliveryDraggable : MonoBehaviour
             && GameManager.Instance != null
             && GameManager.Instance.TryDeliverToCustomer(dropView.Customer);
 
-        // Entrega rechazada (corte incorrecto, plato inválido, cocción bloqueada) o
-        // soltado fuera de un cliente: el plato vuelve a la PlateDropZone.
+        // Si la entrega no se concreta: verificar si se soltó sobre el MeatHolder / MeatList para devolver la carne.
         if (!delivered)
-            RestorePositions();
+        {
+            MeatTransferBuffer transferBuffer = Object.FindAnyObjectByType<MeatTransferBuffer>();
+            if (transferBuffer != null && transferBuffer.IsOverBuildMeatHolder(dropPoint))
+            {
+                RestorePositions();
+                transferBuffer.TryReturnPlateMeatToBuildHolder(gameObject);
+            }
+            else
+            {
+                RestorePositions();
+            }
+        }
 
         DraggedVisuals.Clear();
     }

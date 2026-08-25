@@ -114,6 +114,7 @@ public class MeatTransferBuffer : MonoBehaviour
     private readonly List<GameObject> toBuildVisuals = new List<GameObject>();
     private readonly List<GameObject> buildMeatHolderVisuals = new List<GameObject>();
     private readonly List<GameObject> plateMeatVisuals = new List<GameObject>();
+    private readonly List<BufferedMeatData> plateMeatCuts = new List<BufferedMeatData>();
     private readonly List<GridSlot> meatHolderHoverSlots = new List<GridSlot>();
 
     void Start()
@@ -199,13 +200,20 @@ public class MeatTransferBuffer : MonoBehaviour
 
     public void ConsumeBuildMeatEntry(int entryId, GameObject go)
     {
+        BufferedMeatData consumedData = null;
         if (entryId >= 0 && entryId < buildMeatHolderCuts.Count)
+        {
+            consumedData = buildMeatHolderCuts[entryId];
             buildMeatHolderCuts.RemoveAt(entryId);
+        }
 
         if (entryId >= 0 && entryId < buildMeatHolderLocalPositions.Count)
             buildMeatHolderLocalPositions.RemoveAt(entryId);
 
         buildMeatHolderVisuals.Remove(go);
+
+        if (consumedData != null)
+            plateMeatCuts.Add(consumedData);
 
         if (go != null)
         {
@@ -225,11 +233,83 @@ public class MeatTransferBuffer : MonoBehaviour
     }
 
     /// <summary>
+    /// Retorna la carne del plato a la bandeja de BuildMeatHolder, restaurando sus tiempos de cocción originales.
+    /// Usado tanto por arrastre directo (drop sobre MeatHolder/MeatList) como por el Rollback/Undo.
+    /// </summary>
+    public bool TryReturnPlateMeatToBuildHolder(GameObject plateVisual = null)
+    {
+        if (plateMeatVisuals.Count == 0 && plateMeatCuts.Count == 0)
+            return false;
+
+        int index = -1;
+        if (plateVisual != null)
+            index = plateMeatVisuals.IndexOf(plateVisual);
+
+        if (index < 0)
+            index = plateMeatVisuals.Count - 1;
+
+        if (index < 0 && plateMeatCuts.Count > 0)
+            index = plateMeatCuts.Count - 1;
+
+        if (index < 0)
+            return false;
+
+        BufferedMeatData returnedData = null;
+        if (index < plateMeatCuts.Count)
+        {
+            returnedData = plateMeatCuts[index];
+            plateMeatCuts.RemoveAt(index);
+        }
+        else
+        {
+            BuildStationSystem station = ResolveBuildStation();
+            if (station != null && index < station.AssembledCuts.Count)
+            {
+                MeatCutSO cut = station.AssembledCuts[index];
+                MeatStates state = index < station.AssembledCutStates.Count ? station.AssembledCutStates[index] : MeatStates.Crudo;
+                returnedData = BufferedMeatData.FromCut(cut);
+                if (returnedData != null)
+                    returnedData.state = state;
+            }
+        }
+
+        if (returnedData == null)
+            return false;
+
+        if (index < plateMeatVisuals.Count)
+        {
+            GameObject visual = plateMeatVisuals[index];
+            plateMeatVisuals.RemoveAt(index);
+            if (visual != null)
+                Destroy(visual);
+        }
+
+        BuildStationSystem buildStation = ResolveBuildStation();
+        if (buildStation != null)
+        {
+            buildStation.RemoveCutAt(index);
+        }
+
+        int newIndex = buildMeatHolderCuts.Count;
+        buildMeatHolderCuts.Add(returnedData);
+        buildMeatHolderLocalPositions.Add(GetBuildMeatHolderLocalPosition(newIndex));
+
+        RefreshVisuals();
+
+        string cutName = returnedData.cut != null ? returnedData.cut.cutName : "Sin corte";
+        Debug.Log("[Build] Carne devuelta al MeatHolder: " + cutName + " | Estado: " + returnedData.state);
+        return true;
+    }
+
+    /// <summary>
     /// Elimina el visual del plato en 'index' (alineado con el orden en que se consumieron los cortes).
     /// Usado por el descarte contextual de quemados. Best-effort: ignora índices fuera de rango.
     /// </summary>
     public void RemovePlateMeatVisualAt(int index)
     {
+        if (index >= 0 && index < plateMeatCuts.Count)
+            plateMeatCuts.RemoveAt(index);
+
         if (index < 0 || index >= plateMeatVisuals.Count)
             return;
 
@@ -248,6 +328,7 @@ public class MeatTransferBuffer : MonoBehaviour
         }
 
         plateMeatVisuals.Clear();
+        plateMeatCuts.Clear();
     }
 
     public void UpdatePlateMeatSprite(Sprite sprite)
@@ -335,8 +416,16 @@ public class MeatTransferBuffer : MonoBehaviour
             buildMeatHolderLocalPositions.Add(GetBuildMeatHolderLocalPosition(startIndex + i));
         }
 
-        toBuildCuts.Clear();
-        toBuildLocalPositions.Clear();
+        if (toAdd >= toBuildCuts.Count)
+        {
+            toBuildCuts.Clear();
+            toBuildLocalPositions.Clear();
+        }
+        else
+        {
+            toBuildCuts.RemoveRange(0, toAdd);
+            toBuildLocalPositions.RemoveRange(0, toAdd);
+        }
 
         RefreshVisuals();
     }
@@ -656,6 +745,85 @@ public class MeatTransferBuffer : MonoBehaviour
             toBuildAnchor = FindTransformByNameUnderRoot("ToBuild", "GrillView");
 
         return toBuildAnchor;
+    }
+
+    public bool IsOverBuildMeatHolder(Vector3 worldPoint)
+    {
+        Transform anchor = ResolveBuildMeatHolderAnchor();
+        if (anchor != null)
+        {
+            Collider2D[] colliders = anchor.GetComponentsInChildren<Collider2D>();
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                if (colliders[i] != null && colliders[i].enabled && colliders[i].OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
+                    return true;
+            }
+
+            if (anchor.parent != null)
+            {
+                Collider2D pCol = anchor.parent.GetComponent<Collider2D>();
+                if (pCol != null && pCol.enabled && pCol.OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
+                    return true;
+            }
+
+            SpriteRenderer[] renderers = anchor.GetComponentsInChildren<SpriteRenderer>();
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                {
+                    Vector3 pt = worldPoint;
+                    pt.z = renderers[i].bounds.center.z;
+                    if (renderers[i].bounds.Contains(pt))
+                        return true;
+                }
+            }
+
+            if (anchor.parent != null)
+            {
+                SpriteRenderer pRen = anchor.parent.GetComponent<SpriteRenderer>();
+                if (pRen != null)
+                {
+                    Vector3 pt = worldPoint;
+                    pt.z = pRen.bounds.center.z;
+                    if (pRen.bounds.Contains(pt))
+                        return true;
+                }
+            }
+        }
+
+        SpriteRenderer meatListSr = FindSpriteRendererByNameUnderRoot("MeatList", "BuildView");
+        if (meatListSr != null)
+        {
+            Vector3 pt = worldPoint;
+            pt.z = meatListSr.bounds.center.z;
+            if (meatListSr.bounds.Contains(pt))
+                return true;
+        }
+
+        SpriteRenderer meatHolderSr = FindSpriteRendererByNameUnderRoot("MeatHolder", "BuildView");
+        if (meatHolderSr != null)
+        {
+            Vector3 pt = worldPoint;
+            pt.z = meatHolderSr.bounds.center.z;
+            if (meatHolderSr.bounds.Contains(pt))
+                return true;
+        }
+
+        if (anchor != null)
+        {
+            float dist = Vector2.Distance(new Vector2(worldPoint.x, worldPoint.y), new Vector2(anchor.position.x, anchor.position.y));
+            if (dist <= Mathf.Max(2.5f, buildMeatHolderWorldSpacing * maxBuildMeatHolder))
+                return true;
+        }
+
+        return false;
+    }
+
+    private BuildStationSystem ResolveBuildStation()
+    {
+        if (buildStationSystem == null)
+            buildStationSystem = Object.FindAnyObjectByType<BuildStationSystem>();
+        return buildStationSystem;
     }
 
     private Transform ResolveBuildMeatHolderAnchor()
