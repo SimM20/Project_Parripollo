@@ -220,7 +220,7 @@ public class Meat : Item
         Camera cam = Camera.main;
         if (cam == null) return;
 
-        Vector3 pointerWorld = cam.ScreenToWorldPoint(Input.mousePosition);
+        Vector3 pointerWorld = GetMouseWorldPosition();
         if (!ownCollider.OverlapPoint(pointerWorld)) return;
 
         ShowHover();
