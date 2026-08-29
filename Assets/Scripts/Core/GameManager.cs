@@ -19,15 +19,15 @@ public class GameManager : MonoBehaviour
 
     [Header("Input")]
     [SerializeField] private KeyCode stockPanelToggleKey = KeyCode.Q;
-
-    private ViewType lastView;
+    [SerializeField] private KeyCode toppingsPanelToggleKey = KeyCode.T;
+    [SerializeField] private KeyCode clearPlateKey = KeyCode.C;
 
     // Contexto de descarte de quemados: solo activo tras un intento de entrega bloqueado por quemados.
     private bool discardContextActive;
     private readonly System.Collections.Generic.List<int> discardBurnedIndices = new System.Collections.Generic.List<int>();
 
-    // Cliente del intento bloqueado: permite revalidar con X cuando la entrega vino de un arrastre
-    // (ahí no hay modo de selección activo y SelectedCustomer no es la referencia correcta).
+    // Cliente del intento bloqueado: la entrega es siempre por arrastre, así que no hay
+    // "cliente seleccionado" contra el que revalidar cuando el jugador aprieta X.
     private Customer discardCustomer;
 
     public CustomerSystem Customers => customerSystem;
@@ -45,10 +45,9 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        lastView = viewManager != null ? viewManager.CurrentView : ViewType.Grill;
-
+        // Vista única: la parrilla siempre está a la vista y siempre cocinando.
         if (grillSystem != null)
-            grillSystem.SetMeatVisualsVisible(lastView == ViewType.Grill);
+            grillSystem.SetMeatVisualsVisible(true);
 
         customerSystem.OnNightEnded += EndNight;
 
@@ -71,7 +70,6 @@ public class GameManager : MonoBehaviour
 
             UIManager.Instance?.SetActualDay(tracker.CurrentNight);
         }
-       
     }
 
     private void Update()
@@ -90,129 +88,57 @@ public class GameManager : MonoBehaviour
         if (UIManager.Instance != null && UIManager.Instance.IsPaused)
             return;
 
-        if (viewManager != null)
+        // ── Paneles laterales ──
+        if (Input.GetKeyDown(stockPanelToggleKey) && StockPanelController.Instance != null)
         {
-            if (Input.GetKeyDown(stockPanelToggleKey) && viewManager.CurrentView == ViewType.Grill)
-            {
-                if (StockPanelController.Instance != null && (StockPanelController.Instance.IsOpen || TutorialManager.CheckStockPanelOpenAllowed()))
-                    StockPanelController.Instance.Toggle();
-            }
-
-            if (Input.GetKeyDown(KeyCode.W)) viewManager.Show(ViewType.Grill);
-            if (Input.GetKeyDown(KeyCode.E)) viewManager.Show(ViewType.Build);
-
-            if (Input.GetKeyDown(KeyCode.LeftArrow)) viewManager.PreviousView();
-            if (Input.GetKeyDown(KeyCode.RightArrow)) viewManager.NextView();
+            if (StockPanelController.Instance.IsOpen || TutorialManager.CheckStockPanelOpenAllowed())
+                StockPanelController.Instance.Toggle();
         }
 
-        ViewType currentView = viewManager != null ? viewManager.CurrentView : ViewType.Grill;
+        if (Input.GetKeyDown(toppingsPanelToggleKey) && ToppingsPanelController.Instance != null)
+            ToppingsPanelController.Instance.Toggle();
 
-        if (currentView != lastView && grillSystem != null)
-            grillSystem.SetMeatVisualsVisible(currentView == ViewType.Grill);
+        // ── Parrilla ──
+        if (Input.GetKeyDown(KeyCode.Space))
+            TryToggleGrillLayer();
 
-        if (currentView != lastView)
+        if (Input.GetKeyDown(KeyCode.R) && TutorialManager.CheckCleanAshesAllowed())
+            CleanAshes();
+
+        // ── Armado y entrega (todo dentro de la vista Parrilla) ──
+        if (Input.GetKeyDown(KeyCode.X))
+            TryDiscardBurnedCuts();
+
+        if (Input.GetKeyDown(clearPlateKey) && TutorialManager.CheckClearBuildPlateAllowed())
         {
-            bool buildActive = currentView == ViewType.Build;
-            BuildFoodDropZone.SetActivePlateVisualsVisible(buildActive);
-            meatTransferBuffer?.SendMessage("SetPlateMeatVisualsVisible", buildActive, SendMessageOptions.DontRequireReceiver);
+            ClearBuildAssembly();
+            meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
+            BuildFoodDropZone.ClearActivePlateVisuals();
+            ToppingDraggable.ClearAllSplatters();
+            Debug.Log("[Plato] Plato limpiado.");
         }
 
-        if (currentView == ViewType.Grill)
+        if (Input.GetKeyDown(KeyCode.M))
         {
-            if (Input.GetKeyDown(KeyCode.Space))
-                TryToggleGrillLayer();
-
-            if (Input.GetKeyDown(KeyCode.R) && TutorialManager.CheckCleanAshesAllowed())
-                CleanAshes();
-
-            if (lastView != ViewType.Grill)
-            {
-                if (meatTransferBuffer != null)
-                    meatTransferBuffer.SendMessage("MoveToMeatHolder", SendMessageOptions.DontRequireReceiver);
-
-                if (coalTransferBuffer != null)
-                    coalTransferBuffer.SendMessage("MoveToCoalHolder", SendMessageOptions.DontRequireReceiver);
-
-                if (grillLayerToggle != null)
-                    grillLayerToggle.RefreshVisibility();
-            }
-        }
-
-        if (currentView == ViewType.Build && lastView != ViewType.Build && meatTransferBuffer != null)
-            meatTransferBuffer.SendMessage("MoveToBuildMeatHolder", SendMessageOptions.DontRequireReceiver);
-
-        if (currentView != lastView && currentView != ViewType.Build
-            && customerSystem != null && customerSystem.IsDeliverySelectionActive)
-        {
-            ClearDiscardContext();
-
-            if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
-                customerSystem.EndDeliverySelection();
-        }
-
-        lastView = currentView;
-
-        // Build Selected
-        if (currentView == ViewType.Build)
-        {
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
-                {
-                    if (TutorialManager.CheckDeliveryConfirmAllowed())
-                        ConfirmDeliverySelection();
-                }
-                else
-                {
-                    if (TutorialManager.CheckDeliveryStartAllowed())
-                        TryEnterDeliverySelection();
-                }
-            }
-
-            bool selectingCustomer = customerSystem != null && customerSystem.IsDeliverySelectionActive;
-
-            if (selectingCustomer)
-            {
-                if (Input.GetKeyDown(KeyCode.A))
-                    customerSystem.SelectAdjacentCustomer(-1);
-
-                if (Input.GetKeyDown(KeyCode.D))
-                    customerSystem.SelectAdjacentCustomer(1);
-            }
-
-            var customer = customerSystem?.currentCustomer;
-            var order = customer?.order;
-
-            if (Input.GetKeyDown(KeyCode.X))
-                TryDiscardBurnedCuts();
-
-            if (!selectingCustomer && Input.GetKeyDown(KeyCode.R) && TutorialManager.CheckClearBuildPlateAllowed())
-            {
-                ClearBuildAssembly();
-                meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
-                BuildFoodDropZone.ClearActivePlateVisuals();
-                ToppingDraggable.ClearAllSplatters();
-                Debug.Log("[Build] Plato limpiado.");
-            }
-
-            if (!selectingCustomer && Input.GetKeyDown(KeyCode.M) && order?.PrimaryCut != null)
+            Order order = customerSystem?.currentCustomer?.order;
+            if (order?.PrimaryCut != null)
             {
                 if (foodAvailabilityService != null)
                     foodAvailabilityService.InformMissingCut(order.PrimaryCut);
-
                 else
                     coolerSystem?.InformMissingItem(order.PrimaryCut);
 
-                Debug.Log("[Build] Corte faltante informado: " + order.PrimaryCut.cutName);
+                Debug.Log("[Plato] Corte faltante informado: " + order.PrimaryCut.cutName);
             }
         }
     }
+
     /// <summary>
     /// Cambia la capa de la parrilla (carne ↔ carbón) por teclado.
     /// Espejo exacto del botón de la escena: delega en el mismo GrillLayerToggle.Toggle(),
     /// así que sprite del botón y TutorialManager.NotifyGrillLayerChanged se mantienen sincronizados.
-    /// Solo se invoca desde la vista Grill (ver Update) y nunca mientras se arrastra un item:
-    /// cambiar de capa a mitad de un drag invalidaría el drop y devolvería la pieza a su origen.
+    /// Nunca mientras se arrastra un item: cambiar de capa a mitad de un drag invalidaría
+    /// el drop y devolvería la pieza a su origen.
     /// </summary>
     private void TryToggleGrillLayer()
     {
@@ -259,8 +185,8 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Descarta los cortes quemados detectados en el último intento bloqueado y revalida la entrega.
-    /// Fuera del contexto de una entrega bloqueada por quemados, X no hace nada.
+    /// Descarta los cortes quemados detectados en el último intento bloqueado y revalida la entrega
+    /// contra el mismo cliente. Fuera del contexto de una entrega bloqueada por quemados, X no hace nada.
     /// </summary>
     private void TryDiscardBurnedCuts()
     {
@@ -279,69 +205,35 @@ public class GameManager : MonoBehaviour
         int discarded = discardBurnedIndices.Count;
         Customer pendingCustomer = discardCustomer;
         ClearDiscardContext();
-        Debug.Log("[Build] Cortes quemados descartados: " + discarded);
+        Debug.Log("[Plato] Cortes quemados descartados: " + discarded);
 
         if (!buildStationSystem.HasAnyCut)
         {
             DeliveryFeedbackText.Instance?.Show("Se descartaron los cortes quemados. No queda nada para entregar.");
-            if (customerSystem != null && customerSystem.IsDeliverySelectionActive)
-                customerSystem.EndDeliverySelection();
             return;
         }
 
-        // Revalidar el intento: si sigue habiendo crudos, se bloquea de nuevo con el mensaje actualizado.
-        if (customerSystem == null)
-            return;
-
-        if (customerSystem.IsDeliverySelectionActive)
-            ConfirmDeliverySelection();
-        else if (customerSystem.IsCustomerActive(pendingCustomer))
+        if (customerSystem != null && customerSystem.IsCustomerActive(pendingCustomer))
             TryDeliverToCustomer(pendingCustomer);
-    }
-
-    private void TryEnterDeliverySelection()
-    {
-        if (buildStationSystem == null)
-        {
-            Debug.Log("[TryEnterDeliverySelection] BuildStationSystem no asignado en GameManager.");
-            return;
-        }
-
-        if (!buildStationSystem.HasAnyCut)
-        {
-            DeliveryFeedbackText.Instance?.Show("No hay nada preparado para entregar.");
-            return;
-        }
-
-        if (customerSystem == null || !customerSystem.BeginDeliverySelection())
-            DeliveryFeedbackText.Instance?.Show("No hay clientes esperando.");
-    }
-
-    private void ConfirmDeliverySelection()
-    {
-        TryDeliverToCustomer(customerSystem.SelectedCustomer);
     }
 
     /// <summary>
     /// Entrega el plato armado al cliente indicado. Es el único punto donde vive la lógica
-    /// de entrega: lo usan tanto el flujo por teclado (SPACE + A/D) como el arrastre del
-    /// plato con el mouse (PlateDeliveryDraggable).
+    /// de entrega; la única entrada es el arrastre del plato con el mouse (PlateDeliveryDraggable).
     /// Devuelve true solo si la entrega se concretó y el plato quedó consumido; en cualquier
-    /// rechazo devuelve false (el que arrastra usa eso para devolver el plato a la PlateDropZone).
+    /// rechazo devuelve false (el que arrastra usa eso para devolver el plato a su sitio).
     /// </summary>
     public bool TryDeliverToCustomer(Customer customer)
     {
         if (customer == null)
         {
             DeliveryFeedbackText.Instance?.Show("No hay un cliente seleccionado.");
-            customerSystem.EndDeliverySelection();
             return false;
         }
 
         if (buildStationSystem == null || !buildStationSystem.HasAnyCut)
         {
             DeliveryFeedbackText.Instance?.Show("No hay nada preparado para entregar.");
-            customerSystem.EndDeliverySelection();
             return false;
         }
 
@@ -349,13 +241,12 @@ public class GameManager : MonoBehaviour
 
         if (assembled != customer.order.PrimaryCut)
         {
-            Debug.Log("❌ Corte incorrecto. Pedido: " + customer.order.PrimaryCut?.cutName 
+            Debug.Log("❌ Corte incorrecto. Pedido: " + customer.order.PrimaryCut?.cutName
                 + " | Armado: " + assembled.cutName);
 
-            DeliveryFeedbackText.Instance?.Show("Corte incorrecto. El cliente pidió: " 
+            DeliveryFeedbackText.Instance?.Show("Corte incorrecto. El cliente pidió: "
                 + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".");
 
-            customerSystem.EndDeliverySelection();
             ClearDiscardContext();
             return false;
         }
@@ -370,7 +261,6 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("❌ " + reason);
             DeliveryFeedbackText.Instance?.Show(reason);
-            customerSystem.EndDeliverySelection();
             ClearDiscardContext();
             return false;
         }
@@ -441,8 +331,7 @@ public class GameManager : MonoBehaviour
         ToppingDraggable.ClearAllSplatters();
         PlayerWallet.Instance?.Add(totalPayment + totalTips);
         customerSystem.CompleteCustomer(customer);
-        customerSystem.EndDeliverySelection();
-        Debug.Log("✔ Pedido entregado desde Build. Pago: " + totalPayment + " | Propinas: " + totalTips);
+        Debug.Log("✔ Pedido entregado. Pago: " + totalPayment + " | Propinas: " + totalTips);
         AudioManager.Instance.PlayTaskCompleted();
         TutorialManager.NotifyProductDelivered();
         ClearDiscardContext();

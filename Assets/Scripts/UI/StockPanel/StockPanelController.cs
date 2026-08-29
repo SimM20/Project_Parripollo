@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,15 +7,15 @@ using UnityEngine;
 /// (con contador numérico) y permite arrastrar directamente a la parrilla.
 /// Vive dentro del prefab de GrillView: el singleton destruye el componente duplicado,
 /// nunca el GameObject.
+///
+/// El deslizamiento, el gateo por vista y la cancelación de drop sobre el panel viven
+/// en <see cref="SlidingPanel"/>; acá queda solo la lógica de stock y celdas.
 /// </summary>
-public class StockPanelController : MonoBehaviour
+public class StockPanelController : SlidingPanel
 {
-    [Header("Panel References")]
-    [SerializeField] private Transform slidingRoot;
+    [Header("Slots")]
     [SerializeField] private Transform slotsParent;
     [SerializeField] private StockPanelSlot slotPrefab;
-    [Tooltip("Fondo del panel. Un drop soltado sobre él se cancela sin tocar el stock.")]
-    [SerializeField] private SpriteRenderer panelBackground;
 
     [Header("Data")]
     [SerializeField] private FoodCatalogSO catalog;
@@ -24,7 +23,6 @@ public class StockPanelController : MonoBehaviour
 
     [Header("Systems")]
     [SerializeField] private GrillSystem grillSystem;
-    [SerializeField] private ViewManager viewManager;
     [SerializeField] private MeatTransferBuffer meatTransferBuffer;
     [SerializeField] private CoalTransferBuffer coalTransferBuffer;
 
@@ -40,22 +38,8 @@ public class StockPanelController : MonoBehaviour
     [SerializeField] private Vector2 firstCellLocalOffset = Vector2.zero;
     [SerializeField] private int slotSortingOrder = 100;
 
-    [Header("Slide Animation")]
-    [SerializeField] private float openLocalX = 0f;
-    [SerializeField] private float closedLocalX = -5f;
-    [SerializeField] [Min(0f)] private float slideDuration = 0.2f;
-
     /// <summary>Instancia activa del panel de stock.</summary>
     public static StockPanelController Instance { get; private set; }
-
-    /// <summary>True si el panel está desplegado (o yendo hacia desplegado).</summary>
-    public bool IsOpen { get; private set; }
-
-    /// <summary>True mientras la corrutina de deslizamiento está en curso.</summary>
-    public bool IsAnimating => slideRoutine != null;
-
-    /// <summary>True solo si una celda puede iniciar un arrastre en este momento.</summary>
-    public bool CanBeginDrag => IsOpen && slideRoutine == null;
 
     /// <summary>Parrilla destino de los drops. Puede ser null si no se cableó.</summary>
     public GrillSystem Grill => grillSystem;
@@ -72,7 +56,6 @@ public class StockPanelController : MonoBehaviour
 
     private CoolerSystem coolerSystem;
     private StockPanelSlot activeDragSlot;
-    private Coroutine slideRoutine;
     private bool refreshPending;
     private bool startCompleted;
 
@@ -87,43 +70,18 @@ public class StockPanelController : MonoBehaviour
         Instance = this;
     }
 
-    void OnEnable()
+    protected override void OnEnable()
     {
+        base.OnEnable();
         BindCoolerSystem();
-        BindViewManager();
     }
 
-    void Start()
-    {
-        ValidateReferences();
-
-        // ViewManager.Show() solo dispara OnViewChanged cuando cambia de vista, así que
-        // el Show(Grill) inicial nunca nos llega: hay que auto-inicializarse acá.
-        BindCoolerSystem();
-
-        if (slidingRoot != null)
-            slidingRoot.gameObject.SetActive(true);
-
-        startCompleted = true;
-        RefreshSlots();
-        Close(true);
-    }
-
-    void OnDisable()
+    protected override void OnDisable()
     {
         if (coolerSystem != null)
             coolerSystem.OnInventoryChanged -= RefreshSlots;
 
-        if (viewManager != null)
-            viewManager.OnViewChanged -= HandleViewChanged;
-
-        CancelActiveDrag();
-
-        if (slideRoutine != null)
-        {
-            StopCoroutine(slideRoutine);
-            slideRoutine = null;
-        }
+        base.OnDisable();
     }
 
     void OnDestroy()
@@ -132,25 +90,53 @@ public class StockPanelController : MonoBehaviour
             Instance = null;
     }
 
-    // ── Referencias externas ────────────────────────────────────────────────
+    // ── Hooks de SlidingPanel ───────────────────────────────────────────────
 
-    /// <summary>
-    /// Asigna el ViewManager desde afuera del prefab (vive fuera de GrillView).
-    /// Rebinde la suscripción al evento de cambio de vista.
-    /// </summary>
-    public void SetViewManager(ViewManager manager)
+    protected override void OnPanelStarted()
     {
-        if (viewManager == manager)
-            return;
-
-        if (viewManager != null)
-            viewManager.OnViewChanged -= HandleViewChanged;
-
-        viewManager = manager;
-
-        if (isActiveAndEnabled)
-            BindViewManager();
+        BindCoolerSystem();
+        startCompleted = true;
+        RefreshSlots();
     }
+
+    protected override void OnEnteredGrillView() => RefreshSlots();
+
+    protected override void OnPanelClosing() => CancelActiveDrag();
+
+    protected override void OnPanelOpened() => TutorialManager.NotifyStockPanelOpened();
+
+    protected override bool CanOpen() => TutorialManager.CheckStockPanelOpenAllowed();
+
+    protected override void ValidateReferences()
+    {
+        base.ValidateReferences();
+
+        if (slotsParent == null)
+            Debug.LogWarning("[StockPanelController] Falta la referencia 'slotsParent'. No se pueden crear celdas.");
+
+        if (slotPrefab == null)
+            Debug.LogWarning("[StockPanelController] Falta la referencia 'slotPrefab'. No se pueden crear celdas.");
+
+        if (catalog == null)
+            Debug.LogWarning("[StockPanelController] Falta la referencia 'catalog'. Solo se mostrarán cortes sueltos del stock.");
+
+        if (coalData == null)
+            Debug.LogWarning("[StockPanelController] Falta la referencia 'coalData'. No se mostrará la celda de carbón.");
+
+        if (grillSystem == null)
+            Debug.LogWarning("[StockPanelController] Falta la referencia 'grillSystem'. Los drops no podrán spawnear en la parrilla.");
+
+        if (meatTransferBuffer == null)
+            Debug.LogWarning("[StockPanelController] Falta la referencia 'meatTransferBuffer'. No habrá preview de hover para carne.");
+
+        if (coalTransferBuffer == null)
+            Debug.LogWarning("[StockPanelController] Falta la referencia 'coalTransferBuffer'. No habrá preview de hover para carbón.");
+
+        if (requireDropAreaHit && dropArea == null)
+            Debug.LogWarning("[StockPanelController] 'requireDropAreaHit' está activo pero falta la referencia 'dropArea'. El gate queda desactivado.");
+    }
+
+    // ── Referencias externas ────────────────────────────────────────────────
 
     private void BindCoolerSystem()
     {
@@ -169,86 +155,7 @@ public class StockPanelController : MonoBehaviour
         }
     }
 
-    private void BindViewManager()
-    {
-        if (viewManager == null)
-            return;
-
-        viewManager.OnViewChanged -= HandleViewChanged;
-        viewManager.OnViewChanged += HandleViewChanged;
-    }
-
-    private void ValidateReferences()
-    {
-        if (slidingRoot == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'slidingRoot'. El panel no puede deslizarse.");
-
-        if (slotsParent == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'slotsParent'. No se pueden crear celdas.");
-
-        if (slotPrefab == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'slotPrefab'. No se pueden crear celdas.");
-
-        if (catalog == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'catalog'. Solo se mostrarán cortes sueltos del stock.");
-
-        if (coalData == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'coalData'. No se mostrará la celda de carbón.");
-
-        if (grillSystem == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'grillSystem'. Los drops no podrán spawnear en la parrilla.");
-
-        if (viewManager == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'viewManager'. Usá SetViewManager() desde afuera del prefab.");
-
-        if (meatTransferBuffer == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'meatTransferBuffer'. No habrá preview de hover para carne.");
-
-        if (coalTransferBuffer == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'coalTransferBuffer'. No habrá preview de hover para carbón.");
-
-        if (panelBackground == null)
-            Debug.LogWarning("[StockPanelController] Falta la referencia 'panelBackground'. Soltar un ítem sobre el panel lo colocará igual en la parrilla.");
-
-        if (requireDropAreaHit && dropArea == null)
-            Debug.LogWarning("[StockPanelController] 'requireDropAreaHit' está activo pero falta la referencia 'dropArea'. El gate queda desactivado.");
-    }
-
-    private void HandleViewChanged(ViewType view)
-    {
-        if (view == ViewType.Grill)
-        {
-            if (slidingRoot != null)
-                slidingRoot.gameObject.SetActive(true);
-
-            RefreshSlots();
-            Close(true);
-            return;
-        }
-
-        CancelActiveDrag();
-
-        if (slidingRoot != null)
-            slidingRoot.gameObject.SetActive(false);
-    }
-
     // ── Gates de drop ───────────────────────────────────────────────────────
-
-    /// <summary>
-    /// True si el punto cae dentro del fondo del panel. El panel tapa el borde izquierdo
-    /// de la pantalla, así que soltar ahí debe cancelar el arrastre en vez de colocar
-    /// el ítem en la parrilla. Sin panelBackground asignado no filtra nada.
-    /// </summary>
-    public bool IsPointOverPanel(Vector3 worldPoint)
-    {
-        if (panelBackground == null)
-            return false;
-
-        Vector3 point = worldPoint;
-        point.z = panelBackground.bounds.center.z;
-
-        return panelBackground.bounds.Contains(point);
-    }
 
     /// <summary>
     /// True si el punto está permitido por el área de drop configurable.
@@ -264,102 +171,6 @@ public class StockPanelController : MonoBehaviour
         point.z = dropArea.bounds.center.z;
 
         return dropArea.bounds.Contains(point);
-    }
-
-    // ── Apertura / cierre ───────────────────────────────────────────────────
-
-    /// <summary>Alterna entre abierto y cerrado. Lo llama la pestaña lateral.</summary>
-    public void Toggle()
-    {
-        if (IsOpen)
-            Close();
-        else
-            Open();
-    }
-
-    /// <summary>Despliega el panel deslizándolo hasta openLocalX.</summary>
-    public void Open()
-    {
-        if (!TutorialManager.CheckStockPanelOpenAllowed())
-        {
-            Debug.Log("[StockPanelController] Apertura de stock panel bloqueada por el tutorial.");
-            return;
-        }
-
-        IsOpen = true;
-        StartSlide(openLocalX, false);
-        TutorialManager.NotifyStockPanelOpened();
-    }
-
-    /// <summary>
-    /// Repliega el panel hasta closedLocalX. Con instant en true salta la animación.
-    /// Cancela cualquier arrastre en curso.
-    /// </summary>
-    public void Close(bool instant = false)
-    {
-        CancelActiveDrag();
-        IsOpen = false;
-        StartSlide(closedLocalX, instant);
-    }
-
-    private void StartSlide(float targetX, bool instant)
-    {
-        if (slidingRoot == null)
-            return;
-
-        if (slideRoutine != null)
-        {
-            StopCoroutine(slideRoutine);
-            slideRoutine = null;
-        }
-
-        Vector3 current = slidingRoot.localPosition;
-
-        if (instant || slideDuration <= 0f || !isActiveAndEnabled || !slidingRoot.gameObject.activeInHierarchy)
-        {
-            current.x = targetX;
-            slidingRoot.localPosition = current;
-            return;
-        }
-
-        // Escala la duración por el tramo que falta, para que una interrupción no
-        // vuelva a tardar el tiempo completo.
-        float span = Mathf.Abs(openLocalX - closedLocalX);
-        float remaining = span > 0.0001f ? Mathf.Abs(targetX - current.x) / span : 0f;
-        float duration = slideDuration * Mathf.Clamp01(remaining);
-
-        if (duration <= 0.0001f)
-        {
-            current.x = targetX;
-            slidingRoot.localPosition = current;
-            return;
-        }
-
-        slideRoutine = StartCoroutine(SlideRoutine(targetX, duration));
-    }
-
-    private IEnumerator SlideRoutine(float targetX, float duration)
-    {
-        float startX = slidingRoot.localPosition.x;
-        float elapsed = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
-
-            Vector3 position = slidingRoot.localPosition;
-            position.x = Mathf.Lerp(startX, targetX, k);
-            slidingRoot.localPosition = position;
-
-            yield return null;
-        }
-
-        Vector3 finalPosition = slidingRoot.localPosition;
-        finalPosition.x = targetX;
-        slidingRoot.localPosition = finalPosition;
-
-        slideRoutine = null;
     }
 
     // ── Arrastre ────────────────────────────────────────────────────────────

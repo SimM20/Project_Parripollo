@@ -106,7 +106,7 @@ public class SetBreadUndoAction : IBuildUndoAction
 }
 
 /// <summary>
-/// Deshace colocar una carne en el plato: la retira del armado y la devuelve a la bandeja del MeatHolder.
+/// Deshace colocar una carne en el plato: la retira del armado y la devuelve a la bandeja (MeatTray).
 /// </summary>
 public class AddMeatUndoAction : IBuildUndoAction
 {
@@ -122,6 +122,6 @@ public class AddMeatUndoAction : IBuildUndoAction
     public void Undo()
     {
         if (meatBuffer != null)
-            meatBuffer.TryReturnPlateMeatToBuildHolder(plateMeatVisual);
+            meatBuffer.TryReturnPlateMeatToTray(plateMeatVisual);
     }
 }

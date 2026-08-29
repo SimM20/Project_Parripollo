@@ -3,15 +3,14 @@ using UnityEngine;
 
 /// <summary>
 /// Permite entregar el plato armado arrastrándolo con el mouse hasta un cliente.
-/// Se agrega en runtime a cada visual de carne que queda en la PlateDropZone
-/// (ver MeatTransferBuffer.ConsumeBuildMeatEntry), así que no necesita setup de escena.
+/// Se agrega en runtime a cada visual de carne que queda en la zona del plato
+/// (ver MeatTransferBuffer.AdoptVisualIntoPlate), así que no necesita setup de escena.
 ///
-/// Es una alternativa al flujo por teclado (SPACE + A/D), que no se modifica:
-/// ambos terminan en GameManager.TryDeliverToCustomer.
+/// Es la unica via de entrega: termina en GameManager.TryDeliverToCustomer.
 ///
 /// Al arrastrar se mueve el plato completo como un bloque (visuales de carne +
 /// acompañamientos/toppings). Si la entrega no se concreta, todo vuelve a su
-/// posición original en la PlateDropZone.
+/// posición original sobre el plato.
 /// </summary>
 public class PlateDeliveryDraggable : MonoBehaviour
 {
@@ -133,10 +132,10 @@ public class PlateDeliveryDraggable : MonoBehaviour
         if (!delivered)
         {
             MeatTransferBuffer transferBuffer = Object.FindAnyObjectByType<MeatTransferBuffer>();
-            if (transferBuffer != null && transferBuffer.IsOverBuildMeatHolder(dropPoint))
+            if (transferBuffer != null && transferBuffer.IsOverMeatTray(dropPoint))
             {
                 RestorePositions();
-                transferBuffer.TryReturnPlateMeatToBuildHolder(gameObject);
+                transferBuffer.TryReturnPlateMeatToTray(gameObject);
             }
             else
             {

@@ -226,6 +226,28 @@ public class ToppingDraggable : MonoBehaviour
             selfRenderer.sortingOrder = startSortingOrder;
     }
 
+    /// <summary>
+    /// Aborta el arrastre en curso y devuelve el frasco a su sitio. Lo usa el panel al cerrarse
+    /// o al cambiar de vista. Si ya se habia registrado el topping, el undo se encarga de revertirlo:
+    /// aca no se toca el armado.
+    /// </summary>
+    public void CancelDrag()
+    {
+        if (!isDragging)
+            return;
+
+        isDragging = false;
+        StopPouring();
+
+        transform.position = startPosition;
+        transform.rotation = startRotation;
+
+        if (selfRenderer != null)
+            selfRenderer.sortingOrder = startSortingOrder;
+
+        UpdateSauceBar();
+    }
+
     private void StartPouring()
     {
         isPouring = true;

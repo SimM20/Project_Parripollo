@@ -36,23 +36,26 @@ public class ViewManager : MonoBehaviour
 
     void Start() => Show(startView);
 
-    public void NextView()
-    {
-        if (CurrentView == ViewType.Grill)
-            Show(ViewType.Build);
-    }
+    /// <summary>
+    /// DEPRECADO: ya no hay vistas para recorrer. El armado y la entrega viven dentro de la
+    /// vista Parrilla. Se conserva por compatibilidad con llamadores viejos.
+    /// </summary>
+    public void NextView() { }
 
-    public void PreviousView()
-    {
-        if (CurrentView == ViewType.Build)
-            Show(ViewType.Grill);
-    }
+    /// <summary>DEPRECADO: ver <see cref="NextView"/>.</summary>
+    public void PreviousView() { }
 
     public void Show(ViewType view)
     {
         if (view == ViewType.Cooler)
         {
             Debug.LogWarning("[ViewManager] La Cooler View esta deprecada; el stock vive en el StockPanel de la Vista Parrilla. Redirigiendo a Grill.");
+            view = ViewType.Grill;
+        }
+
+        if (view == ViewType.Build)
+        {
+            Debug.LogWarning("[ViewManager] La Build View esta deprecada; el armado y la entrega viven dentro de la Vista Parrilla. Redirigiendo a Grill.");
             view = ViewType.Grill;
         }
 
