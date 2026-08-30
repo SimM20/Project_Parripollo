@@ -11,6 +11,12 @@ using UnityEngine;
 /// Al arrastrar se mueve el plato completo como un bloque (visuales de carne +
 /// acompañamientos/toppings). Si la entrega no se concreta, todo vuelve a su
 /// posición original sobre el plato.
+///
+/// El agarre NO usa OnMouseDown/OnMouseDrag/OnMouseUp: el visual del plato queda
+/// apoyado sobre el collider de la zona 'ToBuild', que está en el mismo plano z y no
+/// tiene handler de mouse. Con la cámara en perspectiva ese collider se queda con el
+/// click y la carne deja de ser agarrable. El pick se resuelve acá, proyectando el
+/// mouse sobre el plano z del propio visual (mismo patrón que Item.GetMouseWorldPosition).
 /// </summary>
 public class PlateDeliveryDraggable : MonoBehaviour
 {
@@ -29,10 +35,15 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private static readonly List<Transform> PlateItemVisuals = new List<Transform>();
     private static readonly Collider2D[] OverlapResults = new Collider2D[16];
 
+    /// <summary>Instancia que conduce el arrastre en curso. Hay un solo mouse: nunca hay dos a la vez.</summary>
+    private static PlateDeliveryDraggable activeDragger;
+
+    /// <summary>Frame en el que ya se resolvió qué visual agarra el click, para no repetir el pick por instancia.</summary>
+    private static int lastPickFrame = -1;
+
     private SpriteRenderer selfRenderer;
     private BoxCollider2D selfCollider;
     private Vector3 grabWorldPoint;
-    private bool dragging;
     private CustomerView hoveredView;
 
     void Awake()
@@ -49,8 +60,17 @@ public class PlateDeliveryDraggable : MonoBehaviour
             Instances.Add(this);
     }
 
+    void OnDisable()
+    {
+        if (activeDragger == this)
+            CancelDrag();
+    }
+
     void OnDestroy()
     {
+        if (activeDragger == this)
+            CancelDrag();
+
         Instances.Remove(this);
     }
 
@@ -78,15 +98,35 @@ public class PlateDeliveryDraggable : MonoBehaviour
         }
     }
 
-    void OnMouseDown()
+    void Update()
     {
-        BeginDrag();
+        if (activeDragger == this)
+        {
+            UpdateDrag();
+            return;
+        }
+
+        if (activeDragger != null || !Input.GetMouseButtonDown(0))
+            return;
+
+        // El pick es global: la primera instancia que corre este frame lo resuelve para todas.
+        if (lastPickFrame == Time.frameCount)
+            return;
+
+        lastPickFrame = Time.frameCount;
+
+        PlateDeliveryDraggable picked = PickUnderPointer();
+        if (picked != null)
+            picked.BeginDrag();
     }
 
-    void OnMouseDrag()
+    private void UpdateDrag()
     {
-        if (!dragging)
+        if (!Input.GetMouseButton(0))
+        {
+            EndDrag();
             return;
+        }
 
         Vector3 mouseWorld = GetMouseWorldPos();
         Vector3 delta = mouseWorld - grabWorldPoint;
@@ -103,12 +143,90 @@ public class PlateDeliveryDraggable : MonoBehaviour
         SetHoveredView(FindCustomerViewAt(mouseWorld));
     }
 
-    void OnMouseUp()
+    /// <summary>
+    /// Visual del plato bajo el puntero, o null. Cada candidato proyecta el mouse sobre su
+    /// propio plano z: con cámara en perspectiva un punto calculado en otro z cae desplazado.
+    /// Gana el de sortingOrder más alto, que es el que se ve arriba.
+    /// </summary>
+    private static PlateDeliveryDraggable PickUnderPointer()
     {
-        if (!dragging)
+        PlateDeliveryDraggable best = null;
+        int bestSortingOrder = 0;
+
+        for (int i = 0; i < Instances.Count; i++)
+        {
+            PlateDeliveryDraggable candidate = Instances[i];
+            if (candidate == null || !candidate.gameObject.activeInHierarchy)
+                continue;
+
+            if (candidate.selfCollider == null || !candidate.selfCollider.enabled)
+                continue;
+
+            Vector3 pointerWorld = candidate.GetMouseWorldPos();
+            if (!candidate.selfCollider.OverlapPoint(pointerWorld))
+                continue;
+
+            // Los paneles deslizables tapan un borde de la pantalla: ahí el click es de ellos.
+            if (IsPointerOverSlidingPanel(pointerWorld))
+                return null;
+
+            int sortingOrder = candidate.selfRenderer != null ? candidate.selfRenderer.sortingOrder : 0;
+            if (best == null || sortingOrder > bestSortingOrder)
+            {
+                best = candidate;
+                bestSortingOrder = sortingOrder;
+            }
+        }
+
+        return best;
+    }
+
+    private static bool IsPointerOverSlidingPanel(Vector3 worldPoint)
+    {
+        if (StockPanelController.Instance != null && StockPanelController.Instance.IsPointOverPanel(worldPoint))
+            return true;
+
+        if (ToppingsPanelController.Instance != null && ToppingsPanelController.Instance.IsPointOverPanel(worldPoint))
+            return true;
+
+        return false;
+    }
+
+    private void BeginDrag()
+    {
+        if (!TutorialManager.CheckDeliveryConfirmAllowed() && !TutorialManager.CheckDeliveryStartAllowed())
             return;
 
-        dragging = false;
+        DraggedVisuals.Clear();
+        grabWorldPoint = GetMouseWorldPos();
+
+        for (int i = 0; i < Instances.Count; i++)
+        {
+            PlateDeliveryDraggable instance = Instances[i];
+            if (instance == null || !instance.gameObject.activeInHierarchy)
+                continue;
+
+            AddDraggedVisual(instance.transform);
+        }
+
+        PlateItemVisuals.Clear();
+        BuildFoodDropZone.CollectActivePlateVisuals(PlateItemVisuals);
+
+        for (int i = 0; i < PlateItemVisuals.Count; i++)
+            AddDraggedVisual(PlateItemVisuals[i]);
+
+        if (DraggedVisuals.Count == 0)
+            return;
+
+        activeDragger = this;
+
+        // Equivalente por mouse de entrar en modo selección: mantiene vivo el paso del tutorial.
+        TutorialManager.NotifyDeliverySelectionBegun();
+    }
+
+    private void EndDrag()
+    {
+        activeDragger = null;
         RestoreSortingOrders();
 
         Vector3 dropPoint = GetMouseWorldPos();
@@ -146,36 +264,14 @@ public class PlateDeliveryDraggable : MonoBehaviour
         DraggedVisuals.Clear();
     }
 
-    private void BeginDrag()
+    /// <summary>Aborta el arrastre sin intentar el drop. Para cuando el visual que conduce se apaga o se destruye.</summary>
+    private void CancelDrag()
     {
-        if (!TutorialManager.CheckDeliveryConfirmAllowed() && !TutorialManager.CheckDeliveryStartAllowed())
-            return;
-
+        activeDragger = null;
+        RestoreSortingOrders();
+        RestorePositions();
+        SetHoveredView(null);
         DraggedVisuals.Clear();
-        grabWorldPoint = GetMouseWorldPos();
-
-        for (int i = 0; i < Instances.Count; i++)
-        {
-            PlateDeliveryDraggable instance = Instances[i];
-            if (instance == null || !instance.gameObject.activeInHierarchy)
-                continue;
-
-            AddDraggedVisual(instance.transform);
-        }
-
-        PlateItemVisuals.Clear();
-        BuildFoodDropZone.CollectActivePlateVisuals(PlateItemVisuals);
-
-        for (int i = 0; i < PlateItemVisuals.Count; i++)
-            AddDraggedVisual(PlateItemVisuals[i]);
-
-        if (DraggedVisuals.Count == 0)
-            return;
-
-        dragging = true;
-
-        // Equivalente por mouse de entrar en modo selección: mantiene vivo el paso del tutorial.
-        TutorialManager.NotifyDeliverySelectionBegun();
     }
 
     private static void AddDraggedVisual(Transform target)
@@ -250,6 +346,11 @@ public class PlateDeliveryDraggable : MonoBehaviour
         return null;
     }
 
+    /// <summary>
+    /// Punto del mouse sobre el plano z de este visual. La distancia a la cámara es obligatoria:
+    /// con cámara en perspectiva, ScreenToWorldPoint con z=0 devuelve la posición de la cámara.
+    /// Mismo patrón que Item.GetMouseWorldPosition.
+    /// </summary>
     private Vector3 GetMouseWorldPos()
     {
         Camera cam = Camera.main;

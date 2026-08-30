@@ -9,6 +9,7 @@
 | Campo | Valor |
 |---|---|
 | Motor | Unity **2022.3.62f3**, URP (2D), Input Manager legacy (`Input.GetKeyDown`) |
+| Cámara | **Perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). No es ortográfica — ver nota 22 |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`) |
 | Código propio | `Assets/Scripts/` — **115 archivos, ~15.2k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
@@ -525,17 +526,20 @@ que queda intacto: ambos terminan en `GameManager.TryDeliverToCustomer`.
 
 ```csharp
 public void RefreshCollider()   // re-mide el BoxCollider2D contra el sprite actual
-// resto: OnMouseDown/Drag/Up + helpers estáticos
+// resto: Update (pick + drag + drop) + helpers estáticos
 ```
 
 | Aspecto | Detalle |
 |---|---|
-| Creación | **Cero setup de escena.** `MeatTransferBuffer.ConsumeBuildMeatEntry` lo hace `AddComponent` sobre cada visual de carne que queda en la `PlateDropZone`, justo donde destruye el `BuildMeatHolderDraggableMeat` |
+| Creación | **Cero setup de escena.** `MeatTransferBuffer.AdoptVisualIntoPlate` lo hace `AddComponent` sobre cada visual de carne que queda en la zona del plato, justo donde destruye el `ToBuildDraggableMeat` |
+| **Agarre (pick)** | **No usa `OnMouseDown`/`OnMouseDrag`/`OnMouseUp`.** El pick se resuelve en `Update`: `PickUnderPointer()` recorre las instancias, proyecta el mouse sobre el plano z de **cada candidato** (`GetMouseWorldPos`) y prueba `selfCollider.OverlapPoint`. Gana el de `sortingOrder` más alto. Ver nota 22 |
 | Qué se arrastra | El plato **completo como bloque**: todas las instancias de `PlateDeliveryDraggable` + los visuales de sides/toppings que devuelve `BuildFoodDropZone.CollectActivePlateVisuals`. Agarrar cualquier sprite mueve todo |
-| Estado del arrastre | `static`: posiciones y `sortingOrder` de origen de cada visual (hay un solo mouse, no hay arrastres concurrentes). El `sortingOrder` sube `+5000` mientras dura y se restaura al soltar |
+| Estado del arrastre | `static`: la instancia que conduce (`activeDragger`), el frame del último pick (`lastPickFrame`, para no repetirlo por instancia) y las posiciones + `sortingOrder` de origen de cada visual. Hay un solo mouse: no hay arrastres concurrentes. El `sortingOrder` sube `+5000` mientras dura y se restaura al soltar |
+| Gate de paneles | Si el punto cae sobre un `SlidingPanel` abierto (`StockPanelController` / `ToppingsPanelController` → `IsPointOverPanel`) el pick devuelve `null`: el click es del panel. Necesario porque, al no pasar por el raycast de Unity, nada más arbitra quién se queda con el click |
 | Hover de cliente | `Physics2D.OverlapPointNonAlloc` sobre un buffer estático de 16 (sin GC por frame) → `GetComponentInParent<CustomerView>()` → `CustomerSystem.SetDeliveryDragHover(view)` |
-| Rechazo | Si `TryDeliverToCustomer` devuelve `false`, o si se soltó fuera de un cliente, cada visual vuelve a su posición guardada en la `PlateDropZone`. El mensaje ya lo muestra `GameManager` vía `DeliveryFeedbackText` |
-| Tutorial | `OnMouseDown` dispara `TutorialManager.NotifyDeliverySelectionBegun()`: es el equivalente por mouse de entrar en modo selección, y sin eso el paso `25.BeginDelivery` quedaría colgado si el jugador usa el mouse |
+| Rechazo | Si `TryDeliverToCustomer` devuelve `false`, o si se soltó fuera de un cliente, cada visual vuelve a su posición guardada sobre el plato. El mensaje ya lo muestra `GameManager` vía `DeliveryFeedbackText` |
+| Cancelación | `OnDisable`/`OnDestroy` del visual que conduce llaman `CancelDrag()`: restauran posiciones y `sortingOrder` sin intentar el drop |
+| Tutorial | `BeginDrag` dispara `TutorialManager.NotifyDeliverySelectionBegun()`: es el equivalente por mouse de entrar en modo selección, y sin eso el paso `25.BeginDelivery` quedaría colgado si el jugador usa el mouse |
 | Collider | Se re-mide en `Awake` y cada vez que el pan cambia sprite/escala/rotación del visual (`MeatTransferBuffer.UpdatePlateMeatSprite` y `RestorePlateMeatVisual` llaman a `RefreshCollider()`) |
 
 ⚠️ Las salpicaduras de salsa (`SauceSplatter`, creadas por `ToppingDraggable`) **no** siguen al plato
@@ -842,5 +846,6 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 17 | **`TutorialScene` está rota** desde el refactor del cooler: los pasos `2.PrimeraParteCooler`, `9.PasarACooler` y `12.VolverGrillView` usan `ChangeView` hacia/desde `Cooler` y ese evento ya no dispara. Los pasos de arrastre (10/11) sí funcionan porque el drop directo del panel emite las notificaciones existentes. Pendiente de decisión: rehacer esos pasos, saltearlos o sacar la escena del build. Además falta wirear en `TutorialScene` la contra-escala del panel y sus refs (`grillSystem`, `viewManager`, buffers) |
 | 18 | `TutorialOfferController` pone `Time.timeScale = 0` al entrar a `GameScene` hasta que se responde el diálogo. Cualquier animación de UI que deba correr ahí necesita `Time.unscaledDeltaTime` |
 | 19 | La entrega tiene **dos entradas y una sola lógica**: `GameManager.TryDeliverToCustomer(Customer)`. Al tocar validaciones, pagos o mensajes, editar **solo ahí** — `ConfirmDeliverySelection` (SPACE) y `PlateDeliveryDraggable` (mouse) son cáscaras. El `bool` de retorno lo consume el arrastre para decidir si devuelve el plato a la `PlateDropZone`: si se agrega un camino de rechazo nuevo, tiene que devolver `false` o el plato desaparece del mostrador |
-| 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.ConsumeBuildMeatEntry`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la `PlateDropZone`, tiene que agregar el componente o ese plato no se podrá arrastrar |
-| 21 | Los clientes se instancian con `customersParent = null` (raíz de escena), así que **no** los alcanza el toggle de `ViewManager` y sus colliders siguen activos en la vista Build. De eso depende el hover de la entrega por arrastre (`Physics2D.OverlapPointNonAlloc`). Si algún día se cuelgan de un root de vista, se rompe el drag & drop de entrega |
+| 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.AdoptVisualIntoPlate`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la zona del plato, tiene que agregar el componente o ese plato no se podrá arrastrar |
+| 21 | Los clientes se instancian con `customersParent = null` (raíz de escena), así que **no** los alcanza el toggle de `ViewManager` y sus colliders siguen activos. De eso depende el hover de la entrega por arrastre (`Physics2D.OverlapPointNonAlloc`). Si algún día se cuelgan de un root de vista, se rompe el drag & drop de entrega |
+| 22 | **La cámara está en perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). Dos consecuencias, y las dos ya mordieron: (a) **nunca** `cam.ScreenToWorldPoint(Input.mousePosition)` a secas — con `z = 0` devuelve la posición de la cámara. Siempre `pos.z = Mathf.Abs(objeto.z - cam.z)` antes de convertir (`Item.GetMouseWorldPosition` es la referencia; lo repiten `Meat.RestoreHoverIfPointerOver`, `ToBuildDraggableMeat`, `StockPanelSlot`, `PlateDeliveryDraggable`). (b) El pick interno de Unity (`OnMouseDown` sobre `Collider2D`) reparte el click a **un solo** collider, y los visuales del plato quedan apoyados sobre el de la zona `ToBuild` — mismo plano `z = 0` y sin handler de mouse — así que se lo quedaba la zona y la carne del plato dejaba de ser agarrable. Por eso `PlateDeliveryDraggable` resuelve su propio pick en `Update` en vez de usar `OnMouseXXX`. Si algún otro objeto apilado sobre un collider "mudo" deja de responder al mouse, es el mismo caso |
