@@ -220,6 +220,10 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
         activeDragger = this;
 
+        // Los clientes apagan su collider mientras hay un panel desplegado; durante el
+        // arrastre hay que devolvérselo o FindCustomerViewAt no encuentra a nadie.
+        CustomerView.SetDeliveryDragActive(true);
+
         // Equivalente por mouse de entrar en modo selección: mantiene vivo el paso del tutorial.
         TutorialManager.NotifyDeliverySelectionBegun();
     }
@@ -238,6 +242,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
         {
             RestorePositions();
             DraggedVisuals.Clear();
+            CustomerView.SetDeliveryDragActive(false);
             return;
         }
 
@@ -262,6 +267,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
         }
 
         DraggedVisuals.Clear();
+        CustomerView.SetDeliveryDragActive(false);
     }
 
     /// <summary>Aborta el arrastre sin intentar el drop. Para cuando el visual que conduce se apaga o se destruye.</summary>
@@ -272,6 +278,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
         RestorePositions();
         SetHoveredView(null);
         DraggedVisuals.Clear();
+        CustomerView.SetDeliveryDragActive(false);
     }
 
     private static void AddDraggedVisual(Transform target)

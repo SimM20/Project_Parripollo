@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -34,7 +36,26 @@ public abstract class SlidingPanel : MonoBehaviour
     /// <summary>True solo si el contenido puede iniciar un arrastre en este momento.</summary>
     public bool CanBeginDrag => IsOpen && slideRoutine == null;
 
+    /// <summary>True si hay al menos un panel deslizante desplegado.</summary>
+    public static bool AnyPanelOpen => OpenPanels.Count > 0;
+
+    /// <summary>
+    /// Se dispara cuando cambia si hay o no algun panel desplegado. Lo usan los elementos
+    /// del mundo que quedan tapados por los paneles para dejar de robarles el mouse.
+    /// </summary>
+    public static event Action<bool> OnAnyPanelOpenChanged;
+
+    private static readonly HashSet<SlidingPanel> OpenPanels = new HashSet<SlidingPanel>();
+
     private Coroutine slideRoutine;
+
+    // Con "Enter Play Mode" sin domain reload el estatico sobrevive entre sesiones de play.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        OpenPanels.Clear();
+        OnAnyPanelOpenChanged = null;
+    }
 
     // ── Ciclo de vida ───────────────────────────────────────────────────────
 
@@ -62,6 +83,7 @@ public abstract class SlidingPanel : MonoBehaviour
             viewManager.OnViewChanged -= HandleViewChanged;
 
         OnPanelClosing();
+        SetOpenState(false);
 
         if (slideRoutine != null)
         {
@@ -187,7 +209,7 @@ public abstract class SlidingPanel : MonoBehaviour
             return;
         }
 
-        IsOpen = true;
+        SetOpenState(true);
         StartSlide(openLocalX, false);
         OnPanelOpened();
     }
@@ -199,8 +221,29 @@ public abstract class SlidingPanel : MonoBehaviour
     public void Close(bool instant = false)
     {
         OnPanelClosing();
-        IsOpen = false;
+        SetOpenState(false);
         StartSlide(closedLocalX, instant);
+    }
+
+    /// <summary>
+    /// Actualiza IsOpen y el registro global, avisando solo cuando cambia el estado
+    /// agregado (de ningun panel abierto a alguno, o al reves).
+    /// </summary>
+    private void SetOpenState(bool open)
+    {
+        IsOpen = open;
+
+        bool wasAnyOpen = OpenPanels.Count > 0;
+
+        if (open)
+            OpenPanels.Add(this);
+        else
+            OpenPanels.Remove(this);
+
+        bool isAnyOpen = OpenPanels.Count > 0;
+
+        if (wasAnyOpen != isAnyOpen)
+            OnAnyPanelOpenChanged?.Invoke(isAnyOpen);
     }
 
     private void StartSlide(float targetX, bool instant)
