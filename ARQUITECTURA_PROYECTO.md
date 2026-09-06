@@ -10,7 +10,7 @@
 |---|---|
 | Motor | Unity **2022.3.62f3**, URP (2D), Input Manager legacy (`Input.GetKeyDown`) |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`) |
-| Código propio | `Assets/Scripts/` — **115 archivos, ~15.2k líneas** |
+| Código propio | `Assets/Scripts/` — **120 archivos, ~16.2k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina: cocinar cortes, armar platos/sándwiches, entregar a clientes por noche |
 | Persistencia | Solo `init.cfg` (resolución/FPS). **No hay savegame**: el progreso vive en objetos `DontDestroyOnLoad` |
@@ -41,7 +41,7 @@ Assets/Scripts/
 
 | Carpeta | Responsabilidad | Archivos clave |
 |---|---|---|
-| **raíz** | Singletons de sesión (`UIManager`, `AudioManager`, `PlayerWallet`, `CoalConsumptionTracker`), modelo base drag&drop (`Item`), grilla (`GridSlot`), entidades físicas (`Meat`, `Coal`), buffer de carbón, arranque (`Init`), utilidades de escena | `Item.cs`, `GridSlot.cs`, `Meat.cs`, `Coal.cs`, `PlayerWallet.cs`, `CoalConsumptionTracker.cs`, `SceneManagementUtils.cs` |
+| **raíz** | Singletons de sesión (`UIManager`, `AudioManager`, `PlayerWallet`, `CoalConsumptionTracker`), modelo base drag&drop (`Item`), grilla (`GridSlot`), entidades físicas (`Meat`, `Coal`), buffer de carbón, **sistema de strikes**, arranque (`Init`), utilidades de escena | `Item.cs`, `GridSlot.cs`, `Meat.cs`, `Coal.cs`, `PlayerWallet.cs`, `CoalConsumptionTracker.cs`, `SceneManagementUtils.cs`, `Strike*.cs` (5 archivos) |
 | **Core/** | Bucle de partida e input global (`GameManager`), armado del plato (`BuildStationSystem`), staging de carne entre vistas (`MeatTransferBuffer`), draggables inter-vista, basura | `GameManager.cs` (445), `MeatTransferBuffer.cs` (949), `BuildStationSystem.cs` |
 | **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `CoalStackCounter.cs` |
 | **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
@@ -63,7 +63,7 @@ Assets/ScriptableObjects/
 ├── Toppings/        ToppingSO   — Chimichurri, Salsa criolla
 ├── Tutorial/        TutorialStepSO ×30 (secuencia ordenada 1..30)
 ├── FoodCatalog.asset / FoodCatalogTutorial.asset
-├── ShopConfig.asset / CoalData.asset
+├── ShopConfig.asset / CoalData.asset / StrikeConfig.asset
 └── Chorizo.asset, ChorizoTutorial.asset
 ```
 
@@ -80,6 +80,7 @@ graph TD
         CCT[CoalConsumptionTracker]
         CS_[CoolerSystem]
         TS[ToppingStock]
+        SSF[StrikeSessionFlag]
     end
 
     GM[GameManager<br/>input + orquestación]
@@ -100,6 +101,13 @@ graph TD
     GM -->|EndNight| CCT
 
     CUS -->|event OnNightEnded| GM
+    CUS -->|event OnCustomerLostByPatience| STK[StrikeSystem]
+    STK -->|SetStrikes + TriggerStrikeShake| UIM
+    STK -->|PlayStrikeSound| AM[AudioManager]
+    STK -->|BlockNewSpawns| CUS
+    STK -->|MarkClosedByStrikes| SSF
+    STK -->|event OnMaxReached| SGN[StrikeGameplayNotice]
+    SSF -.->|ClosedByStrikes en EndScene| SCP[StrikeClosurePopupUI]
     CUS --> OS[OrderSystem] --> ORD[Order]
     CUS --> FAS[FoodAvailabilityService] --> CAT[FoodCatalogSO]
     FAS --> CS_
@@ -138,14 +146,14 @@ graph TD
 
 | Patrón | Dónde | Detalle |
 |---|---|---|
-| **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `MeatHoverBubble`, `MeatCookHoverBar`, `CustomerHoverBubble`, `CustomerSelectionFrame`, `DeliveryFeedbackText` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
+| **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `StrikeSessionFlag`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `MeatHoverBubble`, `MeatCookHoverBar`, `CustomerHoverBubble`, `CustomerSelectionFrame`, `DeliveryFeedbackText` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
 | **Observer** (`event Action`) | Ver tabla 2.3 | Suscripción en `OnEnable`/`Start`, desuscripción en `OnDisable`/`OnDestroy` |
 | **Static notification hub** | `TutorialManager.Notify*(...)` | 11 métodos estáticos no-op si `Instance == null` → en `GameScene` el tutorial no existe y nada cambia |
 | **Command** | `IBuildUndoAction` + `BuildUndoHistory` (pila) | `AddSideUndoAction`, `AddToppingUndoAction`, `SetBreadUndoAction`. **La carne nunca es reversible** |
 | **Buffer / staging area** | `MeatTransferBuffer`, `CoalTransferBuffer` | Guardan `BufferedMeatData`/`BufferedCoalData` (POCO con tiempos de cocción) y reconstruyen los visuales; permiten mover items entre vistas sin instanciar `Meat`/`Coal` reales |
 | **Duck typing por reflexión / `SendMessage`** | `GameManager`→buffers, `MeatHolderDraggableMeat`, `CoolerDraggableMeat`, `*StockVisualizer` | `Type.GetType` sobre todos los assemblies + `MethodInfo.Invoke` / `SendMessage(..., DontRequireReceiver)`. Rompe el binding estático a propósito |
 | **Registro estático de instancias** | `Coal.ActiveCoals`, `BuildFoodDropZone.ActiveZones`, `TrashZone.ActiveZones`, `ToppingDraggable.ActiveInstances` | Alta en `OnEnable`, baja en `OnDisable`/`OnDestroy`. Habilita APIs estáticas tipo `TryAcceptAt`, `ClearAllSplatters` |
-| **Data-driven (ScriptableObject)** | `ItemDataSO` → `MeatCutSO`, `CoalSO`, `UpgradeSO`; `BreadSO`, `SideSO`, `ToppingSO`, `ProductVariantSO`, `FoodCatalogSO`, `ShopConfigSO`, `TutorialStepSO`, `HudDatabaseSO` | ⚠️ Los SO mutan en runtime (`isUnlocked`, `isPurchased`) → **el estado persiste entre sesiones de Editor** |
+| **Data-driven (ScriptableObject)** | `ItemDataSO` → `MeatCutSO`, `CoalSO`, `UpgradeSO`; `BreadSO`, `SideSO`, `ToppingSO`, `ProductVariantSO`, `FoodCatalogSO`, `ShopConfigSO`, `TutorialStepSO`, `HudDatabaseSO`, `StrikeConfigSO` | ⚠️ Los SO mutan en runtime (`isUnlocked`, `isPurchased`) → **el estado persiste entre sesiones de Editor** |
 | **Service / Facade** | `FoodAvailabilityService` | Cruza `FoodCatalogSO` (estático) con `CoolerSystem` (stock live) |
 | **Static utility / Extension methods** | `DishValidator`, `CookingDeliveryEvaluator`, `SceneManagementUtils`, `MeatHoverText.ToHoverString()`, `OrderText.ToHoverString()` | Sin estado, testeables aisladamente |
 | **Object pool** | `GrillNotificationManager.groupPool` | Reutiliza grupos de notificación |
@@ -158,6 +166,9 @@ graph TD
 |---|---|---|
 | `ViewManager` | `OnViewChanged(ViewType)` | `TutorialManager`, `GrillNotificationManager`, `StockPanelController` |
 | `CustomerSystem` | `OnNightEnded` (campo `Action`) | `GameManager.EndNight` |
+| `CustomerSystem` | `OnCustomerLostByPatience(Customer)` (campo `Action`) | `StrikeSystem` — se dispara **antes** de `RemoveCustomer` cuando el cliente llega a `IsAngry` |
+| `StrikeSystem` | `OnStrikeAdded(int current, int max)` (campo `Action`) | (sin consumidor actual — hook para VFX/HUD extra) |
+| `StrikeSystem` | `OnMaxReached` (campo `Action`) | `StrikeGameplayNotice` (cartel "Te clavaron el cartel") |
 | `CoolerSystem` | `OnMissingItemRequested(ItemDataSO)` | (sin consumidor actual — hook futuro) |
 | `BuildStationSystem` | `OnAssemblyChanged`, `OnAssemblyCleared` | `BuildUndoHistory.Clear` |
 | `BuildUndoHistory` | `OnHistoryChanged` | `RollbackButtonUI` (habilita/deshabilita) |
@@ -271,8 +282,17 @@ bool IsPaused { get; }
 void PauseGame(), UnPauseGame()
 void SetActualDay(int), SetTotalCustomers(int), SetActualCustomers(int), SetActualMoney(float)
 int  GetActualDay(), GetActualMoney(), GetTotalCustomersPerDay(), GetActualCustomers()
+
+void SetStrikes(int current, int max)   // pinta strikesText + color por proximidad al máximo
+void TriggerStrikeShake()               // corrutina de shake sobre el transform de strikesText
 ```
 Instancia `pauseCanvasPrefab` on-demand. Delega el render a `HudManager` → `HudContainer`.
+
+⚠️ El HUD de strikes **no** pasa por `HudManager`: `strikesText` es un `TextMeshProUGUI` asignado
+directo por inspector en el `UIManager`, con su propio formato (`strikesFormat`, def. `"Strikes: {0}/{1}"`)
+y su propia paleta (`strikesNormalColor` / `strikesWarningColor` en `max−1` / `strikesMaxColor` en `max`).
+Si `strikesText` no está asignado, `SetStrikes` y `TriggerStrikeShake` son no-op silenciosos.
+`ShakeText` usa `Time.deltaTime`, así que con `Time.timeScale = 0` (pausa, diálogo de tutorial) no avanza.
 
 ---
 
@@ -585,14 +605,18 @@ Se autolimpia con `BuildStationSystem.OnAssemblyCleared`. **Solo registra pan / 
 #### `CustomerSystem` — `Customers/CustomerSystem.cs`
 ```csharp
 Action OnNightEnded;                      // campo público, no `event`
+Action<Customer> OnCustomerLostByPatience;// campo público — lo consume StrikeSystem
 Customer currentCustomer;                 // compat con GameManager
 Customer SelectedCustomer { get; }
 bool IsDeliverySelectionActive { get; }
 bool IsReadyForSpawning { get; }
+bool SpawnsBlocked { get; }               // true tras BlockNewSpawns()
+int  ActiveCustomerCount { get; }
 IReadOnlyList<Customer> ActiveCustomers { get; }
 FoodCatalogSO Catalog { get; }            // vía FoodAvailabilityService
 
 void StartNight()
+void BlockNewSpawns()                     // corta SpawnLoop; lo llama StrikeSystem al 3er strike
 void SpawnCustomer(bool ignoreNightLimit = false)
 void SelectCustomer(Customer), SelectAdjacentCustomer(int direction)
 bool BeginDeliverySelection();  void EndDeliverySelection()
@@ -606,8 +630,20 @@ Al pasar `null` restaura lo que corresponda al modo teclado. Si el cliente resal
 a mitad del arrastre, `RemoveCustomer` suelta el recuadro antes de destruir la view.
 Clientes por noche: `min(customersFirstNight + (noche−1) × customersAddedPerNight, maximumCustomersPerNight)`
 (por defecto `20 + 5·(n−1)`, cap `70`; máx. `4` simultáneos).
-`Update` descuenta paciencia y expulsa a los `IsAngry`. Al quedar `spawnedTonight >= target && activeCustomers == 0` → `OnNightEnded`.
-`CompactSlots()` corre las views a la izquierda al liberarse un slot.
+`Update` descuenta paciencia y, al llegar a `IsAngry`, dispara `OnCustomerLostByPatience(c)` **antes** de
+`RemoveCustomer(c, "Se fue enojado")`. `CompactSlots()` corre las views a la izquierda al liberarse un slot.
+
+**Fin de noche — cambió con el sistema de strikes.** Hoy `OnNightEnded` se dispara desde dos lugares:
+
+| Origen | Condición |
+|---|---|
+| `RemoveCustomer` | `SpawnsBlocked && activeCustomers.Count == 0` — es decir, **solo** tras el cierre por strikes, una vez atendidos/expulsados los que quedaban en el mostrador |
+| `SpawnCustomer` | `spawnedTonight >= maximumCustomersPerNight` (tope duro, def. `70`) |
+
+`SpawnLoop` ahora itera `while (spawnedTonight <= maximumCustomersPerNight && !SpawnsBlocked)` y chequea
+`SpawnsBlocked` de nuevo después del `WaitForSeconds`. `customersTargetTonight` sigue existiendo y sigue
+frenando los spawns dentro de `SpawnCustomer` (`return` silencioso), pero **ya no cierra la noche** — ver
+nota 22 en §5.
 
 #### `Customer` — POCO
 `type`, `order`, `patience`, `maxPatience`, `slotIndex`; `bool IsAngry`; `float Patience01`; `Init(...)`, `UpdatePatience(float)`.
@@ -622,7 +658,100 @@ OrderSystem(List<WeightedOrderCut> cuts);   Order GenerateOrder();
 
 ---
 
-### 3.6 Progresión, economía y tienda
+### 3.6 Strikes (cierre anticipado de la jornada)
+
+Regla de diseño: **si se van 3 clientes por falta de paciencia, dejan de llegar clientes nuevos.**
+No es un game over — la noche sigue hasta atender a los que ya estaban, y después se pasa a la tienda
+con un popup que explica qué pasó.
+
+Cinco archivos, todos en la raíz de `Assets/Scripts/`, ninguno depende de `GameManager`:
+
+| Archivo | Escena | Rol |
+|---|---|---|
+| `StrikeConfigSO.cs` | asset | Config + **todos los textos** (`Assets/ScriptableObjects/StrikeConfig.asset`) |
+| `StrikeSystem.cs` | `GameScene` (GO `StrikeSystem`) | Lógica: cuenta strikes, corta spawns, marca el flag |
+| `StrikeSessionFlag.cs` | `GameScene` (GO `StrikeSessionFlag`) · **DDOL** | Único puente `GameScene` → `EndScene` |
+| `StrikeGameplayNotice.cs` | `GameScene` (GO `StrikeGameplayNotice`, bajo `StrikeCanvas`) | Cartel temporal in-game al 3er strike |
+| `StrikeClosurePopupUI.cs` | `EndScene` (GO `StrikeClosurePopUp`) | Popup explicativo al llegar a la tienda |
+
+#### `StrikeConfigSO : ScriptableObject` — menú `Parrilla/Strike Config`
+```csharp
+int   maxStrikes = 3;                 // [Min(1)]
+float gameplayNoticeDuration = 5f;    // [Min(0.1)] — segundos que dura el cartel in-game
+string noticeTitle, noticeBody;       // cartel in-game
+string popupTitle, popupBody, popupButtonText;   // popup de la tienda
+```
+El copy vive **acá**, no en los prefabs ni en los scripts: `StrikeSystem` reexpone
+`MaxStrikes` / `NoticeDuration` / `NoticeTitle` / `NoticeBody` con fallbacks (`3`, `5f`, `""`) por si
+falta el asset, y `StrikeClosurePopupUI` lee el SO directo.
+
+#### `StrikeSystem` — `StrikeSystem.cs` (NO singleton, instancia de escena)
+```csharp
+[SF] CustomerSystem customerSystem;  [SF] StrikeConfigSO config;
+Action<int,int> OnStrikeAdded;   Action OnMaxReached;
+int CurrentStrikes { get; }      int MaxStrikes { get; }
+float NoticeDuration { get; }    string NoticeTitle { get; }  string NoticeBody { get; }
+```
+`Start()` — si falta cualquiera de las dos referencias, `LogError` y **no se suscribe a nada**
+(el sistema queda inerte, la partida sigue). Si están: `StrikeSessionFlag.Reset()`, `CurrentStrikes = 0`,
+suscripción a `CustomerSystem.OnCustomerLostByPatience` y primer `UIManager.SetStrikes(0, max)`.
+Se desuscribe en `OnDestroy`.
+
+Por cada cliente perdido (`HandleCustomerLostByPatience`), en orden:
+
+```
+1. CurrentStrikes = min(CurrentStrikes + 1, MaxStrikes)   // sin efecto si maxReached
+2. OnStrikeAdded(current, max)
+3. UIManager.SetStrikes(current, max) + UIManager.TriggerStrikeShake()
+4. AudioManager.PlayStrikeSound()
+5. si current >= MaxStrikes → HandleMaxReached()
+```
+
+`HandleMaxReached()`: `maxReached = true` (guard idempotente) → `CustomerSystem.BlockNewSpawns()` →
+`StrikeSessionFlag.MarkClosedByStrikes()` → `OnMaxReached()`.
+**No** carga escena ni llama a `GameManager.EndNight`: la noche termina sola cuando
+`RemoveCustomer` ve `SpawnsBlocked && activeCustomers == 0`.
+
+Los strikes son **por jornada**: no hay contador acumulado entre noches y `StrikeSessionFlag` solo
+transporta un `bool`, no el conteo.
+
+#### `StrikeSessionFlag` — Singleton + DDOL
+```csharp
+static StrikeSessionFlag Instance { get; }
+bool ClosedByStrikes { get; }
+void MarkClosedByStrikes(), Reset()
+```
+Guard de singleton estándar + `transform.SetParent(null)` antes del `DontDestroyOnLoad` (necesario
+porque en `GameScene` cuelga de un padre). Ciclo del flag:
+
+```
+GameScene: StrikeSystem.Start()      → Reset()                 (arranca la jornada limpia)
+GameScene: 3er strike                → MarkClosedByStrikes()
+EndScene:  StrikeClosurePopupUI.Start() lee ClosedByStrikes → muestra el popup
+EndScene:  click en "Ir a la tienda" → Reset()                 (consume el flag)
+```
+⚠️ No lo destruye `SceneManagementUtils.ReturnToMainMenu()` — a diferencia de los otros cuatro DDOL,
+`StrikeSessionFlag` sobrevive al volver al menú. Como `StrikeSystem.Start()` lo resetea al entrar a
+`GameScene`, en la práctica no se filtra, pero es la excepción a la regla de §4.5.
+
+#### `StrikeGameplayNotice` — cartel in-game
+Se suscribe a `StrikeSystem.OnMaxReached` en `OnEnable` (y apaga `noticeRoot`), se desuscribe en
+`OnDisable`. Al dispararse rellena `titleText`/`bodyText` desde el `StrikeSystem`, activa `noticeRoot`
+y programa el apagado con una corrutina de `WaitForSeconds(NoticeDuration)`, cancelando la anterior si
+la hubiera. Usa tiempo escalado: **con el juego en pausa el cartel no se va**.
+
+#### `StrikeClosurePopupUI` — popup en `EndScene`
+`Awake` engancha `continueButton.onClick` y apaga `popupRoot`. `Start` consulta
+`StrikeSessionFlag.Instance?.ClosedByStrikes`: si es `false` o no hay flag, no hace nada — o sea, en una
+noche terminada normalmente el popup nunca aparece. Si es `true`, vuelca los tres textos del
+`StrikeConfigSO` y activa `popupRoot`. El botón cierra el popup y llama a `Reset()` del flag.
+
+⚠️ Es puramente informativo: **no** bloquea la tienda ni cambia de escena, solo tapa la UI mientras está
+abierto. Y conserva ~10 `Debug.Log` de diagnóstico — sacarlos antes de release (ver nota 24 en §5).
+
+---
+
+### 3.7 Progresión, economía y tienda
 
 #### `CoalConsumptionTracker` — `CoalConsumptionTracker.cs` · Singleton + DDOL
 **Fuente de verdad del progreso de la partida.**
@@ -708,7 +837,7 @@ queda sincronizado por el evento `OnTabChanged`.
 
 ---
 
-### 3.7 Tutorial
+### 3.8 Tutorial
 
 #### `TutorialManager` — `UI/TutorialManager.cs` · Singleton
 Máquina de estados data-driven sobre `List<TutorialStepSO>` (30 pasos). **Solo arranca si `SceneManagementUtils.GetCurrentName() == "TutorialScene"`.**
@@ -753,9 +882,9 @@ MainMenuScene (build index 0)
 
 | Fase | Qué corre |
 |---|---|
-| `Awake` | Singletons se registran (`GameManager`, `UIManager`, `AudioManager`, `CoolerSystem`+DDOL, `PlayerWallet`+DDOL, `ToppingStock`+DDOL, `CoalConsumptionTracker`+DDOL, `BuildUndoHistory`). `GrillSystem.AssignGridCoordinates`. `CoolerSystem.BuildInitialStockRuntime()` (o restaura backup) |
-| `OnEnable` | Visualizadores y UI se suscriben a `OnInventoryChanged` / `OnMoneyChanged` |
-| `Start` | `ViewManager.Show(startView)` · `CustomerSystem` calcula la noche, aplica desbloqueos, crea `OrderSystem` y lanza `StartNight()` · `GameManager` se suscribe a `OnNightEnded` y publica el día en el HUD · buffers resuelven tipos por reflexión y llaman `RefreshVisuals()` |
+| `Awake` | Singletons se registran (`GameManager`, `UIManager`, `AudioManager`, `CoolerSystem`+DDOL, `PlayerWallet`+DDOL, `ToppingStock`+DDOL, `CoalConsumptionTracker`+DDOL, `StrikeSessionFlag`+DDOL, `BuildUndoHistory`). `GrillSystem.AssignGridCoordinates`. `CoolerSystem.BuildInitialStockRuntime()` (o restaura backup) |
+| `OnEnable` | Visualizadores y UI se suscriben a `OnInventoryChanged` / `OnMoneyChanged`; `StrikeGameplayNotice` se suscribe a `StrikeSystem.OnMaxReached` |
+| `Start` | `ViewManager.Show(startView)` · `CustomerSystem` calcula la noche, aplica desbloqueos, crea `OrderSystem` y lanza `StartNight()` · `GameManager` se suscribe a `OnNightEnded` y publica el día en el HUD · `StrikeSystem` resetea el flag, pone el contador en `0/max` y se suscribe a `OnCustomerLostByPatience` · buffers resuelven tipos por reflexión y llaman `RefreshVisuals()` |
 | `Update` | Ver 4.3 |
 
 > ⚠️ `TutorialManager.Start` y `CustomerSystem.Start` pueden correr en cualquier orden: el spawn forzado del tutorial espera un frame y reintenta hasta 5 s.
@@ -768,7 +897,7 @@ MainMenuScene (build index 0)
 | `GrillSystem` | `UpdateHeatPropagation()` — recalcula el calor de todos los slots |
 | `GridSlot` (×N) | Quema carbones → calcula calor interno → `meat.Cook(totalHeatReceived)` |
 | `Meat` | Efectos (calor/humo); si está agarrado: `HandleHeldInput` + `UpdateHoverPreview` |
-| `CustomerSystem` | Descuenta paciencia y expulsa clientes enojados |
+| `CustomerSystem` | Descuenta paciencia y expulsa clientes enojados → `OnCustomerLostByPatience` → `StrikeSystem` |
 | `GrillNotificationManager` | Si la vista ≠ `Grill`: reagrupa las carnes por `MeatCutSO` y refresca las burbujas |
 | Corrutinas | `CustomerSystem.SpawnLoop` (cada `spawnIntervalSeconds`, def. `6 s`) |
 | `CoalStackCounter` (×60) | **`LateUpdate`**: cuenta el stack del slot; solo toca texto/`SetActive` si el conteo o la visibilidad cambiaron |
@@ -795,12 +924,23 @@ MainMenuScene (build index 0)
 ### 4.5 Ciclo de noche
 
 ```
-GameScene ──[último cliente atendido/expulsado]──► CustomerSystem.OnNightEnded
+GameScene ──[cierre por strikes, o tope duro de maximumCustomersPerNight]──► CustomerSystem.OnNightEnded
    └─► GameManager.EndNight()
          ├─ CoalConsumptionTracker.RegisterDayCompleted()   // DaysPlayed++, aplica desbloqueos
          └─ LoadSceneByName("EndScene")
 
+Cierre por strikes (camino principal hoy)
+   3 clientes se van por paciencia
+     └─ CustomerSystem.OnCustomerLostByPatience ×3 ──► StrikeSystem.HandleMaxReached()
+          ├─ CustomerSystem.BlockNewSpawns()        // corta SpawnLoop, SpawnsBlocked = true
+          ├─ StrikeSessionFlag.MarkClosedByStrikes()// viaja a EndScene por DDOL
+          └─ OnMaxReached → StrikeGameplayNotice    // cartel in-game, se va solo a los 5 s
+   …se sigue jugando con los clientes que quedaban…
+     └─ RemoveCustomer: SpawnsBlocked && activeCustomers == 0 → OnNightEnded → EndNight()
+
 EndScene
+   ├─ StrikeClosurePopUp  si StrikeSessionFlag.ClosedByStrikes: popup explicativo
+   │                      → botón "Ir a la tienda" cierra y hace Reset() del flag
    ├─ EndScreen        muestra el dinero · botones: MainMenu / Retry / GoShopping
    ├─ ShopSystem       tabs Coal → Meat → Upgrades → Toppings  (arranca en Coal)
    │     Header:     nombre de tienda · plata · total de carbón en el cooler
@@ -812,6 +952,7 @@ EndScene
 SceneManagementUtils.ReturnToMainMenu()   ← reset total
    destruye PlayerWallet, CoalConsumptionTracker, CoolerSystem, ToppingStock (los 4 DDOL)
    + CoolerSystem.PrepareForNewGame()  (invalida el backup estático de stock)
+   ⚠️ NO destruye StrikeSessionFlag (5º DDOL) — lo limpia StrikeSystem.Start() al reentrar a GameScene
 ```
 
 ---
@@ -844,3 +985,10 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 19 | La entrega tiene **dos entradas y una sola lógica**: `GameManager.TryDeliverToCustomer(Customer)`. Al tocar validaciones, pagos o mensajes, editar **solo ahí** — `ConfirmDeliverySelection` (SPACE) y `PlateDeliveryDraggable` (mouse) son cáscaras. El `bool` de retorno lo consume el arrastre para decidir si devuelve el plato a la `PlateDropZone`: si se agrega un camino de rechazo nuevo, tiene que devolver `false` o el plato desaparece del mostrador |
 | 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.ConsumeBuildMeatEntry`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la `PlateDropZone`, tiene que agregar el componente o ese plato no se podrá arrastrar |
 | 21 | Los clientes se instancian con `customersParent = null` (raíz de escena), así que **no** los alcanza el toggle de `ViewManager` y sus colliders siguen activos en la vista Build. De eso depende el hover de la entrega por arrastre (`Physics2D.OverlapPointNonAlloc`). Si algún día se cuelgan de un root de vista, se rompe el drag & drop de entrega |
+| 22 | **Los strikes son la única fuente de `OnNightEnded` en una partida normal.** `StrikeSystem` no conoce a `GameManager`: corta los spawns y deja que `CustomerSystem.RemoveCustomer` cierre la noche cuando se vacía el mostrador. Si se toca `BlockNewSpawns`, `SpawnsBlocked` o la condición de `RemoveCustomer`, se rompe el fin de noche entero — ver nota 23 |
+| 23 | ⚠️ **Regresión abierta en el fin de noche.** El bloque `if (spawnedTonight >= customersTargetTonight && activeCustomers.Count == 0) OnNightEnded()` fue **eliminado** de `RemoveCustomer` y reemplazado por la condición con `SpawnsBlocked`. Como `SpawnCustomer` sigue frenando con un `return` silencioso al llegar a `customersTargetTonight`, una noche jugada **sin llegar a 3 strikes** ya no termina: se atienden los N clientes, `SpawnLoop` sigue girando sin spawnear y `OnNightEnded` nunca dispara (salvo que se alcance `maximumCustomersPerNight`, def. `70`). Si se quiere el cierre normal, hay que volver a chequear `spawnedTonight >= customersTargetTonight` en `RemoveCustomer` |
+| 24 | `StrikeSystem` **no es singleton**: es un componente de escena con `customerSystem` y `config` por inspector. Si falta cualquiera de los dos, hace `LogError` en `Start` y **no se suscribe a nada** — no hay strikes, no hay cierre de noche y (por la nota 23) la partida queda sin final. Al duplicar `GameScene` o armar una escena nueva, verificar ese wiring |
+| 25 | `StrikeSessionFlag` es el **5º DDOL** y el único que `SceneManagementUtils.ReturnToMainMenu()` **no** destruye. Se limpia solo porque `StrikeSystem.Start()` llama a `Reset()`; si algún día `StrikeSystem` deja de correr al entrar a `GameScene`, el popup de la tienda puede reaparecer sin motivo |
+| 26 | `StrikeClosurePopupUI` tiene ~10 `Debug.Log`/`LogWarning` de diagnóstico en `Awake`/`Start`/`ShowPopup` — quitarlos antes de release (mismo caso que la nota 8d) |
+| 27 | `CustomerSystem.RemoveCustomer` llama a **`CompactSlots()` dos veces seguidas** (`CustomerSystem.cs:555` y `:557`); es idempotente, así que solo desperdicia trabajo. `SpawnLoop` también quedó **sin indentar** respecto del resto de la clase |
+| 28 | Todo el copy de strikes (cartel in-game y popup de la tienda) vive en `Assets/ScriptableObjects/StrikeConfig.asset`, no en los prefabs. Para cambiar textos, umbral (`maxStrikes`) o duración del cartel, editar el asset — no hace falta tocar código |

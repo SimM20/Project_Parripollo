@@ -6,6 +6,10 @@ using System;
 
 public class CustomerSystem : MonoBehaviour
 {
+    public Action<Customer> OnCustomerLostByPatience;
+    public bool SpawnsBlocked { get; private set; } = false;
+    public int ActiveCustomerCount => activeCustomers.Count;
+    
     [Header("Customer Limits")]
     [Min(1)]
     [SerializeField] private int maxSimultaneousCustomers = 4;
@@ -183,8 +187,19 @@ public class CustomerSystem : MonoBehaviour
 
             if (c.IsAngry)
             {
+                OnCustomerLostByPatience?.Invoke(c);
                 RemoveCustomer(c, "Se fue enojado");
             }
+        }
+    }
+    
+    public void BlockNewSpawns()
+    {
+        SpawnsBlocked = true;
+        if (spawnRoutine != null)
+        {
+            StopCoroutine(spawnRoutine);
+            spawnRoutine = null;
         }
     }
 
@@ -211,23 +226,28 @@ public class CustomerSystem : MonoBehaviour
             customersTargetTonight + " clientes."
         );
     }
-    IEnumerator SpawnLoop()
+IEnumerator SpawnLoop()
+{
+    while (spawnedTonight <= maximumCustomersPerNight && !SpawnsBlocked)
     {
-        while (spawnedTonight < customersTargetTonight)
-        {
-            yield return new WaitForSeconds(
-                spawnIntervalSeconds
-            );
+        yield return new WaitForSeconds(spawnIntervalSeconds);
 
-            if (activeCustomers.Count >= maxSimultaneousCustomers)
-                continue;
+        if (SpawnsBlocked) break;
+        if (activeCustomers.Count >= maxSimultaneousCustomers) continue;
 
-            SpawnCustomer();
-        }
+        SpawnCustomer();
     }
+}
 
     public void SpawnCustomer(bool ignoreNightLimit = false)
     {
+        if (SpawnsBlocked) return;
+        if (spawnedTonight >= maximumCustomersPerNight)
+        {
+            OnNightEnded?.Invoke();
+            return;
+        }
+        
         if (!IsReadyForSpawning)
         {
             Debug.LogWarning(
@@ -534,11 +554,11 @@ public class CustomerSystem : MonoBehaviour
         // opcional: compactar slots (corrés a la izquierda para no dejar huecos)
         CompactSlots();
 
-        if (spawnedTonight >= customersTargetTonight &&
-     activeCustomers.Count == 0)
-        {
-            OnNightEnded?.Invoke();
-        }
+        CompactSlots();
+
+        // Si estamos en modo bloqueado y ya no hay clientes activos, termina la noche.
+        if (SpawnsBlocked && activeCustomers.Count == 0)
+            OnNightEnded?.Invoke();    
     }
 
     private void CompactSlots()
