@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -14,7 +15,34 @@ public class CustomerView : MonoBehaviour
     private Customer customer;
     private CustomerSystem system;
 
+    private Collider2D pickCollider;
+    private bool isHovered;
+
+    private static bool deliveryDragActive;
+    private static event Action OnDeliveryDragActiveChanged;
+
     public Customer Customer => customer;
+
+    // Con "Enter Play Mode" sin domain reload el estatico sobrevive entre sesiones de play.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        deliveryDragActive = false;
+        OnDeliveryDragActiveChanged = null;
+    }
+
+    /// <summary>
+    /// Marca que hay un arrastre de plato en curso. Durante el arrastre los clientes
+    /// vuelven a ser detectables aunque haya paneles abiertos, porque la entrega los
+    /// busca con Physics2D y no con los eventos de mouse.
+    /// </summary>
+    public static void SetDeliveryDragActive(bool active)
+    {
+        if (deliveryDragActive == active) return;
+
+        deliveryDragActive = active;
+        OnDeliveryDragActiveChanged?.Invoke();
+    }
 
     public void Init(Customer c, CustomerSystem owner)
     {
@@ -24,10 +52,50 @@ public class CustomerView : MonoBehaviour
         RefreshPatience();
     }
 
+    void Awake()
+    {
+        pickCollider = GetComponent<Collider2D>();
+    }
+
+    void OnEnable()
+    {
+        SlidingPanel.OnAnyPanelOpenChanged += HandlePanelOpenChanged;
+        OnDeliveryDragActiveChanged += ApplyPickingState;
+        ApplyPickingState();
+    }
+
+    void OnDisable()
+    {
+        SlidingPanel.OnAnyPanelOpenChanged -= HandlePanelOpenChanged;
+        OnDeliveryDragActiveChanged -= ApplyPickingState;
+    }
+
     void Update()
     {
         if (customer == null) return;
         RefreshPatience();
+    }
+
+    private void HandlePanelOpenChanged(bool anyPanelOpen) => ApplyPickingState();
+
+    /// <summary>
+    /// Los paneles deslizantes se abren justo encima de los slots de clientes y sus
+    /// colliders comparten el mismo z, asi que el cliente le roba el OnMouseDown a las
+    /// celdas del panel (bloqueaba, por ejemplo, agarrar el carbon). Mientras haya un
+    /// panel desplegado el cliente deja de recibir hover y click, y la burbuja de pedido
+    /// se retira.
+    /// </summary>
+    private void ApplyPickingState()
+    {
+        bool blocked = SlidingPanel.AnyPanelOpen && !deliveryDragActive;
+
+        if (pickCollider != null)
+            pickCollider.enabled = !blocked;
+
+        if (!blocked || !isHovered) return;
+
+        isHovered = false;
+        RestoreBubbleAfterHover();
     }
 
     void OnMouseDown()
@@ -38,6 +106,8 @@ public class CustomerView : MonoBehaviour
 
     void OnMouseEnter()
     {
+        isHovered = true;
+
         if (customer?.order == null) return;
         if (CustomerHoverBubble.Instance == null) return;
 
@@ -63,8 +133,16 @@ public class CustomerView : MonoBehaviour
     }
     void OnMouseExit()
     {
-        // En modo selección de entrega, restaura la burbuja del cliente seleccionado
-        // en vez de ocultarla; fuera del modo, la oculta como siempre.
+        isHovered = false;
+        RestoreBubbleAfterHover();
+    }
+
+    /// <summary>
+    /// En modo selección de entrega, restaura la burbuja del cliente seleccionado
+    /// en vez de ocultarla; fuera del modo, la oculta como siempre.
+    /// </summary>
+    private void RestoreBubbleAfterHover()
+    {
         if (system != null)
             system.ShowSelectedOrderBubble();
         else if (CustomerHoverBubble.Instance != null)

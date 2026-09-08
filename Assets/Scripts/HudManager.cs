@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 
 public class HudManager : MonoBehaviour
@@ -7,7 +7,12 @@ public class HudManager : MonoBehaviour
 
     [SerializeField] private Button pauseButton;
 
-    private void Awake() => pauseButton?.onClick.AddListener(UIManager.Instance.PauseGame);
+    private void Awake()
+    {
+        if (pauseButton != null)
+            pauseButton.onClick.AddListener(() => UIManager.Instance?.PauseGame());
+    }
+
     private void Start() => AutoUpdateTexts();
     private void OnEnable() => AutoUpdateTexts();
 
@@ -44,7 +49,7 @@ public class HudManager : MonoBehaviour
         foreach (var container in containers)
         {
             if (container != null && container.GetContainerType() == HudContainers.Day)
-                container.UpdateText("DÍA " + value.ToString());
+                container.UpdateText("DIA " + value.ToString());
         }
     }
 
@@ -70,5 +75,9 @@ public class HudManager : MonoBehaviour
         }
     }
 
-    private void OnDisable() => pauseButton.onClick.RemoveAllListeners();
+    private void OnDisable()
+    {
+        if (pauseButton != null)
+            pauseButton.onClick.RemoveAllListeners();
+    }
 }

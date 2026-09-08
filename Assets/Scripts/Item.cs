@@ -20,14 +20,27 @@ public class Item : MonoBehaviour
 
     protected void OnMouseDrag()
     {
+        transform.position = GetMouseWorldPosition();
+        UpdateHoverPreview();
+    }
+
+    /// <summary>
+    /// Punto del mouse sobre el plano z del item. La distancia a la camara es obligatoria:
+    /// con camara en perspectiva, ScreenToWorldPoint con z=0 devuelve la posicion de la camara
+    /// y el item queda clavado en el centro de pantalla. Mismo patron que el resto de draggables.
+    /// </summary>
+    protected Vector3 GetMouseWorldPosition()
+    {
         Camera cam = Camera.main;
         if (cam == null)
-            return;
+            return transform.position;
 
-        Vector3 mousePos = cam.ScreenToWorldPoint(Input.mousePosition);
-        mousePos.z = 0;
-        transform.position = mousePos;
-        UpdateHoverPreview();
+        Vector3 pos = Input.mousePosition;
+        pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
+
+        Vector3 world = cam.ScreenToWorldPoint(pos);
+        world.z = transform.position.z;
+        return world;
     }
 
     protected virtual void Update()

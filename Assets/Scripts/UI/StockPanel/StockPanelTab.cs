@@ -1,12 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// Pestaña lateral que abre y cierra el panel de stock al hacer clic.
+/// Pestaña lateral que abre y cierra un panel deslizante al hacer clic.
+/// Sirve para cualquier SlidingPanel (stock, items de armado).
 /// </summary>
 public class StockPanelTab : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private StockPanelController controller;
+    [SerializeField] private SlidingPanel controller;
 
     void Awake()
     {
@@ -16,7 +17,7 @@ public class StockPanelTab : MonoBehaviour
     void Start()
     {
         if (controller == null)
-            Debug.LogWarning("[StockPanelTab] Falta la referencia 'controller'. La pestaña no abre el panel de stock.");
+            Debug.LogWarning("[StockPanelTab] Falta la referencia 'controller'. La pestaña no abre ningún panel.");
     }
 
     void OnMouseDown()
@@ -24,9 +25,7 @@ public class StockPanelTab : MonoBehaviour
         if (controller == null)
             return;
 
-        if (!controller.IsOpen && !TutorialManager.CheckStockPanelOpenAllowed())
-            return;
-
+        // El gate del tutorial vive en SlidingPanel.CanOpen(): Toggle() se rechaza solo.
         controller.Toggle();
     }
 

@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Arrastre de un corte que esta en la bandeja (cortes devueltos del plato).
+/// Se puede soltar sobre el plato para volver a montarlo o sobre la parrilla para seguir cocinandolo.
+/// </summary>
 public class ToBuildDraggableMeat : MonoBehaviour
 {
     private MeatCutSO cut;
@@ -81,7 +85,12 @@ public class ToBuildDraggableMeat : MonoBehaviour
             return;
         }
 
-        bool dropped = buffer.TryDropFromToBuildById(entryId, GetMouseWorldPosition(), isGridRotated);
+        Vector3 dropPoint = GetMouseWorldPosition();
+
+        // El plato tiene prioridad: es un area chica y superpuesta al borde de la grilla.
+        bool dropped = buffer.TryPlateFromTrayById(entryId, dropPoint)
+                       || buffer.TryDropFromTrayById(entryId, dropPoint, isGridRotated);
+
         if (!dropped)
             RestoreStartTransform();
     }
