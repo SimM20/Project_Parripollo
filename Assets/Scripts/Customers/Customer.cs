@@ -13,6 +13,27 @@ public class Customer
 
     public bool IsAngry => patience <= 0f;
 
+    /// <summary>
+    /// Indica si el cliente está mostrando actualmente su reacción/feedback de 4 segundos.
+    /// Mientras esté en feedback, su paciencia se congela y no admite nuevas interacciones.
+    /// </summary>
+    public bool IsInFeedback { get; private set; }
+
+    /// <summary>
+    /// Indica si la propina quedó anulada por cambio de pedido tras informar faltante de corte.
+    /// </summary>
+    public bool IsTipAnulada { get; set; }
+
+    public void StartFeedback()
+    {
+        IsInFeedback = true;
+    }
+
+    public void EndFeedback()
+    {
+        IsInFeedback = false;
+    }
+
     public void Init(CustomerType customerType, Order newOrder, float patienceValue, int assignedSlot)
     {
         type = customerType;
@@ -22,10 +43,13 @@ public class Customer
         patience = patienceValue;
 
         slotIndex = assignedSlot;
+        IsInFeedback = false;
+        IsTipAnulada = false;
     }
 
     public void UpdatePatience(float deltaTime)
     {
+        if (IsInFeedback) return;
         patience -= deltaTime;
     }
 

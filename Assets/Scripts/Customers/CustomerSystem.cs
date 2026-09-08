@@ -62,6 +62,9 @@ public class CustomerSystem : MonoBehaviour
    
     [Header("Patience")]
     [SerializeField] private float basePatienceSeconds = 30f;
+
+    [Header("Delivery Feedback")]
+    [SerializeField] private CustomerFeedbackConfigSO feedbackConfig;
     
     public FoodCatalogSO Catalog => availabilityService != null ? availabilityService.Catalog : null;
 
@@ -179,11 +182,13 @@ public class CustomerSystem : MonoBehaviour
         for (int i = activeCustomers.Count - 1; i >= 0; i--)
         {
             var c = activeCustomers[i];
+            if (c.IsInFeedback) continue;
+
             c.UpdatePatience(Time.deltaTime);
 
             if (c.IsAngry)
             {
-                RemoveCustomer(c, "Se fue enojado");
+                TriggerAngryLeaveFeedback(c);
             }
         }
     }
@@ -342,7 +347,7 @@ public class CustomerSystem : MonoBehaviour
 
     public void SelectCustomer(Customer customer)
     {
-        if (customer == null) return;
+        if (customer == null || customer.IsInFeedback) return;
 
         SelectedCustomer = customer;
         currentCustomer = customer; // compat con GameManager
@@ -396,7 +401,7 @@ public class CustomerSystem : MonoBehaviour
     /// <summary>True si el cliente sigue esperando (no se fue enojado ni fue atendido).</summary>
     public bool IsCustomerActive(Customer customer)
     {
-        return customer != null && activeCustomers.Contains(customer);
+        return customer != null && activeCustomers.Contains(customer) && !customer.IsInFeedback;
     }
 
     /// <summary>
@@ -410,7 +415,7 @@ public class CustomerSystem : MonoBehaviour
 
         dragHoverView = view;
 
-        if (view != null && view.Customer != null)
+        if (view != null && view.Customer != null && !view.Customer.IsInFeedback)
         {
             CustomerSelectionFrame.Instance?.ShowOver(view);
 
@@ -491,7 +496,150 @@ public class CustomerSystem : MonoBehaviour
 
     public void CompleteCustomer(Customer customer)
     {
-        RemoveCustomer(customer, "Pedido entregado");
+        TriggerDeliveryFeedback(customer, 0f, 0f, CustomerFeedbackState.EntregaExcelente);
+    }
+
+    /// <summary>
+    /// Inicia el feedback de entrega (4 segundos). El cliente permanece en su slot
+    /// durante todo el feedback sin pausar el gameplay ni liberar el slot antes de tiempo.
+    /// Al cumplirse los 4 segundos, el cliente se retira y se libera su posición.
+    /// </summary>
+    public void TriggerDeliveryFeedback(
+        Customer customer,
+        float payment,
+        float tip,
+        CustomerFeedbackState state)
+    {
+        if (customer == null) return;
+
+        customer.StartFeedback();
+
+        // Limpiar selecciones previas
+        if (dragHoverView != null && dragHoverView.Customer == customer)
+        {
+            dragHoverView = null;
+            CustomerSelectionFrame.Instance?.Hide();
+            CustomerHoverBubble.Instance?.Hide();
+        }
+
+        if (SelectedCustomer == customer)
+        {
+            SelectedCustomer = null;
+            currentCustomer = null;
+
+            var next = GetFirstActiveCustomer();
+            if (next != null)
+                SelectCustomer(next);
+            else if (IsDeliverySelectionActive)
+                EndDeliverySelection();
+        }
+
+        CustomerView view = GetViewForCustomer(customer);
+        if (view != null)
+        {
+            view.ShowFeedback(
+                state,
+                payment,
+                tip,
+                false,
+                () => RemoveCustomer(customer, "Pedido entregado"),
+                feedbackConfig
+            );
+        }
+        else
+        {
+            RemoveCustomer(customer, "Pedido entregado");
+        }
+    }
+
+    /// <summary>
+    /// Feedback de abandono por paciencia 0 (Estado 6: No paga / se va).
+    /// Permanece 4 segundos en su slot con Pedido: $0 y Propina: $0 antes de retirarse.
+    /// </summary>
+    public void TriggerAngryLeaveFeedback(Customer customer)
+    {
+        if (customer == null || customer.IsInFeedback) return;
+
+        customer.StartFeedback();
+
+        if (dragHoverView != null && dragHoverView.Customer == customer)
+        {
+            dragHoverView = null;
+            CustomerSelectionFrame.Instance?.Hide();
+            CustomerHoverBubble.Instance?.Hide();
+        }
+
+        if (SelectedCustomer == customer)
+        {
+            SelectedCustomer = null;
+            currentCustomer = null;
+
+            var next = GetFirstActiveCustomer();
+            if (next != null)
+                SelectCustomer(next);
+            else if (IsDeliverySelectionActive)
+                EndDeliverySelection();
+        }
+
+        CustomerView view = GetViewForCustomer(customer);
+        if (view != null)
+        {
+            view.ShowFeedback(
+                CustomerFeedbackState.NoPagaSeVa,
+                0f,
+                0f,
+                false,
+                () => RemoveCustomer(customer, "Se fue enojado"),
+                feedbackConfig
+            );
+        }
+        else
+        {
+            RemoveCustomer(customer, "Se fue enojado");
+        }
+    }
+
+    /// <summary>
+    /// Feedback de aceptación de cambio por faltante (Estado 5).
+    /// Muestra Pedido: pendiente y Propina: anulada durante 4 segundos.
+    /// Al finalizar, el cliente continúa en la escena con el nuevo pedido.
+    /// </summary>
+    public void TriggerMissingCutChange(Customer customer, MeatCutSO newCut)
+    {
+        if (customer == null || newCut == null) return;
+
+        customer.order.SetSingleCut(newCut, customer.order.GetRequestedState(0));
+        customer.IsTipAnulada = true;
+
+        CustomerView view = GetViewForCustomer(customer);
+        if (view != null)
+        {
+            view.ShowFeedback(
+                CustomerFeedbackState.CambioPorFaltante,
+                0f,
+                0f,
+                true,
+                () =>
+                {
+                    Debug.Log($"[CustomerSystem] Cambio por faltante completado: {newCut.cutName}. Propina anulada.");
+                    RefreshSelectionVisuals();
+                },
+                feedbackConfig
+            );
+        }
+    }
+
+    public CustomerView GetViewForCustomer(Customer customer)
+    {
+        if (slotViews == null || customer == null) return null;
+
+        for (int i = 0; i < slotViews.Length; i++)
+        {
+            if (slotViews[i] != null && slotViews[i].Customer == customer)
+                return slotViews[i];
+        }
+
+        return null;
     }
 
     private void RemoveCustomer(Customer customer, string reason)
@@ -571,11 +719,17 @@ public class CustomerSystem : MonoBehaviour
         // intentar respetar el orden de slots (0..n)
         for (int i = 0; i < slotViews.Length; i++)
         {
-            if (slotViews[i] != null)
+            if (slotViews[i] != null && slotViews[i].Customer != null && !slotViews[i].Customer.IsInFeedback)
                 return slotViews[i].Customer;
         }
 
-        return activeCustomers[0];
+        for (int i = 0; i < activeCustomers.Count; i++)
+        {
+            if (!activeCustomers[i].IsInFeedback)
+                return activeCustomers[i];
+        }
+
+        return null;
     }
 
     private int GetNextFreeSlotIndex()

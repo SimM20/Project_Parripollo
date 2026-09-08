@@ -11,6 +11,11 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip newClientBell;
     [SerializeField] private AudioClip toppingShake;
 
+    [Header("Delivery Feedback Audio (Spec Doc)")]
+    [SerializeField] private AudioClip positiveFeedback;
+    [SerializeField] private AudioClip intermediateFeedback;
+    [SerializeField] private AudioClip negativeFeedback;
+
     private AudioSource audioSource;
 
     private void Awake()
@@ -38,4 +43,22 @@ public class AudioManager : MonoBehaviour
     public void PlayNewClientBell() => audioSource?.PlayOneShot(newClientBell);
 
     public void PlayOnUseTopping() => audioSource?.PlayOneShot(toppingShake);
+
+    public void PlayPositiveFeedback()
+    {
+        AudioClip clip = positiveFeedback != null ? positiveFeedback : taskCompleted;
+        if (clip != null) audioSource?.PlayOneShot(clip);
+    }
+
+    public void PlayIntermediateFeedback()
+    {
+        AudioClip clip = intermediateFeedback != null ? intermediateFeedback : taskCompleted;
+        if (clip != null) audioSource?.PlayOneShot(clip);
+    }
+
+    public void PlayNegativeFeedback()
+    {
+        if (negativeFeedback != null)
+            audioSource?.PlayOneShot(negativeFeedback);
+    }
 }
