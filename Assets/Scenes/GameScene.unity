@@ -11462,6 +11462,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0fb06a1292a6e5a45933d8e38a49cabc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
+--- !u!114 &1177400707 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3692118382165033274, guid: c9961954cd0bb5146bfa934cb8d12c45, type: 3}
+  m_PrefabInstance: {fileID: 570770829}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &1182468359 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8524616056676153058, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -11995,7 +12006,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   hudManager: {fileID: 1219608615}
   pauseCanvasPrefab: {fileID: 4411120392363534055, guid: 80cbd1623a8f1094abfdae428b0ca67c, type: 3}
-  strikesText: {fileID: 0}
+  strikesText: {fileID: 1177400707}
   strikesFormat: 'Strikes: {0}/{1}'
   strikesNormalColor: {r: 1, g: 1, b: 1, a: 1}
   strikesWarningColor: {r: 1, g: 0.6, b: 0.2, a: 1}

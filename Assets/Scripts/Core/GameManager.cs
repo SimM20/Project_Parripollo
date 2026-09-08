@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
     
     [Header("Scenes")]
     [SerializeField] private string endSceneName = "EndScene";
+    [SerializeField] private string endShiftName = "EndScene";
 
     [Header("Input")]
     [SerializeField] private KeyCode stockPanelToggleKey = KeyCode.Q;
@@ -365,6 +366,11 @@ public class GameManager : MonoBehaviour
     }
     
     public void EndNight()
+    {
+        SceneManager.LoadScene(endShiftName);
+    }
+
+    public void EndRun()
     {
         SceneManager.LoadScene(endSceneName);
     }

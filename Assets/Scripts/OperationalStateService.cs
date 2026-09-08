@@ -5,8 +5,9 @@ public class OperationalStateService : MonoBehaviour
     [Header("References")]
     [SerializeField] private GrillSystem grillSystem;
     [SerializeField] private BuildStationSystem buildStation;
-    [SerializeField] private CoolerSystem coolerSystem;
     [SerializeField] private FoodCatalogSO catalog;
+    
+    private CoolerSystem coolerSystem => CoolerSystem.Instance;
 
     /// <summary>
     /// Devuelve true si el jugador todavía puede completar alguna venta:
@@ -16,34 +17,46 @@ public class OperationalStateService : MonoBehaviour
     /// </summary>
     public bool CanContinueNight()
     {
-        // Si hay carbón activo o en stock, siempre puede continuar
-        if (HasAnyCoal()) return true;
+        bool hasCoal = HasAnyCoal();
+        bool hasDeliverable = grillSystem != null && grillSystem.HasDeliverableMeat();
+        bool hasCutInBuild = buildStation != null && buildStation.HasAnyCut;
 
-        // Sin carbón: solo puede seguir si hay comida entregable o algo armándose
-        if (grillSystem != null && grillSystem.HasDeliverableMeat()) return true;
-        if (buildStation != null && buildStation.HasAnyCut) return true;
+        Debug.Log($"[OperationalState] hasCoal={hasCoal}, hasDeliverable={hasDeliverable}, hasCutInBuild={hasCutInBuild}");
 
-        // Sin carbón ni comida ya cocida: no hay venta posible
+        if (hasCoal) return true;
+        if (hasDeliverable) return true;
+        if (hasCutInBuild) return true;
         return false;
     }
 
-    /// <summary>Devuelve true si hay carbón activo o en stock.</summary>
     public bool HasAnyCoal()
     {
-        if (grillSystem != null && grillSystem.HasActiveCoal()) return true;
-
-        if (coolerSystem != null && catalog != null)
+        if (grillSystem != null && grillSystem.HasActiveCoal())
         {
-            // Cualquier CoalSO con stock > 0 cuenta
-            foreach (var entry in coolerSystem.EnumerateStock())
-            {
-                if (entry.Key is CoalSO && entry.Value > 0)
-                    return true;
-            }
+            Debug.Log("[OperationalState] HasAnyCoal: hay carbón activo en grill");
+            return true;
         }
-        return false;
-    }
 
+        if (coolerSystem == null)
+        {
+            Debug.LogWarning("[OperationalState] coolerSystem es null");
+            return false;
+        }
+
+        if (catalog == null)
+        {
+            Debug.LogWarning("[OperationalState] catalog es igual a null → esto rompe el chequeo de stock");
+        }
+
+        int totalCoalInCooler = 0;
+        foreach (var entry in coolerSystem.EnumerateStock())
+        {
+            if (entry.Key is CoalSO)
+                totalCoalInCooler += entry.Value;
+        }
+        Debug.Log($"[OperationalState] Coal total en cooler: {totalCoalInCooler}");
+        return totalCoalInCooler > 0;
+    }
     /// <summary>Motivo del cierre. Útil para la pantalla de fin de jornada.</summary>
     public NightEndReason GetEndReason()
     {

@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 1073647879310545481}
   - component: {fileID: 4025231708038557061}
   - component: {fileID: 5509240100963363123}
-  - component: {fileID: 1458371215647363363}
   m_Layer: 5
   m_Name: StrikeCanvas
   m_TagString: Untagged
@@ -103,25 +102,6 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
---- !u!114 &1458371215647363363
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 33389406846618329}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6e15055b55c248746bae37f67b4f1ff8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  hudManager: {fileID: 0}
-  pauseCanvasPrefab: {fileID: 0}
-  strikesText: {fileID: 3692118382165033274}
-  strikesFormat: 'Strikes: {0}/{1}'
-  strikesNormalColor: {r: 1, g: 1, b: 1, a: 1}
-  strikesWarningColor: {r: 1, g: 0.6, b: 0.2, a: 1}
-  strikesMaxColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &4164433653106063340
 GameObject:
   m_ObjectHideFlags: 0
