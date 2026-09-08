@@ -18,6 +18,8 @@ public class ShopNextButtonUI : MonoBehaviour
 
     [Header("Scene")]
     [SerializeField] private string gameSceneName = "GameScene";
+    
+    [SerializeField] private ShopConfigSO config;
 
     private bool started;
 
@@ -33,10 +35,14 @@ public class ShopNextButtonUI : MonoBehaviour
 
     void OnEnable()
     {
-        if (shop != null) shop.OnTabChanged += Refresh;
+        if (shop != null)
+        {
+            shop.OnTabChanged += Refresh;
+            if (shop.Wallet != null) shop.Wallet.OnMoneyChanged += _ => Refresh();
+            if (shop.Cooler != null) shop.Cooler.OnInventoryChanged += Refresh;
+        }
         if (started) Refresh();
     }
-
     void Start()
     {
         started = true;
@@ -54,14 +60,34 @@ public class ShopNextButtonUI : MonoBehaviour
 
         if (shop.CurrentTab == ShopTabType.Toppings)
         {
-            // Último tab: arrancar próximo día
+            // Antes de arrancar el próximo día, verificar mínimos
+            if (!CanStartNextDay())
+            {
+                Debug.Log("[ShopNextButton] No se cumplen los mínimos, no puede arrancar el día.");
+                // Opcional: mostrar feedback visual (shake, mensaje, etc.)
+                return;
+            }
+
+            // Avanzar contador de día antes de cargar la escena
+            DayCounter.Instance?.AdvanceDay();
             SceneManager.LoadScene(gameSceneName);
             return;
         }
 
-        // Avanzar al siguiente tab
         ShopTabType next = GetNextTab(shop.CurrentTab);
         shop.SetTab(next);
+    }
+
+    private bool CanStartNextDay()
+    {
+        if (config == null || DayCounter.Instance == null || shop == null) return true;
+
+        int nextDay = DayCounter.Instance.CurrentDay + 1;
+        int meatRequired = config.GetMeatMinimumForDay(nextDay);
+        int coalRequired = config.GetCoalMinimumForDay(nextDay);
+
+        return shop.GetTotalMeatUnits() >= meatRequired
+               && shop.GetTotalCoalUnits() >= coalRequired;
     }
 
     private static ShopTabType GetNextTab(ShopTabType current)
@@ -85,6 +111,13 @@ public class ShopNextButtonUI : MonoBehaviour
             case ShopTabType.Meat:     label.text = fromMeatText; break;
             case ShopTabType.Upgrades: label.text = fromUpgradesText; break;
             case ShopTabType.Toppings: label.text = fromToppingsText; break;
+        }
+
+        // Si es el último tab, deshabilitar si no cumple mínimos
+        if (button != null)
+        {
+            bool canProceed = shop.CurrentTab != ShopTabType.Toppings || CanStartNextDay();
+            button.interactable = canProceed;
         }
     }
 }

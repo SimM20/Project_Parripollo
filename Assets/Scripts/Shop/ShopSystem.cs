@@ -354,6 +354,19 @@ public class ShopSystem : MonoBehaviour
         return true;
     }
     
+    public int GetTotalMeatUnits()
+    {
+        if (Cooler == null || catalog == null) return 0;
+
+        int total = 0;
+        foreach (var entry in Cooler.EnumerateStock())
+        {
+            if (entry.Key is MeatCutSO)
+                total += entry.Value;
+        }
+        return total;
+    }
+    
     /// <summary>
     /// Suma todas las unidades de carbón en el cooler, sin importar el tipo.
     /// </summary>

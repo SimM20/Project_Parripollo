@@ -8,6 +8,10 @@ public class ShopHeaderUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI moneyText;
     [SerializeField] private TextMeshProUGUI totalCoalText;   // ← NUEVO
     [SerializeField] private string shopName = "LA PARRILLA DE DON COCO";
+    
+    [SerializeField] private TextMeshProUGUI meatMinimumText;
+    [SerializeField] private TextMeshProUGUI coalMinimumText;
+    [SerializeField] private ShopConfigSO config;
 
     private bool started;
 
@@ -37,7 +41,7 @@ public class ShopHeaderUI : MonoBehaviour
     }
 
     private void OnMoneyChanged(float _) => Refresh();
-
+    
     private void Refresh()
     {
         if (shopNameText != null) shopNameText.text = shopName;
@@ -47,5 +51,23 @@ public class ShopHeaderUI : MonoBehaviour
 
         if (totalCoalText != null && shop != null)
             totalCoalText.text = $"Carbon: {shop.GetTotalCoalUnits()} u.";
+
+        // Mínimos según el día actual
+        if (config != null && DayCounter.Instance != null && shop != null)
+        {
+            int nextDay = DayCounter.Instance.CurrentDay + 1;
+
+            int meatRequired = config.GetMeatMinimumForDay(nextDay);
+            int coalRequired = config.GetCoalMinimumForDay(nextDay);
+
+            int meatCurrent = shop.GetTotalMeatUnits();
+            int coalCurrent = shop.GetTotalCoalUnits();
+
+            if (meatMinimumText != null)
+                meatMinimumText.text = $"Carne: {meatCurrent} / {meatRequired}";
+
+            if (coalMinimumText != null)
+                coalMinimumText.text = $"Carbón: {coalCurrent} / {coalRequired}";
+        }
     }
 }

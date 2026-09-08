@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -16,11 +17,21 @@ public class GameManager : MonoBehaviour
     [SerializeField] private ShopSystem shopSystem;
     [SerializeField] private PlayerWallet wallet;
     [SerializeField] private GrillLayerToggle grillLayerToggle;
+    
+    [Header("Scenes")]
+    [SerializeField] private string endSceneName = "EndScene";
 
     [Header("Input")]
     [SerializeField] private KeyCode stockPanelToggleKey = KeyCode.Q;
     [SerializeField] private KeyCode toppingsPanelToggleKey = KeyCode.T;
     [SerializeField] private KeyCode clearPlateKey = KeyCode.C;
+    
+    [Header("Operational State")]
+    [SerializeField] private OperationalStateService operationalState;
+    [SerializeField] private float checkIntervalSeconds = 2f;
+
+    private float lastOperationalCheck = 0f;
+    private bool nightEndTriggered = false;
 
     // Contexto de descarte de quemados: solo activo tras un intento de entrega bloqueado por quemados.
     private bool discardContextActive;
@@ -129,6 +140,21 @@ public class GameManager : MonoBehaviour
                     coolerSystem?.InformMissingItem(order.PrimaryCut);
 
                 Debug.Log("[Plato] Corte faltante informado: " + order.PrimaryCut.cutName);
+            }
+        }
+        
+        // Chequeo periódico de fin anticipado por colapso operativo
+        if (!nightEndTriggered && operationalState != null)
+        {
+            lastOperationalCheck += Time.deltaTime;
+            if (lastOperationalCheck >= checkIntervalSeconds)
+            {
+                lastOperationalCheck = 0f;
+                if (!operationalState.CanContinueNight())
+                {
+                    nightEndTriggered = true;
+                    HandleNightEnd(operationalState.GetEndReason());
+                }
             }
         }
     }
@@ -337,42 +363,24 @@ public class GameManager : MonoBehaviour
         ClearDiscardContext();
         return true;
     }
-
+    
     public void EndNight()
     {
-        customerSystem.OnNightEnded -= EndNight;
-
-        Debug.Log("[GameManager] Terminando la noche.");
-
-        CoalConsumptionTracker tracker = CoalConsumptionTracker.Instance;
-
-        if (tracker == null)
-        {
-            tracker = FindFirstObjectByType<CoalConsumptionTracker>();
-        }
-
-        if (tracker == null)
-        {
-            Debug.LogError(
-                "[GameManager] No existe ningún CoalConsumptionTracker. " +
-                "La noche terminó, pero no se pudo registrar el progreso."
-            );
-        }
-        else
-        {
-            int nightBefore = tracker.CurrentNight;
-
-            tracker.RegisterDayCompleted();
-
-            Debug.Log(
-                "[GameManager] Noche " + nightBefore +
-                " completada correctamente. " +
-                "Próxima noche: " + tracker.CurrentNight
-            );
-        }
-
-        SceneManagementUtils.LoadSceneByName("EndScene");
+        SceneManager.LoadScene(endSceneName);
     }
-
-    private void OnDestroy() => customerSystem.OnNightEnded -= EndNight;
+    
+    
+    private void OnDestroy()
+    {
+        if (customerSystem != null)
+            customerSystem.OnNightEnded -= EndNight;
+    }
+    
+    private void HandleNightEnd(NightEndReason reason)
+    {
+        Debug.Log($"[GameManager] Noche terminada. Razón: {reason}");
+        NightEndReasonHolder.LastReason = reason;
+        EndNight();
+    }
+    
 }

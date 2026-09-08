@@ -255,4 +255,51 @@ public class GrillSystem : MonoBehaviour
 
         return sum / placementSlots.Count;
     }
+    
+    /// <summary>Devuelve true si hay al menos un Coal en estado Encendido.</summary>
+    public bool HasActiveCoal()
+    {
+        for (int i = 0; i < Coal.ActiveCoals.Count; i++)
+        {
+            var coal = Coal.ActiveCoals[i];
+            if (coal != null && coal.state == CoalStates.Encendido)
+                return true;
+        }
+        return false;
+    }
+    /// <summary>Devuelve true si hay al menos un Meat en estado entregable.</summary>
+    public bool HasDeliverableMeat()
+    {
+        if (slots == null) return false;
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var slot = slots[i];
+            if (slot == null || slot.currentMeat == null) continue;
+
+            var state = slot.currentMeat.state;
+            if (state == MeatStates.Jugoso ||
+                state == MeatStates.Hecho ||
+                state == MeatStates.Muy_Hecho)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Devuelve true si hay al menos un Meat crudo o cocinándose (no quemado).</summary>
+    public bool HasRawOrCookingMeat()
+    {
+        if (slots == null) return false;
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var slot = slots[i];
+            if (slot == null || slot.currentMeat == null) continue;
+
+            var state = slot.currentMeat.state;
+            if (state == MeatStates.Crudo)
+                return true;
+        }
+        return false;
+    }
 }
