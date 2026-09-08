@@ -14249,7 +14249,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   grillSystem: {fileID: 1141140570}
   buildStation: {fileID: 34340692}
-  coolerSystem: {fileID: 2035808171}
   catalog: {fileID: 11400000, guid: c47218184b1c40747b898decc4e587c8, type: 2}
 --- !u!1 &1826849857
 GameObject:

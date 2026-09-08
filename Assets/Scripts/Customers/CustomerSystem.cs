@@ -92,8 +92,8 @@ public class CustomerSystem : MonoBehaviour
     void Start()
     {
         int currentNight =
-            CoalConsumptionTracker.Instance != null
-                ? CoalConsumptionTracker.Instance.CurrentNight
+            DayCounter.Instance != null
+                ? DayCounter.Instance.CurrentDay
                 : 1;
 
         customersTargetTonight =
@@ -554,13 +554,19 @@ IEnumerator SpawnLoop()
         // opcional: compactar slots (corrés a la izquierda para no dejar huecos)
         CompactSlots();
 
-        CompactSlots();
-
-        // Si estamos en modo bloqueado y ya no hay clientes activos, termina la noche.
+        // Fin de noche por strikes (ya existía)
         if (SpawnsBlocked && activeCustomers.Count == 0)
-            OnNightEnded?.Invoke();    
-    }
+        {
+            OnNightEnded?.Invoke();
+            return;
+        }
 
+        // NUEVO: Fin de noche por atender todos los clientes del máximo
+        if (spawnedTonight >= customersTargetTonight && activeCustomers.Count == 0)
+        {
+            OnNightEnded?.Invoke();
+        }
+    }
     private void CompactSlots()
     {
         // mueve views hacia el primer slot libre
