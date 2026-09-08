@@ -346,7 +346,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
                 continue;
 
             CustomerView view = hit.GetComponentInParent<CustomerView>();
-            if (view != null)
+            if (view != null && view.Customer != null && !view.Customer.IsInFeedback)
                 return view;
         }
 

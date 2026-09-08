@@ -132,15 +132,43 @@ public class GameManager : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.M))
         {
-            Order order = customerSystem?.currentCustomer?.order;
-            if (order?.PrimaryCut != null)
+            Customer targetCustomer = customerSystem?.SelectedCustomer ?? customerSystem?.currentCustomer;
+            Order order = targetCustomer?.order;
+            if (targetCustomer != null && !targetCustomer.IsInFeedback && order?.PrimaryCut != null)
             {
-                if (foodAvailabilityService != null)
-                    foodAvailabilityService.InformMissingCut(order.PrimaryCut);
-                else
-                    coolerSystem?.InformMissingItem(order.PrimaryCut);
+                MeatCutSO missingCut = order.PrimaryCut;
 
-                Debug.Log("[Plato] Corte faltante informado: " + order.PrimaryCut.cutName);
+                if (foodAvailabilityService != null)
+                    foodAvailabilityService.InformMissingCut(missingCut);
+                else
+                    coolerSystem?.InformMissingItem(missingCut);
+
+                Debug.Log("[Plato] Corte faltante informado: " + missingCut.cutName);
+
+                // Buscar un corte sustituto disponible con stock
+                MeatCutSO substituteCut = null;
+                if (foodAvailabilityService != null)
+                {
+                    var available = foodAvailabilityService.GetAvailableCuts();
+                    for (int i = 0; i < available.Count; i++)
+                    {
+                        if (available[i] != missingCut)
+                        {
+                            substituteCut = available[i];
+                            break;
+                        }
+                    }
+                }
+
+                if (substituteCut != null)
+                {
+                    customerSystem.TriggerMissingCutChange(targetCustomer, substituteCut);
+                    DeliveryFeedbackText.Instance?.Show($"El cliente aceptó cambiar a {substituteCut.cutName}. Propina anulada.");
+                }
+                else
+                {
+                    DeliveryFeedbackText.Instance?.Show("No hay otros cortes disponibles en stock para sustituir.");
+                }
             }
         }
         
@@ -252,9 +280,9 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public bool TryDeliverToCustomer(Customer customer)
     {
-        if (customer == null)
+        if (customer == null || customer.IsInFeedback)
         {
-            DeliveryFeedbackText.Instance?.Show("No hay un cliente seleccionado.");
+            DeliveryFeedbackText.Instance?.Show("No hay un cliente válido seleccionado.");
             return false;
         }
 
@@ -330,7 +358,7 @@ public class GameManager : MonoBehaviour
         bool isSandwich = customer.order.IsSandwich;
 
         float totalPayment = 0f;
-        float totalTips = 0f;
+        int overallWorstOffset = 0;
 
         for (int i = 0; i < cuts.Count; i++)
         {
@@ -342,24 +370,38 @@ public class GameManager : MonoBehaviour
 
             var cutResult = CookingDeliveryEvaluator.EvaluateCut(sideStates[i].sideA, sideStates[i].sideB, requested, basePrice);
             totalPayment += cutResult.price;
-
-            if (cutResult.tipEligible)
-                totalTips += CookingDeliveryEvaluator.CalculateTip(basePrice, customer.Patience01);
+            if (cutResult.worstOffset > overallWorstOffset)
+                overallWorstOffset = cutResult.worstOffset;
 
             Debug.Log("[Entrega] " + cut.cutName + " | Pedido: " + requested
                       + " | A: " + sideStates[i].sideA + " | B: " + sideStates[i].sideB
                       + " | Desfase: " + cutResult.worstOffset
-                      + " | Pago: " + cutResult.price + " | Propina: " + (cutResult.tipEligible ? "sí" : "no"));
+                      + " | Pago: " + cutResult.price);
         }
+
+        // Evaluar propina y estado de satisfacción general según spec doc
+        float primaryBasePrice = cuts.Count > 0 && cuts[0] != null
+            ? (isSandwich ? cuts[0].sellPriceSandwich : cuts[0].sellPricePlate)
+            : totalPayment;
+
+        var feedbackEval = CookingDeliveryEvaluator.EvaluateDeliveryFeedback(
+            customer,
+            primaryBasePrice,
+            overallWorstOffset
+        );
+
+        float totalTips = feedbackEval.tipAmount;
 
         ClearBuildAssembly();
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
         ToppingDraggable.ClearAllSplatters();
         PlayerWallet.Instance?.Add(totalPayment + totalTips);
-        customerSystem.CompleteCustomer(customer);
-        Debug.Log("✔ Pedido entregado. Pago: " + totalPayment + " | Propinas: " + totalTips);
-        AudioManager.Instance.PlayTaskCompleted();
+
+        // Iniciar feedback de entrega (4 segundos con slot ocupado)
+        customerSystem.TriggerDeliveryFeedback(customer, totalPayment, totalTips, feedbackEval.state);
+
+        Debug.Log("✔ Pedido entregado. Pago: " + totalPayment + " | Propinas: " + totalTips + " | Estado: " + feedbackEval.state);
         TutorialManager.NotifyProductDelivered();
         ClearDiscardContext();
         return true;

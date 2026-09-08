@@ -14,6 +14,11 @@ public class AudioManager : MonoBehaviour
     [Header("Strikes")]
     [SerializeField] private AudioClip strikeClip;
 
+    [Header("Delivery Feedback Audio (Spec Doc)")]
+    [SerializeField] private AudioClip positiveFeedback;
+    [SerializeField] private AudioClip intermediateFeedback;
+    [SerializeField] private AudioClip negativeFeedback;
+
     private AudioSource audioSource;
 
     private void Awake()
@@ -41,6 +46,24 @@ public class AudioManager : MonoBehaviour
     public void PlayNewClientBell() => audioSource?.PlayOneShot(newClientBell);
 
     public void PlayOnUseTopping() => audioSource?.PlayOneShot(toppingShake);
-    
+
     public void PlayStrikeSound() => audioSource?.PlayOneShot(strikeClip);
+
+    public void PlayPositiveFeedback()
+    {
+        AudioClip clip = positiveFeedback != null ? positiveFeedback : taskCompleted;
+        if (clip != null) audioSource?.PlayOneShot(clip);
+    }
+
+    public void PlayIntermediateFeedback()
+    {
+        AudioClip clip = intermediateFeedback != null ? intermediateFeedback : taskCompleted;
+        if (clip != null) audioSource?.PlayOneShot(clip);
+    }
+
+    public void PlayNegativeFeedback()
+    {
+        if (negativeFeedback != null)
+            audioSource?.PlayOneShot(negativeFeedback);
+    }
 }

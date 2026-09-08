@@ -154,7 +154,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
       propertyPath: grillSystem
-      value: 
+      value:
       objectReference: {fileID: 1141140570}
     - target: {fileID: 2036080050042580382, guid: 4500cbcf21196084d8792cbc556c3f51, type: 3}
       propertyPath: visualPrefab
@@ -8269,6 +8269,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: feedbackConfig
+      value: 
+      objectReference: {fileID: 11400000, guid: dd74f019187152940a5589cb8c5b392e, type: 2}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: availabilityService
       value: 
       objectReference: {fileID: 1159028469}
@@ -14993,6 +14997,9 @@ MonoBehaviour:
   newClientBell: {fileID: 8300000, guid: ebe80cd35d6c07c40ae0550850136564, type: 3}
   toppingShake: {fileID: 8300000, guid: 64c8b3f2860da644496ee7b41cadbf01, type: 3}
   strikeClip: {fileID: 0}
+  positiveFeedback: {fileID: 0}
+  intermediateFeedback: {fileID: 0}
+  negativeFeedback: {fileID: 0}
 --- !u!82 &2004183797
 AudioSource:
   m_ObjectHideFlags: 0

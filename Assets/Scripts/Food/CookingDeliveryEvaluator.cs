@@ -115,6 +115,73 @@ public static class CookingDeliveryEvaluator
     }
 
     /// <summary>
+    /// Estructura con el desglose económico y el estado de feedback correspondiente a la entrega.
+    /// </summary>
+    public struct DeliveryFeedbackEvaluation
+    {
+        public CustomerFeedbackState state;
+        public float tipAmount;
+    }
+
+    /// <summary>
+    /// Evalúa la satisfacción del cliente y la propina según las reglas del documento:
+    /// - Turista feliz: corte en punto exacto + cliente Turista -> 20% propina.
+    /// - Entrega excelente: corte en punto exacto + paciencia alta (>= 50%) -> 10% propina.
+    /// - Entrega aceptable: corte con desfase 1 o paciencia media/baja -> 3% a 7% (5% promedio).
+    /// - Sin propina: desfase >= 2, o propina anulada por faltante, o propina evaluada en 0 -> $0.
+    /// </summary>
+    public static DeliveryFeedbackEvaluation EvaluateDeliveryFeedback(Customer customer, float basePrice, int worstOffset)
+    {
+        var result = new DeliveryFeedbackEvaluation();
+
+        if (customer == null || customer.IsTipAnulada)
+        {
+            result.state = CustomerFeedbackState.SinPropina;
+            result.tipAmount = 0f;
+            return result;
+        }
+
+        if (worstOffset == 0)
+        {
+            if (customer.type == CustomerType.Turista)
+            {
+                result.state = CustomerFeedbackState.TuristaFeliz;
+                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.20f));
+            }
+            else if (customer.Patience01 >= 0.5f)
+            {
+                result.state = CustomerFeedbackState.EntregaExcelente;
+                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.10f));
+            }
+            else
+            {
+                result.state = CustomerFeedbackState.EntregaAceptable;
+                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.05f));
+            }
+        }
+        else if (worstOffset == 1)
+        {
+            if (customer.Patience01 >= 0.3f)
+            {
+                result.state = CustomerFeedbackState.EntregaAceptable;
+                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.05f));
+            }
+            else
+            {
+                result.state = CustomerFeedbackState.SinPropina;
+                result.tipAmount = 0f;
+            }
+        }
+        else
+        {
+            result.state = CustomerFeedbackState.SinPropina;
+            result.tipAmount = 0f;
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Mensaje de bloqueo con contadores. Adapta singular/plural y omite contadores en cero.
     /// Incluye la instrucción de descarte solo si hay quemados.
     /// </summary>
