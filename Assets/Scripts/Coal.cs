@@ -13,8 +13,11 @@ public class Coal : Item
     [SerializeField] private SpriteRenderer spriteRenderer;
 
     [Header("Combustion")]
+    [Tooltip("Fallback: solo se usa si coalData es null. El valor real sale de CoalSO.maxBurnTime.")]
     [SerializeField] private float maxBurnTime = 60f;
     public float currentBurnTime = 0f;
+
+    public float MaxBurnTime => (coalData != null) ? coalData.maxBurnTime : maxBurnTime;
 
     public CoalStates state = CoalStates.Apagado;
 
@@ -35,7 +38,7 @@ public class Coal : Item
     {
         if (state != CoalStates.Encendido) return 0f;
 
-        float lifeFactor = Mathf.Clamp01(1f - (currentBurnTime / maxBurnTime));
+        float lifeFactor = Mathf.Clamp01(1f - (currentBurnTime / MaxBurnTime));
         return 6.5f * lifeFactor;
     }
 
@@ -106,7 +109,7 @@ public class Coal : Item
 
         currentBurnTime += Time.deltaTime;
 
-        if (currentBurnTime >= maxBurnTime)
+        if (currentBurnTime >= MaxBurnTime)
             state = CoalStates.Ceniza;
 
         if (state == CoalStates.Ceniza) return;

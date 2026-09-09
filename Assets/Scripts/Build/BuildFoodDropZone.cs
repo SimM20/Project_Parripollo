@@ -133,10 +133,40 @@ public class BuildFoodDropZone : MonoBehaviour
             if (!zone.zoneCollider.OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
                 continue;
 
+            // El plato admite un solo corte a la vez: el que sobra vuelve a su origen.
+            if (zone.buildStationSystem.HasAnyCut)
+            {
+                Debug.Log("[Build] El plato ya tiene una carne: se rechaza " + cut.cutName + ".");
+                return false;
+            }
+
             zone.buildStationSystem.AddCut(cut, state, sideAState, sideBState);
             Debug.Log("[Build] Carne arrastrada: " + cut.cutName + " con estado " + state
                       + " (A: " + sideAState + " | B: " + sideBState + ")");
             return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// True si el punto cae sobre una zona de plato que ya tiene una carne montada.
+    /// Lo usan los arrastres para devolver el corte a su origen en vez de dejarlo caer
+    /// en la grilla que el plato tapa.
+    /// </summary>
+    public static bool IsPlateOccupiedAt(Vector3 worldPoint)
+    {
+        for (int i = 0; i < ActiveZones.Count; i++)
+        {
+            BuildFoodDropZone zone = ActiveZones[i];
+            if (zone == null || !zone.isActiveAndEnabled || zone.zoneCollider == null || zone.buildStationSystem == null)
+                continue;
+
+            if (!zone.zoneCollider.OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
+                continue;
+
+            if (zone.buildStationSystem.HasAnyCut)
+                return true;
         }
 
         return false;

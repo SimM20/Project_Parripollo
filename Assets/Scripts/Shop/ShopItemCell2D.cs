@@ -31,6 +31,8 @@ public class ShopItemCell2D : MonoBehaviour
     private ShopSystem shop;
     private int pendingQty = 1;
 
+    private int MaxQty => (shop != null && item != null) ? shop.GetMaxPurchaseQty(item) : ShopSystem.UnlimitedQty;
+
     public ItemDataSO Item => item;
     public ToppingSO ToppingItem => toppingItem;
 
@@ -92,6 +94,8 @@ public class ShopItemCell2D : MonoBehaviour
     {
         if (shop == null) return;
 
+        pendingQty = Mathf.Clamp(pendingQty, 1, MaxQty);
+
         bool purchasable;
         Sprite icon;
         string name;
@@ -130,7 +134,7 @@ public class ShopItemCell2D : MonoBehaviour
         bool canAfford = shop.Wallet != null && shop.Wallet.CanAfford(price * pendingQty);
         bool stepperOn = purchasable;
         if (minusButton != null) minusButton.SetInteractable(stepperOn && pendingQty > 1);
-        if (plusButton != null) plusButton.SetInteractable(stepperOn);
+        if (plusButton != null) plusButton.SetInteractable(stepperOn && pendingQty < MaxQty);
         if (buyButton != null) buyButton.SetInteractable(stepperOn && canAfford);
     }
 
@@ -147,7 +151,7 @@ public class ShopItemCell2D : MonoBehaviour
 
     private void OnPlus()
     {
-        pendingQty++;
+        pendingQty = Mathf.Min(pendingQty + 1, MaxQty);
         RefreshVisuals();
     }
 

@@ -29,6 +29,8 @@ public class ShopItemCellUI : MonoBehaviour
     private ShopSystem shop;
     private int pendingQty = 1;
 
+    private int MaxQty => (shop != null && item != null) ? shop.GetMaxPurchaseQty(item) : ShopSystem.UnlimitedQty;
+
     void Awake()
     {
         if (minusButton != null) minusButton.onClick.AddListener(OnMinus);
@@ -64,6 +66,8 @@ public class ShopItemCellUI : MonoBehaviour
     public void RefreshVisuals()
     {
         if (shop == null) return;
+
+        pendingQty = Mathf.Clamp(pendingQty, 1, MaxQty);
 
         bool purchasable;
         Sprite icon;
@@ -102,7 +106,7 @@ public class ShopItemCellUI : MonoBehaviour
 
         bool canAfford = shop.Wallet != null && shop.Wallet.CanAfford(price * pendingQty);
         if (minusButton != null) minusButton.interactable = purchasable && pendingQty > 1;
-        if (plusButton != null) plusButton.interactable = purchasable;
+        if (plusButton != null) plusButton.interactable = purchasable && pendingQty < MaxQty;
         if (buyButton != null) buyButton.interactable = purchasable && canAfford;
     }
 
@@ -114,7 +118,7 @@ public class ShopItemCellUI : MonoBehaviour
 
     private void OnPlus()
     {
-        pendingQty++;
+        pendingQty = Mathf.Min(pendingQty + 1, MaxQty);
         RefreshVisuals();
     }
 
