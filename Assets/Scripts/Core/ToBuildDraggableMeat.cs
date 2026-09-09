@@ -88,8 +88,11 @@ public class ToBuildDraggableMeat : MonoBehaviour
         Vector3 dropPoint = GetMouseWorldPosition();
 
         // El plato tiene prioridad: es un area chica y superpuesta al borde de la grilla.
+        // Y admite un solo corte: si esta ocupado, el corte vuelve a la bandeja en vez de
+        // caer en los slots de la grilla que el plato tapa.
         bool dropped = buffer.TryPlateFromTrayById(entryId, dropPoint)
-                       || buffer.TryDropFromTrayById(entryId, dropPoint, isGridRotated);
+                       || (!BuildFoodDropZone.IsPlateOccupiedAt(dropPoint)
+                           && buffer.TryDropFromTrayById(entryId, dropPoint, isGridRotated));
 
         if (!dropped)
             RestoreStartTransform();
