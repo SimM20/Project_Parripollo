@@ -27,6 +27,7 @@ public class CoalHolderDraggableCoal : MonoBehaviour
         if (coalData == null || transferBuffer == null) return;
 
         isDragging = true;
+        GamePause.OnPaused += CancelDrag;
         startPosition = transform.position;
         startParent = transform.parent;
 
@@ -50,7 +51,9 @@ public class CoalHolderDraggableCoal : MonoBehaviour
 
     void OnMouseUp()
     {
+        if (!isDragging) return;
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
 
         if (transferBuffer != null) transferBuffer.ClearCoalHolderHover();
 
@@ -67,11 +70,15 @@ public class CoalHolderDraggableCoal : MonoBehaviour
             RestoreStartTransform();
     }
 
-    void OnDisable()
+    void OnDisable() => CancelDrag();
+
+    /// <summary>Aborta el arrastre y devuelve el carbón a la bandeja. Lo dispara GamePause al pausar.</summary>
+    private void CancelDrag()
     {
         if (!isDragging) return;
 
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
         if (transferBuffer != null) transferBuffer.ClearCoalHolderHover();

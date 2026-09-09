@@ -74,7 +74,8 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // El diálogo de oferta del tutorial tiene su propia pausa: mientras está abierto, ESC no abre el menú.
+        if (Input.GetKeyDown(KeyCode.Escape) && !GamePause.IsDialogPaused)
         {
             if (UIManager.Instance != null)
             {
@@ -85,7 +86,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (UIManager.Instance != null && UIManager.Instance.IsPaused)
+        if (GamePause.IsPaused)
             return;
 
         // ── Paneles laterales ──

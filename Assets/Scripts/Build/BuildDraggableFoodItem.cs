@@ -10,6 +10,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
     private Vector3 startPosition;
     private int startSortingOrder;
     private SpriteRenderer selfRenderer;
+    private bool isDragging;
 
     public bool HasExactlyOneData()
     {
@@ -28,6 +29,8 @@ public class BuildDraggableFoodItem : MonoBehaviour
 
     void OnMouseDown()
     {
+        isDragging = true;
+        GamePause.OnPaused += CancelDrag;
         startPosition = transform.position;
         AudioManager.Instance?.PlayOnUseTopping();
 
@@ -38,9 +41,18 @@ public class BuildDraggableFoodItem : MonoBehaviour
         }
     }
 
-    void OnMouseDrag() => transform.position = GetFoodItemMouseWorldPos();
+    void OnMouseDrag()
+    {
+        if (!isDragging) return;
+        transform.position = GetFoodItemMouseWorldPos();
+    }
+
     void OnMouseUp()
     {
+        if (!isDragging) return;
+        isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
+
         if (!HasExactlyOneData())
         {
             Debug.LogWarning("[BuildDraggableFoodItem] " + gameObject.name +
@@ -50,6 +62,21 @@ public class BuildDraggableFoodItem : MonoBehaviour
             BuildFoodDropZone.TryAcceptAt(GetFoodItemMouseWorldPos(), this);
 
         // Always return to source position — item is reusable, not consumed
+        transform.position = startPosition;
+
+        if (selfRenderer != null)
+            selfRenderer.sortingOrder = startSortingOrder;
+    }
+
+    void OnDisable() => CancelDrag();
+
+    /// <summary>Aborta el arrastre y devuelve el ítem a su origen sin intentar el drop. Lo dispara GamePause al pausar.</summary>
+    private void CancelDrag()
+    {
+        if (!isDragging) return;
+        isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
+
         transform.position = startPosition;
 
         if (selfRenderer != null)

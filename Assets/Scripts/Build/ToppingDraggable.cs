@@ -130,6 +130,7 @@ public class ToppingDraggable : MonoBehaviour
 
     void OnDestroy()
     {
+        GamePause.OnPaused -= CancelDrag;
         ActiveInstances.Remove(this);
     }
 
@@ -145,6 +146,7 @@ public class ToppingDraggable : MonoBehaviour
     void OnMouseDown()
     {
         isDragging = true;
+        GamePause.OnPaused += CancelDrag;
         isPouring = false;
         toppingRegistered = false;
 
@@ -210,6 +212,7 @@ public class ToppingDraggable : MonoBehaviour
     {
         if (!isDragging) return;
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
 
         if (isPouring || toppingRegistered)
         {
@@ -237,6 +240,7 @@ public class ToppingDraggable : MonoBehaviour
             return;
 
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
         StopPouring();
 
         transform.position = startPosition;

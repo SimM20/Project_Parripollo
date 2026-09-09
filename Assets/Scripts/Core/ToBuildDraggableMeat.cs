@@ -44,6 +44,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
         if (cut == null || buffer == null) return;
 
         isDragging = true;
+        GamePause.OnPaused += CancelDrag;
         startPosition = transform.position;
         startParent = transform.parent;
 
@@ -62,7 +63,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
 
     void OnMouseDrag()
     {
-        if (cut == null || buffer == null) return;
+        if (!isDragging || cut == null || buffer == null) return;
 
         transform.position = GetMouseWorldPosition() + dragOffset;
         buffer.UpdateMeatHolderHover(cut, transform.position, isGridRotated);
@@ -72,6 +73,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
     {
         if (!isDragging) return;
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
 
         if (buffer != null)
             buffer.ClearMeatHolderHover();
@@ -152,11 +154,15 @@ public class ToBuildDraggableMeat : MonoBehaviour
         }
     }
 
-    void OnDisable()
+    void OnDisable() => CancelDrag();
+
+    /// <summary>Aborta el arrastre y devuelve el corte a la bandeja. Lo dispara GamePause al pausar.</summary>
+    private void CancelDrag()
     {
         if (!isDragging) return;
 
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
 
