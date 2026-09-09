@@ -89,9 +89,21 @@ public class FoodCatalogSO : ScriptableObject, IFoodCatalogProvider
         for (int i = 0; i < allUpgrades.Count; i++)
         {
             var u = allUpgrades[i];
-            if (u != null && !u.isPurchased) result.Add(u);
+            if (u != null && !u.IsMaxed) result.Add(u);
         }
         return result;
+    }
+
+    /// <summary>Clientes simultaneos extra aportados por las mejoras ya compradas.</summary>
+    public int GetMaxSimultaneousCustomersBonus()
+    {
+        int bonus = 0;
+        for (int i = 0; i < allUpgrades.Count; i++)
+        {
+            var u = allUpgrades[i];
+            if (u != null) bonus += u.MaxSimultaneousCustomersBonus;
+        }
+        return bonus;
     }
 
     public float GetBasePrice(ProductVariantSO variant)

@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 342aacb661265b741ae0fc63cd2ef4a3, type: 3}
-  m_Name: CoalBurnTimeUpgrade
+  m_Name: CustomerCapacityUpgrade
   m_EditorClassIdentifier: 
-  itemName: Carbon de Quebracho
-  basePrice: 500
-  category: 1
-  icon: {fileID: 7258142702659648963, guid: b814f052cc3b63f499ba2574cb208516, type: 3}
-  description: 'Carbon mas denso: cada brasa dura mas del doble antes de volverse
-    ceniza.'
+  itemName: Mesa extra
+  basePrice: 100
+  category: 0
+  icon: {fileID: 21300000, guid: 2eba78db35522b841bcd8592a5170807, type: 3}
+  description: 'Una mesa mas en el patio: sumas un cliente simultaneo por cada nivel
+    comprado.'
   isUnlocked: 1
-  maxLevel: 1
+  maxLevel: 3
   currentLevel: 0
-  effectType: 0
-  targetCoal: {fileID: 11400000, guid: 9eaa56d6afb63b140989ce44c6b336c1, type: 2}
-  upgradedMaxBurnTime: 200
+  effectType: 1
+  targetCoal: {fileID: 0}
+  upgradedMaxBurnTime: 0
   customersPerLevel: 1

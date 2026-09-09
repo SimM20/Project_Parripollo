@@ -152,7 +152,19 @@ public class ShopItemCellUI : MonoBehaviour
 
     private static string ResolveDescription(ItemDataSO item)
     {
-        if (item is UpgradeSO up) return up.description ?? "";
+        if (item is UpgradeSO up)
+        {
+            string text = up.description ?? "";
+
+            // Las mejoras de varios niveles muestran en que nivel van.
+            if (up.MaxLevel > 1)
+            {
+                string level = "Nivel " + up.CurrentLevel + "/" + up.MaxLevel;
+                text = string.IsNullOrEmpty(text) ? level : text + System.Environment.NewLine + level;
+            }
+
+            return text;
+        }
         return "";
     }
 }

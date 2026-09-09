@@ -46,3 +46,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: d88058f9642e45a4a9f1584757d728c7, type: 2}
   allUpgrades:
   - {fileID: 11400000, guid: f39cb61e368c4cceb8401abd02fd27a8, type: 2}
+  - {fileID: 11400000, guid: bcf77f21fd724e26a5cc38b3a393ac59, type: 2}
