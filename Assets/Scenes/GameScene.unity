@@ -8157,7 +8157,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1276132352683363579, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: initialStock.Array.data[3].amount
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 3693624490507164874, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: m_Name

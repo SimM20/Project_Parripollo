@@ -24,4 +24,4 @@ MonoBehaviour:
     coalOff: {fileID: 21300000, guid: b99743242c6d7d9438d369c9f05be734, type: 3}
     coalOnn: {fileID: 21300000, guid: 7f4db28dd3a1f334c8a9d44c7b814934, type: 3}
     coalAshes: {fileID: 21300000, guid: e31a888066742e64e8660e53fcf332ba, type: 3}
-  unitsPerBag: 1
+  unitsPerBag: 10
