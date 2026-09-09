@@ -14,12 +14,15 @@ public class Item : MonoBehaviour
     {
         startPosition = transform.position;
         isHeldByMouse = true;
+        GamePause.OnPaused += CancelDrag;
         OnPickedUp();
         UpdateHoverPreview();
     }
 
     protected void OnMouseDrag()
     {
+        if (!isHeldByMouse) return;
+
         transform.position = GetMouseWorldPosition();
         UpdateHoverPreview();
     }
@@ -54,8 +57,7 @@ public class Item : MonoBehaviour
 
     public virtual void OnMouseUp()
     {
-        isHeldByMouse = false;
-        ClearHoverPreview();
+        if (!EndHold()) return;
 
         Collider2D hit = Physics2D.OverlapPoint(transform.position);
         if (hit != null && hit.TryGetComponent<GridSlot>(out GridSlot newSlot))
@@ -70,6 +72,28 @@ public class Item : MonoBehaviour
                 return;
             }
         }
+        transform.position = startPosition;
+    }
+
+    /// <summary>
+    /// Cierra el agarre. Devuelve false si no había uno activo (p. ej. un OnMouseUp tardío
+    /// tras una cancelación por pausa). Las subclases lo llaman al inicio de OnMouseUp.
+    /// </summary>
+    protected bool EndHold()
+    {
+        if (!isHeldByMouse) return false;
+
+        isHeldByMouse = false;
+        GamePause.OnPaused -= CancelDrag;
+        ClearHoverPreview();
+        return true;
+    }
+
+    /// <summary>Aborta el arrastre y devuelve el ítem a donde estaba. Lo dispara GamePause al pausar.</summary>
+    protected virtual void CancelDrag()
+    {
+        if (!EndHold()) return;
+
         transform.position = startPosition;
     }
 
@@ -165,6 +189,7 @@ public class Item : MonoBehaviour
     public virtual void OnDisable()
     {
         isHeldByMouse = false;
+        GamePause.OnPaused -= CancelDrag;
         ClearHoverPreview();
     }
 }

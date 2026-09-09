@@ -104,6 +104,10 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
     void Update()
     {
+        // Único pick que no pasa por OnMouseXXX (ver nota de clase): eventMask no lo frena.
+        if (GamePause.IsPaused)
+            return;
+
         if (activeDragger == this)
         {
             UpdateDrag();
@@ -223,6 +227,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
             return;
 
         activeDragger = this;
+        GamePause.OnPaused += CancelDrag;
 
         // Los clientes apagan su collider mientras hay un panel desplegado; durante el
         // arrastre hay que devolvérselo o FindCustomerViewAt no encuentra a nadie.
@@ -235,6 +240,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private void EndDrag()
     {
         activeDragger = null;
+        GamePause.OnPaused -= CancelDrag;
         RestoreSortingOrders();
 
         Vector3 dropPoint = GetMouseWorldPos();
@@ -272,6 +278,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private void CancelDrag()
     {
         activeDragger = null;
+        GamePause.OnPaused -= CancelDrag;
         RestoreSortingOrders();
         RestorePositions();
         SetHoveredView(null);

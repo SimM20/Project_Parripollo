@@ -147,6 +147,7 @@ public class StockPanelSlot : MonoBehaviour
 
         draggingItem = item;
         isDragging = true;
+        GamePause.OnPaused += CancelDrag;
         isGridRotated = false;
 
         Vector3 mouseWorld = GetMouseWorldPosition();
@@ -179,6 +180,7 @@ public class StockPanelSlot : MonoBehaviour
         bool rotated = isGridRotated;
 
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
         ClearHoverPreview();
         DestroyGhost();
 
@@ -202,6 +204,7 @@ public class StockPanelSlot : MonoBehaviour
             return;
 
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
         ClearHoverPreview();
         DestroyGhost();
         draggingItem = null;

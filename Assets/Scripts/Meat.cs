@@ -174,8 +174,7 @@ public class Meat : Item
 
     public override void OnMouseUp()
     {
-        isHeldByMouse = false;
-        ClearHoverPreview();
+        if (!EndHold()) return;
 
         if (TrashZone.TryConsumeAtWorldPoint(transform.position, this))
             return;
