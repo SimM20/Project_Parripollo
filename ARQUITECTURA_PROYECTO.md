@@ -64,6 +64,7 @@ Assets/ScriptableObjects/
 ├── Toppings/        ToppingSO   — Chimichurri, Salsa criolla
 ├── Tutorial/        TutorialStepSO ×30 (secuencia ordenada 1..30)
 ├── FoodCatalog.asset / FoodCatalogTutorial.asset
+├── Upgrades/        UpgradeSO   — CoalBurnTimeUpgrade, CustomerCapacityUpgrade
 ├── ShopConfig.asset / CoalData.asset
 └── Chorizo.asset, ChorizoTutorial.asset
 ```
@@ -146,7 +147,7 @@ graph TD
 | **Buffer / staging area** | `MeatTransferBuffer`, `CoalTransferBuffer` | Guardan `BufferedMeatData`/`BufferedCoalData` (POCO con tiempos de cocción) y reconstruyen los visuales; permiten mover items entre vistas sin instanciar `Meat`/`Coal` reales |
 | **Duck typing por reflexión / `SendMessage`** | `GameManager`→buffers, `MeatHolderDraggableMeat`, `CoolerDraggableMeat`, `*StockVisualizer` | `Type.GetType` sobre todos los assemblies + `MethodInfo.Invoke` / `SendMessage(..., DontRequireReceiver)`. Rompe el binding estático a propósito |
 | **Registro estático de instancias** | `Coal.ActiveCoals`, `BuildFoodDropZone.ActiveZones`, `TrashZone.ActiveZones`, `ToppingDraggable.ActiveInstances` | Alta en `OnEnable`, baja en `OnDisable`/`OnDestroy`. Habilita APIs estáticas tipo `TryAcceptAt`, `ClearAllSplatters` |
-| **Data-driven (ScriptableObject)** | `ItemDataSO` → `MeatCutSO`, `CoalSO`, `UpgradeSO`; `BreadSO`, `SideSO`, `ToppingSO`, `ProductVariantSO`, `FoodCatalogSO`, `ShopConfigSO`, `TutorialStepSO`, `HudDatabaseSO` | ⚠️ Los SO mutan en runtime (`isUnlocked`, `isPurchased`) → **el estado persiste entre sesiones de Editor** |
+| **Data-driven (ScriptableObject)** | `ItemDataSO` → `MeatCutSO`, `CoalSO`, `UpgradeSO`; `BreadSO`, `SideSO`, `ToppingSO`, `ProductVariantSO`, `FoodCatalogSO`, `ShopConfigSO`, `TutorialStepSO`, `HudDatabaseSO` | ⚠️ Los SO mutan en runtime (`isUnlocked`, `UpgradeSO.currentLevel`) → **el estado persiste entre sesiones de Editor** |
 | **Service / Facade** | `FoodAvailabilityService` | Cruza `FoodCatalogSO` (estático) con `CoolerSystem` (stock live) |
 | **Static utility / Extension methods** | `DishValidator`, `CookingDeliveryEvaluator`, `SceneManagementUtils`, `MeatHoverText.ToHoverString()`, `OrderText.ToHoverString()` | Sin estado, testeables aisladamente |
 | **Object pool** | `GrillNotificationManager.groupPool` | Reutiliza grupos de notificación |
@@ -616,6 +617,7 @@ Customer SelectedCustomer { get; }
 bool IsDeliverySelectionActive { get; }
 bool IsReadyForSpawning { get; }
 IReadOnlyList<Customer> ActiveCustomers { get; }
+int  MaxSimultaneousCustomers { get; }    // base del inspector + mejoras compradas
 FoodCatalogSO Catalog { get; }            // vía FoodAvailabilityService
 
 void StartNight()
@@ -631,7 +633,13 @@ void SetDeliveryDragHover(CustomerView)     // resaltado durante el arrastre del
 Al pasar `null` restaura lo que corresponda al modo teclado. Si el cliente resaltado se va enojado
 a mitad del arrastre, `RemoveCustomer` suelta el recuadro antes de destruir la view.
 Clientes por noche: `min(customersFirstNight + (noche−1) × customersAddedPerNight, maximumCustomersPerNight)`
-(por defecto `20 + 5·(n−1)`, cap `70`; máx. `4` simultáneos).
+(por defecto `20 + 5·(n−1)`, cap `70`; en `GameScene`: `10 + 2·(n−1)`, cap `30`).
+**Clientes simultáneos** = `maxSimultaneousCustomers` (base del inspector, `3` en `GameScene`) +
+`Catalog.GetMaxSimultaneousCustomersBonus()`. Se resuelve **una sola vez en `Start`** (dimensiona
+`slotViews` y limita el `SpawnLoop`), así que una mejora comprada en la tienda recién impacta en la
+noche siguiente. Sin `availabilityService` asignado no hay catálogo → warning y se usa solo la base.
+⚠️ Los slots extra se posicionan con `autoFirstSlotPos + right × autoSlotSpacing × i`: al subir la
+capacidad hay que verificar que los últimos slots sigan entrando en cámara.
 `Update` descuenta paciencia y expulsa a los `IsAngry`. Al quedar `spawnedTonight >= target && activeCustomers == 0` → `OnNightEnded`.
 `CompactSlots()` corre las views a la izquierda al liberarse un slot.
 
@@ -664,6 +672,39 @@ void  ReportConsumption(int), RegisterDayCompleted(), ConfigureNightTwoCut(MeatC
 #### `PlayerWallet` — Singleton + DDOL
 `float Money { get; }` · `event Action<float> OnMoneyChanged` · `CanAfford(float)`, `TrySpend(float)`, `Add(float)`. Arranca en `1000`.
 
+#### `UpgradeSO` — `UpgradeSO.cs` · `ItemDataSO`
+Mejora de tienda **por niveles**, data-driven. Los assets viven en `ScriptableObjects/Upgrades/` y se
+registran en `FoodCatalogSO.allUpgrades` (de ahí los toma el tab `Upgrades`).
+```csharp
+bool isUnlocked;  int maxLevel = 1;  int currentLevel = 0;   // currentLevel muta y persiste
+UpgradeEffectType effectType;        // CoalBurnTime | MaxSimultaneousCustomers
+CoalSO targetCoal;  float upgradedMaxBurnTime;               // efecto CoalBurnTime
+int customersPerLevel = 1;                                   // efecto MaxSimultaneousCustomers
+
+int  CurrentLevel { get; }  int MaxLevel { get; }  bool IsMaxed { get; }
+int  MaxSimultaneousCustomersBonus { get; }   // CurrentLevel × customersPerLevel, 0 si no aplica
+bool Purchase()                               // +1 nivel y ApplyEffect(); false si ya está al máximo
+void ApplyEffect()                            // idempotente: fija valor absoluto, no acumula
+```
+Dos maneras de aplicar el efecto, según a quién le pertenezca la variable:
+
+| Efecto | Dónde vive el valor | Cómo se aplica |
+|---|---|---|
+| `CoalBurnTime` | `CoalSO._maxBurnTime` | `ApplyEffect()` → `targetCoal.SetMaxBurnTime(upgradedMaxBurnTime)`. Impacta al instante |
+| `MaxSimultaneousCustomers` | el propio `currentLevel` | `ApplyEffect()` es no-op. `CustomerSystem.Start()` **lee** el bonus del catálogo. Impacta en la noche siguiente |
+
+> Una variable de MonoBehaviour de escena (como `maxSimultaneousCustomers`) no se puede mutar desde la
+> tienda: `EndScene` no tiene `CustomerSystem`. El patrón es guardar el nivel en el SO — que sobrevive
+> al cambio de escena — y que el sistema de `GameScene` lo lea al arrancar.
+
+| Asset | Efecto | Precio | Niveles |
+|---|---|---|---|
+| `CoalBurnTimeUpgrade` | `maxBurnTime` del carbón → `200` | `$500` | 1 |
+| `CustomerCapacityUpgrade` | `+1` cliente simultáneo por nivel | `$100` / nivel | 3 |
+
+⚠️ `currentLevel` se serializa en el asset: **si se compra en el Editor, queda comprado**. Para
+resetear, ponerlo en `0` a mano en el inspector.
+
 #### `ShopSystem` — `Shop/ShopSystem.cs`
 Lógica pura, sin UI. Vive en `EndScene` (también hay una copia en `GameScene`).
 ```csharp
@@ -690,7 +731,7 @@ bool TryBuyToppingNow(ToppingSO, int qty, out string)    // ← compra individua
 |---|---|---|
 | `Coal` | `ShopConfigSO.coal` (un solo item) | siempre `true` |
 | `Meat` | `FoodCatalogSO.GetAllCuts()` | `cut.isUnlocked` |
-| `Upgrades` | `FoodCatalogSO.GetAllUpgrades()` | `up.isUnlocked && !up.isPurchased` |
+| `Upgrades` | `FoodCatalogSO.GetAllUpgrades()` | `up.isUnlocked && !up.IsMaxed` |
 | `Toppings` | `GetToppings()` → `catalog.GetAvailableToppings()` (devuelve `ToppingSO`, **no** `ItemDataSO`) | siempre `true` |
 
 > El tab `Toppings` es el único que **no** pasa por `GetItemsForTab`: la UI llama a `GetToppings()` y bindea `ToppingSO`. Por eso `ShopGridUI` y `ShopItemCellUI` tienen una rama y un `Bind` por cada tipo.
@@ -702,7 +743,7 @@ Compra individual (capa uGUI, la activa)
    ShopItemCellUI: −/+ ajustan un `pendingQty` LOCAL de la celda (no toca el carrito)
    → botón Comprar → ShopSystem.TryBuyNow(item, qty) / TryBuyToppingNow(topping, qty)
    → valida IsPurchasable → Wallet.CanAfford → Wallet.TrySpend
-   → CoalSO: Cooler.Add(coal, unitsPerBag × qty) · UpgradeSO: up.isPurchased = true · resto: Cooler.Add(item, qty)
+   → CoalSO: Cooler.Add(coal, unitsPerBag × qty) · UpgradeSO: up.Purchase() (+1 nivel) · resto: Cooler.Add(item, qty)
    → OnPurchaseResult(true, msg) + pendingQty vuelve a 1
    ⚠️ NO emite OnCartChanged. El refresco lo disparan Wallet.OnMoneyChanged y Cooler.OnInventoryChanged
 
@@ -710,7 +751,7 @@ Carrito (capa 2D, desactivada)
    SetQty/IncrementQty → cart / toppingCart → TryConfirmPurchase() paga todo junto
 ```
 Dos carritos separados: `cart` (`ItemDataSO`) y `toppingCart` (`ToppingSO` → `ToppingStock`).
-`UpgradeSO` está capado a cantidad 1 en ambos caminos.
+`UpgradeSO` está capado a cantidad 1 en ambos caminos: **una compra = un nivel**.
 
 #### UI de tienda (capa uGUI activa) — `Shop/*UI.cs` · `EndScene`
 
@@ -724,7 +765,7 @@ el flag `started` evita refrescar antes del primer `Start`.
 | `ShopTabButtonUI` | `[RequireComponent(Button)]`. Expone `ShopTabType Tab` y `Action<ShopTabType> OnTabClicked`. `SetActiveState(bool)` cambia color de `background` y `label` (activo/inactivo) |
 | `ShopHeaderUI` | Header: nombre de la tienda, plata (`$N0`) y **total de carbón** (`"Carbon: {GetTotalCoalUnits()} u."`). Se suscribe a `Wallet.OnMoneyChanged` **y** `Cooler.OnInventoryChanged` |
 | `ShopGridUI` | Reconstruye la grilla al cambiar de tab. `AdjustCellCount` instancia/destruye celdas (`ShopItemCell 1.prefab`) bajo el `Content` del ScrollView y las bindea. Ante cambios de stock/plata solo llama `RefreshVisuals()` de cada celda (no reconstruye) |
-| `ShopItemCellUI` | Celda: icono, nombre, descripción, precio, `pendingQty`, subtotal. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. `lockedOverlay` + icono atenuado para lo bloqueado |
+| `ShopItemCellUI` | Celda: icono, nombre, descripción (+ `"Nivel X/Y"` si la mejora tiene varios niveles), precio, `pendingQty`, subtotal. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. `lockedOverlay` + icono atenuado para lo bloqueado |
 | `ShopSubtitleUI` | Título + detalle por tab. En `Coal` el detalle es dinámico: `"USASTE {AverageCoalPerDay} UNIDADES DE CARBÓN"`, o `"PRIMERA NOCHE — SIN DATOS DE CONSUMO"` si `DaysPlayed == 0` |
 | `ShopNextButtonUI` | Avanza `Coal → Meat → Upgrades → Toppings` cambiando el label; en `Toppings` el botón carga `GameScene` |
 

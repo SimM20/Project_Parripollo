@@ -113,7 +113,7 @@ public class ShopSystem : MonoBehaviour
         if (item == null) return false;
         if (item is CoalSO) return true;
         if (item is MeatCutSO cut) return cut.isUnlocked;
-        if (item is UpgradeSO up) return up.isUnlocked && !up.isPurchased;
+        if (item is UpgradeSO up) return up.isUnlocked && !up.IsMaxed;
         return false;
     }
 
@@ -156,7 +156,7 @@ public class ShopSystem : MonoBehaviour
     public const int UnlimitedQty = int.MaxValue;
 
     /// <summary>
-    /// Maximo comprable de un item en una sola operacion. Las mejoras son de una sola vez.
+    /// Maximo comprable de un item en una sola operacion. Las mejoras se compran de a un nivel.
     /// Fuente de verdad unica: la usan el carrito, la compra directa y los steppers de las celdas.
     /// </summary>
     public int GetMaxPurchaseQty(ItemDataSO item)
@@ -297,10 +297,7 @@ public class ShopSystem : MonoBehaviour
             if (item is CoalSO coal)
                 Cooler.Add(coal, coal.unitsPerBag * qty);
             else if (item is UpgradeSO up)
-            {
-                up.isPurchased = true;
-                up.ApplyEffect();
-            }
+                up.Purchase();
             else
                 Cooler.Add(item, qty);
         }
@@ -360,10 +357,7 @@ public class ShopSystem : MonoBehaviour
         if (item is CoalSO coal)
             Cooler.Add(coal, coal.unitsPerBag * qty);
         else if (item is UpgradeSO up)
-        {
-            up.isPurchased = true;
-            up.ApplyEffect();
-        }
+            up.Purchase();
         else
             Cooler.Add(item, qty);
 

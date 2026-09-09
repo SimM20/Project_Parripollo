@@ -8,6 +8,7 @@ public class CustomerSystem : MonoBehaviour
 {
     [Header("Customer Limits")]
     [Min(1)]
+    [Tooltip("Base de clientes simultaneos. Las mejoras de la tienda le suman encima.")]
     [SerializeField] private int maxSimultaneousCustomers = 4;
 
     [Header("Customers Per Night")]
@@ -24,6 +25,15 @@ public class CustomerSystem : MonoBehaviour
     [SerializeField] private int maximumCustomersPerNight = 70;
 
     private int customersTargetTonight;
+
+    // Base del inspector + bonus de las mejoras. Se resuelve una vez en Start.
+    private int resolvedMaxSimultaneousCustomers;
+
+    /// <summary>Clientes simultaneos de esta noche, ya con las mejoras compradas aplicadas.</summary>
+    public int MaxSimultaneousCustomers =>
+        resolvedMaxSimultaneousCustomers > 0
+            ? resolvedMaxSimultaneousCustomers
+            : Mathf.Max(1, maxSimultaneousCustomers);
 
     [Header("Spawning")]
     [SerializeField] private float spawnIntervalSeconds = 6f;
@@ -98,10 +108,15 @@ public class CustomerSystem : MonoBehaviour
         customersTargetTonight =
             CalculateCustomersForNight(currentNight);
 
+        resolvedMaxSimultaneousCustomers =
+            CalculateMaxSimultaneousCustomers();
+
         Debug.Log(
             "[CustomerSystem] Iniciando noche " + currentNight +
             " | Clientes de esta noche: " + customersTargetTonight +
-            " | Máximo configurado: " + maximumCustomersPerNight
+            " | Máximo configurado: " + maximumCustomersPerNight +
+            " | Simultáneos: " + resolvedMaxSimultaneousCustomers +
+            " (base " + Mathf.Max(1, maxSimultaneousCustomers) + ")"
         );
 
         // Comunica al tracker cuál es el corte desbloqueable.
@@ -154,7 +169,7 @@ public class CustomerSystem : MonoBehaviour
         orderSystem = new OrderSystem(cuts);
 
         slotViews = new CustomerView[
-            Mathf.Max(1, maxSimultaneousCustomers)
+            resolvedMaxSimultaneousCustomers
         ];
 
         UIManager.Instance?.SetTotalCustomers(
@@ -176,6 +191,31 @@ public class CustomerSystem : MonoBehaviour
 
         return Mathf.Min(calculated, safeMaximum);
     }
+
+    /// <summary>
+    /// Clientes simultaneos = base del inspector + los que sumaron las mejoras compradas
+    /// en la tienda (`UpgradeSO` con `effectType == MaxSimultaneousCustomers`). El nivel de
+    /// cada mejora vive en su propio SO, asi que el bonus sobrevive al cambio de escena.
+    /// </summary>
+    private int CalculateMaxSimultaneousCustomers()
+    {
+        int baseValue = Mathf.Max(1, maxSimultaneousCustomers);
+
+        FoodCatalogSO catalog = Catalog;
+
+        if (catalog == null)
+        {
+            Debug.LogWarning(
+                "[CustomerSystem] Sin catálogo: no se aplican las mejoras de " +
+                "clientes simultáneos."
+            );
+
+            return baseValue;
+        }
+
+        return baseValue + catalog.GetMaxSimultaneousCustomersBonus();
+    }
+
     void Update()
     {
         // Tick paciencia + expulsión
@@ -224,7 +264,7 @@ public class CustomerSystem : MonoBehaviour
                 spawnIntervalSeconds
             );
 
-            if (activeCustomers.Count >= maxSimultaneousCustomers)
+            if (activeCustomers.Count >= resolvedMaxSimultaneousCustomers)
                 continue;
 
             SpawnCustomer();
