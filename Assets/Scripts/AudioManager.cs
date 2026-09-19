@@ -10,9 +10,6 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip taskCompleted;
     [SerializeField] private AudioClip newClientBell;
     [SerializeField] private AudioClip toppingShake;
-    
-    [Header("Strikes")]
-    [SerializeField] private AudioClip strikeClip;
 
     private AudioSource audioSource;
 
@@ -41,6 +38,4 @@ public class AudioManager : MonoBehaviour
     public void PlayNewClientBell() => audioSource?.PlayOneShot(newClientBell);
 
     public void PlayOnUseTopping() => audioSource?.PlayOneShot(toppingShake);
-    
-    public void PlayStrikeSound() => audioSource?.PlayOneShot(strikeClip);
 }
