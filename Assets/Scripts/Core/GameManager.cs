@@ -22,14 +22,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private KeyCode toppingsPanelToggleKey = KeyCode.T;
     [SerializeField] private KeyCode clearPlateKey = KeyCode.C;
 
-    // Contexto de descarte de quemados: solo activo tras un intento de entrega bloqueado por quemados.
-    private bool discardContextActive;
-    private readonly System.Collections.Generic.List<int> discardBurnedIndices = new System.Collections.Generic.List<int>();
-
-    // Cliente del intento bloqueado: la entrega es siempre por arrastre, así que no hay
-    // "cliente seleccionado" contra el que revalidar cuando el jugador aprieta X.
-    private Customer discardCustomer;
-
     public CustomerSystem Customers => customerSystem;
 
     private void Awake()
@@ -107,9 +99,6 @@ public class GameManager : MonoBehaviour
             CleanAshes();
 
         // ── Armado y entrega (todo dentro de la vista Parrilla) ──
-        if (Input.GetKeyDown(KeyCode.X))
-            TryDiscardBurnedCuts();
-
         if (Input.GetKeyDown(clearPlateKey) && TutorialManager.CheckClearBuildPlateAllowed())
         {
             ClearBuildAssembly();
@@ -204,46 +193,6 @@ public class GameManager : MonoBehaviour
 
         if (cleanedCount > 0)
             Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
-    }
-
-    private void ClearDiscardContext()
-    {
-        discardContextActive = false;
-        discardCustomer = null;
-        discardBurnedIndices.Clear();
-    }
-
-    /// <summary>
-    /// Descarta los cortes quemados detectados en el último intento bloqueado y revalida la entrega
-    /// contra el mismo cliente. Fuera del contexto de una entrega bloqueada por quemados, X no hace nada.
-    /// </summary>
-    private void TryDiscardBurnedCuts()
-    {
-        if (!discardContextActive || discardBurnedIndices.Count == 0)
-            return;
-
-        // Eliminar de mayor a menor índice para no invalidar los índices restantes.
-        discardBurnedIndices.Sort();
-        for (int i = discardBurnedIndices.Count - 1; i >= 0; i--)
-        {
-            int index = discardBurnedIndices[i];
-            buildStationSystem.RemoveCutAt(index);
-            meatTransferBuffer?.SendMessage("RemovePlateMeatVisualAt", index, SendMessageOptions.DontRequireReceiver);
-        }
-
-        int discarded = discardBurnedIndices.Count;
-        Customer pendingCustomer = discardCustomer;
-        ClearDiscardContext();
-        Debug.Log("[Plato] Cortes quemados descartados: " + discarded);
-
-        if (!buildStationSystem.HasAnyCut)
-        {
-            DeliveryFeedbackText.Instance?.Show("Se descartaron los cortes quemados. No queda nada para entregar.");
-            return;
-        }
-
-        if (customerSystem != null && customerSystem.IsCustomerActive(pendingCustomer))
-            TryDeliverToCustomer(pendingCustomer);
     }
 
     /// <summary>
@@ -366,9 +315,10 @@ public class GameManager : MonoBehaviour
 
     /// <summary>
     /// Mensaje de bloqueo por cocción con el nombre de los cortes afectados, para que el
-    /// jugador sepa cuál es sin adivinar (el plato además los resalta en rojo).
+    /// jugador sepa cuál es sin adivinar (el plato además los resalta en rojo). Si hay
+    /// quemados, indica la tecla configurada para limpiar el plato: es la única salida.
     /// </summary>
-    private static string BuildBlockedMessageWithCuts(
+    private string BuildBlockedMessageWithCuts(
         CookingDeliveryEvaluator.DeliveryValidation validation,
         System.Collections.Generic.IReadOnlyList<MeatCutSO> cuts)
     {
@@ -378,7 +328,13 @@ public class GameManager : MonoBehaviour
         AppendCutNames(sb, "Crudo", validation.rawIndices, cuts);
         AppendCutNames(sb, "Quemado", validation.burnedIndices, cuts);
 
-        return sb.Length > 0 ? sb.ToString() + "\n" + message : message;
+        if (sb.Length > 0)
+            message = sb.ToString() + "\n" + message;
+
+        if (validation.burnedCount > 0)
+            message += "\nApretá " + clearPlateKey + " para limpiar el plato.";
+
+        return message;
     }
 
     private static void AppendCutNames(
@@ -414,33 +370,15 @@ public class GameManager : MonoBehaviour
             DeliveryFeedbackText.Instance?.Show(eval.rejectReason);
             Debug.Log("❌ " + eval.rejectReason.Replace('\n', ' '));
 
-            if (!eval.cookingBlocked)
+            if (eval.cookingBlocked)
             {
-                ClearDiscardContext();
-                return false;
+                // Resaltar en el plato los cortes que bloquean, crudos y quemados por igual.
+                var blockedIndices = new System.Collections.Generic.List<int>();
+                if (eval.validation.rawIndices != null) blockedIndices.AddRange(eval.validation.rawIndices);
+                if (eval.validation.burnedIndices != null) blockedIndices.AddRange(eval.validation.burnedIndices);
+                meatTransferBuffer?.SendMessage("FlashPlateMeatVisuals", blockedIndices, SendMessageOptions.DontRequireReceiver);
             }
 
-            // Resaltar en el plato los cortes que bloquean, crudos y quemados por igual.
-            var blockedIndices = new System.Collections.Generic.List<int>();
-            if (eval.validation.rawIndices != null) blockedIndices.AddRange(eval.validation.rawIndices);
-            if (eval.validation.burnedIndices != null) blockedIndices.AddRange(eval.validation.burnedIndices);
-            meatTransferBuffer?.SendMessage("FlashPlateMeatVisuals", blockedIndices, SendMessageOptions.DontRequireReceiver);
-
-            // Habilitar X solo si hay quemados descartables en este intento.
-            discardBurnedIndices.Clear();
-            if (eval.validation.burnedCount > 0)
-            {
-                discardBurnedIndices.AddRange(eval.validation.burnedIndices);
-                discardContextActive = true;
-                discardCustomer = customer;
-            }
-            else
-            {
-                discardContextActive = false;
-                discardCustomer = null;
-            }
-
-            // El intento queda pendiente: tras descartar con X se revalida contra el mismo cliente.
             return false;
         }
 
@@ -456,7 +394,6 @@ public class GameManager : MonoBehaviour
         Debug.Log("✔ Pedido entregado. Pago: " + eval.payment + " | Propinas: " + eval.tip
                   + " | Desfase: " + eval.worstOffset + " | Estado: " + eval.feedbackState);
         TutorialManager.NotifyProductDelivered();
-        ClearDiscardContext();
         return true;
     }
 

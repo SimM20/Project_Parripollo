@@ -445,24 +445,6 @@ public class MeatTransferBuffer : MonoBehaviour
 
     // ── Visuales del plato ──────────────────────────────────────────────────
 
-    /// <summary>
-    /// Elimina el visual del plato en 'index' (alineado con el orden en que se montaron los cortes).
-    /// Usado por el descarte contextual de quemados. Best-effort: ignora índices fuera de rango.
-    /// </summary>
-    public void RemovePlateMeatVisualAt(int index)
-    {
-        if (index >= 0 && index < plateMeatCuts.Count)
-            plateMeatCuts.RemoveAt(index);
-
-        if (index < 0 || index >= plateMeatVisuals.Count)
-            return;
-
-        if (plateMeatVisuals[index] != null)
-            Destroy(plateMeatVisuals[index]);
-
-        plateMeatVisuals.RemoveAt(index);
-    }
-
     public void ClearPlateMeatVisuals()
     {
         StopBlockedFlash();

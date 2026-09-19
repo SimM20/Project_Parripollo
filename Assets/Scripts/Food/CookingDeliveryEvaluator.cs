@@ -189,7 +189,7 @@ public static class CookingDeliveryEvaluator
 
     /// <summary>
     /// Mensaje de bloqueo con contadores. Adapta singular/plural y omite contadores en cero.
-    /// Incluye la instrucción de descarte solo si hay quemados.
+    /// No incluye instrucciones: la tecla para limpiar el plato la conoce GameManager.
     /// </summary>
     public static string BuildBlockedMessage(int rawCount, int burnedCount)
     {
@@ -210,9 +210,6 @@ public static class CookingDeliveryEvaluator
         {
             sb.Append(burnedCount == 1 ? "1 corte quemado." : burnedCount + " cortes quemados.");
         }
-
-        if (burnedCount > 0)
-            sb.Append("\nApretá X para desechar " + (burnedCount == 1 ? "el corte quemado." : "los cortes quemados."));
 
         return sb.ToString();
     }
