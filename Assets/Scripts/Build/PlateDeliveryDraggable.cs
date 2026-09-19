@@ -254,19 +254,25 @@ public class PlateDeliveryDraggable : MonoBehaviour
             && GameManager.Instance != null
             && GameManager.Instance.TryDeliverToCustomer(dropView.Customer);
 
-        // Sin entrega el bloque vuelve al plato, y solo la carne agarrada puede cambiar de
-        // destino: a la bandeja (MeatHolder / MeatList) o de vuelta a la parrilla.
+        // Sin entrega el bloque vuelve al plato. Solo si se soltó al vacío (no sobre un
+        // cliente) la carne agarrada puede cambiar de destino: a la bandeja (MeatHolder /
+        // MeatList) o de vuelta a la parrilla. Un rechazo del cliente (crudo, quemado, corte
+        // incorrecto...) deja el plato tal cual: los clientes pueden quedar sobre slots de la
+        // parrilla y sin este gate la carne rechazada terminaba cocinándose de nuevo.
         if (!delivered)
         {
             RestorePositions();
 
-            MeatTransferBuffer transferBuffer = Object.FindAnyObjectByType<MeatTransferBuffer>();
-            if (transferBuffer != null)
+            if (dropView == null)
             {
-                if (transferBuffer.IsOverMeatTray(dropPoint))
-                    transferBuffer.TryReturnPlateMeatToTray(gameObject);
-                else
-                    transferBuffer.TryReturnPlateMeatToGrill(gameObject, dropPoint);
+                MeatTransferBuffer transferBuffer = Object.FindAnyObjectByType<MeatTransferBuffer>();
+                if (transferBuffer != null)
+                {
+                    if (transferBuffer.IsOverMeatTray(dropPoint))
+                        transferBuffer.TryReturnPlateMeatToTray(gameObject);
+                    else
+                        transferBuffer.TryReturnPlateMeatToGrill(gameObject, dropPoint);
+                }
             }
         }
 
