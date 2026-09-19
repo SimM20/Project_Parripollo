@@ -241,7 +241,9 @@ Bucle de input global y árbitro de la entrega. **No** contiene lógica de cocci
 
 ```csharp
 public CustomerSystem Customers { get; }          // acceso para PlateDeliveryDraggable
-public bool TryDeliverToCustomer(Customer)        // ÚNICO lugar con la lógica de entrega
+public struct DeliveryEvaluation { accepted, rejectReason, rejectShort, cookingBlocked, validation, payment, tip, worstOffset, feedbackState }
+public DeliveryEvaluation EvaluateDelivery(Customer) // reglas de entrega SIN efectos: preview + entrega real
+public bool TryDeliverToCustomer(Customer)        // ÚNICO lugar con efectos de entrega (mensaje, cobro, limpieza)
 public void EndNight()   // desuscribe, tracker.RegisterDayCompleted(), carga "EndScene"
 // privados relevantes: TryToggleGrillLayer, ClearBuildAssembly, CleanAshes,
 //                      TryDiscardBurnedCuts, TryEnterDeliverySelection, ConfirmDeliverySelection
@@ -251,6 +253,16 @@ teclado y arrastre comparten validaciones, mensajes de `DeliveryFeedbackText`, p
 El `bool` de retorno es **solo** para el arrastre: `false` = entrega rechazada → devolver el plato a la
 `PlateDropZone`. `TryDiscardBurnedCuts` (`X`) revalida contra `SelectedCustomer` si el modo de selección
 está activo, y contra `discardCustomer` si el intento vino de un arrastre.
+
+**Evaluación vs. efectos.** Las reglas (cliente válido → corte correcto → `DishValidator` → cocción →
+pago/propina) viven en `EvaluateDelivery(Customer)`, que es puro. `TryDeliverToCustomer` la llama y
+aplica los efectos. `CustomerSystem.SetDeliveryDragHover` también la llama para el **preview** en la
+burbuja mientras se arrastra el plato (`$X + $Y propina` / `$X - sin propina` / motivo del rechazo en
+rojo): lo que muestra la burbuja es exactamente lo que va a pasar al soltar. Al tocar una regla, tocar
+solo `EvaluateDelivery`. Si una entrega se bloquea por cocción, `GameManager` manda
+`FlashPlateMeatVisuals(List<int>)` a `MeatTransferBuffer` (por `SendMessage`, como el resto) con los
+índices crudos + quemados (`DeliveryValidation.rawIndices` / `burnedIndices`) y el mensaje nombra cada
+corte afectado.
 
 #### `ViewManager` — `UI/ViewManager.cs`
 ```csharp
@@ -645,6 +657,13 @@ capacidad hay que verificar que los últimos slots sigan entrando en cámara.
 
 #### `Customer` — POCO
 `type`, `order`, `patience`, `maxPatience`, `slotIndex`; `bool IsAngry`; `float Patience01`; `Init(...)`, `UpdatePatience(float)`.
+
+#### `CustomerView` — `Customers/CustomerView.cs`
+Barra de paciencia (`patienceFill`, hijo `Completo` de `BarraPAciencia` en los prefabs `Cliente*`):
+`RefreshPatience()` escala el fill en X y además **lo tiñe** (`patienceHighColor` → `Mid` en 50 % →
+`Low`) y **hace temblar el contenedor** por debajo de `urgentThreshold` (0.2). El temblor mueve
+`patienceFill.parent`, nunca el cliente, para que el collider de pick no se corra bajo el mouse;
+`ShowFeedback` lo deja quieto antes de ocultar la barra.
 
 #### `OrderSystem` / `Order` — `Orders/`
 ```csharp

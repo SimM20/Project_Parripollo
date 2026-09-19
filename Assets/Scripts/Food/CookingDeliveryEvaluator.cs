@@ -25,6 +25,7 @@ public static class CookingDeliveryEvaluator
         public int rawCount;
         public int burnedCount;
         public List<int> burnedIndices;
+        public List<int> rawIndices;
 
         public bool IsBlocked => rawCount > 0 || burnedCount > 0;
     }
@@ -48,7 +49,11 @@ public static class CookingDeliveryEvaluator
         IReadOnlyList<MeatCutSO> cuts,
         System.Func<MeatCutSO, bool> isBurnedExempt)
     {
-        var result = new DeliveryValidation { burnedIndices = new List<int>() };
+        var result = new DeliveryValidation
+        {
+            burnedIndices = new List<int>(),
+            rawIndices = new List<int>()
+        };
 
         if (sideStates == null)
             return result;
@@ -67,6 +72,7 @@ public static class CookingDeliveryEvaluator
             else if (sideStates[i].IsRaw)
             {
                 result.rawCount++;
+                result.rawIndices.Add(i);
             }
         }
 

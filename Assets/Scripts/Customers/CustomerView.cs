@@ -9,6 +9,18 @@ public class CustomerView : MonoBehaviour
     [SerializeField] private Transform patienceFill; // escalar en X (0..1)
     [SerializeField] private float fillFullX = 1f;
 
+    [Header("Patience Urgency")]
+    [Tooltip("Color del fill con la paciencia llena. Se interpola hacia Mid y Low a medida que baja.")]
+    [SerializeField] private Color patienceHighColor = new Color(0.35f, 0.85f, 0.35f);
+    [SerializeField] private Color patienceMidColor = new Color(0.95f, 0.8f, 0.2f);
+    [SerializeField] private Color patienceLowColor = new Color(0.9f, 0.2f, 0.2f);
+    [Tooltip("Paciencia (0..1) por debajo de la cual la barra tiembla.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float urgentThreshold = 0.2f;
+    [Tooltip("Amplitud del temblor en unidades locales del contenedor de la barra.")]
+    [SerializeField] private float urgentShakeAmplitude = 0.03f;
+    [SerializeField] private float urgentShakeFrequency = 22f;
+
     [Header("Selection Visual (optional)")]
     [SerializeField] private GameObject selectionHighlight;
 
@@ -20,6 +32,12 @@ public class CustomerView : MonoBehaviour
 
     private Collider2D pickCollider;
     private bool isHovered;
+
+    // Barra de paciencia: renderer del fill (color) y contenedor (temblor).
+    private SpriteRenderer patienceFillRenderer;
+    private Transform patienceBarRoot;
+    private Vector3 patienceBarBaseLocalPos;
+    private bool patienceShaking;
 
     private static bool deliveryDragActive;
     private static event Action OnDeliveryDragActiveChanged;
@@ -58,6 +76,14 @@ public class CustomerView : MonoBehaviour
     void Awake()
     {
         pickCollider = GetComponent<Collider2D>();
+
+        if (patienceFill != null)
+        {
+            patienceFillRenderer = patienceFill.GetComponent<SpriteRenderer>();
+            patienceBarRoot = patienceFill.parent;
+            if (patienceBarRoot != null)
+                patienceBarBaseLocalPos = patienceBarRoot.localPosition;
+        }
 
         if (feedbackBubble == null)
             feedbackBubble = GetComponentInChildren<CustomerFeedbackBubble>(true);
@@ -170,7 +196,12 @@ public class CustomerView : MonoBehaviour
             CustomerHoverBubble.Instance?.Hide();
         }
 
-        // Ocultar barra de paciencia durante el feedback
+        // Ocultar barra de paciencia durante el feedback (y dejarla quieta por si vuelve)
+        if (patienceBarRoot != null && patienceShaking)
+        {
+            patienceBarRoot.localPosition = patienceBarBaseLocalPos;
+            patienceShaking = false;
+        }
         if (patienceFill != null && patienceFill.parent != null)
             patienceFill.parent.gameObject.SetActive(false);
 
@@ -267,8 +298,39 @@ public class CustomerView : MonoBehaviour
     {
         if (patienceFill == null || customer == null || customer.IsInFeedback) return;
 
+        float p = customer.Patience01;
+
         var s = patienceFill.localScale;
-        s.x = fillFullX * customer.Patience01;
+        s.x = fillFullX * p;
         patienceFill.localScale = s;
+
+        // Verde → amarillo en la mitad superior, amarillo → rojo en la inferior.
+        if (patienceFillRenderer != null)
+        {
+            patienceFillRenderer.color = p >= 0.5f
+                ? Color.Lerp(patienceMidColor, patienceHighColor, (p - 0.5f) * 2f)
+                : Color.Lerp(patienceLowColor, patienceMidColor, p * 2f);
+        }
+
+        // Temblor de la barra completa cuando queda poca paciencia. Se mueve el contenedor
+        // y no el cliente, así el collider de pick no se corre bajo el mouse.
+        if (patienceBarRoot == null) return;
+
+        bool urgent = p > 0f && p < urgentThreshold;
+        if (urgent)
+        {
+            float t = Time.time * urgentShakeFrequency;
+            Vector3 offset = new Vector3(
+                Mathf.Sin(t) * urgentShakeAmplitude,
+                Mathf.Cos(t * 1.7f) * urgentShakeAmplitude * 0.5f,
+                0f);
+            patienceBarRoot.localPosition = patienceBarBaseLocalPos + offset;
+            patienceShaking = true;
+        }
+        else if (patienceShaking)
+        {
+            patienceBarRoot.localPosition = patienceBarBaseLocalPos;
+            patienceShaking = false;
+        }
     }
 }
