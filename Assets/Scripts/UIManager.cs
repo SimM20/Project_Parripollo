@@ -41,7 +41,7 @@ public class UIManager : MonoBehaviour
             PlayerWallet.Instance.OnMoneyChanged -= SetActualMoney;
     }
 
-    public bool IsPaused => pauseCanvasInstance != null && pauseCanvasInstance.activeSelf;
+    public bool IsPaused => GamePause.IsMenuPaused;
 
     public void PauseGame()
     {
@@ -49,13 +49,15 @@ public class UIManager : MonoBehaviour
             pauseCanvasInstance = Instantiate(pauseCanvasPrefab);
 
         pauseCanvasInstance.SetActive(true);
+        GamePause.SetMenuPaused(true);
     }
 
     public void UnPauseGame()
     {
-        if (!pauseCanvasInstance) return;
+        if (pauseCanvasInstance)
+            pauseCanvasInstance.SetActive(false);
 
-        pauseCanvasInstance.SetActive(false);
+        GamePause.SetMenuPaused(false);
     }
 
     public void SetActualDay(int newDay)

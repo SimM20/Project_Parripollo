@@ -8157,7 +8157,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1276132352683363579, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: initialStock.Array.data[3].amount
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 3693624490507164874, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: m_Name
@@ -8171,6 +8171,10 @@ PrefabInstance:
       propertyPath: autoStartNight
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: feedbackConfig
+      value: 
+      objectReference: {fileID: 11400000, guid: dd74f019187152940a5589cb8c5b392e, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: availabilityService
       value: 
@@ -14647,6 +14651,9 @@ MonoBehaviour:
   taskCompleted: {fileID: 8300000, guid: 037843cbf466bf042b308524e29066ee, type: 3}
   newClientBell: {fileID: 8300000, guid: ebe80cd35d6c07c40ae0550850136564, type: 3}
   toppingShake: {fileID: 8300000, guid: 64c8b3f2860da644496ee7b41cadbf01, type: 3}
+  positiveFeedback: {fileID: 0}
+  intermediateFeedback: {fileID: 0}
+  negativeFeedback: {fileID: 0}
 --- !u!82 &2004183797
 AudioSource:
   m_ObjectHideFlags: 0

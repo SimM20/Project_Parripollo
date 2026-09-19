@@ -18,7 +18,10 @@ public static class SceneManagementUtils
     public static void LoadSceneByName(string sceneName)
     {
         if (Application.CanStreamedLevelBeLoaded(sceneName))
+        {
+            GamePause.Reset(); // timeScale / AudioListener.pause persisten entre escenas
             SceneManager.LoadScene(sceneName);
+        }
         else
             Debug.LogError($"scene: '{sceneName}' its not avaiable. Check Build settings.");
     }
@@ -26,12 +29,19 @@ public static class SceneManagementUtils
     public static void LoadSceneByIndex(int index)
     {
         if (index >= 0 && index < SceneManager.sceneCountInBuildSettings)
+        {
+            GamePause.Reset();
             SceneManager.LoadScene(index);
+        }
         else
             Debug.LogError($"scene {index} out of range.");
     }
 
-    public static void ReLoadScene() => SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    public static void ReLoadScene()
+    {
+        GamePause.Reset();
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
 
     public static string GetCurrentName() => SceneManager.GetActiveScene().name;
 

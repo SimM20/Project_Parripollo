@@ -174,14 +174,22 @@ public class Meat : Item
 
     public override void OnMouseUp()
     {
-        isHeldByMouse = false;
-        ClearHoverPreview();
+        if (!EndHold()) return;
 
         if (TrashZone.TryConsumeAtWorldPoint(transform.position, this))
             return;
 
         if (TrySendToBuildBuffer(transform.position))
             return;
+
+        // El plato admite una sola carne: si ya tiene una, este corte vuelve al lugar donde
+        // estaba en vez de caer en los slots de la grilla que el plato tapa.
+        if (BuildFoodDropZone.IsPlateOccupiedAt(transform.position))
+        {
+            transform.position = startPosition;
+            RestoreHoverIfPointerOver();
+            return;
+        }
 
         Vector2Int requiredSize = GetRequiredGridSize();
         GridSlot[] allSlots = FindObjectsOfType<GridSlot>();

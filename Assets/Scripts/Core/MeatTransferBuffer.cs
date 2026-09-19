@@ -260,10 +260,63 @@ public class MeatTransferBuffer : MonoBehaviour
     /// </summary>
     public bool TryReturnPlateMeatToTray(GameObject plateVisual = null)
     {
+        if (!TryResolvePlateEntry(plateVisual, out int index, out BufferedMeatData returnedData))
+            return false;
+
+        RemovePlateEntryAt(index);
+
+        int newIndex = trayCuts.Count;
+        trayCuts.Add(returnedData);
+        trayLocalPositions.Add(GetTrayLocalPosition(newIndex));
+
+        RefreshVisuals();
+
+        string cutName = returnedData.cut != null ? returnedData.cut.cutName : "Sin corte";
+        Debug.Log("[Bandeja] Carne devuelta desde el plato: " + cutName + " | Estado: " + returnedData.state);
+        return true;
+    }
+
+    /// <summary>
+    /// Devuelve a la parrilla la carne del plato, restaurando tiempos de coccion y rotacion.
+    /// False si el punto no cae en un hueco libre de la grilla: el corte se queda en el plato.
+    /// </summary>
+    public bool TryReturnPlateMeatToGrill(GameObject plateVisual, Vector3 dropWorldPoint)
+    {
+        if (grillSystem == null)
+            return false;
+
+        if (!TryResolvePlateEntry(plateVisual, out int index, out BufferedMeatData returnedData))
+            return false;
+
+        if (returnedData.cut == null)
+            return false;
+
+        bool rotateFootprint = returnedData.isGridRotated;
+        if (!grillSystem.TrySpawnMeatAtPoint(returnedData.cut, dropWorldPoint, out Meat spawnedMeat, rotateFootprint))
+            return false;
+
+        returnedData.ApplyTo(spawnedMeat, rotateFootprint);
+        RemovePlateEntryAt(index);
+
+        RefreshVisuals();
+
+        Debug.Log("[Plato] Carne devuelta a la parrilla: " + returnedData.cut.cutName + " | Estado: " + returnedData.state);
+        TutorialManager.NotifyMeatPlacedOnGrill(returnedData.cut);
+        return true;
+    }
+
+    /// <summary>
+    /// Resuelve que entrada del plato corresponde a un visual (o la ultima si no se pasa ninguno),
+    /// sin mutar nada. Cae al armado cuando no hay visual (falta 'visualPrefab').
+    /// </summary>
+    private bool TryResolvePlateEntry(GameObject plateVisual, out int index, out BufferedMeatData entry)
+    {
+        index = -1;
+        entry = null;
+
         if (plateMeatVisuals.Count == 0 && plateMeatCuts.Count == 0)
             return false;
 
-        int index = -1;
         if (plateVisual != null)
             index = plateMeatVisuals.IndexOf(plateVisual);
 
@@ -276,27 +329,33 @@ public class MeatTransferBuffer : MonoBehaviour
         if (index < 0)
             return false;
 
-        BufferedMeatData returnedData = null;
         if (index < plateMeatCuts.Count)
         {
-            returnedData = plateMeatCuts[index];
-            plateMeatCuts.RemoveAt(index);
-        }
-        else
-        {
-            BuildStationSystem station = ResolveBuildStation();
-            if (station != null && index < station.AssembledCuts.Count)
-            {
-                MeatCutSO cut = station.AssembledCuts[index];
-                MeatStates state = index < station.AssembledCutStates.Count ? station.AssembledCutStates[index] : MeatStates.Crudo;
-                returnedData = BufferedMeatData.FromCut(cut);
-                if (returnedData != null)
-                    returnedData.state = state;
-            }
+            entry = plateMeatCuts[index];
+            return entry != null;
         }
 
-        if (returnedData == null)
+        BuildStationSystem station = ResolveBuildStation();
+        if (station == null || index >= station.AssembledCuts.Count)
             return false;
+
+        MeatStates state = index < station.AssembledCutStates.Count ? station.AssembledCutStates[index] : MeatStates.Crudo;
+        entry = BufferedMeatData.FromCut(station.AssembledCuts[index]);
+        if (entry == null)
+            return false;
+
+        entry.state = state;
+        return true;
+    }
+
+    /// <summary>Saca del plato la entrada en 'index': datos, visual y corte del armado.</summary>
+    private void RemovePlateEntryAt(int index)
+    {
+        if (index < 0)
+            return;
+
+        if (index < plateMeatCuts.Count)
+            plateMeatCuts.RemoveAt(index);
 
         if (index < plateMeatVisuals.Count)
         {
@@ -306,21 +365,7 @@ public class MeatTransferBuffer : MonoBehaviour
                 Destroy(visual);
         }
 
-        BuildStationSystem buildStation = ResolveBuildStation();
-        if (buildStation != null)
-        {
-            buildStation.RemoveCutAt(index);
-        }
-
-        int newIndex = trayCuts.Count;
-        trayCuts.Add(returnedData);
-        trayLocalPositions.Add(GetTrayLocalPosition(newIndex));
-
-        RefreshVisuals();
-
-        string cutName = returnedData.cut != null ? returnedData.cut.cutName : "Sin corte";
-        Debug.Log("[Bandeja] Carne devuelta desde el plato: " + cutName + " | Estado: " + returnedData.state);
-        return true;
+        ResolveBuildStation()?.RemoveCutAt(index);
     }
 
     private void RemoveTrayEntryAt(int entryId, bool destroyVisual)
@@ -697,39 +742,36 @@ public class MeatTransferBuffer : MonoBehaviour
 
     // ── Bandeja: anclas y consultas ─────────────────────────────────────────
 
-    /// <summary>True si el punto cae sobre la bandeja. Lo usa el arrastre del plato para devolver un corte.</summary>
+    /// <summary>
+    /// True si el punto cae sobre la bandeja. Lo usa el arrastre del plato para devolver un corte.
+    ///
+    /// Mide SOLO el subarbol del anchor: el padre de 'MeatTray' es el root de GrillView, asi que
+    /// medirlo tragaba media parrilla y la carne devuelta terminaba en la bandeja. Si la bandeja
+    /// esta desactivada en la escena no reclama ningun punto.
+    /// </summary>
     public bool IsOverMeatTray(Vector3 worldPoint)
     {
         Transform anchor = ResolveTrayAnchor();
-        if (anchor == null)
+        if (anchor == null || !anchor.gameObject.activeInHierarchy)
             return false;
 
-        Transform[] candidates = { anchor, anchor.parent };
-
-        for (int c = 0; c < candidates.Length; c++)
+        Collider2D[] colliders = anchor.GetComponentsInChildren<Collider2D>();
+        for (int i = 0; i < colliders.Length; i++)
         {
-            Transform candidate = candidates[c];
-            if (candidate == null)
+            if (colliders[i] != null && colliders[i].enabled && colliders[i].OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
+                return true;
+        }
+
+        SpriteRenderer[] renderers = anchor.GetComponentsInChildren<SpriteRenderer>();
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            if (renderers[i] == null || renderers[i].sprite == null)
                 continue;
 
-            Collider2D[] colliders = candidate.GetComponentsInChildren<Collider2D>();
-            for (int i = 0; i < colliders.Length; i++)
-            {
-                if (colliders[i] != null && colliders[i].enabled && colliders[i].OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
-                    return true;
-            }
-
-            SpriteRenderer[] renderers = candidate.GetComponentsInChildren<SpriteRenderer>();
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                if (renderers[i] == null || renderers[i].sprite == null)
-                    continue;
-
-                Vector3 point = worldPoint;
-                point.z = renderers[i].bounds.center.z;
-                if (renderers[i].bounds.Contains(point))
-                    return true;
-            }
+            Vector3 point = worldPoint;
+            point.z = renderers[i].bounds.center.z;
+            if (renderers[i].bounds.Contains(point))
+                return true;
         }
 
         return false;

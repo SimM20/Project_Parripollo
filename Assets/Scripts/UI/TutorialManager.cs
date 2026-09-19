@@ -323,6 +323,13 @@ public class TutorialManager : MonoBehaviour
 
         while (elapsed < timeoutSeconds)
         {
+            // Corre con tiempo unscaled: sin este gate forzaría el spawn durante la pausa.
+            if (GamePause.IsPaused)
+            {
+                yield return null;
+                continue;
+            }
+
             CustomerSystem customerSystem = FindFirstObjectByType<CustomerSystem>();
 
             if (customerSystem != null)

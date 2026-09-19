@@ -19,21 +19,21 @@ public class TutorialOfferController : MonoBehaviour
         if (offerPanel != null)
         {
             offerPanel.SetActive(true);
-            Time.timeScale = 0f;
+            GamePause.SetDialogPaused(true);
         }
     }
 
     public void OnSelectYes()
     {
         hasAskedThisSession = true;
-        Time.timeScale = 1f;
+        GamePause.SetDialogPaused(false);
         SceneManagementUtils.LoadSceneByName("TutorialScene");
     }
 
     public void OnSelectNo()
     {
         hasAskedThisSession = true;
-        Time.timeScale = 1f;
+        GamePause.SetDialogPaused(false);
         if (offerPanel != null)
         {
             offerPanel.SetActive(false);

@@ -12,6 +12,10 @@ using UnityEngine;
 /// acompañamientos/toppings). Si la entrega no se concreta, todo vuelve a su
 /// posición original sobre el plato.
 ///
+/// La carne no queda bloqueada en el plato: si se suelta sobre la bandeja vuelve a la
+/// bandeja, y si se suelta sobre un hueco libre de la parrilla vuelve a cocinarse ahí
+/// (ver MeatTransferBuffer.TryReturnPlateMeatToTray / TryReturnPlateMeatToGrill).
+///
 /// El agarre NO usa OnMouseDown/OnMouseDrag/OnMouseUp: el visual del plato queda
 /// apoyado sobre el collider de la zona 'ToBuild', que está en el mismo plano z y no
 /// tiene handler de mouse. Con la cámara en perspectiva ese collider se queda con el
@@ -100,6 +104,10 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
     void Update()
     {
+        // Único pick que no pasa por OnMouseXXX (ver nota de clase): eventMask no lo frena.
+        if (GamePause.IsPaused)
+            return;
+
         if (activeDragger == this)
         {
             UpdateDrag();
@@ -219,6 +227,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
             return;
 
         activeDragger = this;
+        GamePause.OnPaused += CancelDrag;
 
         // Los clientes apagan su collider mientras hay un panel desplegado; durante el
         // arrastre hay que devolvérselo o FindCustomerViewAt no encuentra a nadie.
@@ -231,6 +240,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private void EndDrag()
     {
         activeDragger = null;
+        GamePause.OnPaused -= CancelDrag;
         RestoreSortingOrders();
 
         Vector3 dropPoint = GetMouseWorldPos();
@@ -238,31 +248,25 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
         SetHoveredView(null);
 
-        if (!TutorialManager.CheckDeliveryConfirmAllowed())
-        {
-            RestorePositions();
-            DraggedVisuals.Clear();
-            CustomerView.SetDeliveryDragActive(false);
-            return;
-        }
-
-        bool delivered = dropView != null
+        bool delivered = TutorialManager.CheckDeliveryConfirmAllowed()
+            && dropView != null
             && dropView.Customer != null
             && GameManager.Instance != null
             && GameManager.Instance.TryDeliverToCustomer(dropView.Customer);
 
-        // Si la entrega no se concreta: verificar si se soltó sobre el MeatHolder / MeatList para devolver la carne.
+        // Sin entrega el bloque vuelve al plato, y solo la carne agarrada puede cambiar de
+        // destino: a la bandeja (MeatHolder / MeatList) o de vuelta a la parrilla.
         if (!delivered)
         {
+            RestorePositions();
+
             MeatTransferBuffer transferBuffer = Object.FindAnyObjectByType<MeatTransferBuffer>();
-            if (transferBuffer != null && transferBuffer.IsOverMeatTray(dropPoint))
+            if (transferBuffer != null)
             {
-                RestorePositions();
-                transferBuffer.TryReturnPlateMeatToTray(gameObject);
-            }
-            else
-            {
-                RestorePositions();
+                if (transferBuffer.IsOverMeatTray(dropPoint))
+                    transferBuffer.TryReturnPlateMeatToTray(gameObject);
+                else
+                    transferBuffer.TryReturnPlateMeatToGrill(gameObject, dropPoint);
             }
         }
 
@@ -274,6 +278,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private void CancelDrag()
     {
         activeDragger = null;
+        GamePause.OnPaused -= CancelDrag;
         RestoreSortingOrders();
         RestorePositions();
         SetHoveredView(null);
@@ -346,7 +351,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
                 continue;
 
             CustomerView view = hit.GetComponentInParent<CustomerView>();
-            if (view != null)
+            if (view != null && view.Customer != null && !view.Customer.IsInFeedback)
                 return view;
         }
 

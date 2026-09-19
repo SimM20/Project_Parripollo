@@ -27,6 +27,9 @@ public class CoalSO : ItemDataSO
     [Tooltip("Cuántas unidades aporta una bolsa")]
     public int unitsPerBag = 1;
 
+    /// <summary>Usado por UpgradeSO para aplicar mejoras de combustion.</summary>
+    public void SetMaxBurnTime(float value) => _maxBurnTime = Mathf.Max(0f, value);
+
     void OnValidate() => category = ItemType.Coal;
 
     public Sprite GetSpriteForState(CoalStates state) { return coalSprites.GetSpriteForState(state); }

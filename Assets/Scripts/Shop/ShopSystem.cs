@@ -113,7 +113,7 @@ public class ShopSystem : MonoBehaviour
         if (item == null) return false;
         if (item is CoalSO) return true;
         if (item is MeatCutSO cut) return cut.isUnlocked;
-        if (item is UpgradeSO up) return up.isUnlocked && !up.isPurchased;
+        if (item is UpgradeSO up) return up.isUnlocked && !up.IsMaxed;
         return false;
     }
 
@@ -152,6 +152,19 @@ public class ShopSystem : MonoBehaviour
         return Mathf.CeilToInt((float)units / perBag);
     }
 
+    /// <summary>Valor centinela: el item no tiene tope de cantidad.</summary>
+    public const int UnlimitedQty = int.MaxValue;
+
+    /// <summary>
+    /// Maximo comprable de un item en una sola operacion. Las mejoras se compran de a un nivel.
+    /// Fuente de verdad unica: la usan el carrito, la compra directa y los steppers de las celdas.
+    /// </summary>
+    public int GetMaxPurchaseQty(ItemDataSO item)
+    {
+        if (item is UpgradeSO) return 1;
+        return UnlimitedQty;
+    }
+
     // ── Estado del carrito ──────────────────────────────────────────────
     public int GetCartQty(ItemDataSO item)
     {
@@ -166,7 +179,7 @@ public class ShopSystem : MonoBehaviour
         if (!IsPurchasable(item)) return;
 
         qty = Mathf.Max(0, qty);
-        if (item is UpgradeSO && qty > 1) qty = 1;
+        qty = Mathf.Min(qty, GetMaxPurchaseQty(item));
         if (qty == 0) cart.Remove(item);
         else cart[item] = qty;
 
@@ -284,7 +297,7 @@ public class ShopSystem : MonoBehaviour
             if (item is CoalSO coal)
                 Cooler.Add(coal, coal.unitsPerBag * qty);
             else if (item is UpgradeSO up)
-                up.isPurchased = true;
+                up.Purchase();
             else
                 Cooler.Add(item, qty);
         }
@@ -324,8 +337,7 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
-        qty = Mathf.Max(1, qty);
-        if (item is UpgradeSO) qty = 1;
+        qty = Mathf.Clamp(qty, 1, GetMaxPurchaseQty(item));
 
         float total = item.basePrice * qty;
         if (!Wallet.CanAfford(total))
@@ -345,7 +357,7 @@ public class ShopSystem : MonoBehaviour
         if (item is CoalSO coal)
             Cooler.Add(coal, coal.unitsPerBag * qty);
         else if (item is UpgradeSO up)
-            up.isPurchased = true;
+            up.Purchase();
         else
             Cooler.Add(item, qty);
 

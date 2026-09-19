@@ -44,6 +44,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
         if (cut == null || buffer == null) return;
 
         isDragging = true;
+        GamePause.OnPaused += CancelDrag;
         startPosition = transform.position;
         startParent = transform.parent;
 
@@ -62,7 +63,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
 
     void OnMouseDrag()
     {
-        if (cut == null || buffer == null) return;
+        if (!isDragging || cut == null || buffer == null) return;
 
         transform.position = GetMouseWorldPosition() + dragOffset;
         buffer.UpdateMeatHolderHover(cut, transform.position, isGridRotated);
@@ -72,6 +73,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
     {
         if (!isDragging) return;
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
 
         if (buffer != null)
             buffer.ClearMeatHolderHover();
@@ -88,8 +90,11 @@ public class ToBuildDraggableMeat : MonoBehaviour
         Vector3 dropPoint = GetMouseWorldPosition();
 
         // El plato tiene prioridad: es un area chica y superpuesta al borde de la grilla.
+        // Y admite un solo corte: si esta ocupado, el corte vuelve a la bandeja en vez de
+        // caer en los slots de la grilla que el plato tapa.
         bool dropped = buffer.TryPlateFromTrayById(entryId, dropPoint)
-                       || buffer.TryDropFromTrayById(entryId, dropPoint, isGridRotated);
+                       || (!BuildFoodDropZone.IsPlateOccupiedAt(dropPoint)
+                           && buffer.TryDropFromTrayById(entryId, dropPoint, isGridRotated));
 
         if (!dropped)
             RestoreStartTransform();
@@ -149,11 +154,15 @@ public class ToBuildDraggableMeat : MonoBehaviour
         }
     }
 
-    void OnDisable()
+    void OnDisable() => CancelDrag();
+
+    /// <summary>Aborta el arrastre y devuelve el corte a la bandeja. Lo dispara GamePause al pausar.</summary>
+    private void CancelDrag()
     {
         if (!isDragging) return;
 
         isDragging = false;
+        GamePause.OnPaused -= CancelDrag;
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
 
