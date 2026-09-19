@@ -262,6 +262,14 @@ solo `EvaluateDelivery`. Si una entrega se bloquea por cocción, `GameManager` m
 índices crudos + quemados (`DeliveryValidation.rawIndices` / `burnedIndices`) y el mensaje nombra cada
 corte afectado.
 
+La misma evaluación llena `DeliveryEvaluation.cutOffsets` (uno por corte del plato, en orden de
+montaje; `CutBlocked = -1` para crudo/quemado o corte equivocado; null si el rechazo no llegó a mirar
+los cortes). Mientras el plato está sobre un cliente, `GameManager.ShowDeliveryPreviewOnPlate(eval)`
+lo traduce a tintes (`previewExactTint` / `OffByOne` / `OffByTwo` / `Blocked`, header *Delivery Preview
+Tints*) y los manda por `SendMessage("SetPlateMeatTints", List<Color>)` a `MeatTransferBuffer`; al
+salir del cliente, `ClearDeliveryPreviewOnPlate` → `ClearPlateMeatTints`. Un tinte nuevo corta un
+flash en curso; un `Clear` con flash en curso no hace nada (el flash restaura al terminar).
+
 #### `ViewManager` — `UI/ViewManager.cs`
 ```csharp
 ViewType CurrentView { get; }
@@ -913,7 +921,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | # | Nota |
 |---|---|
 | 1 | **`MeatCutSO` vive en `Grill/MeatType.cs`**; `GrillSlot` en `Grill/GrillSlots.cs`. Los nombres de archivo no siempre coinciden con la clase. `Grill/GrillSys2.cs` está **vacío** |
-| 2 | `GameManager` habla con los buffers **solo por `SendMessage`** (campos tipados `MonoBehaviour`). Renombrar `MoveToMeatHolder`, `MoveToCoalHolder`, `MoveToBuildMeatHolder`, `ClearPlateMeatVisuals`, `FlashPlateMeatVisuals`, `SetPlateMeatVisualsVisible` **rompe en silencio** |
+| 2 | `GameManager` habla con los buffers **solo por `SendMessage`** (campos tipados `MonoBehaviour`). Renombrar `MoveToMeatHolder`, `MoveToCoalHolder`, `MoveToBuildMeatHolder`, `ClearPlateMeatVisuals`, `FlashPlateMeatVisuals`, `SetPlateMeatTints`, `ClearPlateMeatTints`, `SetPlateMeatVisualsVisible` **rompe en silencio** |
 | 3 | `MeatHolderDraggableMeat` y `CoolerDraggableMeat` invocan al buffer por **reflexión** (`MethodInfo`), probando primero la sobrecarga de 3 parámetros y cayendo a la de 2 |
 | 4 | Los visualizadores hacen `AddComponent(Type resuelto por nombre)` + `SendMessage("SetCut"/"SetCoalData"/"SetCoolerSystem"/"SetTransferBuffer"/"SetToGrillDropArea"/"SetTransferEntryId")` |
 | 5 | Los `ScriptableObject` **mutan en runtime** (`isUnlocked`, `isPurchased`, `ProductVariantSO.isUnlocked`) → el estado se filtra entre sesiones del Editor |

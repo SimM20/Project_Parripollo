@@ -461,12 +461,17 @@ public class CustomerSystem : MonoBehaviour
 
             if (view.Customer.order != null)
             {
-                // Mientras se arrastra el plato la burbuja suma el preview de la entrega:
-                // qué va a pagar este cliente (o por qué no lo va a aceptar) antes de soltar.
+                // Mientras se arrastra el plato, la misma evaluación que usa la entrega real
+                // alimenta dos previews: la línea de pago en la burbuja y el tinte por corte
+                // sobre el plato (verde exacto / amarillo desfase 1 / naranja mitad / rojo bloquea).
                 string message = view.Customer.order.ToHoverString();
-                string preview = BuildDeliveryPreviewLine(view.Customer);
-                if (!string.IsNullOrEmpty(preview))
-                    message += "\n" + preview;
+
+                if (GameManager.Instance != null)
+                {
+                    GameManager.DeliveryEvaluation eval = GameManager.Instance.EvaluateDelivery(view.Customer);
+                    message += "\n" + BuildDeliveryPreviewLine(eval);
+                    GameManager.Instance.ShowDeliveryPreviewOnPlate(eval);
+                }
 
                 CustomerHoverBubble.Instance?.Show(
                     message,
@@ -477,6 +482,7 @@ public class CustomerSystem : MonoBehaviour
             return;
         }
 
+        GameManager.Instance?.ClearDeliveryPreviewOnPlate();
         RefreshSelectionVisuals();
 
         if (!IsDeliverySelectionActive)
@@ -484,16 +490,11 @@ public class CustomerSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Línea de preview económico para la burbuja de arrastre. Usa la misma evaluación que
-    /// la entrega real (GameManager.EvaluateDelivery), así lo que se muestra es lo que pasa.
+    /// Línea de preview económico para la burbuja de arrastre.
     /// Colores: misma paleta que CustomerFeedbackBubble.
     /// </summary>
-    private static string BuildDeliveryPreviewLine(Customer customer)
+    private static string BuildDeliveryPreviewLine(GameManager.DeliveryEvaluation eval)
     {
-        if (GameManager.Instance == null) return null;
-
-        GameManager.DeliveryEvaluation eval = GameManager.Instance.EvaluateDelivery(customer);
-
         if (!eval.accepted)
             return "<color=#EF4444>" + eval.rejectShort + "</color>";
 
