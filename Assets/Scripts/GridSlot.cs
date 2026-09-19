@@ -25,11 +25,45 @@ public class GridSlot : MonoBehaviour
 
     private Color baseHoverColor = Color.white;
     private bool baseHoverColorCached;
+    private bool hoverPreviewActive;
+
+    // Mapa de calor: config global (la fija GrillSystem desde su inspector) aplicada por
+    // cada slot de carne sobre su propio sprite, que fuera del hover queda con alpha 0.
+    private static bool heatTintEnabled;
+    private static Color heatTintColor = new Color(1f, 0.45f, 0.1f);
+    private static float heatTintMaxAlpha = 0.5f;
+    private static float heatTintFullHeat = 6f;
 
     public bool IsOccupied => currentItem != null;
     public Meat currentMeat => currentItem != null ? currentItem.GetComponent<Meat>() : null;
 
+    public static void ConfigureHeatTint(bool enabled, Color color, float maxAlpha, float fullHeat)
+    {
+        heatTintEnabled = enabled;
+        heatTintColor = color;
+        heatTintMaxAlpha = Mathf.Clamp01(maxAlpha);
+        heatTintFullHeat = Mathf.Max(0.1f, fullHeat);
+    }
+
     void Awake() => EnsureHoverRenderer();
+
+    // Después de GrillSystem.Update (propagación) y de los hovers del frame.
+    void LateUpdate()
+    {
+        if (hoverPreviewActive || hoverRenderer == null) return;
+        if (acceptsType != ItemType.Meat) return;
+
+        if (!heatTintEnabled || !GrillLayerToggle.IsItemTypeAllowed(ItemType.Meat))
+        {
+            hoverRenderer.color = baseHoverColor;
+            return;
+        }
+
+        float k = Mathf.Clamp01(totalHeatReceived / heatTintFullHeat);
+        Color c = heatTintColor;
+        c.a = k * heatTintMaxAlpha;
+        hoverRenderer.color = c;
+    }
 
     void Update()
     {
@@ -115,6 +149,7 @@ public class GridSlot : MonoBehaviour
     public void SetHoverPreview(bool isActive, bool isValid)
     {
         EnsureHoverRenderer();
+        hoverPreviewActive = isActive;
         if (hoverRenderer != null)
             hoverRenderer.color = isActive ? (isValid ? validHoverColor : invalidHoverColor) : baseHoverColor;
     }

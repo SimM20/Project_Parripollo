@@ -12,11 +12,35 @@ public class GrillSystem : MonoBehaviour
     [Header("Coal Stack Counter")]
     [SerializeField] private CoalStackCounterStyle coalStackCounterStyle = new CoalStackCounterStyle();
 
+    [Header("Heat Map")]
+    [Tooltip("Tiñe cada slot de carne según el calor que recibe (totalHeatReceived), para que se vea dónde cocina más rápido.")]
+    [SerializeField] private bool showHeatMap = true;
+    [SerializeField] private Color heatMapColor = new Color(1f, 0.45f, 0.1f);
+    [Tooltip("Alpha del tinte con el slot a calor pleno.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float heatMapMaxAlpha = 0.5f;
+    [Tooltip("Calor (totalHeatReceived) al que el tinte llega a su máximo. AddExternalHeat clampea en 10.")]
+    [Min(0.1f)]
+    [SerializeField] private float heatMapFullHeat = 6f;
+
     private readonly List<CoalStackCounter> coalStackCounters = new List<CoalStackCounter>();
 
     void Update() => UpdateHeatPropagation();
 
-    private void Awake() => GridSlot.AssignGridCoordinates(slots);
+    private void Awake()
+    {
+        GridSlot.AssignGridCoordinates(slots);
+        GridSlot.ConfigureHeatTint(showHeatMap, heatMapColor, heatMapMaxAlpha, heatMapFullHeat);
+    }
+
+#if UNITY_EDITOR
+    // Permite ajustar el mapa de calor en Play sin reiniciar.
+    private void OnValidate()
+    {
+        if (Application.isPlaying)
+            GridSlot.ConfigureHeatTint(showHeatMap, heatMapColor, heatMapMaxAlpha, heatMapFullHeat);
+    }
+#endif
 
     // Los contadores se crean en Start: TextMeshPro no admite asignar la fuente hasta que su Awake corrio.
     private void Start() => SetupCoalStackCounters();

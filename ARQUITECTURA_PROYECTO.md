@@ -415,6 +415,15 @@ Dos entradas para `Toggle()`: el `OnMouseDown` del propio botón en la escena y 
 `GameManager.TryToggleGrillLayer()` (**solo en la vista `Grill`**). Ambas pasan por `ShowLayer`,
 así que el icono del botón y `TutorialManager.NotifyGrillLayerChanged` quedan siempre sincronizados.
 
+#### Mapa de calor (`GridSlot.LateUpdate`)
+
+Los slots de carne tiñen su propio `SpriteRenderer` (el mismo que usa el hover preview, que fuera
+del hover queda con alpha 0) con `heatMapColor` y alpha `clamp01(totalHeatReceived / heatMapFullHeat) ×
+heatMapMaxAlpha`. Config en `GrillSystem` → header *Heat Map* (`[SYSTEMS].prefab`), aplicada a todos
+los slots vía `GridSlot.ConfigureHeatTint` (estática; `OnValidate` la refresca en Play). Reglas: solo
+`acceptsType == Meat`, solo con la capa Meat activa, y nunca mientras `SetHoverPreview(true, …)` está
+vigente — el hover manda. Se apaga con `showHeatMap = false`.
+
 #### `CoalStackCounter` — `Grill/CoalStackCounter.cs`
 
 Contiene también `CoalStackCounterStyle`. Feedback visual del stack de carbón: etiqueta `TextMeshPro`
