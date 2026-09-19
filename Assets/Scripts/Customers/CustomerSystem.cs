@@ -40,6 +40,11 @@ public class CustomerSystem : MonoBehaviour
     [SerializeField] private bool autoStartNight = true;
     public Action OnNightEnded;
 
+    [Header("Order Tickets")]
+    [Tooltip("Riel de tickets de cocina con los pedidos activos (OrderTicketBoard, creado en runtime).")]
+    [SerializeField] private bool showOrderTickets = true;
+    [SerializeField] private OrderTicketStyle orderTicketStyle = new OrderTicketStyle();
+
     [Header("Slots (optional)")]
     [SerializeField] private List<Transform> slots = new List<Transform>();
     [SerializeField] private Vector3 autoFirstSlotPos = new Vector3(-6f, 3.2f, 0f);
@@ -175,6 +180,9 @@ public class CustomerSystem : MonoBehaviour
         UIManager.Instance?.SetTotalCustomers(
             customersTargetTonight
         );
+
+        if (showOrderTickets)
+            OrderTicketBoard.Create(this, orderTicketStyle);
 
         if (autoStartNight)
             StartNight();

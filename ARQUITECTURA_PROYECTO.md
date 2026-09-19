@@ -683,6 +683,17 @@ capacidad hay que verificar que los últimos slots sigan entrando en cámara.
 #### `Customer` — POCO
 `type`, `order`, `patience`, `maxPatience`, `slotIndex`; `bool IsAngry`; `float Patience01`; `Init(...)`, `UpdatePatience(float)`.
 
+#### `OrderTicketBoard` — `UI/OrderTicketBoard.cs` · creado en runtime
+Riel de **tickets de cocina**: un ticket por cliente activo (excluye `IsInFeedback`), ordenados por
+`slotIndex` de izquierda a derecha para que mapeen con los clientes en escena. Muestra corte (título),
+punto + sándwich/plato, y acompañamientos; el pin parpadea con `Patience01 < pinUrgentPatience`.
+`CustomerSystem.Start` lo crea con `OrderTicketBoard.Create(this, orderTicketStyle)` si
+`showOrderTickets`; el estilo (`OrderTicketStyle`: anclaje, tamaño, colores, fuente, tilt) vive en el
+inspector de `CustomerSystem`. Canvas propio *ScreenSpaceOverlay* (1920×1080, `sortingOrder`
+configurable, sin `GraphicRaycaster`), oculto mientras `GamePause.IsPaused`. Reconstruye por polling
+en `Update` cuando cambia la lista o la firma del pedido (corte / punto / sándwich), lo que cubre
+`TriggerMissingCutChange` sin eventos nuevos.
+
 #### `CustomerView` — `Customers/CustomerView.cs`
 Barra de paciencia (`patienceFill`, hijo `Completo` de `BarraPAciencia` en los prefabs `Cliente*`):
 `RefreshPatience()` escala el fill en X y además **lo tiñe** (`patienceHighColor` → `Mid` en 50 % →
