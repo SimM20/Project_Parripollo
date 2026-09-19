@@ -8356,6 +8356,18 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 5369905810012751788, guid: 252a7c34ce989fa47bc9f57d76600ced, type: 3}
     - target: {fileID: 8639708219335087134, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: heatMapFlicker
+      value: 0.18
+      objectReference: {fileID: 0}
+    - target: {fileID: 8639708219335087134, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: heatMapMaxAlpha
+      value: 0.45
+      objectReference: {fileID: 0}
+    - target: {fileID: 8639708219335087134, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: heatMapGlowScale
+      value: 2.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8639708219335087134, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: slots.Array.size
       value: 120
       objectReference: {fileID: 0}
@@ -11453,6 +11465,21 @@ MonoBehaviour:
   - {fileID: 1659614316}
   - {fileID: 583758130}
   pauseButton: {fileID: 828843323}
+  moneyPopupStyle:
+    font: {fileID: 0}
+    fontSize: 5
+    color: {r: 0.29, g: 0.87, b: 0.5, a: 1}
+    outlineColor: {r: 0, g: 0, b: 0, a: 0.8}
+    outlineWidth: 0.25
+    sortingOrder: 6000
+    popInSeconds: 0.15
+    holdSeconds: 0.35
+    flySeconds: 0.45
+    holdRise: 0.4
+    spawnOffset: {x: 0, y: 0.9, z: -0.5}
+  moneyPunchScale: 1.25
+  moneyPunchSeconds: 0.25
+  moneyCountSeconds: 0.35
 --- !u!1 &1227301499
 GameObject:
   m_ObjectHideFlags: 0

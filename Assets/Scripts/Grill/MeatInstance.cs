@@ -21,9 +21,6 @@ public class MeatInstance : Meat
     {
         base.Cook(heatFromSlot);
 
-        float currentFrameTotalHeat = 0f;
-
-
         if (heatFromSlot > 100)
             ChangeClipIfNeeded(hardSound);
 

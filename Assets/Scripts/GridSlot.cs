@@ -90,19 +90,32 @@ public class GridSlot : MonoBehaviour
 
         if (!heatGlow.enabled) heatGlow.enabled = true;
 
-        // Parpadeo leve de brasa, desfasado por slot para que no respiren todos juntos.
-        float flicker = 1f - heatGlowFlicker * (0.5f + 0.5f * Mathf.Sin(Time.time * 7f + heatGlowPhase));
+        // Titilado de brasa: tres senos de frecuencias no múltiplos entre sí. Una sola onda
+        // se lee como un pulso mecánico; sumadas nunca repiten el mismo ciclo. La fase por
+        // slot evita que toda la parrilla respire al unísono.
+        float t = Time.time;
+        float wave = 0.55f * Mathf.Sin(t * 6.1f + heatGlowPhase)
+                   + 0.30f * Mathf.Sin(t * 11.7f + heatGlowPhase * 1.7f)
+                   + 0.15f * Mathf.Sin(t * 19.3f + heatGlowPhase * 2.3f);   // queda en [-1, 1]
 
-        Color c = Color.Lerp(heatGlowLowColor, heatGlowHighColor, k);
+        float flicker = 1f - heatGlowFlicker * (0.5f + 0.5f * wave);
+
+        // La brasa también se aviva y se apaga de tamaño, no solo de brillo.
+        float breath = 1f + heatGlowFlicker * 0.35f * wave;
+
+        // Al titilar sube un poco de temperatura: el pico tira hacia el color caliente.
+        float temp = Mathf.Clamp01(k + heatGlowFlicker * 0.5f * wave);
+
+        Color c = Color.Lerp(heatGlowLowColor, heatGlowHighColor, temp);
         c.a = k * heatGlowMaxAlpha * flicker;
         heatGlow.color = c;
         heatGlow.sortingOrder = heatGlowSortingOrder;
-        heatGlow.transform.localScale = Vector3.one * heatGlowScale;
+        heatGlow.transform.localScale = Vector3.one * (heatGlowScale * breath);
     }
 
     private void CreateHeatGlow()
     {
-        if (heatGlowSprite == null) heatGlowSprite = MakeRadialGlowSprite(64);
+        if (heatGlowSprite == null) heatGlowSprite = MakeRadialGlowSprite(128);
 
         var go = new GameObject("HeatGlow");
         go.transform.SetParent(transform, false);   // hereda la escala aplastada del slot
@@ -115,7 +128,13 @@ public class GridSlot : MonoBehaviour
         heatGlow.color = Color.clear;
     }
 
-    /// <summary>Degradado radial: opaco en el centro, transparente en el borde, sin escalones.</summary>
+    /// <summary>
+    /// Brasa radial: núcleo caliente concentrado sobre un halo ancho de caída suave.
+    /// El perfil gaussiano deja una cola larga para que los slots vecinos se fundan en un
+    /// campo continuo en vez de leerse como puntos naranjas separados. El RGB va de blanco
+    /// en el centro a un naranja profundo en el borde, así el calor tiene temperatura
+    /// espacial además de la que aporta el color según el calor del slot.
+    /// </summary>
     private static Sprite MakeRadialGlowSprite(int size)
     {
         var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -125,6 +144,12 @@ public class GridSlot : MonoBehaviour
         var pixels = new Color32[size * size];
         float r = size * 0.5f;
 
+        const float HaloFalloff = 4.0f;    // menor = halo más ancho
+        const float CoreFalloff = 16f;     // mayor = núcleo más chico
+        float haloEdge = Mathf.Exp(-HaloFalloff);   // valor en d=1, para normalizar a 0
+
+        Color edgeTint = new Color(1f, 0.62f, 0.30f);
+
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
@@ -132,9 +157,18 @@ public class GridSlot : MonoBehaviour
                 float dx = (x + 0.5f - r) / r;
                 float dy = (y + 0.5f - r) / r;
                 float d = Mathf.Sqrt(dx * dx + dy * dy);
-                float a = Mathf.SmoothStep(1f, 0f, d);      // 1 en el centro, 0 en el radio
-                a *= a;                                       // concentra el brillo en el medio
-                pixels[y * size + x] = new Color32(255, 255, 255, (byte)(255f * a));
+
+                float halo = (Mathf.Exp(-HaloFalloff * d * d) - haloEdge) / (1f - haloEdge);
+                halo = Mathf.Max(0f, halo);
+                float core = Mathf.Exp(-CoreFalloff * d * d);
+
+                float a = Mathf.Clamp01(0.80f * halo + 0.30f * core);
+                a *= 1f - Mathf.Clamp01((d - 0.85f) / 0.15f);   // mata cualquier resto en el borde
+
+                Color rgb = Color.Lerp(Color.white, edgeTint, Mathf.Clamp01(d * 1.25f));
+
+                pixels[y * size + x] = new Color32(
+                    (byte)(255f * rgb.r), (byte)(255f * rgb.g), (byte)(255f * rgb.b), (byte)(255f * a));
             }
         }
 

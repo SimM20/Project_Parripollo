@@ -17,9 +17,17 @@ public class Meat : Item
     [SerializeField] private GameObject smokePrefab;
     [SerializeField] private Vector3 heatOffset = Vector3.zero;
     [SerializeField] private Vector3 smokeOffset = new Vector3(0f, 0.8f, -0.1f);
+    [Tooltip("Orden de dibujo del humo relativo al sprite de la carne.")]
+    [SerializeField] private int smokeSortingOrderOffset = 4;
 
     private GameObject heatInstance;
     private GameObject smokeInstance;
+    private Transform fxRoot;
+
+    [Header("Flip Puff")]
+    [SerializeField] private FlipPuff flipPuff;
+    [Tooltip("Altura del puff respecto de la base del sprite (contacto con la parrilla).")]
+    [SerializeField] private float flipPuffContactOffsetY = 0.04f;
 
     [Header("Sound")]
     [SerializeField] protected AudioClip hardSound;
@@ -78,6 +86,9 @@ public class Meat : Item
         baseLocalScale = transform.localScale;
         ownCollider = GetComponent<Collider2D>();
 
+        if (flipPuff == null)
+            flipPuff = GetComponentInChildren<FlipPuff>(true);
+
         ApplyCutVisual();
     }
 
@@ -92,6 +103,11 @@ public class Meat : Item
         bool showHeat = IsCurrentlyCooking();
         bool isBurned = IsAnySideBurned;
 
+        if (heatInstance == null && heatPrefab == null && smokeInstance == null && smokePrefab == null)
+            return;
+
+        StabilizeFxRoot();
+
         if (heatInstance != null)
         {
             if (heatInstance.activeSelf != showHeat)
@@ -99,12 +115,14 @@ public class Meat : Item
         }
         else if (heatPrefab != null && showHeat)
         {
-            heatInstance = Instantiate(heatPrefab, transform);
+            heatInstance = Instantiate(heatPrefab, EnsureFxRoot());
             heatInstance.transform.localPosition = heatOffset;
             heatInstance.transform.localRotation = Quaternion.identity;
             heatInstance.SetActive(true);
         }
 
+        // Humo continuo: existe SOLO mientras alguna cara esta quemada, y vive colgado
+        // de este corte. Varios cortes quemados => varias instancias independientes.
         if (smokeInstance != null)
         {
             if (smokeInstance.activeSelf != isBurned)
@@ -112,11 +130,78 @@ public class Meat : Item
         }
         else if (smokePrefab != null && isBurned)
         {
-            smokeInstance = Instantiate(smokePrefab, transform);
+            smokeInstance = Instantiate(smokePrefab, EnsureFxRoot());
             smokeInstance.transform.localPosition = smokeOffset;
             smokeInstance.transform.localRotation = Quaternion.identity;
+            SetUpSmokeRenderers(smokeInstance);
             smokeInstance.SetActive(true);
         }
+    }
+
+    private Transform EnsureFxRoot()
+    {
+        if (fxRoot == null)
+        {
+            fxRoot = new GameObject("FX").transform;
+            fxRoot.SetParent(transform, false);
+        }
+        return fxRoot;
+    }
+
+    /// <summary>
+    /// El humo tiene que subir en vertical de mundo y no deformarse: la carne rota 90 grados
+    /// con R y el flip le aplasta la escala en X. El nodo FX cancela ambas cosas.
+    /// </summary>
+    private void StabilizeFxRoot()
+    {
+        if (fxRoot == null) return;
+
+        fxRoot.rotation = Quaternion.identity;
+
+        Vector3 baseScale = (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : Vector3.one;
+        Vector3 current = transform.localScale;
+
+        fxRoot.localScale = new Vector3(
+            SafeRatio(baseScale.x, current.x),
+            SafeRatio(baseScale.y, current.y),
+            SafeRatio(baseScale.z, current.z));
+    }
+
+    private static float SafeRatio(float baseValue, float current)
+    {
+        if (Mathf.Abs(current) < 0.01f) return 1f;
+        return Mathf.Clamp(baseValue / current, 0.05f, 20f);
+    }
+
+    /// <summary>
+    /// El humo se dibuja por encima de su propia carne. Se usa baseSortingOrder y no el
+    /// orden vivo porque durante el flip el sprite sube +flipSortingOrderBoost.
+    /// </summary>
+    private void SetUpSmokeRenderers(GameObject smoke)
+    {
+        Renderer[] renderers = smoke.GetComponentsInChildren<Renderer>(true);
+        int meatLayer = spriteRenderer != null ? spriteRenderer.sortingLayerID : 0;
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            renderers[i].sortingLayerID = meatLayer;
+            renderers[i].sortingOrder = baseSortingOrder + smokeSortingOrderOffset;
+        }
+    }
+
+    /// <summary>Puff de game feel del flip: se dispara desde la base del corte, donde toca la parrilla.</summary>
+    private void EmitFlipPuff()
+    {
+        if (flipPuff == null) return;
+
+        Vector3 origin = transform.position;
+        if (spriteRenderer != null)
+        {
+            Bounds b = spriteRenderer.bounds;
+            origin = new Vector3(b.center.x, b.min.y + flipPuffContactOffsetY, transform.position.z);
+        }
+
+        flipPuff.Play(origin);
     }
 
     private bool IsCurrentlyCooking()
@@ -331,6 +416,9 @@ public class Meat : Item
             spriteRenderer.sortingOrder = origSortingOrder + flipSortingOrderBoost;
 
         PlayFlipSound();
+
+        // Arranque del giro: el corte recien se despega de la parrilla.
+        EmitFlipPuff();
 
         float elapsed = 0f;
         bool logicFlipped = false;

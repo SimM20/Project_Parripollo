@@ -1,23 +1,37 @@
-Shader"Custom/URP2D/Grill_Smoke_Visible"
+// Humo continuo de corte quemado. Pensado para la parrilla 2.5D:
+// el quad se ancla con pivot abajo sobre la carne y la columna sube y se abre con la altura.
+// Todo el ruido es procedural (sin _NoiseTex) para no depender del wrap mode de una textura.
+Shader "Custom/URP2D/Grill_Smoke_Visible"
 {
     Properties
     {
-        [PerRendererData] _MainTex ("Sprite Mask", 2D) = "white" {}
-        _NoiseTex ("Noise Texture", 2D) = "gray" {}
+        [PerRendererData] _MainTex ("Sprite", 2D) = "white" {}
 
-        _Tint ("Smoke Color", Color) = (0.75, 0.70, 0.60, 1)
+        _Tint ("Smoke Color", Color) = (0.62, 0.60, 0.58, 1)
+        _Opacity ("Opacity", Range(0,1)) = 0.42
+        _Intensity ("Density", Range(0,3)) = 1.15
 
-        _Alpha ("Alpha", Range(0,1)) = 0.75
-        _Speed ("Speed", Range(-5,5)) = 0.8
-        _Scale ("Noise Scale", Range(0.1,30)) = 4.0
+        _RiseSpeed ("Rise Speed", Range(0,3)) = 0.55
+        _NoiseScale ("Noise Scale", Range(0.5,12)) = 3.1
+        _Detail ("Detail", Range(0,1)) = 0.75
+        _Contrast ("Contrast", Range(0.5,4)) = 1.45
 
-        _SoftCut ("Soft Cut", Range(0,1)) = 0.25
-        _Contrast ("Contrast", Range(0.1,5)) = 1.4
+        _Width ("Base Width", Range(0.02,0.5)) = 0.14
+        _Expand ("Expand With Height", Range(0,1)) = 0.32
+        _Softness ("Edge Softness", Range(0.05,1)) = 0.6
 
-        _Wobble ("Wobble", Range(0,0.5)) = 0.12
-        _EdgeFade ("Edge Fade", Range(0.001,0.5)) = 0.18
-        _BottomFade ("Bottom Fade", Range(0.001,0.5)) = 0.04
-        _TopFade ("Top Fade", Range(0.001,1)) = 0.35
+        _SwayAmount ("Sway", Range(0,0.4)) = 0.1
+        _SwaySpeed ("Sway Speed", Range(0,4)) = 0.85
+        _Drift ("Horizontal Drift", Range(-0.5,0.5)) = 0.05
+
+        _BottomFade ("Bottom Fade", Range(0,0.6)) = 0.08
+        _TopFade ("Top Fade", Range(0.01,1)) = 0.55
+        _Dissipate ("Dissipate With Height", Range(0,1)) = 0.7
+
+        _Seed ("Random Seed", Float) = 0
+
+        [HideInInspector] _Color ("Tint", Color) = (1,1,1,1)
+        [HideInInspector] _RendererColor ("RendererColor", Color) = (1,1,1,1)
     }
 
     SubShader
@@ -28,117 +42,119 @@ Shader"Custom/URP2D/Grill_Smoke_Visible"
             "Queue"="Transparent"
             "RenderType"="Transparent"
             "IgnoreProjector"="True"
+            "PreviewType"="Plane"
             "CanUseSpriteAtlas"="True"
         }
 
         Pass
         {
-Cull Off
+            Tags { "LightMode"="Universal2D" }
 
-ZWrite Off
-
-ZTest LEqual
-
-Blend SrcAlpha
-OneMinusSrcAlpha
+            Cull Off
+            ZWrite Off
+            ZTest LEqual
+            Blend SrcAlpha OneMinusSrcAlpha
 
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
-#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-struct Attributes
-{
-    float4 positionOS : POSITION;
-    float2 uv : TEXCOORD0;
-    float4 color : COLOR;
-};
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float2 uv         : TEXCOORD0;
+                float4 color      : COLOR;
+            };
 
-struct Varyings
-{
-    float4 positionCS : SV_POSITION;
-    float2 uv : TEXCOORD0;
-    float4 color : COLOR;
-};
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv         : TEXCOORD0;
+                float4 color      : COLOR;
+            };
 
-            TEXTURE2D(_MainTex);
-            SAMPLER(sampler_MainTex);
+            float4 _Tint;
+            float4 _Color;
+            float4 _RendererColor;
 
-            TEXTURE2D(_NoiseTex);
-            SAMPLER(sampler_NoiseTex);
+            float _Opacity, _Intensity;
+            float _RiseSpeed, _NoiseScale, _Detail, _Contrast;
+            float _Width, _Expand, _Softness;
+            float _SwayAmount, _SwaySpeed, _Drift;
+            float _BottomFade, _TopFade, _Dissipate;
+            float _Seed;
 
-float4 _MainTex_ST;
-float4 _Tint;
+            float hash21(float2 p)
+            {
+                p = frac(p * float2(123.34, 345.45));
+                p += dot(p, p + 34.345);
+                return frac(p.x * p.y);
+            }
 
-float _Alpha;
-float _Speed;
-float _Scale;
-float _SoftCut;
-float _Contrast;
-float _Wobble;
-float _EdgeFade;
-float _BottomFade;
-float _TopFade;
+            float vnoise(float2 p)
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                f = f * f * (3.0 - 2.0 * f);
+                float a = hash21(i);
+                float b = hash21(i + float2(1, 0));
+                float c = hash21(i + float2(0, 1));
+                float d = hash21(i + float2(1, 1));
+                return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+            }
 
-Varyings vert(Attributes v)
-{
-    Varyings o;
-    o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
-    o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-    o.color = v.color;
-    return o;
-}
+            float fbm(float2 p)
+            {
+                return vnoise(p) * 0.55 + vnoise(p * 2.03) * 0.29 + vnoise(p * 4.11) * 0.16;
+            }
 
-float Fade(float2 uv)
-{
-    float x =
-                    smoothstep(0.0, _EdgeFade, uv.x) *
-                    smoothstep(0.0, _EdgeFade, 1.0 - uv.x);
+            Varyings vert(Attributes v)
+            {
+                Varyings o;
+                o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
+                o.uv = v.uv;
+                o.color = v.color * _Color * _RendererColor;
+                return o;
+            }
 
-    float y =
-                    smoothstep(0.0, _BottomFade, uv.y) *
-                    smoothstep(0.0, _TopFade, 1.0 - uv.y);
+            half4 frag(Varyings i) : SV_Target
+            {
+                float2 uv = i.uv;
+                float h = saturate(uv.y);          // 0 = pegado a la carne, 1 = disipado arriba
+                float t = _Time.y;
+                float s = _Seed;
 
-    return x * y;
-}
+                // Serpenteo lateral: crece con la altura, nunca en la base.
+                float sway = sin(h * 3.1 + t * _SwaySpeed + s * 6.2831) * 0.65
+                           + sin(h * 6.7 - t * _SwaySpeed * 0.63 + s * 3.1) * 0.35;
 
-half4 frag(Varyings i) : SV_Target
-{
-    float mask = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).a * i.color.a;
+                float cx = 0.5 + sway * _SwayAmount * h + _Drift * h;
 
-    float t = _Time.y * _Speed;
+                // Columna que se abre con la altura, con bordes suaves (nada de rectangulo).
+                float w = _Width + _Expand * h;
+                float d = abs(uv.x - cx) / max(0.001, w);
+                float body = 1.0 - smoothstep(1.0 - _Softness, 1.0, d);
 
-    float2 uv = i.uv;
+                // Bocanadas encadenadas subiendo.
+                float2 np = float2(uv.x * _NoiseScale, uv.y * _NoiseScale - t * _RiseSpeed) + s * 17.0;
+                float n = fbm(np);
+                n = lerp(0.62, n, _Detail);
 
-    float wobble =
-                    sin(uv.y * 4.0 + t * 1.2) * 0.6 +
-                    sin(uv.y * 9.0 - t * 0.7) * 0.4;
+                float fadeBottom = smoothstep(0.0, max(0.001, _BottomFade), h);
+                float fadeTop    = 1.0 - smoothstep(1.0 - _TopFade, 1.0, h);
+                float dissipate  = lerp(1.0, 1.0 - _Dissipate, h);
 
-    uv.x += wobble * _Wobble * uv.y;
+                float a = body * n * _Intensity * dissipate * fadeBottom * fadeTop;
+                a = pow(saturate(a), _Contrast) * _Opacity * i.color.a;
 
-    float2 uv1 = uv * _Scale + float2(0.0, t);
-    float2 uv2 = uv * (_Scale * 0.55) + float2(0.31, t * 0.55);
-    float2 uv3 = uv * (_Scale * 1.8) + float2(-0.17, t * 1.35);
-
-    float n1 = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, uv1).r;
-    float n2 = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, uv2).r;
-    float n3 = SAMPLE_TEXTURE2D(_NoiseTex, sampler_NoiseTex, uv3).r;
-
-    float smoke = n1 * 0.5 + n2 * 0.35 + n3 * 0.15;
-
-    smoke = saturate((smoke - _SoftCut) / max(0.001, 1.0 - _SoftCut));
-    smoke = pow(smoke, _Contrast);
-
-    float vertical = pow(saturate(1.0 - i.uv.y), 0.35);
-    float alpha = smoke * Fade(i.uv) * vertical * mask * _Alpha;
-
-    float3 col = _Tint.rgb * (0.8 + smoke * 0.3);
-
-    return half4(col, alpha);
-}
-
+                float3 col = _Tint.rgb * (0.85 + n * 0.3);
+                return half4(col, saturate(a));
+            }
             ENDHLSL
         }
     }
+
+    Fallback Off
 }
