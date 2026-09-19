@@ -435,12 +435,18 @@ así que el icono del botón y `TutorialManager.NotifyGrillLayerChanged` quedan 
 
 #### Mapa de calor (`GridSlot.LateUpdate`)
 
-Los slots de carne tiñen su propio `SpriteRenderer` (el mismo que usa el hover preview, que fuera
-del hover queda con alpha 0) con `heatMapColor` y alpha `clamp01(totalHeatReceived / heatMapFullHeat) ×
-heatMapMaxAlpha`. Config en `GrillSystem` → header *Heat Map* (`[SYSTEMS].prefab`), aplicada a todos
-los slots vía `GridSlot.ConfigureHeatTint` (estática; `OnValidate` la refresca en Play). Reglas: solo
-`acceptsType == Meat`, solo con la capa Meat activa, y nunca mientras `SetHoverPreview(true, …)` está
-vigente — el hover manda. Se apaga con `showHeatMap = false`.
+Cada slot de carne cuelga en runtime un hijo `HeatGlow`: `SpriteRenderer` con un **degradado radial**
+generado por código (`MakeRadialGlowSprite`, 64px, 1×1 unidades), color `Lerp(heatMapLowColor,
+heatMapHighColor, k)` y alpha `k × heatMapMaxAlpha × flicker`, con `k = clamp01(totalHeatReceived /
+heatMapFullHeat)`. Por qué un resplandor y no un tinte del slot: la parrilla está en perspectiva y el
+sprite rectangular del slot (escala 0.85×0.49, alineado a pantalla) delataba el escorzo con sus
+bordes; un degradado no tiene bordes, y como es hijo del slot hereda su escala aplastada y sale como
+elipse escorzada. `heatMapGlowScale` (1.6) lo hace más grande que el slot para que los vecinos se
+fundan en un campo continuo. `heatMapSortingOrder = -1`: sobre el fondo `Parrilla` (-2) y **debajo de
+las barras** (`Grill`, 0), así el calor se ve entre las barras como brasa. Config en `GrillSystem` →
+header *Heat Map* (`[SYSTEMS].prefab`), aplicada a todos los slots vía `GridSlot.ConfigureHeatGlow`
+(estática; `OnValidate` la refresca en Play). Solo `acceptsType == Meat` y solo con la capa Meat
+activa; el hover preview sigue en el sprite del slot y no se toca. Se apaga con `showHeatMap = false`.
 
 #### `CoalStackCounter` — `Grill/CoalStackCounter.cs`
 

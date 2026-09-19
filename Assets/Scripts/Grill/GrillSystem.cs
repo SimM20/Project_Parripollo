@@ -13,15 +13,25 @@ public class GrillSystem : MonoBehaviour
     [SerializeField] private CoalStackCounterStyle coalStackCounterStyle = new CoalStackCounterStyle();
 
     [Header("Heat Map")]
-    [Tooltip("Tiñe cada slot de carne según el calor que recibe (totalHeatReceived), para que se vea dónde cocina más rápido.")]
+    [Tooltip("Resplandor de brasa bajo cada slot de carne según el calor que recibe (totalHeatReceived), para que se vea dónde cocina más rápido.")]
     [SerializeField] private bool showHeatMap = true;
-    [SerializeField] private Color heatMapColor = new Color(1f, 0.45f, 0.1f);
-    [Tooltip("Alpha del tinte con el slot a calor pleno.")]
+    [Tooltip("Color con poco calor (rojo profundo) → color a calor pleno (naranja/amarillo).")]
+    [SerializeField] private Color heatMapLowColor = new Color(0.85f, 0.15f, 0.05f);
+    [SerializeField] private Color heatMapHighColor = new Color(1f, 0.7f, 0.2f);
+    [Tooltip("Alpha del resplandor con el slot a calor pleno.")]
     [Range(0f, 1f)]
-    [SerializeField] private float heatMapMaxAlpha = 0.5f;
-    [Tooltip("Calor (totalHeatReceived) al que el tinte llega a su máximo. AddExternalHeat clampea en 10.")]
+    [SerializeField] private float heatMapMaxAlpha = 0.75f;
+    [Tooltip("Calor (totalHeatReceived) al que el resplandor llega a su máximo. AddExternalHeat clampea en 10.")]
     [Min(0.1f)]
     [SerializeField] private float heatMapFullHeat = 6f;
+    [Tooltip("Tamaño del resplandor relativo al slot. >1 funde los vecinos en un campo continuo.")]
+    [Min(0.1f)]
+    [SerializeField] private float heatMapGlowScale = 1.6f;
+    [Tooltip("Parpadeo de brasa (0 = quieto).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float heatMapFlicker = 0.12f;
+    [Tooltip("Orden de dibujo. -1 = sobre el fondo 'Parrilla' (-2) y debajo de las barras (0): el calor se ve entre las barras.")]
+    [SerializeField] private int heatMapSortingOrder = -1;
 
     private readonly List<CoalStackCounter> coalStackCounters = new List<CoalStackCounter>();
 
@@ -30,7 +40,14 @@ public class GrillSystem : MonoBehaviour
     private void Awake()
     {
         GridSlot.AssignGridCoordinates(slots);
-        GridSlot.ConfigureHeatTint(showHeatMap, heatMapColor, heatMapMaxAlpha, heatMapFullHeat);
+        PushHeatMapConfig();
+    }
+
+    private void PushHeatMapConfig()
+    {
+        GridSlot.ConfigureHeatGlow(
+            showHeatMap, heatMapLowColor, heatMapHighColor, heatMapMaxAlpha,
+            heatMapFullHeat, heatMapGlowScale, heatMapFlicker, heatMapSortingOrder);
     }
 
 #if UNITY_EDITOR
@@ -38,7 +55,7 @@ public class GrillSystem : MonoBehaviour
     private void OnValidate()
     {
         if (Application.isPlaying)
-            GridSlot.ConfigureHeatTint(showHeatMap, heatMapColor, heatMapMaxAlpha, heatMapFullHeat);
+            PushHeatMapConfig();
     }
 #endif
 

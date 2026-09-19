@@ -25,44 +25,124 @@ public class GridSlot : MonoBehaviour
 
     private Color baseHoverColor = Color.white;
     private bool baseHoverColorCached;
-    private bool hoverPreviewActive;
 
-    // Mapa de calor: config global (la fija GrillSystem desde su inspector) aplicada por
-    // cada slot de carne sobre su propio sprite, que fuera del hover queda con alpha 0.
-    private static bool heatTintEnabled;
-    private static Color heatTintColor = new Color(1f, 0.45f, 0.1f);
-    private static float heatTintMaxAlpha = 0.5f;
-    private static float heatTintFullHeat = 6f;
+    // Mapa de calor: config global (la fija GrillSystem desde su inspector). Cada slot de
+    // carne cuelga un "HeatGlow": un degradado radial sin bordes, debajo de las barras, que
+    // hereda la escala aplastada del slot y por eso sigue la perspectiva de la parrilla.
+    // Un rectángulo (el sprite del slot) delataba el escorzo; un resplandor no tiene forma.
+    private static bool heatGlowEnabled;
+    private static Color heatGlowLowColor = new Color(0.85f, 0.15f, 0.05f);
+    private static Color heatGlowHighColor = new Color(1f, 0.7f, 0.2f);
+    private static float heatGlowMaxAlpha = 0.75f;
+    private static float heatGlowFullHeat = 6f;
+    private static float heatGlowScale = 1.6f;
+    private static float heatGlowFlicker = 0.12f;
+    private static int heatGlowSortingOrder = -1;
+    private static Sprite heatGlowSprite;
+
+    private SpriteRenderer heatGlow;
+    private float heatGlowPhase;
 
     public bool IsOccupied => currentItem != null;
     public Meat currentMeat => currentItem != null ? currentItem.GetComponent<Meat>() : null;
 
-    public static void ConfigureHeatTint(bool enabled, Color color, float maxAlpha, float fullHeat)
+    public static void ConfigureHeatGlow(
+        bool enabled, Color lowColor, Color highColor, float maxAlpha,
+        float fullHeat, float scale, float flicker, int sortingOrder)
     {
-        heatTintEnabled = enabled;
-        heatTintColor = color;
-        heatTintMaxAlpha = Mathf.Clamp01(maxAlpha);
-        heatTintFullHeat = Mathf.Max(0.1f, fullHeat);
+        heatGlowEnabled = enabled;
+        heatGlowLowColor = lowColor;
+        heatGlowHighColor = highColor;
+        heatGlowMaxAlpha = Mathf.Clamp01(maxAlpha);
+        heatGlowFullHeat = Mathf.Max(0.1f, fullHeat);
+        heatGlowScale = Mathf.Max(0.1f, scale);
+        heatGlowFlicker = Mathf.Clamp01(flicker);
+        heatGlowSortingOrder = sortingOrder;
     }
 
-    void Awake() => EnsureHoverRenderer();
+    void Awake()
+    {
+        EnsureHoverRenderer();
+        heatGlowPhase = Random.Range(0f, Mathf.PI * 2f);
+    }
 
-    // Después de GrillSystem.Update (propagación) y de los hovers del frame.
+    // Después de GrillSystem.Update (propagación).
     void LateUpdate()
     {
-        if (hoverPreviewActive || hoverRenderer == null) return;
         if (acceptsType != ItemType.Meat) return;
 
-        if (!heatTintEnabled || !GrillLayerToggle.IsItemTypeAllowed(ItemType.Meat))
+        bool show = heatGlowEnabled && GrillLayerToggle.IsItemTypeAllowed(ItemType.Meat);
+        if (!show)
         {
-            hoverRenderer.color = baseHoverColor;
+            if (heatGlow != null && heatGlow.enabled) heatGlow.enabled = false;
             return;
         }
 
-        float k = Mathf.Clamp01(totalHeatReceived / heatTintFullHeat);
-        Color c = heatTintColor;
-        c.a = k * heatTintMaxAlpha;
-        hoverRenderer.color = c;
+        if (heatGlow == null) CreateHeatGlow();
+        if (heatGlow == null) return;
+
+        float k = Mathf.Clamp01(totalHeatReceived / heatGlowFullHeat);
+        if (k <= 0.001f)
+        {
+            if (heatGlow.enabled) heatGlow.enabled = false;
+            return;
+        }
+
+        if (!heatGlow.enabled) heatGlow.enabled = true;
+
+        // Parpadeo leve de brasa, desfasado por slot para que no respiren todos juntos.
+        float flicker = 1f - heatGlowFlicker * (0.5f + 0.5f * Mathf.Sin(Time.time * 7f + heatGlowPhase));
+
+        Color c = Color.Lerp(heatGlowLowColor, heatGlowHighColor, k);
+        c.a = k * heatGlowMaxAlpha * flicker;
+        heatGlow.color = c;
+        heatGlow.sortingOrder = heatGlowSortingOrder;
+        heatGlow.transform.localScale = Vector3.one * heatGlowScale;
+    }
+
+    private void CreateHeatGlow()
+    {
+        if (heatGlowSprite == null) heatGlowSprite = MakeRadialGlowSprite(64);
+
+        var go = new GameObject("HeatGlow");
+        go.transform.SetParent(transform, false);   // hereda la escala aplastada del slot
+        go.transform.localPosition = Vector3.zero;
+
+        heatGlow = go.AddComponent<SpriteRenderer>();
+        heatGlow.sprite = heatGlowSprite;
+        heatGlow.sortingLayerID = hoverRenderer != null ? hoverRenderer.sortingLayerID : 0;
+        heatGlow.sortingOrder = heatGlowSortingOrder;
+        heatGlow.color = Color.clear;
+    }
+
+    /// <summary>Degradado radial: opaco en el centro, transparente en el borde, sin escalones.</summary>
+    private static Sprite MakeRadialGlowSprite(int size)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+
+        var pixels = new Color32[size * size];
+        float r = size * 0.5f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f - r) / r;
+                float dy = (y + 0.5f - r) / r;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = Mathf.SmoothStep(1f, 0f, d);      // 1 en el centro, 0 en el radio
+                a *= a;                                       // concentra el brillo en el medio
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)(255f * a));
+            }
+        }
+
+        tex.SetPixels32(pixels);
+        tex.Apply();
+
+        // pixelsPerUnit = size → el sprite mide 1x1 unidades: la escala local es el tamaño real.
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
     }
 
     void Update()
@@ -149,7 +229,6 @@ public class GridSlot : MonoBehaviour
     public void SetHoverPreview(bool isActive, bool isValid)
     {
         EnsureHoverRenderer();
-        hoverPreviewActive = isActive;
         if (hoverRenderer != null)
             hoverRenderer.color = isActive ? (isValid ? validHoverColor : invalidHoverColor) : baseHoverColor;
     }
