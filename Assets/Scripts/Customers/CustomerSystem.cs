@@ -461,8 +461,15 @@ public class CustomerSystem : MonoBehaviour
 
             if (view.Customer.order != null)
             {
+                // Mientras se arrastra el plato la burbuja suma el preview de la entrega:
+                // qué va a pagar este cliente (o por qué no lo va a aceptar) antes de soltar.
+                string message = view.Customer.order.ToHoverString();
+                string preview = BuildDeliveryPreviewLine(view.Customer);
+                if (!string.IsNullOrEmpty(preview))
+                    message += "\n" + preview;
+
                 CustomerHoverBubble.Instance?.Show(
-                    view.Customer.order.ToHoverString(),
+                    message,
                     view.transform,
                     view.GetDishSprite());
             }
@@ -474,6 +481,31 @@ public class CustomerSystem : MonoBehaviour
 
         if (!IsDeliverySelectionActive)
             CustomerHoverBubble.Instance?.Hide();
+    }
+
+    /// <summary>
+    /// Línea de preview económico para la burbuja de arrastre. Usa la misma evaluación que
+    /// la entrega real (GameManager.EvaluateDelivery), así lo que se muestra es lo que pasa.
+    /// Colores: misma paleta que CustomerFeedbackBubble.
+    /// </summary>
+    private static string BuildDeliveryPreviewLine(Customer customer)
+    {
+        if (GameManager.Instance == null) return null;
+
+        GameManager.DeliveryEvaluation eval = GameManager.Instance.EvaluateDelivery(customer);
+
+        if (!eval.accepted)
+            return "<color=#EF4444>" + eval.rejectShort + "</color>";
+
+        string payment = "$" + (int)eval.payment;
+
+        if (eval.tip > 0f)
+            return "<color=#4ADE80>" + payment + " + $" + (int)eval.tip + " propina</color>";
+
+        if (eval.worstOffset >= 2)
+            return "<color=#F59E0B>" + payment + " (mitad) - sin propina</color>";
+
+        return "<color=#FACC15>" + payment + " - sin propina</color>";
     }
 
     private void RefreshSelectionVisuals()

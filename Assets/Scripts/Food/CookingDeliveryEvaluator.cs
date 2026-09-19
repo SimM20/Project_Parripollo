@@ -25,6 +25,7 @@ public static class CookingDeliveryEvaluator
         public int rawCount;
         public int burnedCount;
         public List<int> burnedIndices;
+        public List<int> rawIndices;
 
         public bool IsBlocked => rawCount > 0 || burnedCount > 0;
     }
@@ -48,7 +49,11 @@ public static class CookingDeliveryEvaluator
         IReadOnlyList<MeatCutSO> cuts,
         System.Func<MeatCutSO, bool> isBurnedExempt)
     {
-        var result = new DeliveryValidation { burnedIndices = new List<int>() };
+        var result = new DeliveryValidation
+        {
+            burnedIndices = new List<int>(),
+            rawIndices = new List<int>()
+        };
 
         if (sideStates == null)
             return result;
@@ -67,6 +72,7 @@ public static class CookingDeliveryEvaluator
             else if (sideStates[i].IsRaw)
             {
                 result.rawCount++;
+                result.rawIndices.Add(i);
             }
         }
 
@@ -183,7 +189,7 @@ public static class CookingDeliveryEvaluator
 
     /// <summary>
     /// Mensaje de bloqueo con contadores. Adapta singular/plural y omite contadores en cero.
-    /// Incluye la instrucción de descarte solo si hay quemados.
+    /// No incluye instrucciones: la tecla para limpiar el plato la conoce GameManager.
     /// </summary>
     public static string BuildBlockedMessage(int rawCount, int burnedCount)
     {
@@ -204,9 +210,6 @@ public static class CookingDeliveryEvaluator
         {
             sb.Append(burnedCount == 1 ? "1 corte quemado." : burnedCount + " cortes quemados.");
         }
-
-        if (burnedCount > 0)
-            sb.Append("\nApretá X para desechar " + (burnedCount == 1 ? "el corte quemado." : "los cortes quemados."));
 
         return sb.ToString();
     }

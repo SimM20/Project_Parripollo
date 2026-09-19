@@ -22,14 +22,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private KeyCode toppingsPanelToggleKey = KeyCode.T;
     [SerializeField] private KeyCode clearPlateKey = KeyCode.C;
 
-    // Contexto de descarte de quemados: solo activo tras un intento de entrega bloqueado por quemados.
-    private bool discardContextActive;
-    private readonly System.Collections.Generic.List<int> discardBurnedIndices = new System.Collections.Generic.List<int>();
-
-    // Cliente del intento bloqueado: la entrega es siempre por arrastre, así que no hay
-    // "cliente seleccionado" contra el que revalidar cuando el jugador aprieta X.
-    private Customer discardCustomer;
-
     public CustomerSystem Customers => customerSystem;
 
     private void Awake()
@@ -107,9 +99,6 @@ public class GameManager : MonoBehaviour
             CleanAshes();
 
         // ── Armado y entrega (todo dentro de la vista Parrilla) ──
-        if (Input.GetKeyDown(KeyCode.X))
-            TryDiscardBurnedCuts();
-
         if (Input.GetKeyDown(clearPlateKey) && TutorialManager.CheckClearBuildPlateAllowed())
         {
             ClearBuildAssembly();
@@ -206,78 +195,59 @@ public class GameManager : MonoBehaviour
             Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
     }
 
-    private void ClearDiscardContext()
+    /// <summary>
+    /// Resultado de evaluar el plato armado contra un cliente. Lo produce
+    /// <see cref="EvaluateDelivery"/> sin tocar nada: sirve tanto para el preview de la burbuja
+    /// mientras se arrastra el plato como para la entrega real.
+    /// </summary>
+    public struct DeliveryEvaluation
     {
-        discardContextActive = false;
-        discardCustomer = null;
-        discardBurnedIndices.Clear();
+        public bool accepted;
+        /// <summary>Mensaje para el jugador cuando <c>accepted == false</c>.</summary>
+        public string rejectReason;
+        /// <summary>Versión corta de <c>rejectReason</c> para la burbuja de hover.</summary>
+        public string rejectShort;
+        /// <summary>Rechazo por Crudo/Quemado; <c>validation</c> trae los índices afectados.</summary>
+        public bool cookingBlocked;
+        public CookingDeliveryEvaluator.DeliveryValidation validation;
+
+        public float payment;
+        public float tip;
+        public int worstOffset;
+        public CustomerFeedbackState feedbackState;
     }
 
     /// <summary>
-    /// Descarta los cortes quemados detectados en el último intento bloqueado y revalida la entrega
-    /// contra el mismo cliente. Fuera del contexto de una entrega bloqueada por quemados, X no hace nada.
+    /// Evalúa la entrega del plato armado al cliente sin efectos secundarios (no muestra
+    /// mensajes, no cobra, no limpia el plato). Aplica exactamente las mismas reglas que
+    /// <see cref="TryDeliverToCustomer"/>, que es su único consumidor con efectos.
     /// </summary>
-    private void TryDiscardBurnedCuts()
+    public DeliveryEvaluation EvaluateDelivery(Customer customer)
     {
-        if (!discardContextActive || discardBurnedIndices.Count == 0)
-            return;
+        var result = new DeliveryEvaluation();
 
-        // Eliminar de mayor a menor índice para no invalidar los índices restantes.
-        discardBurnedIndices.Sort();
-        for (int i = discardBurnedIndices.Count - 1; i >= 0; i--)
-        {
-            int index = discardBurnedIndices[i];
-            buildStationSystem.RemoveCutAt(index);
-            meatTransferBuffer?.SendMessage("RemovePlateMeatVisualAt", index, SendMessageOptions.DontRequireReceiver);
-        }
-
-        int discarded = discardBurnedIndices.Count;
-        Customer pendingCustomer = discardCustomer;
-        ClearDiscardContext();
-        Debug.Log("[Plato] Cortes quemados descartados: " + discarded);
-
-        if (!buildStationSystem.HasAnyCut)
-        {
-            DeliveryFeedbackText.Instance?.Show("Se descartaron los cortes quemados. No queda nada para entregar.");
-            return;
-        }
-
-        if (customerSystem != null && customerSystem.IsCustomerActive(pendingCustomer))
-            TryDeliverToCustomer(pendingCustomer);
-    }
-
-    /// <summary>
-    /// Entrega el plato armado al cliente indicado. Es el único punto donde vive la lógica
-    /// de entrega; la única entrada es el arrastre del plato con el mouse (PlateDeliveryDraggable).
-    /// Devuelve true solo si la entrega se concretó y el plato quedó consumido; en cualquier
-    /// rechazo devuelve false (el que arrastra usa eso para devolver el plato a su sitio).
-    /// </summary>
-    public bool TryDeliverToCustomer(Customer customer)
-    {
         if (customer == null || customer.IsInFeedback)
         {
-            DeliveryFeedbackText.Instance?.Show("No hay un cliente válido seleccionado.");
-            return false;
+            result.rejectReason = "No hay un cliente válido seleccionado.";
+            result.rejectShort = "Cliente no disponible";
+            return result;
         }
 
         if (buildStationSystem == null || !buildStationSystem.HasAnyCut)
         {
-            DeliveryFeedbackText.Instance?.Show("No hay nada preparado para entregar.");
-            return false;
+            result.rejectReason = "No hay nada preparado para entregar.";
+            result.rejectShort = "Plato vacío";
+            return result;
         }
 
         MeatCutSO assembled = buildStationSystem.AssembledCuts[0];
 
         if (assembled != customer.order.PrimaryCut)
         {
-            Debug.Log("❌ Corte incorrecto. Pedido: " + customer.order.PrimaryCut?.cutName
-                + " | Armado: " + assembled.cutName);
-
-            DeliveryFeedbackText.Instance?.Show("Corte incorrecto. El cliente pidió: "
-                + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".");
-
-            ClearDiscardContext();
-            return false;
+            result.rejectReason = "Corte incorrecto. El cliente pidió: "
+                + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".";
+            result.rejectShort = "Corte incorrecto";
+            return result;
         }
 
         string reason;
@@ -288,51 +258,32 @@ public class GameManager : MonoBehaviour
 
         if (!valid)
         {
-            Debug.Log("❌ " + reason);
-            DeliveryFeedbackText.Instance?.Show(reason);
-            ClearDiscardContext();
-            return false;
+            result.rejectReason = reason;
+            result.rejectShort = reason;
+            return result;
         }
 
         // ── Validación de cocción: Crudo/Quemado bloquean la entrega completa (atómica) ──
         // El tutorial exime al chorizo tutorial quemado para evitar un softlock; en GameScene
         // no hay TutorialManager, así que el predicado siempre es false y nada cambia.
-        var validation = CookingDeliveryEvaluator.Validate(
-            buildStationSystem.AssembledCutSideStates,
-            buildStationSystem.AssembledCuts,
-            TutorialManager.IsBurnedDeliveryExempt);
+        var cuts = buildStationSystem.AssembledCuts;
+        var sideStates = buildStationSystem.AssembledCutSideStates;
 
-        if (validation.IsBlocked)
+        result.validation = CookingDeliveryEvaluator.Validate(
+            sideStates, cuts, TutorialManager.IsBurnedDeliveryExempt);
+
+        if (result.validation.IsBlocked)
         {
-            string blockedMessage = CookingDeliveryEvaluator.BuildBlockedMessage(validation.rawCount, validation.burnedCount);
-            DeliveryFeedbackText.Instance?.Show(blockedMessage);
-            Debug.Log("❌ Entrega bloqueada. Crudos: " + validation.rawCount + " | Quemados: " + validation.burnedCount);
-
-            // Habilitar X solo si hay quemados descartables en este intento.
-            discardBurnedIndices.Clear();
-            if (validation.burnedCount > 0)
-            {
-                discardBurnedIndices.AddRange(validation.burnedIndices);
-                discardContextActive = true;
-                discardCustomer = customer;
-            }
-            else
-            {
-                discardContextActive = false;
-                discardCustomer = null;
-            }
-
-            // El intento queda pendiente: tras descartar con X se revalida contra el mismo cliente.
-            return false;
+            result.cookingBlocked = true;
+            result.rejectReason = BuildBlockedMessageWithCuts(result.validation, cuts);
+            result.rejectShort = result.validation.burnedCount > 0
+                ? (result.validation.rawCount > 0 ? "Crudo y quemado" : "Quemado")
+                : "Crudo";
+            return result;
         }
 
         // ── Evaluación económica por corte: peor desfase de ambas caras ──
-        var cuts = buildStationSystem.AssembledCuts;
-        var sideStates = buildStationSystem.AssembledCutSideStates;
         bool isSandwich = customer.order.IsSandwich;
-
-        float totalPayment = 0f;
-        int overallWorstOffset = 0;
 
         for (int i = 0; i < cuts.Count; i++)
         {
@@ -343,41 +294,106 @@ public class GameManager : MonoBehaviour
             MeatStates requested = customer.order.GetRequestedState(i < customer.order.requestedStates.Count ? i : 0);
 
             var cutResult = CookingDeliveryEvaluator.EvaluateCut(sideStates[i].sideA, sideStates[i].sideB, requested, basePrice);
-            totalPayment += cutResult.price;
-            if (cutResult.worstOffset > overallWorstOffset)
-                overallWorstOffset = cutResult.worstOffset;
-
-            Debug.Log("[Entrega] " + cut.cutName + " | Pedido: " + requested
-                      + " | A: " + sideStates[i].sideA + " | B: " + sideStates[i].sideB
-                      + " | Desfase: " + cutResult.worstOffset
-                      + " | Pago: " + cutResult.price);
+            result.payment += cutResult.price;
+            if (cutResult.worstOffset > result.worstOffset)
+                result.worstOffset = cutResult.worstOffset;
         }
 
         // Evaluar propina y estado de satisfacción general según spec doc
         float primaryBasePrice = cuts.Count > 0 && cuts[0] != null
             ? (isSandwich ? cuts[0].sellPriceSandwich : cuts[0].sellPricePlate)
-            : totalPayment;
+            : result.payment;
 
         var feedbackEval = CookingDeliveryEvaluator.EvaluateDeliveryFeedback(
-            customer,
-            primaryBasePrice,
-            overallWorstOffset
-        );
+            customer, primaryBasePrice, result.worstOffset);
 
-        float totalTips = feedbackEval.tipAmount;
+        result.tip = feedbackEval.tipAmount;
+        result.feedbackState = feedbackEval.state;
+        result.accepted = true;
+        return result;
+    }
+
+    /// <summary>
+    /// Mensaje de bloqueo por cocción con el nombre de los cortes afectados, para que el
+    /// jugador sepa cuál es sin adivinar (el plato además los resalta en rojo). Si hay
+    /// quemados, indica la tecla configurada para limpiar el plato: es la única salida.
+    /// </summary>
+    private string BuildBlockedMessageWithCuts(
+        CookingDeliveryEvaluator.DeliveryValidation validation,
+        System.Collections.Generic.IReadOnlyList<MeatCutSO> cuts)
+    {
+        string message = CookingDeliveryEvaluator.BuildBlockedMessage(validation.rawCount, validation.burnedCount);
+
+        var sb = new System.Text.StringBuilder();
+        AppendCutNames(sb, "Crudo", validation.rawIndices, cuts);
+        AppendCutNames(sb, "Quemado", validation.burnedIndices, cuts);
+
+        if (sb.Length > 0)
+            message = sb.ToString() + "\n" + message;
+
+        if (validation.burnedCount > 0)
+            message += "\nApretá " + clearPlateKey + " para limpiar el plato.";
+
+        return message;
+    }
+
+    private static void AppendCutNames(
+        System.Text.StringBuilder sb,
+        string label,
+        System.Collections.Generic.List<int> indices,
+        System.Collections.Generic.IReadOnlyList<MeatCutSO> cuts)
+    {
+        if (indices == null || cuts == null) return;
+
+        for (int i = 0; i < indices.Count; i++)
+        {
+            int index = indices[i];
+            if (index < 0 || index >= cuts.Count || cuts[index] == null) continue;
+
+            if (sb.Length > 0) sb.Append("  |  ");
+            sb.Append(cuts[index].cutName).Append(": ").Append(label);
+        }
+    }
+
+    /// <summary>
+    /// Entrega el plato armado al cliente indicado. Es el único punto donde vive la lógica
+    /// de entrega; la única entrada es el arrastre del plato con el mouse (PlateDeliveryDraggable).
+    /// Devuelve true solo si la entrega se concretó y el plato quedó consumido; en cualquier
+    /// rechazo devuelve false (el que arrastra usa eso para devolver el plato a su sitio).
+    /// </summary>
+    public bool TryDeliverToCustomer(Customer customer)
+    {
+        DeliveryEvaluation eval = EvaluateDelivery(customer);
+
+        if (!eval.accepted)
+        {
+            DeliveryFeedbackText.Instance?.Show(eval.rejectReason);
+            Debug.Log("❌ " + eval.rejectReason.Replace('\n', ' '));
+
+            if (eval.cookingBlocked)
+            {
+                // Resaltar en el plato los cortes que bloquean, crudos y quemados por igual.
+                var blockedIndices = new System.Collections.Generic.List<int>();
+                if (eval.validation.rawIndices != null) blockedIndices.AddRange(eval.validation.rawIndices);
+                if (eval.validation.burnedIndices != null) blockedIndices.AddRange(eval.validation.burnedIndices);
+                meatTransferBuffer?.SendMessage("FlashPlateMeatVisuals", blockedIndices, SendMessageOptions.DontRequireReceiver);
+            }
+
+            return false;
+        }
 
         ClearBuildAssembly();
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
         ToppingDraggable.ClearAllSplatters();
-        PlayerWallet.Instance?.Add(totalPayment + totalTips);
+        PlayerWallet.Instance?.Add(eval.payment + eval.tip);
 
         // Iniciar feedback de entrega (4 segundos con slot ocupado)
-        customerSystem.TriggerDeliveryFeedback(customer, totalPayment, totalTips, feedbackEval.state);
+        customerSystem.TriggerDeliveryFeedback(customer, eval.payment, eval.tip, eval.feedbackState);
 
-        Debug.Log("✔ Pedido entregado. Pago: " + totalPayment + " | Propinas: " + totalTips + " | Estado: " + feedbackEval.state);
+        Debug.Log("✔ Pedido entregado. Pago: " + eval.payment + " | Propinas: " + eval.tip
+                  + " | Desfase: " + eval.worstOffset + " | Estado: " + eval.feedbackState);
         TutorialManager.NotifyProductDelivered();
-        ClearDiscardContext();
         return true;
     }
 

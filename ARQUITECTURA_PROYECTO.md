@@ -217,7 +217,7 @@ Entrega — dos caminos hacia el MISMO método, GameManager.TryDeliverToCustomer
   Lógica compartida (TryDeliverToCustomer, devuelve bool):
    │     1. corte armado == order.PrimaryCut ?
    │     2. DishValidator.ValidateSandwich / ValidatePlatedDish
-   │     3. CookingDeliveryEvaluator.Validate → Crudo/Quemado BLOQUEAN (X descarta quemados)
+   │     3. CookingDeliveryEvaluator.Validate → Crudo/Quemado BLOQUEAN (salida: clearPlateKey limpia el plato)
    │     4. CookingDeliveryEvaluator.EvaluateCut por corte → pago + propina
    │     5. PlayerWallet.Add · CustomerSystem.CompleteCustomer · limpiar plato → return true
 ```
@@ -236,21 +236,31 @@ Bucle de input global y árbitro de la entrega. **No** contiene lógica de cocci
 | `[SF] customerSystem, grillSystem, coolerSystem, viewManager, buildStationSystem, shopSystem, wallet, grillLayerToggle, foodAvailabilityService, catalog` | Referencias de inspector |
 | `[SF] MonoBehaviour meatTransferBuffer, coalTransferBuffer` | ⚠️ Tipados como `MonoBehaviour`: se invocan **solo por `SendMessage`** |
 | `ViewType lastView` | Detecta transiciones de vista |
-| `bool discardContextActive` / `List<int> discardBurnedIndices` | Contexto de descarte con `X`; solo activo tras una entrega bloqueada por quemados |
-| `Customer discardCustomer` | Cliente del intento bloqueado. Necesario porque una entrega **por arrastre** no activa el modo de selección: sin esto, la `X` no sabría contra quién revalidar |
 
 ```csharp
 public CustomerSystem Customers { get; }          // acceso para PlateDeliveryDraggable
-public bool TryDeliverToCustomer(Customer)        // ÚNICO lugar con la lógica de entrega
+public struct DeliveryEvaluation { accepted, rejectReason, rejectShort, cookingBlocked, validation, payment, tip, worstOffset, feedbackState }
+public DeliveryEvaluation EvaluateDelivery(Customer) // reglas de entrega SIN efectos: preview + entrega real
+public bool TryDeliverToCustomer(Customer)        // ÚNICO lugar con efectos de entrega (mensaje, cobro, limpieza)
 public void EndNight()   // desuscribe, tracker.RegisterDayCompleted(), carga "EndScene"
 // privados relevantes: TryToggleGrillLayer, ClearBuildAssembly, CleanAshes,
-//                      TryDiscardBurnedCuts, TryEnterDeliverySelection, ConfirmDeliverySelection
+//                      TryEnterDeliverySelection, ConfirmDeliverySelection
 ```
 `ConfirmDeliverySelection()` es un wrapper de una línea sobre `TryDeliverToCustomer(SelectedCustomer)`:
 teclado y arrastre comparten validaciones, mensajes de `DeliveryFeedbackText`, pago y limpieza del plato.
 El `bool` de retorno es **solo** para el arrastre: `false` = entrega rechazada → devolver el plato a la
-`PlateDropZone`. `TryDiscardBurnedCuts` (`X`) revalida contra `SelectedCustomer` si el modo de selección
-está activo, y contra `discardCustomer` si el intento vino de un arrastre.
+`PlateDropZone`. No hay descarte parcial de cortes: ante un bloqueo por quemado la única salida es
+limpiar el plato entero con `clearPlateKey` (`C` por defecto), y el mensaje de bloqueo lo dice con la tecla real.
+
+**Evaluación vs. efectos.** Las reglas (cliente válido → corte correcto → `DishValidator` → cocción →
+pago/propina) viven en `EvaluateDelivery(Customer)`, que es puro. `TryDeliverToCustomer` la llama y
+aplica los efectos. `CustomerSystem.SetDeliveryDragHover` también la llama para el **preview** en la
+burbuja mientras se arrastra el plato (`$X + $Y propina` / `$X - sin propina` / motivo del rechazo en
+rojo): lo que muestra la burbuja es exactamente lo que va a pasar al soltar. Al tocar una regla, tocar
+solo `EvaluateDelivery`. Si una entrega se bloquea por cocción, `GameManager` manda
+`FlashPlateMeatVisuals(List<int>)` a `MeatTransferBuffer` (por `SendMessage`, como el resto) con los
+índices crudos + quemados (`DeliveryValidation.rawIndices` / `burnedIndices`) y el mensaje nombra cada
+corte afectado.
 
 #### `ViewManager` — `UI/ViewManager.cs`
 ```csharp
@@ -507,7 +517,7 @@ bool TryQueueFromGrillToBuild(Meat, Vector3)          // destruye el Meat, conse
 bool TryDropFromMeatHolder[ById](..., Vector3, bool rotateFootprint)
 bool TryDropFromToBuild[ById](..., Vector3, bool rotateFootprint)
 void ConsumeBuildMeatEntry(int entryId, GameObject)
-void RemovePlateMeatVisualAt(int), ClearPlateMeatVisuals(), SetPlateMeatVisualsVisible(bool)
+void ClearPlateMeatVisuals(), FlashPlateMeatVisuals(List<int>), SetPlateMeatVisualsVisible(bool)
 void UpdatePlateMeatSprite(Sprite)
 bool TryCaptureLastPlateMeatVisual(out GameObject, out Sprite, out Vector3, out Vector3)  // undo
 void RestorePlateMeatVisual(GameObject, Sprite, Vector3, Vector3)                          // undo
@@ -560,7 +570,7 @@ public void RefreshCollider()   // re-mide el BoxCollider2D contra el sprite act
 | Estado del arrastre | `static`: la instancia que conduce (`activeDragger`), el frame del último pick (`lastPickFrame`, para no repetirlo por instancia) y las posiciones + `sortingOrder` de origen de cada visual. Hay un solo mouse: no hay arrastres concurrentes. El `sortingOrder` sube `+5000` mientras dura y se restaura al soltar |
 | Gate de paneles | Si el punto cae sobre un `SlidingPanel` abierto (`StockPanelController` / `ToppingsPanelController` → `IsPointOverPanel`) el pick devuelve `null`: el click es del panel. Necesario porque, al no pasar por el raycast de Unity, nada más arbitra quién se queda con el click |
 | Hover de cliente | `Physics2D.OverlapPointNonAlloc` sobre un buffer estático de 16 (sin GC por frame) → `GetComponentInParent<CustomerView>()` → `CustomerSystem.SetDeliveryDragHover(view)` |
-| Rechazo | Si `TryDeliverToCustomer` devuelve `false`, o si se soltó fuera de un cliente, cada visual vuelve a su posición guardada sobre el plato. El mensaje ya lo muestra `GameManager` vía `DeliveryFeedbackText` |
+| Rechazo | Si `TryDeliverToCustomer` devuelve `false`, o si se soltó fuera de un cliente, cada visual vuelve a su posición guardada sobre el plato. El mensaje ya lo muestra `GameManager` vía `DeliveryFeedbackText`. **Solo si se soltó al vacío** (`dropView == null`) la carne agarrada puede irse a la bandeja o a la parrilla según el punto de drop; un rechazo del cliente deja el plato intacto (los clientes pueden pisar slots de la parrilla y sin ese gate la carne rechazada volvía a cocinarse) |
 | Cancelación | `OnDisable`/`OnDestroy` del visual que conduce llaman `CancelDrag()`: restauran posiciones y `sortingOrder` sin intentar el drop |
 | Tutorial | `BeginDrag` dispara `TutorialManager.NotifyDeliverySelectionBegun()`: es el equivalente por mouse de entrar en modo selección, y sin eso el paso `25.BeginDelivery` quedaría colgado si el jugador usa el mouse |
 | Collider | Se re-mide en `Awake` y cada vez que el pan cambia sprite/escala/rotación del visual (`MeatTransferBuffer.UpdatePlateMeatSprite` y `RestorePlateMeatVisual` llaman a `RefreshCollider()`) |
@@ -645,6 +655,13 @@ capacidad hay que verificar que los últimos slots sigan entrando en cámara.
 
 #### `Customer` — POCO
 `type`, `order`, `patience`, `maxPatience`, `slotIndex`; `bool IsAngry`; `float Patience01`; `Init(...)`, `UpdatePatience(float)`.
+
+#### `CustomerView` — `Customers/CustomerView.cs`
+Barra de paciencia (`patienceFill`, hijo `Completo` de `BarraPAciencia` en los prefabs `Cliente*`):
+`RefreshPatience()` escala el fill en X y además **lo tiñe** (`patienceHighColor` → `Mid` en 50 % →
+`Low`) y **hace temblar el contenedor** por debajo de `urgentThreshold` (0.2). El temblor mueve
+`patienceFill.parent`, nunca el cliente, para que el collider de pick no se corra bajo el mouse;
+`ShowFeedback` lo deja quieto antes de ocultar la barra.
 
 #### `OrderSystem` / `Order` — `Orders/`
 ```csharp
@@ -855,7 +872,6 @@ MainMenuScene (build index 0)
 | `Space` | Build | Entrar a selección de cliente / confirmar entrega |
 | Arrastrar el plato | Build | Entrega por **drag & drop**: soltar sobre un cliente entrega; soltar al vacío o entrega rechazada → el plato vuelve a la `PlateDropZone` |
 | `A` / `D` | Build, seleccionando | Cliente anterior / siguiente |
-| `X` | Build, entrega bloqueada | Descartar cortes quemados y revalidar |
 | `R` | Build, sin seleccionar | Limpiar el plato entero |
 | `M` | Build | Informar corte faltante |
 
@@ -888,7 +904,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | # | Nota |
 |---|---|
 | 1 | **`MeatCutSO` vive en `Grill/MeatType.cs`**; `GrillSlot` en `Grill/GrillSlots.cs`. Los nombres de archivo no siempre coinciden con la clase. `Grill/GrillSys2.cs` está **vacío** |
-| 2 | `GameManager` habla con los buffers **solo por `SendMessage`** (campos tipados `MonoBehaviour`). Renombrar `MoveToMeatHolder`, `MoveToCoalHolder`, `MoveToBuildMeatHolder`, `ClearPlateMeatVisuals`, `RemovePlateMeatVisualAt`, `SetPlateMeatVisualsVisible` **rompe en silencio** |
+| 2 | `GameManager` habla con los buffers **solo por `SendMessage`** (campos tipados `MonoBehaviour`). Renombrar `MoveToMeatHolder`, `MoveToCoalHolder`, `MoveToBuildMeatHolder`, `ClearPlateMeatVisuals`, `FlashPlateMeatVisuals`, `SetPlateMeatVisualsVisible` **rompe en silencio** |
 | 3 | `MeatHolderDraggableMeat` y `CoolerDraggableMeat` invocan al buffer por **reflexión** (`MethodInfo`), probando primero la sobrecarga de 3 parámetros y cayendo a la de 2 |
 | 4 | Los visualizadores hacen `AddComponent(Type resuelto por nombre)` + `SendMessage("SetCut"/"SetCoalData"/"SetCoolerSystem"/"SetTransferBuffer"/"SetToGrillDropArea"/"SetTransferEntryId")` |
 | 5 | Los `ScriptableObject` **mutan en runtime** (`isUnlocked`, `isPurchased`, `ProductVariantSO.isUnlocked`) → el estado se filtra entre sesiones del Editor |
