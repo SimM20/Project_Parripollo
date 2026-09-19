@@ -295,6 +295,16 @@ int  GetActualDay(), GetActualMoney(), GetTotalCustomersPerDay(), GetActualCusto
 Instancia `pauseCanvasPrefab` on-demand y delega el estado a `GamePause.SetMenuPaused`.
 `IsPaused` refleja `GamePause.IsMenuPaused`, no el canvas. Delega el render a `HudManager` → `HudContainer`.
 
+#### `HudManager` / `MoneyPopup` — plata con juice
+`HudManager` es singleton de escena (`Instance`). Al cobrar, `GameManager.TryDeliverToCustomer` hace
+`MoneyPopup.Spawn(posCliente, pago + propina)` **antes** de `PlayerWallet.Add`: el popup (`TextMeshPro`
+world-space creado en runtime, fuente `TMP_Settings.defaultFontAsset`) hace pop, sube, y vuela hasta el
+contenedor `Money` del HUD (`HudCanvas` es world-space; el destino se proyecta al plano z del popup por
+cámara — nota 22). Como `MoneyPopup.InFlight > 0` cuando llega `UpdateMoneyText`, el HUD **no** pisa el
+número: espera `OnMoneyPopupArrived` (o un fallback de la duración del vuelo), hace punch de escala y
+cuenta animado hasta el valor real. Bajas de plata (tienda) y subas sin popup se aplican al instante.
+Estilo del popup y del punch: `HudManager` → header *Money Popup* (`MoneyPopupStyle`).
+
 #### `GamePause` — `Core/GamePause.cs` · estática
 ```csharp
 bool IsPaused, IsMenuPaused, IsDialogPaused

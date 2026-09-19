@@ -451,6 +451,13 @@ public class GameManager : MonoBehaviour
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
         ToppingDraggable.ClearAllSplatters();
+
+        // El popup se crea ANTES de sumar: así HudManager sabe que hay plata "en vuelo" y
+        // recién actualiza el contador cuando aterriza.
+        CustomerView paidView = customerSystem.GetViewForCustomer(customer);
+        if (paidView != null)
+            MoneyPopup.Spawn(paidView.transform.position, eval.payment + eval.tip);
+
         PlayerWallet.Instance?.Add(eval.payment + eval.tip);
 
         // Iniciar feedback de entrega (4 segundos con slot ocupado)
