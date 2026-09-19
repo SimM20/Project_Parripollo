@@ -22,6 +22,13 @@ public class GameManager : MonoBehaviour
     [SerializeField] private KeyCode toppingsPanelToggleKey = KeyCode.T;
     [SerializeField] private KeyCode clearPlateKey = KeyCode.C;
 
+    [Header("Delivery Preview Tints")]
+    [Tooltip("Tinte de cada corte del plato mientras se arrastra sobre un cliente, según su desfase con el punto pedido.")]
+    [SerializeField] private Color previewExactTint = new Color(0.65f, 1f, 0.7f);
+    [SerializeField] private Color previewOffByOneTint = new Color(1f, 0.95f, 0.55f);
+    [SerializeField] private Color previewOffByTwoTint = new Color(1f, 0.75f, 0.45f);
+    [SerializeField] private Color previewBlockedTint = new Color(1f, 0.45f, 0.45f);
+
     public CustomerSystem Customers => customerSystem;
 
     private void Awake()
@@ -215,6 +222,16 @@ public class GameManager : MonoBehaviour
         public float tip;
         public int worstOffset;
         public CustomerFeedbackState feedbackState;
+
+        /// <summary>
+        /// Desfase por corte del plato, alineado con <c>BuildStationSystem.AssembledCuts</c>:
+        /// 0 exacto, 1 aceptable, >=2 mitad de precio; <see cref="CutBlocked"/> si ese corte
+        /// bloquea (crudo/quemado) o si el corte es el equivocado. Null cuando la evaluación
+        /// no llegó a mirar los cortes (cliente inválido, plato vacío, falta pan...).
+        /// </summary>
+        public int[] cutOffsets;
+
+        public const int CutBlocked = -1;
     }
 
     /// <summary>
@@ -247,6 +264,11 @@ public class GameManager : MonoBehaviour
             result.rejectReason = "Corte incorrecto. El cliente pidió: "
                 + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".";
             result.rejectShort = "Corte incorrecto";
+
+            // Todos los cortes en rojo: ninguno le sirve a este cliente.
+            result.cutOffsets = new int[buildStationSystem.AssembledCuts.Count];
+            for (int i = 0; i < result.cutOffsets.Length; i++)
+                result.cutOffsets[i] = DeliveryEvaluation.CutBlocked;
             return result;
         }
 
@@ -272,6 +294,33 @@ public class GameManager : MonoBehaviour
         result.validation = CookingDeliveryEvaluator.Validate(
             sideStates, cuts, TutorialManager.IsBurnedDeliveryExempt);
 
+        // ── Evaluación económica por corte: peor desfase de ambas caras ──
+        // Se calcula aunque la entrega esté bloqueada: el preview del arrastre tiñe cada
+        // corte por su desfase, y los que bloquean van en rojo.
+        bool isSandwich = customer.order.IsSandwich;
+        result.cutOffsets = new int[cuts.Count];
+
+        for (int i = 0; i < cuts.Count; i++)
+        {
+            MeatCutSO cut = cuts[i];
+            if (cut == null) continue;
+
+            if (result.validation.rawIndices.Contains(i) || result.validation.burnedIndices.Contains(i))
+            {
+                result.cutOffsets[i] = DeliveryEvaluation.CutBlocked;
+                continue;
+            }
+
+            float basePrice = isSandwich ? cut.sellPriceSandwich : cut.sellPricePlate;
+            MeatStates requested = customer.order.GetRequestedState(i < customer.order.requestedStates.Count ? i : 0);
+
+            var cutResult = CookingDeliveryEvaluator.EvaluateCut(sideStates[i].sideA, sideStates[i].sideB, requested, basePrice);
+            result.cutOffsets[i] = cutResult.worstOffset;
+            result.payment += cutResult.price;
+            if (cutResult.worstOffset > result.worstOffset)
+                result.worstOffset = cutResult.worstOffset;
+        }
+
         if (result.validation.IsBlocked)
         {
             result.cookingBlocked = true;
@@ -279,24 +328,9 @@ public class GameManager : MonoBehaviour
             result.rejectShort = result.validation.burnedCount > 0
                 ? (result.validation.rawCount > 0 ? "Crudo y quemado" : "Quemado")
                 : "Crudo";
+            result.payment = 0f;
+            result.worstOffset = 0;
             return result;
-        }
-
-        // ── Evaluación económica por corte: peor desfase de ambas caras ──
-        bool isSandwich = customer.order.IsSandwich;
-
-        for (int i = 0; i < cuts.Count; i++)
-        {
-            MeatCutSO cut = cuts[i];
-            if (cut == null) continue;
-
-            float basePrice = isSandwich ? cut.sellPriceSandwich : cut.sellPricePlate;
-            MeatStates requested = customer.order.GetRequestedState(i < customer.order.requestedStates.Count ? i : 0);
-
-            var cutResult = CookingDeliveryEvaluator.EvaluateCut(sideStates[i].sideA, sideStates[i].sideB, requested, basePrice);
-            result.payment += cutResult.price;
-            if (cutResult.worstOffset > result.worstOffset)
-                result.worstOffset = cutResult.worstOffset;
         }
 
         // Evaluar propina y estado de satisfacción general según spec doc
@@ -311,6 +345,37 @@ public class GameManager : MonoBehaviour
         result.feedbackState = feedbackEval.state;
         result.accepted = true;
         return result;
+    }
+
+    /// <summary>
+    /// Tiñe los cortes del plato según <c>eval.cutOffsets</c> mientras el plato está sobre
+    /// un cliente. Sin offsets (rechazo que no mira los cortes) no tiñe nada.
+    /// </summary>
+    public void ShowDeliveryPreviewOnPlate(DeliveryEvaluation eval)
+    {
+        if (eval.cutOffsets == null || eval.cutOffsets.Length == 0)
+        {
+            ClearDeliveryPreviewOnPlate();
+            return;
+        }
+
+        var tints = new System.Collections.Generic.List<Color>(eval.cutOffsets.Length);
+        for (int i = 0; i < eval.cutOffsets.Length; i++)
+        {
+            int offset = eval.cutOffsets[i];
+            Color tint = offset == DeliveryEvaluation.CutBlocked ? previewBlockedTint
+                       : offset == 0 ? previewExactTint
+                       : offset == 1 ? previewOffByOneTint
+                       : previewOffByTwoTint;
+            tints.Add(tint);
+        }
+
+        meatTransferBuffer?.SendMessage("SetPlateMeatTints", tints, SendMessageOptions.DontRequireReceiver);
+    }
+
+    public void ClearDeliveryPreviewOnPlate()
+    {
+        meatTransferBuffer?.SendMessage("ClearPlateMeatTints", SendMessageOptions.DontRequireReceiver);
     }
 
     /// <summary>
@@ -386,6 +451,13 @@ public class GameManager : MonoBehaviour
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
         ToppingDraggable.ClearAllSplatters();
+
+        // El popup se crea ANTES de sumar: así HudManager sabe que hay plata "en vuelo" y
+        // recién actualiza el contador cuando aterriza.
+        CustomerView paidView = customerSystem.GetViewForCustomer(customer);
+        if (paidView != null)
+            MoneyPopup.Spawn(paidView.transform.position, eval.payment + eval.tip);
+
         PlayerWallet.Instance?.Add(eval.payment + eval.tip);
 
         // Iniciar feedback de entrega (4 segundos con slot ocupado)

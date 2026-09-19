@@ -262,6 +262,14 @@ solo `EvaluateDelivery`. Si una entrega se bloquea por cocción, `GameManager` m
 índices crudos + quemados (`DeliveryValidation.rawIndices` / `burnedIndices`) y el mensaje nombra cada
 corte afectado.
 
+La misma evaluación llena `DeliveryEvaluation.cutOffsets` (uno por corte del plato, en orden de
+montaje; `CutBlocked = -1` para crudo/quemado o corte equivocado; null si el rechazo no llegó a mirar
+los cortes). Mientras el plato está sobre un cliente, `GameManager.ShowDeliveryPreviewOnPlate(eval)`
+lo traduce a tintes (`previewExactTint` / `OffByOne` / `OffByTwo` / `Blocked`, header *Delivery Preview
+Tints*) y los manda por `SendMessage("SetPlateMeatTints", List<Color>)` a `MeatTransferBuffer`; al
+salir del cliente, `ClearDeliveryPreviewOnPlate` → `ClearPlateMeatTints`. Un tinte nuevo corta un
+flash en curso; un `Clear` con flash en curso no hace nada (el flash restaura al terminar).
+
 #### `ViewManager` — `UI/ViewManager.cs`
 ```csharp
 ViewType CurrentView { get; }
@@ -286,6 +294,16 @@ int  GetActualDay(), GetActualMoney(), GetTotalCustomersPerDay(), GetActualCusto
 ```
 Instancia `pauseCanvasPrefab` on-demand y delega el estado a `GamePause.SetMenuPaused`.
 `IsPaused` refleja `GamePause.IsMenuPaused`, no el canvas. Delega el render a `HudManager` → `HudContainer`.
+
+#### `HudManager` / `MoneyPopup` — plata con juice
+`HudManager` es singleton de escena (`Instance`). Al cobrar, `GameManager.TryDeliverToCustomer` hace
+`MoneyPopup.Spawn(posCliente, pago + propina)` **antes** de `PlayerWallet.Add`: el popup (`TextMeshPro`
+world-space creado en runtime, fuente `TMP_Settings.defaultFontAsset`) hace pop, sube, y vuela hasta el
+contenedor `Money` del HUD (`HudCanvas` es world-space; el destino se proyecta al plano z del popup por
+cámara — nota 22). Como `MoneyPopup.InFlight > 0` cuando llega `UpdateMoneyText`, el HUD **no** pisa el
+número: espera `OnMoneyPopupArrived` (o un fallback de la duración del vuelo), hace punch de escala y
+cuenta animado hasta el valor real. Bajas de plata (tienda) y subas sin popup se aplican al instante.
+Estilo del popup y del punch: `HudManager` → header *Money Popup* (`MoneyPopupStyle`).
 
 #### `GamePause` — `Core/GamePause.cs` · estática
 ```csharp
@@ -414,6 +432,21 @@ La capa inactiva queda visible con `inactiveAlpha` y colliders desactivados.
 Dos entradas para `Toggle()`: el `OnMouseDown` del propio botón en la escena y `Space` desde
 `GameManager.TryToggleGrillLayer()` (**solo en la vista `Grill`**). Ambas pasan por `ShowLayer`,
 así que el icono del botón y `TutorialManager.NotifyGrillLayerChanged` quedan siempre sincronizados.
+
+#### Mapa de calor (`GridSlot.LateUpdate`)
+
+Cada slot de carne cuelga en runtime un hijo `HeatGlow`: `SpriteRenderer` con un **degradado radial**
+generado por código (`MakeRadialGlowSprite`, 64px, 1×1 unidades), color `Lerp(heatMapLowColor,
+heatMapHighColor, k)` y alpha `k × heatMapMaxAlpha × flicker`, con `k = clamp01(totalHeatReceived /
+heatMapFullHeat)`. Por qué un resplandor y no un tinte del slot: la parrilla está en perspectiva y el
+sprite rectangular del slot (escala 0.85×0.49, alineado a pantalla) delataba el escorzo con sus
+bordes; un degradado no tiene bordes, y como es hijo del slot hereda su escala aplastada y sale como
+elipse escorzada. `heatMapGlowScale` (1.6) lo hace más grande que el slot para que los vecinos se
+fundan en un campo continuo. `heatMapSortingOrder = -1`: sobre el fondo `Parrilla` (-2) y **debajo de
+las barras** (`Grill`, 0), así el calor se ve entre las barras como brasa. Config en `GrillSystem` →
+header *Heat Map* (`[SYSTEMS].prefab`), aplicada a todos los slots vía `GridSlot.ConfigureHeatGlow`
+(estática; `OnValidate` la refresca en Play). Solo `acceptsType == Meat` y solo con la capa Meat
+activa; el hover preview sigue en el sprite del slot y no se toca. Se apaga con `showHeatMap = false`.
 
 #### `CoalStackCounter` — `Grill/CoalStackCounter.cs`
 
@@ -904,7 +937,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | # | Nota |
 |---|---|
 | 1 | **`MeatCutSO` vive en `Grill/MeatType.cs`**; `GrillSlot` en `Grill/GrillSlots.cs`. Los nombres de archivo no siempre coinciden con la clase. `Grill/GrillSys2.cs` está **vacío** |
-| 2 | `GameManager` habla con los buffers **solo por `SendMessage`** (campos tipados `MonoBehaviour`). Renombrar `MoveToMeatHolder`, `MoveToCoalHolder`, `MoveToBuildMeatHolder`, `ClearPlateMeatVisuals`, `FlashPlateMeatVisuals`, `SetPlateMeatVisualsVisible` **rompe en silencio** |
+| 2 | `GameManager` habla con los buffers **solo por `SendMessage`** (campos tipados `MonoBehaviour`). Renombrar `MoveToMeatHolder`, `MoveToCoalHolder`, `MoveToBuildMeatHolder`, `ClearPlateMeatVisuals`, `FlashPlateMeatVisuals`, `SetPlateMeatTints`, `ClearPlateMeatTints`, `SetPlateMeatVisualsVisible` **rompe en silencio** |
 | 3 | `MeatHolderDraggableMeat` y `CoolerDraggableMeat` invocan al buffer por **reflexión** (`MethodInfo`), probando primero la sobrecarga de 3 parámetros y cayendo a la de 2 |
 | 4 | Los visualizadores hacen `AddComponent(Type resuelto por nombre)` + `SendMessage("SetCut"/"SetCoalData"/"SetCoolerSystem"/"SetTransferBuffer"/"SetToGrillDropArea"/"SetTransferEntryId")` |
 | 5 | Los `ScriptableObject` **mutan en runtime** (`isUnlocked`, `isPurchased`, `ProductVariantSO.isUnlocked`) → el estado se filtra entre sesiones del Editor |

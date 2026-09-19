@@ -536,6 +536,41 @@ public class MeatTransferBuffer : MonoBehaviour
         blockedFlashRoutine = null;
     }
 
+    /// <summary>
+    /// Tinte de preview por corte (alineado con el orden de montaje) mientras el plato se
+    /// arrastra sobre un cliente. Lo invoca GameManager por SendMessage. Corta un flash en
+    /// curso: el preview es más reciente que el rechazo anterior.
+    /// </summary>
+    public void SetPlateMeatTints(List<Color> tints)
+    {
+        StopBlockedFlash();
+
+        for (int i = 0; i < plateMeatVisuals.Count; i++)
+        {
+            if (plateMeatVisuals[i] == null) continue;
+
+            SpriteRenderer sr = plateMeatVisuals[i].GetComponent<SpriteRenderer>();
+            if (sr == null) continue;
+
+            sr.color = (tints != null && i < tints.Count) ? tints[i] : Color.white;
+        }
+    }
+
+    public void ClearPlateMeatTints()
+    {
+        // Si hay un flash corriendo, él es dueño del color y lo restaura al terminar.
+        if (blockedFlashRoutine != null)
+            return;
+
+        for (int i = 0; i < plateMeatVisuals.Count; i++)
+        {
+            if (plateMeatVisuals[i] == null) continue;
+
+            SpriteRenderer sr = plateMeatVisuals[i].GetComponent<SpriteRenderer>();
+            if (sr != null) sr.color = Color.white;
+        }
+    }
+
     public void UpdatePlateMeatSprite(Sprite sprite)
     {
         if (sprite == null || plateMeatVisuals.Count == 0)
