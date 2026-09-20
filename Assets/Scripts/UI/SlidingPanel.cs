@@ -189,6 +189,58 @@ public abstract class SlidingPanel : MonoBehaviour
         return panelBackground.bounds.Contains(point);
     }
 
+    /// <summary>
+    /// True si el area XY dada se superpone con el fondo de algun panel desplegado.
+    /// El panel se mide en su posicion final abierta, asi que la respuesta no depende
+    /// de que el deslizamiento haya terminado.
+    /// </summary>
+    public static bool IsAreaCoveredByOpenPanel(Bounds worldArea)
+    {
+        foreach (SlidingPanel panel in OpenPanels)
+        {
+            if (panel != null && panel.OverlapsWhenOpen(worldArea))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Superposicion en XY contra el fondo del panel ubicado en su posicion abierta.
+    /// Asume que panelBackground cuelga de slidingRoot (por eso se desliza con el panel).
+    /// </summary>
+    private bool OverlapsWhenOpen(Bounds worldArea)
+    {
+        if (panelBackground == null)
+            return false;
+
+        Bounds panelBounds = panelBackground.bounds;
+        panelBounds.center += GetOffsetToOpenPosition();
+
+        // Se ignora Z: panel y clientes viven en planos distintos pero se tapan en pantalla.
+        return panelBounds.min.x <= worldArea.max.x && panelBounds.max.x >= worldArea.min.x
+            && panelBounds.min.y <= worldArea.max.y && panelBounds.max.y >= worldArea.min.y;
+    }
+
+    /// <summary>
+    /// Desplazamiento en mundo que llevaria al root desde donde esta ahora hasta openLocalX.
+    /// Es cero cuando el panel ya termino de abrirse.
+    /// </summary>
+    private Vector3 GetOffsetToOpenPosition()
+    {
+        if (slidingRoot == null)
+            return Vector3.zero;
+
+        float delta = openLocalX - slidingRoot.localPosition.x;
+        if (Mathf.Approximately(delta, 0f))
+            return Vector3.zero;
+
+        Vector3 localDelta = new Vector3(delta, 0f, 0f);
+        Transform parent = slidingRoot.parent;
+
+        return parent != null ? parent.TransformVector(localDelta) : localDelta;
+    }
+
     // ── Apertura / cierre ───────────────────────────────────────────────────
 
     /// <summary>Alterna entre abierto y cerrado. Lo llama la pestana lateral.</summary>
@@ -226,24 +278,18 @@ public abstract class SlidingPanel : MonoBehaviour
     }
 
     /// <summary>
-    /// Actualiza IsOpen y el registro global, avisando solo cuando cambia el estado
-    /// agregado (de ningun panel abierto a alguno, o al reves).
+    /// Actualiza IsOpen y el registro global, avisando cada vez que un panel entra o sale
+    /// del registro. No alcanza con mirar el agregado: abrir un segundo panel tapa area
+    /// nueva aunque ya hubiera uno desplegado.
     /// </summary>
     private void SetOpenState(bool open)
     {
         IsOpen = open;
 
-        bool wasAnyOpen = OpenPanels.Count > 0;
+        bool changed = open ? OpenPanels.Add(this) : OpenPanels.Remove(this);
 
-        if (open)
-            OpenPanels.Add(this);
-        else
-            OpenPanels.Remove(this);
-
-        bool isAnyOpen = OpenPanels.Count > 0;
-
-        if (wasAnyOpen != isAnyOpen)
-            OnAnyPanelOpenChanged?.Invoke(isAnyOpen);
+        if (changed)
+            OnAnyPanelOpenChanged?.Invoke(OpenPanels.Count > 0);
     }
 
     private void StartSlide(float targetX, bool instant)
