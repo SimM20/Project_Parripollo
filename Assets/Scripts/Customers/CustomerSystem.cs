@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using System.Collections;
 using System;
@@ -63,6 +64,12 @@ public class CustomerSystem : MonoBehaviour
     private List<WeightedOrderCut> availableOrderCuts =
     new List<WeightedOrderCut>();
     [SerializeField] private FoodAvailabilityService availabilityService;
+
+    [Header("Order Toppings")]
+    [Tooltip("Probabilidad de que un pedido al plato lleve toppings. Los pedidos con pan nunca llevan: el pan bloquea cualquier topping.")]
+    [SerializeField] [Range(0f, 1f)] private float toppingOrderChance = 0.4f;
+    [Tooltip("Máximo de toppings distintos por pedido. El pool sale de FoodCatalog.availableToppings.")]
+    [SerializeField] [Min(1)] private int maxToppingsPerOrder = 2;
 
     [Header("Night Progression")]
     [SerializeField] private MeatCutSO nightTwoCut;
@@ -166,7 +173,23 @@ public class CustomerSystem : MonoBehaviour
             );
         }
 
-        orderSystem = new OrderSystem(cuts);
+        IReadOnlyList<ToppingSO> orderToppings =
+            Catalog != null ? Catalog.GetAvailableToppings() : null;
+
+        if (orderToppings == null || orderToppings.Count == 0)
+        {
+            Debug.LogWarning(
+                "[CustomerSystem] El catálogo no tiene toppings: " +
+                "ningún pedido llevará toppings."
+            );
+        }
+
+        orderSystem = new OrderSystem(
+            cuts,
+            orderToppings,
+            toppingOrderChance,
+            maxToppingsPerOrder
+        );
 
         slotViews = new CustomerView[
             resolvedMaxSimultaneousCustomers
@@ -377,6 +400,12 @@ public class CustomerSystem : MonoBehaviour
             slotIndex +
             " | Pedido: " +
             order.PrimaryCut.cutName +
+            (order.IsSandwich
+                ? " (" + order.bread.breadName + ")"
+                : " al plato") +
+            (order.toppings.Count > 0
+                ? " + " + string.Join(", ", order.toppings.Select(t => t.toppingName))
+                : "") +
             " | Cliente " +
             spawnedTonight +
             "/" +
@@ -681,7 +710,20 @@ public class CustomerSystem : MonoBehaviour
     {
         if (customer == null || newCut == null) return;
 
-        customer.order.SetSingleCut(newCut, customer.order.GetRequestedState(0));
+        Order order = customer.order;
+        order.SetSingleCut(newCut, order.GetRequestedState(0));
+
+        // El sustituto puede cambiar el modo de servicio: lleva pan solo si el corte lo admite
+        // (y el pan que ese corte exige), y con pan no queda ningún topping.
+        bool wantsSandwich =
+            newCut.servingMode == ServingMode.SandwichOnly ||
+            (newCut.servingMode == ServingMode.Both && order.IsSandwich);
+
+        order.bread = wantsSandwich ? newCut.requiredBread : null;
+
+        if (order.IsSandwich)
+            order.toppings.Clear();
+
         customer.IsTipAnulada = true;
 
         CustomerView view = GetViewForCustomer(customer);

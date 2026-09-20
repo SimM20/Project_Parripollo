@@ -6788,6 +6788,10 @@ PrefabInstance:
       value: 80
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: toppingOrderChance
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: maxCustomersPerNight
       value: 2
       objectReference: {fileID: 0}
