@@ -861,6 +861,9 @@ public class CustomerSystem : MonoBehaviour
             // actualizar customer.slotIndex + mover transform
             view.Customer.slotIndex = i;
             view.transform.position = GetSlotPosition(i);
+
+            // El slot nuevo puede quedar debajo (o fuera) de un panel desplegado.
+            view.RefreshPickingState();
         }
     }
 

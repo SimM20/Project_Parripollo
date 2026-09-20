@@ -33,6 +33,10 @@ public class CustomerView : MonoBehaviour
     private Collider2D pickCollider;
     private bool isHovered;
 
+    // Area del collider relativa al transform, para saber si un panel abierto lo tapa.
+    private Bounds pickLocalBounds;
+    private bool hasPickBounds;
+
     // Barra de paciencia: renderer del fill (color) y contenedor (temblor).
     private SpriteRenderer patienceFillRenderer;
     private Transform patienceBarRoot;
@@ -76,6 +80,7 @@ public class CustomerView : MonoBehaviour
     void Awake()
     {
         pickCollider = GetComponent<Collider2D>();
+        CachePickBounds();
 
         if (patienceFill != null)
         {
@@ -119,10 +124,10 @@ public class CustomerView : MonoBehaviour
 
     /// <summary>
     /// Los paneles deslizantes se abren justo encima de los slots de clientes y sus
-    /// colliders comparten el mismo z, asi que el cliente le roba el OnMouseDown a las
-    /// celdas del panel (bloqueaba, por ejemplo, agarrar el carbon). Mientras haya un
-    /// panel desplegado el cliente deja de recibir hover y click, y la burbuja de pedido
-    /// se retira.
+    /// colliders comparten el mismo z, asi que un cliente tapado por el panel le roba el
+    /// OnMouseDown a las celdas (bloqueaba, por ejemplo, agarrar el carbon). Solo se apaga
+    /// el pick de los clientes que quedan debajo de un panel desplegado: los que no se
+    /// superponen siguen respondiendo al hover y muestran su burbuja de pedido.
     /// </summary>
     private void ApplyPickingState()
     {
@@ -133,7 +138,7 @@ public class CustomerView : MonoBehaviour
             return;
         }
 
-        bool blocked = SlidingPanel.AnyPanelOpen && !deliveryDragActive;
+        bool blocked = !deliveryDragActive && SlidingPanel.AnyPanelOpen && IsCoveredByOpenPanel();
 
         if (pickCollider != null)
             pickCollider.enabled = !blocked;
@@ -142,6 +147,73 @@ public class CustomerView : MonoBehaviour
 
         isHovered = false;
         RestoreBubbleAfterHover();
+    }
+
+    /// <summary>
+    /// Reevalua el gateo por paneles. Hay que llamarlo cuando el cliente cambia de slot:
+    /// moverse puede meterlo o sacarlo de debajo de un panel desplegado.
+    /// </summary>
+    public void RefreshPickingState() => ApplyPickingState();
+
+    /// <summary>
+    /// True si el area de pick queda debajo de algun panel desplegado. Sin area conocida
+    /// se bloquea igual que antes, para no reabrir el softlock.
+    /// </summary>
+    private bool IsCoveredByOpenPanel()
+    {
+        Bounds area;
+        if (!TryGetPickArea(out area))
+            return true;
+
+        return SlidingPanel.IsAreaCoveredByOpenPanel(area);
+    }
+
+    /// <summary>Area de pick en mundo, con el cliente en la posicion de su slot actual.</summary>
+    private bool TryGetPickArea(out Bounds area)
+    {
+        if (!hasPickBounds)
+            CachePickBounds();
+
+        if (!hasPickBounds)
+        {
+            area = default(Bounds);
+            return false;
+        }
+
+        area = new Bounds(pickLocalBounds.center + transform.position, pickLocalBounds.size);
+        return true;
+    }
+
+    /// <summary>
+    /// Guarda el area del collider relativa al transform. Con BoxCollider2D se lee de
+    /// offset/size (los clientes no rotan) porque Collider2D.bounds no sirve con el collider
+    /// apagado ni antes del primer sync de fisica; el resto cae al AABB del fisico.
+    /// </summary>
+    private void CachePickBounds()
+    {
+        hasPickBounds = false;
+
+        if (pickCollider == null) return;
+
+        Vector3 scale = transform.lossyScale;
+        BoxCollider2D box = pickCollider as BoxCollider2D;
+
+        if (box != null)
+        {
+            pickLocalBounds = new Bounds(
+                new Vector3(box.offset.x * scale.x, box.offset.y * scale.y, 0f),
+                new Vector3(Mathf.Abs(box.size.x * scale.x), Mathf.Abs(box.size.y * scale.y), 0f));
+            hasPickBounds = true;
+            return;
+        }
+
+        if (!pickCollider.enabled) return;
+
+        Bounds world = pickCollider.bounds;
+        if (world.size.sqrMagnitude <= 0f) return;
+
+        pickLocalBounds = new Bounds(world.center - transform.position, world.size);
+        hasPickBounds = true;
     }
 
     void OnMouseDown()
