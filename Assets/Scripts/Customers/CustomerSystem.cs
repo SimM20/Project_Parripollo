@@ -254,6 +254,7 @@ public class CustomerSystem : MonoBehaviour
             resolvedMaxSimultaneousCustomers
         ];
 
+        DayStats.ResetDay();
         UIManager.Instance?.SetServedCustomers(0);
         UIManager.Instance?.SetArrivedCustomers(0);
 
@@ -326,6 +327,7 @@ public class CustomerSystem : MonoBehaviour
         servedToday = 0;
         dayEnded = false;
 
+        DayStats.ResetDay();
         UIManager.Instance?.SetServedCustomers(0);
         UIManager.Instance?.SetArrivedCustomers(0);
 
@@ -590,6 +592,8 @@ public class CustomerSystem : MonoBehaviour
             SelectCustomer(customer);
 
         AudioManager.Instance?.PlayNewClientBell();
+
+        DayStats.SetCustomersToday(spawnedTonight);
 
         UIManager.Instance?.SetArrivedCustomers(
             spawnedTonight

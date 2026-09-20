@@ -21,7 +21,7 @@ MonoBehaviour:
     defaultText: 0 $
   - type: 3
     icon: {fileID: 21300000, guid: 2eba78db35522b841bcd8592a5170807, type: 3}
-    defaultText: 0/0 Customers
+    defaultText: 0
   - type: 4
     icon: {fileID: 21300000, guid: 484d8da8c9825f140958ba7f506759d6, type: 3}
     defaultText: 06:30

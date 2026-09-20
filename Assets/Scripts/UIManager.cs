@@ -76,20 +76,21 @@ public class UIManager : MonoBehaviour
             hudManager.UpdateTimeText(dayTime);
     }
 
-    /// <summary>Clientes que llegaron en lo que va del día (el denominador del HUD).</summary>
+    /// <summary>Clientes que aparecieron en lo que va del día: es el número que muestra el HUD.</summary>
     public void SetArrivedCustomers(int newCustomers)
     {
         arrivedCustomers = newCustomers;
         if (hudManager != null)
-            hudManager.UpdateCustomersText(servedCustomers, arrivedCustomers);
+            hudManager.UpdateCustomersText(arrivedCustomers);
     }
 
-    /// <summary>Clientes que se fueron con su pedido entregado (el numerador del HUD).</summary>
+    /// <summary>
+    /// Clientes que se fueron con su pedido entregado. No se muestra en el HUD
+    /// (que cuenta los que aparecieron), queda para el resumen de la jornada.
+    /// </summary>
     public void SetServedCustomers(int newCustomers)
     {
         servedCustomers = newCustomers;
-        if (hudManager != null)
-            hudManager.UpdateCustomersText(servedCustomers, arrivedCustomers);
     }
 
     public void SetActualMoney(float newMoney)

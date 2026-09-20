@@ -69,8 +69,8 @@ public class HudManager : MonoBehaviour
                         container.UpdateText(FormatMoney(money));
                         break;
                     case HudContainers.Customers:
-                        newText = UIManager.Instance?.GetServedCustomers().ToString() + "/" + UIManager.Instance?.GetArrivedCustomers().ToString();
-                        container.UpdateText(newText);
+                        int customers = UIManager.Instance != null ? UIManager.Instance.GetArrivedCustomers() : 0;
+                        container.UpdateText(customers.ToString());
                         break;
                     case HudContainers.Time:
                         newText = UIManager.Instance?.GetDayTime();
@@ -225,15 +225,18 @@ public class HudManager : MonoBehaviour
         return null;
     }
 
-    /// <summary>Clientes atendidos sobre clientes que llegaron en lo que va del día.</summary>
-    public void UpdateCustomersText(int served, int arrived)
+    /// <summary>
+    /// Clientes que aparecieron en lo que va del día: un contador que arranca en 0
+    /// y suma 1 por cada cliente nuevo.
+    /// </summary>
+    public void UpdateCustomersText(int customers)
     {
         if (!gameObject.activeInHierarchy) return;
 
         foreach (var container in containers)
         {
             if (container != null && container.GetContainerType() == HudContainers.Customers)
-                container.UpdateText(served.ToString() + "/" + arrived.ToString());
+                container.UpdateText(customers.ToString());
         }
     }
 
