@@ -106,6 +106,36 @@ public class FoodCatalogSO : ScriptableObject, IFoodCatalogProvider
         return bonus;
     }
 
+    /// <summary>
+    /// Multiplicador de propina aportado por las mejoras ya compradas. Aditivo y siempre >= 1:
+    /// sin mejoras devuelve `1`, con dos niveles de `+50%` devuelve `2`.
+    /// </summary>
+    public float GetTipMultiplier()
+    {
+        float bonus = 0f;
+        for (int i = 0; i < allUpgrades.Count; i++)
+        {
+            var u = allUpgrades[i];
+            if (u != null) bonus += u.TipMultiplierBonus;
+        }
+        return 1f + bonus;
+    }
+
+    /// <summary>
+    /// Multiplicador de paciencia aportado por las mejoras ya compradas. Aditivo y siempre >= 1:
+    /// sin mejoras devuelve `1`, con un nivel de `+15%` devuelve `1.15`.
+    /// </summary>
+    public float GetPatienceMultiplier()
+    {
+        float bonus = 0f;
+        for (int i = 0; i < allUpgrades.Count; i++)
+        {
+            var u = allUpgrades[i];
+            if (u != null) bonus += u.PatienceMultiplierBonus;
+        }
+        return 1f + bonus;
+    }
+
     public float GetBasePrice(ProductVariantSO variant)
     {
         if (variant == null) return 0f;

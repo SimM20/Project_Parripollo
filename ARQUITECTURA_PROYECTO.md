@@ -64,7 +64,7 @@ Assets/ScriptableObjects/
 ├── Toppings/        ToppingSO   — Chimichurri, Salsa criolla
 ├── Tutorial/        TutorialStepSO ×30 (secuencia ordenada 1..30)
 ├── FoodCatalog.asset / FoodCatalogTutorial.asset
-├── Upgrades/        UpgradeSO   — CoalBurnTimeUpgrade, CustomerCapacityUpgrade
+├── Upgrades/        UpgradeSO   — CoalBurnTimeUpgrade, CustomerCapacityUpgrade, TipUpgrade, RadioUpgrade
 ├── ShopConfig.asset / CoalData.asset
 └── Chorizo.asset, ChorizoTutorial.asset
 ```
@@ -621,15 +621,42 @@ struct DeliveryValidation { int rawCount, burnedCount; List<int> burnedIndices; 
 static DeliveryValidation Validate(IReadOnlyList<CutSideStates>,
                                    IReadOnlyList<MeatCutSO>, Func<MeatCutSO,bool> isBurnedExempt)
 static CutResult EvaluateCut(MeatStates sideA, MeatStates sideB, MeatStates requested, float basePrice)
-static float  CalculateTip(float basePrice, float patience01)
+static float  CalculateTip(float basePrice, float patience01)    // ⚠️ CÓDIGO MUERTO — nadie lo llama
 static string BuildBlockedMessage(int rawCount, int burnedCount)
+static DeliveryFeedbackEvaluation EvaluateDeliveryFeedback(Customer, float basePrice,
+                                                           int worstOffset, float tipMultiplier = 1f)
 ```
+
+`worstOffset` decide el **pago** (`EvaluateCut`); la **propina** la decide aparte
+`EvaluateDeliveryFeedback`, que mira también el tipo de cliente y la paciencia.
 
 | `worstOffset = max(|A−pedido|, |B−pedido|)` | Pago | Propina |
 |---|---|---|
-| `0` | 100 % | ✅ `max(1, floor(base × 0.2 × patience01))` |
-| `1` | 100 % | ❌ |
+| `0` | 100 % | ✅ (según tipo de cliente y paciencia) |
+| `1` | 100 % | ✅ solo con paciencia `>= 30 %` |
 | `>= 2` | `floor(base × 0.5)` | ❌ |
+
+**Propina** — `EvaluateDeliveryFeedback`. `basePrice` es el del **primer corte** del pedido. La
+propina se multiplica por `tipMultiplier` (mejora de tienda `TipPercent`, `1` = sin mejoras) **antes**
+del redondeo y del piso de `$1`. Único llamador: `GameManager.EvaluateDelivery`.
+
+| Condición | Estado | Propina |
+|---|---|---|
+| `customer == null` o `IsTipAnulada` | `SinPropina` | `0` |
+| offset `0` + `CustomerType.Turista` | `TuristaFeliz` | `max(1, round(base × 0.20 × mult))` |
+| offset `0` + paciencia `>= 50 %` | `EntregaExcelente` | `max(1, round(base × 0.10 × mult))` |
+| offset `0` + paciencia `< 50 %` | `EntregaAceptable` | `max(1, round(base × 0.05 × mult))` |
+| offset `1` + paciencia `>= 30 %` | `EntregaAceptable` | `max(1, round(base × 0.05 × mult))` |
+| offset `1` + paciencia `< 30 %` | `SinPropina` | `0` |
+| offset `>= 2` | `SinPropina` | `0` |
+
+`CustomerFeedbackSelfCheck` (`Customers/`, `[RuntimeInitializeOnLoadMethod]`) **assertea estos montos
+con `mult` por defecto (`1`)** sobre `basePrice = 1000`. No es donde se calcula la propina: es un test
+que corre solo al entrar en Play. Si cambian los porcentajes, hay que actualizar sus asserts.
+
+⚠️ `CalculateTip` y las constantes `TipPercentOfPrice` / `MinimumPerfectTip` son **código muerto**:
+quedaron de la fórmula vieja de propina, que hoy vive entera en `EvaluateDeliveryFeedback`.
+`tipEligible` de `CutResult` tampoco lo lee nadie.
 
 **Bloqueo**: cualquier cara `Crudo` o `Quemado` bloquea la entrega **completa** (atómica). `Quemado` tiene prioridad sobre `Crudo`. `isBurnedExempt` solo lo usa el tutorial (`TutorialManager.IsBurnedDeliveryExempt`) para evitar un softlock.
 
@@ -686,6 +713,11 @@ capacidad hay que verificar que los últimos slots sigan entrando en cámara.
 `Update` descuenta paciencia y expulsa a los `IsAngry`. Al quedar `spawnedTonight >= target && activeCustomers == 0` → `OnNightEnded`.
 `CompactSlots()` corre las views a la izquierda al liberarse un slot.
 
+Paciencia de cada cliente al spawnear:
+`basePatienceSeconds` (inspector, `30`) × `entry.patienceMultiplier` (por tipo) × `PatienceMultiplier`.
+Este último sale de `Catalog.GetPatienceMultiplier()` y se resuelve **una sola vez en `Start`**, igual
+que los clientes simultáneos.
+
 #### `Customer` — POCO
 `type`, `order`, `patience`, `maxPatience`, `slotIndex`; `bool IsAngry`; `float Patience01`; `Init(...)`, `UpdatePatience(float)`.
 
@@ -727,14 +759,18 @@ Mejora de tienda **por niveles**, data-driven. Los assets viven en `ScriptableOb
 registran en `FoodCatalogSO.allUpgrades` (de ahí los toma el tab `Upgrades`).
 ```csharp
 bool isUnlocked;  int maxLevel = 1;  int currentLevel = 0;   // currentLevel muta y persiste
-UpgradeEffectType effectType;        // CoalBurnTime | MaxSimultaneousCustomers
+UpgradeEffectType effectType;        // CoalBurnTime | MaxSimultaneousCustomers | TipPercent | CustomerPatience
 CoalSO targetCoal;  float upgradedMaxBurnTime;               // efecto CoalBurnTime
 int customersPerLevel = 1;                                   // efecto MaxSimultaneousCustomers
+float tipBonusPerLevel = 0.5f;                               // efecto TipPercent
+float patienceBonusPerLevel = 0.15f;                         // efecto CustomerPatience
 
-int  CurrentLevel { get; }  int MaxLevel { get; }  bool IsMaxed { get; }
-int  MaxSimultaneousCustomersBonus { get; }   // CurrentLevel × customersPerLevel, 0 si no aplica
-bool Purchase()                               // +1 nivel y ApplyEffect(); false si ya está al máximo
-void ApplyEffect()                            // idempotente: fija valor absoluto, no acumula
+int   CurrentLevel { get; }  int MaxLevel { get; }  bool IsMaxed { get; }
+int   MaxSimultaneousCustomersBonus { get; }  // CurrentLevel × customersPerLevel, 0 si no aplica
+float TipMultiplierBonus { get; }             // CurrentLevel × tipBonusPerLevel, 0 si no aplica
+float PatienceMultiplierBonus { get; }       // CurrentLevel × patienceBonusPerLevel, 0 si no aplica
+bool  Purchase()                              // +1 nivel y ApplyEffect(); false si ya está al máximo
+void  ApplyEffect()                           // idempotente: fija valor absoluto, no acumula
 ```
 Dos maneras de aplicar el efecto, según a quién le pertenezca la variable:
 
@@ -742,6 +778,8 @@ Dos maneras de aplicar el efecto, según a quién le pertenezca la variable:
 |---|---|---|
 | `CoalBurnTime` | `CoalSO._maxBurnTime` | `ApplyEffect()` → `targetCoal.SetMaxBurnTime(upgradedMaxBurnTime)`. Impacta al instante |
 | `MaxSimultaneousCustomers` | el propio `currentLevel` | `ApplyEffect()` es no-op. `CustomerSystem.Start()` **lee** el bonus del catálogo. Impacta en la noche siguiente |
+| `TipPercent` | el propio `currentLevel` | `ApplyEffect()` es no-op. `GameManager.EvaluateDelivery` **lee** `catalog.GetTipMultiplier()` en cada entrega. Impacta en la noche siguiente |
+| `CustomerPatience` | el propio `currentLevel` | `ApplyEffect()` es no-op. `CustomerSystem.Start()` **lee** `catalog.GetPatienceMultiplier()` y lo cachea en `resolvedPatienceMultiplier`. Impacta en la noche siguiente |
 
 > Una variable de MonoBehaviour de escena (como `maxSimultaneousCustomers`) no se puede mutar desde la
 > tienda: `EndScene` no tiene `CustomerSystem`. El patrón es guardar el nivel en el SO — que sobrevive
@@ -751,9 +789,37 @@ Dos maneras de aplicar el efecto, según a quién le pertenezca la variable:
 |---|---|---|---|
 | `CoalBurnTimeUpgrade` | `maxBurnTime` del carbón → `200` | `$500` | 1 |
 | `CustomerCapacityUpgrade` | `+1` cliente simultáneo por nivel | `$100` / nivel | 3 |
+| `TipUpgrade` | `+50%` de propina por nivel (**aditivo**: ×1.5 / ×2 / ×2.5) | `$100` / nivel | 3 |
+| `RadioUpgrade` | `+15%` de paciencia total + activa el GO `Radio` de `GameScene` | `$400` | 1 |
 
-⚠️ `currentLevel` se serializa en el asset: **si se compra en el Editor, queda comprado**. Para
-resetear, ponerlo en `0` a mano en el inspector.
+⚠️ `currentLevel` se serializa en el asset: **si se compra en el Editor, queda comprado**.
+`Scripts/Editor/UpgradeStateResetter.cs` lo limpia solo al salir del Play Mode (ver abajo).
+
+#### `UpgradeStateResetter` — `Scripts/Editor/UpgradeStateResetter.cs` · **solo editor**
+`[InitializeOnLoad]` + `EditorApplication.playModeStateChanged`. No entra en las builds (carpeta `Editor`).
+
+| Evento | Qué hace |
+|---|---|
+| `ExitingEditMode` | Guarda el `maxBurnTime` de todos los `CoalSO` en `SessionState` |
+| `EnteredEditMode` | `currentLevel = 0` en todos los `UpgradeSO` + restaura los `CoalSO` al valor guardado → `SaveAssets()` |
+
+> Barre `AssetDatabase.FindAssets("t:UpgradeSO")`, así que **cualquier mejora nueva queda cubierta sola**.
+> Los efectos que solo leen `currentLevel` (`MaxSimultaneousCustomers`, `TipPercent`, `CustomerPatience`)
+> no necesitan snapshot: al bajar el nivel a 0 el multiplicador vuelve a `1`.
+
+#### `UpgradeUnlockActivator` — `Core/UpgradeUnlockActivator.cs`
+Activa un GameObject de escena cuando su `UpgradeSO` tiene `CurrentLevel >= 1`. Dos campos serializados
+(`upgrade`, `target`) y un `SetActive` en `Start`.
+⚠️ **No puede vivir en el objeto que activa** (arranca desactivado → su `Start` nunca correría): va en un
+root siempre activo. En `GameScene` está en `[SYSTEMS]`, apuntando a `RadioUpgrade` + el root `Radio`.
+El `SetActive` es solo de runtime: la escena guardada deja el `Radio` desactivado.
+
+> El snapshot va a `SessionState` y no a un campo estático porque entrar a Play descarga el dominio.
+> Hay que restaurar el carbón aparte: `CoalBurnTime` escribe un **valor absoluto** en `CoalSO._maxBurnTime`,
+> así que bajar `currentLevel` a `0` no lo desharía.
+
+⚠️ Solo toca mejoras y carbones. Los otros SO que mutan en runtime (`MeatCutSO.isUnlocked`,
+`ProductVariantSO.isUnlocked` — ver `CustomerSystem` y `CoalConsumptionTracker`) siguen a mano.
 
 #### `ShopSystem` — `Shop/ShopSystem.cs`
 Lógica pura, sin UI. Vive en `EndScene` (también hay una copia en `GameScene`).

@@ -36,6 +36,11 @@ public class CustomerSystem : MonoBehaviour
             ? resolvedMaxSimultaneousCustomers
             : Mathf.Max(1, maxSimultaneousCustomers);
 
+    private float resolvedPatienceMultiplier = 1f;
+
+    /// <summary>Multiplicador de paciencia de esta noche, ya con las mejoras compradas aplicadas.</summary>
+    public float PatienceMultiplier => Mathf.Max(0.01f, resolvedPatienceMultiplier);
+
     [Header("Spawning")]
     [SerializeField] private float spawnIntervalSeconds = 6f;
     [SerializeField] private bool autoStartNight = true;
@@ -118,12 +123,16 @@ public class CustomerSystem : MonoBehaviour
         resolvedMaxSimultaneousCustomers =
             CalculateMaxSimultaneousCustomers();
 
+        resolvedPatienceMultiplier =
+            CalculatePatienceMultiplier();
+
         Debug.Log(
             "[CustomerSystem] Iniciando noche " + currentNight +
             " | Clientes de esta noche: " + customersTargetTonight +
             " | Máximo configurado: " + maximumCustomersPerNight +
             " | Simultáneos: " + resolvedMaxSimultaneousCustomers +
-            " (base " + Mathf.Max(1, maxSimultaneousCustomers) + ")"
+            " (base " + Mathf.Max(1, maxSimultaneousCustomers) + ")" +
+            " | Paciencia x" + resolvedPatienceMultiplier
         );
 
         // Comunica al tracker cuál es el corte desbloqueable.
@@ -239,6 +248,27 @@ public class CustomerSystem : MonoBehaviour
         return baseValue + catalog.GetMaxSimultaneousCustomersBonus();
     }
 
+    /// <summary>
+    /// Multiplicador de paciencia de esta noche. Se resuelve una sola vez en `Start` porque la
+    /// tienda es post-noche: una mejora comprada impacta recien al volver a la GameScene.
+    /// </summary>
+    private float CalculatePatienceMultiplier()
+    {
+        FoodCatalogSO catalog = Catalog;
+
+        if (catalog == null)
+        {
+            Debug.LogWarning(
+                "[CustomerSystem] Sin catálogo: no se aplican las mejoras de " +
+                "paciencia."
+            );
+
+            return 1f;
+        }
+
+        return Mathf.Max(0.01f, catalog.GetPatienceMultiplier());
+    }
+
     void Update()
     {
         // Tick paciencia + expulsión
@@ -345,7 +375,8 @@ public class CustomerSystem : MonoBehaviour
 
         float patience =
             basePatienceSeconds *
-            Mathf.Max(0.01f, entry.patienceMultiplier);
+            Mathf.Max(0.01f, entry.patienceMultiplier) *
+            PatienceMultiplier;
 
         customer.Init(
             entry.type,

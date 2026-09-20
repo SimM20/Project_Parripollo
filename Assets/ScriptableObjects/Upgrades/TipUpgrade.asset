@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 342aacb661265b741ae0fc63cd2ef4a3, type: 3}
-  m_Name: CustomerCapacityUpgrade
+  m_Name: TipUpgrade
   m_EditorClassIdentifier: 
-  itemName: Mesa extra
+  itemName: Frasco de propinas
   basePrice: 100
   category: 0
-  icon: {fileID: 21300000, guid: 2eba78db35522b841bcd8592a5170807, type: 3}
-  description: 'Una mesa mas en el patio: sumas un cliente simultaneo por cada nivel
-    comprado.'
+  icon: {fileID: 21300000, guid: 5078a530ba6290346a92120239d467ca, type: 3}
+  description: 'Un frasco bien a la vista en el mostrador: cada nivel sube un 50%
+    lo que te dejan de propina.'
   isUnlocked: 1
   maxLevel: 3
   currentLevel: 0
-  effectType: 1
+  effectType: 2
   targetCoal: {fileID: 0}
   upgradedMaxBurnTime: 0
   customersPerLevel: 1
