@@ -14,17 +14,25 @@ public class CustomerSystem : MonoBehaviour
 
     [Header("Customers Per Night")]
     [Min(1)]
-    [Tooltip("Cantidad de clientes durante la primera noche.")]
+    [Tooltip("Clientes esperados durante la primera jornada. Con reloj no es un cupo: " +
+             "reparte el ritmo de llegada entre la apertura y el cierre.")]
     [SerializeField] private int customersFirstNight = 20;
 
     [Min(0)]
-    [Tooltip("Cantidad de clientes que se agregan por cada nueva noche.")]
+    [Tooltip("Clientes esperados que se agregan por cada nueva jornada. Como el día dura " +
+             "siempre lo mismo, sumar clientes es apretar el ritmo de llegada.")]
     [SerializeField] private int customersAddedPerNight = 5;
 
     [Min(1)]
-    [Tooltip("Máximo absoluto de clientes que puede tener una noche.")]
+    [Tooltip("Techo absoluto de clientes esperados en una jornada.")]
     [SerializeField] private int maximumCustomersPerNight = 70;
 
+    /// <summary>
+    /// Clientes esperados en la jornada. Con <see cref="DayClock"/> no es un cupo duro:
+    /// solo fija el ritmo promedio de llegada (ver <see cref="BaseSpawnIntervalSeconds"/>),
+    /// y los que entren de verdad dependen del horario y de los slots libres. Sin reloj
+    /// (tutorial) sí es el cupo fijo de siempre.
+    /// </summary>
     private int customersTargetTonight;
 
     // Base del inspector + bonus de las mejoras. Se resuelve una vez en Start.
@@ -37,9 +45,21 @@ public class CustomerSystem : MonoBehaviour
             : Mathf.Max(1, maxSimultaneousCustomers);
 
     [Header("Spawning")]
+    [Tooltip("Segundos entre clientes cuando NO hay DayClock en la escena (tutorial). " +
+             "Con reloj, el intervalo sale de repartir los clientes esperados en la jornada.")]
     [SerializeField] private float spawnIntervalSeconds = 6f;
+
+    [Tooltip("Arrancar la jornada sola al cargar la escena.")]
     [SerializeField] private bool autoStartNight = true;
-    public Action OnNightEnded;
+
+    [Tooltip("Cómo se reparte la llegada de clientes a lo largo de la jornada: 0 = apertura, " +
+             "1 = cierre. Es un multiplicador del ritmo (2 = entra el doble que el promedio, " +
+             "0.5 = la mitad). Se normaliza sola, así que el total del día lo sigue mandando " +
+             "la cantidad de clientes esperados. Una curva plana en 1 = llegada pareja.")]
+    [SerializeField] private AnimationCurve affluenceCurve = DefaultAffluenceCurve();
+
+    /// <summary>Se dispara cuando se fue el último cliente del día. Solo una vez por jornada.</summary>
+    public Action OnDayEnded;
 
     [Header("Slots (optional)")]
     [SerializeField] private List<Transform> slots = new List<Transform>();
@@ -98,7 +118,46 @@ public class CustomerSystem : MonoBehaviour
     private CustomerView dragHoverView;
 
     private int spawnedTonight;
+    private int servedToday;
+    private bool dayEnded;
+    private float affluenceAverage = 1f;
     private Coroutine spawnRoutine;
+
+    /// <summary>
+    /// True mientras todavía puede entrar gente: con reloj, hasta la hora de cierre;
+    /// sin reloj, hasta cubrir el cupo de la noche.
+    /// </summary>
+    private bool DoorsOpen
+    {
+        get
+        {
+            DayClock clock = DayClock.Instance;
+
+            return clock != null
+                ? !clock.HasClosed
+                : spawnedTonight < customersTargetTonight;
+        }
+    }
+
+    /// <summary>
+    /// Ritmo promedio de llegada: reparte los clientes esperados a lo largo de toda la
+    /// jornada. Sin reloj cae al intervalo fijo del inspector.
+    /// </summary>
+    private float BaseSpawnIntervalSeconds
+    {
+        get
+        {
+            DayClock clock = DayClock.Instance;
+
+            if (clock == null)
+                return Mathf.Max(0.1f, spawnIntervalSeconds);
+
+            return Mathf.Max(
+                0.1f,
+                clock.DayDurationSeconds / Mathf.Max(1, customersTargetTonight)
+            );
+        }
+    }
 
     public bool IsReadyForSpawning =>
     orderSystem != null &&
@@ -195,12 +254,11 @@ public class CustomerSystem : MonoBehaviour
             resolvedMaxSimultaneousCustomers
         ];
 
-        UIManager.Instance?.SetTotalCustomers(
-            customersTargetTonight
-        );
+        UIManager.Instance?.SetServedCustomers(0);
+        UIManager.Instance?.SetArrivedCustomers(0);
 
         if (autoStartNight)
-            StartNight();
+            StartDay();
     }
     private int CalculateCustomersForNight(int nightNumber)
     {
@@ -256,42 +314,189 @@ public class CustomerSystem : MonoBehaviour
         }
     }
 
-    public void StartNight()
+    /// <summary>
+    /// Abre el local: arranca el reloj de la jornada y la llegada de clientes.
+    /// Sin <see cref="DayClock"/> en la escena (tutorial) mantiene el modo viejo de cupo fijo.
+    /// </summary>
+    public void StartDay()
     {
         ClearAllCustomers();
+
         spawnedTonight = 0;
+        servedToday = 0;
+        dayEnded = false;
 
-        UIManager.Instance?.SetActualCustomers(
-            spawnedTonight
-        );
+        UIManager.Instance?.SetServedCustomers(0);
+        UIManager.Instance?.SetArrivedCustomers(0);
 
-        UIManager.Instance?.SetTotalCustomers(
-            customersTargetTonight
-        );
+        CacheAffluenceAverage();
 
         if (spawnRoutine != null)
             StopCoroutine(spawnRoutine);
 
-        spawnRoutine = StartCoroutine(SpawnLoop());
+        DayClock clock = DayClock.Instance;
 
-        Debug.Log(
-            "[CustomerSystem] Noche iniciada. Objetivo: " +
-            customersTargetTonight + " clientes."
-        );
+        if (clock != null)
+        {
+            clock.OnClosingTime -= HandleClosingTime;
+            clock.OnClosingTime += HandleClosingTime;
+            clock.StartDay();
+
+            Debug.Log(
+                "[CustomerSystem] Jornada iniciada de " +
+                DayClock.FormatHour(clock.OpeningHour) + " a " +
+                DayClock.FormatHour(clock.ClosingHour) +
+                " | Clientes esperados: " + customersTargetTonight +
+                " (uno cada " + BaseSpawnIntervalSeconds.ToString("0.0") + "s en promedio)"
+            );
+        }
+        else
+        {
+            Debug.Log(
+                "[CustomerSystem] Jornada iniciada sin reloj (cupo fijo). Objetivo: " +
+                customersTargetTonight + " clientes."
+            );
+        }
+
+        spawnRoutine = StartCoroutine(SpawnLoop());
     }
+
     IEnumerator SpawnLoop()
     {
-        while (spawnedTonight < customersTargetTonight)
+        while (DoorsOpen)
         {
-            yield return new WaitForSeconds(
-                spawnIntervalSeconds
-            );
+            yield return new WaitForSeconds(NextSpawnDelaySeconds());
+
+            // El local pudo cerrar mientras esperábamos: nadie entra después de hora.
+            if (!DoorsOpen)
+                break;
 
             if (activeCustomers.Count >= resolvedMaxSimultaneousCustomers)
                 continue;
 
             SpawnCustomer();
         }
+
+        spawnRoutine = null;
+
+        TryEndDay();
+    }
+
+    /// <summary>
+    /// Cuánto falta para el próximo cliente. La curva de afluencia aprieta o afloja el
+    /// ritmo según la hora (mediodía y noche son los picos), sin mover el total del día:
+    /// la curva se divide por su propio promedio.
+    /// </summary>
+    private float NextSpawnDelaySeconds()
+    {
+        float interval = BaseSpawnIntervalSeconds;
+
+        DayClock clock = DayClock.Instance;
+
+        if (clock == null || affluenceCurve == null || affluenceCurve.length == 0)
+            return interval;
+
+        float multiplier = Mathf.Max(
+            0.05f,
+            affluenceCurve.Evaluate(clock.Normalized01) / affluenceAverage
+        );
+
+        return interval / multiplier;
+    }
+
+    /// <summary>
+    /// Promedio de la curva de afluencia sobre la jornada. Dividir por él deja la curva
+    /// como puro reparto: cambia CUÁNDO entra la gente, no cuánta.
+    /// </summary>
+    private void CacheAffluenceAverage()
+    {
+        affluenceAverage = 1f;
+
+        if (affluenceCurve == null || affluenceCurve.length == 0)
+            return;
+
+        const int samples = 64;
+        float sum = 0f;
+
+        for (int i = 0; i < samples; i++)
+            sum += Mathf.Max(0f, affluenceCurve.Evaluate((i + 0.5f) / samples));
+
+        float average = sum / samples;
+
+        if (average <= 0.01f)
+        {
+            Debug.LogWarning(
+                "[CustomerSystem] La curva de afluencia es casi cero en toda la jornada: " +
+                "no entraría nadie. Se ignora y la llegada queda pareja."
+            );
+
+            return;
+        }
+
+        affluenceAverage = average;
+    }
+
+    /// <summary>
+    /// Cerró el local: no entra nadie más. Si adentro ya no quedaba nadie el día termina
+    /// acá; si queda gente, sigue hasta que se vaya el último.
+    /// </summary>
+    private void HandleClosingTime()
+    {
+        if (spawnRoutine != null)
+        {
+            StopCoroutine(spawnRoutine);
+            spawnRoutine = null;
+        }
+
+        Debug.Log(
+            "[CustomerSystem] Cerró el local con " + activeCustomers.Count +
+            " cliente(s) adentro."
+        );
+
+        TryEndDay();
+    }
+
+    /// <summary>
+    /// Termina el día cuando ya no puede entrar nadie y se fue el último cliente.
+    /// Único lugar que dispara <see cref="OnDayEnded"/>, y lo hace una sola vez.
+    /// </summary>
+    private void TryEndDay()
+    {
+        if (dayEnded || activeCustomers.Count > 0 || DoorsOpen)
+            return;
+
+        dayEnded = true;
+
+        Debug.Log(
+            "[CustomerSystem] Se fue el último cliente: termina el día. " +
+            "Atendidos: " + servedToday + "/" + spawnedTonight + "."
+        );
+
+        OnDayEnded?.Invoke();
+    }
+
+    /// <summary>
+    /// Curva por defecto: mañana floja, pico del mediodía, bajón de la siesta y pico de la
+    /// noche. En una jornada de 06:30 a 21:00, t = 0.4 cae cerca de las 12:30 y t = 0.93,
+    /// de las 20:00.
+    /// </summary>
+    private static AnimationCurve DefaultAffluenceCurve()
+    {
+        AnimationCurve curve = new AnimationCurve(
+            new Keyframe(0f, 0.5f),
+            new Keyframe(0.20f, 0.7f),
+            new Keyframe(0.40f, 2f),
+            new Keyframe(0.50f, 1.8f),
+            new Keyframe(0.62f, 0.8f),
+            new Keyframe(0.80f, 0.9f),
+            new Keyframe(0.93f, 2f),
+            new Keyframe(1f, 1.5f)
+        );
+
+        for (int i = 0; i < curve.length; i++)
+            curve.SmoothTangents(i, 0f);
+
+        return curve;
     }
 
     public void SpawnCustomer(bool ignoreNightLimit = false)
@@ -306,13 +511,10 @@ public class CustomerSystem : MonoBehaviour
             return;
         }
 
-        // Los spawns normales respetan el límite de la noche.
+        // Los spawns normales respetan el horario del local (o el cupo, sin reloj).
         // El tutorial puede ignorarlo.
-        if (!ignoreNightLimit &&
-            spawnedTonight >= customersTargetTonight)
-        {
+        if (!ignoreNightLimit && !DoorsOpen)
             return;
-        }
 
         int slotIndex = GetNextFreeSlotIndex();
 
@@ -389,7 +591,7 @@ public class CustomerSystem : MonoBehaviour
 
         AudioManager.Instance?.PlayNewClientBell();
 
-        UIManager.Instance?.SetActualCustomers(
+        UIManager.Instance?.SetArrivedCustomers(
             spawnedTonight
         );
 
@@ -406,10 +608,11 @@ public class CustomerSystem : MonoBehaviour
             (order.toppings.Count > 0
                 ? " + " + string.Join(", ", order.toppings.Select(t => t.toppingName))
                 : "") +
-            " | Cliente " +
+            " | Cliente n° " +
             spawnedTonight +
-            "/" +
-            customersTargetTonight +
+            (DayClock.Instance != null
+                ? " | " + DayClock.Instance.TimeLabel
+                : "/" + customersTargetTonight) +
             (ignoreNightLimit ? " | Spawn forzado" : "")
         );
     }
@@ -620,6 +823,9 @@ public class CustomerSystem : MonoBehaviour
     {
         if (customer == null) return;
 
+        servedToday++;
+        UIManager.Instance?.SetServedCustomers(servedToday);
+
         customer.StartFeedback();
 
         // Limpiar selecciones previas
@@ -803,11 +1009,13 @@ public class CustomerSystem : MonoBehaviour
         // opcional: compactar slots (corrés a la izquierda para no dejar huecos)
         CompactSlots();
 
-        if (spawnedTonight >= customersTargetTonight &&
-     activeCustomers.Count == 0)
-        {
-            OnNightEnded?.Invoke();
-        }
+        TryEndDay();
+    }
+
+    private void OnDestroy()
+    {
+        if (DayClock.Instance != null)
+            DayClock.Instance.OnClosingTime -= HandleClosingTime;
     }
 
     private void CompactSlots()

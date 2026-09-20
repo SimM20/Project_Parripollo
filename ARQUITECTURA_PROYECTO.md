@@ -13,7 +13,8 @@
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`) |
 | Código propio | `Assets/Scripts/` — **115 archivos, ~15.2k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
-| Género | Simulador de parrilla argentina: cocinar cortes, armar platos/sándwiches, entregar a clientes por noche |
+| Género | Simulador de parrilla argentina **contrarreloj**: cocinar cortes, armar platos/sándwiches y entregar a los clientes que entran durante la jornada |
+| Jornada | **06:30 → 21:00 en 5 minutos reales** (`DayClock`). A las 21:00 cierra y deja de entrar gente; el día termina **cuando se va el último cliente**, no al cerrar |
 | Persistencia | Solo `init.cfg` (resolución/FPS). **No hay savegame**: el progreso vive en objetos `DontDestroyOnLoad` |
 | Idioma del dominio | Español (`Crudo`, `Jugoso`, `Hecho`, `Muy_Hecho`, `Pasado`, `Quemado`) |
 
@@ -27,7 +28,7 @@
 ```
 Assets/Scripts/
 ├── (raíz)      Managers globales, modelo base de items/grilla, utilidades
-├── Core/       Orquestación de partida + transferencia de items entre vistas
+├── Core/       Orquestación de partida, reloj de la jornada, transferencia de items entre vistas
 ├── Grill/      Vista Parrilla: cocción, capas carne/carbón, HUD de hover
 ├── Cooler/     Stock persistente (CoolerSystem). Vista Heladera DEPRECADA → StockPanel
 ├── Build/      Vista Armado: plato, pan/guarniciones/toppings, undo, entrega por arrastre
@@ -43,11 +44,11 @@ Assets/Scripts/
 | Carpeta | Responsabilidad | Archivos clave |
 |---|---|---|
 | **raíz** | Singletons de sesión (`UIManager`, `AudioManager`, `PlayerWallet`, `CoalConsumptionTracker`), modelo base drag&drop (`Item`), grilla (`GridSlot`), entidades físicas (`Meat`, `Coal`), buffer de carbón, arranque (`Init`), utilidades de escena | `Item.cs`, `GridSlot.cs`, `Meat.cs`, `Coal.cs`, `PlayerWallet.cs`, `CoalConsumptionTracker.cs`, `SceneManagementUtils.cs` |
-| **Core/** | Bucle de partida e input global (`GameManager`), armado del plato (`BuildStationSystem`), staging de carne entre vistas (`MeatTransferBuffer`), draggables inter-vista, basura, pausa global (`GamePause`) | `GameManager.cs` (445), `MeatTransferBuffer.cs` (949), `BuildStationSystem.cs`, `GamePause.cs` |
+| **Core/** | Bucle de partida e input global (`GameManager`), **reloj de la jornada (`DayClock`)**, armado del plato (`BuildStationSystem`), staging de carne entre vistas (`MeatTransferBuffer`), draggables inter-vista, basura, pausa global (`GamePause`) | `GameManager.cs` (445), `DayClock.cs`, `MeatTransferBuffer.cs` (949), `BuildStationSystem.cs`, `GamePause.cs` |
 | **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `CoalStackCounter.cs` |
 | **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
 | **Build/** | Zona de drop del plato (`BuildFoodDropZone`), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command), **entrega del plato por arrastre** (`PlateDeliveryDraggable`) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (670), `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs` |
-| **Customers/** | Spawn ponderado por noche, tick de paciencia, modo selección de entrega, view + burbuja + recuadro | `CustomerSystem.cs` (673), `Customer.cs`, `CustomerView.cs` |
+| **Customers/** | Llegada de clientes según el horario y la curva de afluencia, tick de paciencia, modo selección de entrega, view + burbuja + recuadro | `CustomerSystem.cs`, `Customer.cs`, `CustomerView.cs` |
 | **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada | `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Catálogo estático (`FoodCatalogSO`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
 | **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
@@ -99,9 +100,11 @@ graph TD
     GM -.->|SendMessage duck-typed| MTB & CTB
     GM -->|CookingDeliveryEvaluator.Validate/EvaluateCut| EVAL[CookingDeliveryEvaluator]
     GM -->|Add pago+propina| PW
-    GM -->|EndNight| CCT
+    GM -->|EndDay| CCT
 
-    CUS -->|event OnNightEnded| GM
+    CUS -->|event OnDayEnded| GM
+    DC[DayClock] -->|event OnClosingTime| CUS
+    CUS -->|StartDay| DC
     CUS --> OS[OrderSystem] --> ORD[Order]
     CUS --> FAS[FoodAvailabilityService] --> CAT[FoodCatalogSO]
     FAS --> CS_
@@ -159,7 +162,8 @@ graph TD
 | Emisor | Evento | Consumidores |
 |---|---|---|
 | `ViewManager` | `OnViewChanged(ViewType)` | `TutorialManager`, `GrillNotificationManager`, `StockPanelController` |
-| `CustomerSystem` | `OnNightEnded` (campo `Action`) | `GameManager.EndNight` |
+| `CustomerSystem` | `OnDayEnded` (campo `Action`) | `GameManager.EndDay` |
+| `DayClock` | `OnClosingTime` (`event Action`) | `CustomerSystem.HandleClosingTime` (corta el spawn e intenta cerrar el día) |
 | `CoolerSystem` | `OnMissingItemRequested(ItemDataSO)` | (sin consumidor actual — hook futuro) |
 | `BuildStationSystem` | `OnAssemblyChanged`, `OnAssemblyCleared` | `BuildUndoHistory.Clear` |
 | `BuildUndoHistory` | `OnHistoryChanged` | `RollbackButtonUI` (habilita/deshabilita) |
@@ -242,7 +246,7 @@ public CustomerSystem Customers { get; }          // acceso para PlateDeliveryDr
 public struct DeliveryEvaluation { accepted, rejectReason, rejectShort, cookingBlocked, validation, payment, tip, worstOffset, feedbackState }
 public DeliveryEvaluation EvaluateDelivery(Customer) // reglas de entrega SIN efectos: preview + entrega real
 public bool TryDeliverToCustomer(Customer)        // ÚNICO lugar con efectos de entrega (mensaje, cobro, limpieza)
-public void EndNight()   // desuscribe, tracker.RegisterDayCompleted(), carga "EndScene"
+public void EndDay()     // desuscribe, DayClock.StopDay(), tracker.RegisterDayCompleted(), carga "EndScene"
 // privados relevantes: TryToggleGrillLayer, ClearBuildAssembly, CleanAshes,
 //                      TryEnterDeliverySelection, ConfirmDeliverySelection
 ```
@@ -327,6 +331,34 @@ pausado mientras cualquiera esté activa.
   persisten entre escenas.
 
 ---
+
+#### `DayClock` — `Core/DayClock.cs` · Singleton (opcional por escena)
+**Única fuente de la hora del juego.** Mapea la franja del local sobre segundos reales.
+
+```csharp
+event Action OnClosingTime;               // una sola vez, al llegar a la hora de cierre
+bool  IsRunning, HasClosed, IsOpen;
+float OpeningHour, ClosingHour, DayDurationSeconds;
+float CurrentHour;                        // horas decimales: 6.5 = 06:30
+float Normalized01;                       // 0 apertura → 1 cierre; entrada de la curva de afluencia
+float RemainingRealSeconds;
+string TimeLabel, HudLabel;               // "06:30" · HudLabel pasa a closedLabel ("CERRADO") al cerrar
+void StartDay(), StopDay();
+static string FormatHour(float hour, int minuteStep = 1);
+```
+
+| Campo de inspector | `GameScene` | |
+|---|---|---|
+| `openingHour` / `closingHour` | `6.5` / `21` | Horas decimales |
+| `dayDurationSeconds` | `300` | Partida de 5 minutos |
+| `displayMinuteStep` | `5` | El HUD salta de 5 en 5 minutos de juego: a esta velocidad, mostrar cada minuto es ilegible |
+| `closedLabel` | `CERRADO` | Reemplaza la hora en el HUD desde el cierre |
+
+Corre con `Time.deltaTime`, así que **`GamePause` lo congela solo** (`timeScale = 0`) — no hay
+que pausarlo a mano. Empuja el texto al HUD (`UIManager.SetDayTime`) **solo cuando cambia**, no por frame.
+El reloj **no termina el día**: al llegar al cierre se detiene y avisa; quién cierra la jornada es
+`CustomerSystem` (ver 3.5 y 4.5).
+⚠️ Es **opcional**: una escena sin `DayClock` (el tutorial) mantiene el modo viejo de cupo fijo de clientes.
 
 ### 3.2 Parrilla y cocción
 
@@ -654,7 +686,7 @@ Se autolimpia con `BuildStationSystem.OnAssemblyCleared`. **Solo registra pan / 
 
 #### `CustomerSystem` — `Customers/CustomerSystem.cs`
 ```csharp
-Action OnNightEnded;                      // campo público, no `event`
+Action OnDayEnded;                        // campo público, no `event`
 Customer currentCustomer;                 // compat con GameManager
 Customer SelectedCustomer { get; }
 bool IsDeliverySelectionActive { get; }
@@ -663,7 +695,7 @@ IReadOnlyList<Customer> ActiveCustomers { get; }
 int  MaxSimultaneousCustomers { get; }    // base del inspector + mejoras compradas
 FoodCatalogSO Catalog { get; }            // vía FoodAvailabilityService
 
-void StartNight()
+void StartDay()                           // arranca el DayClock y la llegada de clientes
 void SpawnCustomer(bool ignoreNightLimit = false)
 void SelectCustomer(Customer), SelectAdjacentCustomer(int direction)
 bool BeginDeliverySelection();  void EndDeliverySelection()
@@ -675,15 +707,35 @@ void SetDeliveryDragHover(CustomerView)     // resaltado durante el arrastre del
 `SelectedCustomer` ni `IsDeliverySelectionActive`: el arrastre y la selección por teclado conviven.
 Al pasar `null` restaura lo que corresponda al modo teclado. Si el cliente resaltado se va enojado
 a mitad del arrastre, `RemoveCustomer` suelta el recuadro antes de destruir la view.
-Clientes por noche: `min(customersFirstNight + (noche−1) × customersAddedPerNight, maximumCustomersPerNight)`
-(por defecto `20 + 5·(n−1)`, cap `70`; en `GameScene`: `10 + 2·(n−1)`, cap `30`).
+**Clientes esperados en la jornada**: `min(customersFirstNight + (día−1) × customersAddedPerNight, maximumCustomersPerNight)`
+(por defecto `20 + 5·(n−1)`, cap `70`; en `GameScene`: `21 + 4·(n−1)`, cap `63`).
+Con `DayClock` **no es un cupo**: fija el ritmo promedio de llegada
+(`BaseSpawnIntervalSeconds = DayDurationSeconds / esperados` → `300/21 ≈ 14,3 s` el día 1).
+Subir los clientes del día es **apretar el ritmo**, no alargar la jornada: el día dura siempre lo mismo.
+Sin reloj (tutorial) vuelve a ser el cupo fijo de siempre y manda `spawnIntervalSeconds`.
+
+**Curva de afluencia** (`affluenceCurve`, `AnimationCurve` de `0` = apertura a `1` = cierre):
+multiplica el ritmo y **se divide por su propio promedio**, así que cambia *cuándo* entra la gente,
+nunca *cuánta*. Por defecto: mañana floja, pico del mediodía, bajón de la siesta y pico de la noche
+→ con la config de `GameScene`, un cliente cada `34 s` a las 06:30, cada `8 s` a las 12:30,
+cada `21 s` a las 15:30 y cada `8 s` a las 20:00. **Una curva plana en `1` = llegada pareja.**
 **Clientes simultáneos** = `maxSimultaneousCustomers` (base del inspector, `3` en `GameScene`) +
 `Catalog.GetMaxSimultaneousCustomersBonus()`. Se resuelve **una sola vez en `Start`** (dimensiona
 `slotViews` y limita el `SpawnLoop`), así que una mejora comprada en la tienda recién impacta en la
 noche siguiente. Sin `availabilityService` asignado no hay catálogo → warning y se usa solo la base.
 ⚠️ Los slots extra se posicionan con `autoFirstSlotPos + right × autoSlotSpacing × i`: al subir la
 capacidad hay que verificar que los últimos slots sigan entrando en cámara.
-`Update` descuenta paciencia y expulsa a los `IsAngry`. Al quedar `spawnedTonight >= target && activeCustomers == 0` → `OnNightEnded`.
+`Update` descuenta paciencia y expulsa a los `IsAngry`.
+**Fin del día** — lo resuelve `TryEndDay()`, único lugar que dispara `OnDayEnded` (y una sola vez,
+con guarda `dayEnded`). Se lo llama desde `RemoveCustomer`, desde `HandleClosingTime` y al salir del
+`SpawnLoop`; dispara solo si **`!DoorsOpen && activeCustomers == 0`**:
+
+| | Con `DayClock` | Sin reloj (tutorial) |
+|---|---|---|
+| `DoorsOpen` | `!clock.HasClosed` | `spawnedTonight < customersTargetTonight` |
+
+Es decir: a las 21:00 cierra el local y deja de entrar gente, **pero la partida sigue** hasta que se
+va el último cliente de adentro — por más que ya sea de noche. El HUD muestra `CERRADO` en ese tramo.
 `CompactSlots()` corre las views a la izquierda al liberarse un slot.
 
 #### `Customer` — POCO
@@ -872,7 +924,7 @@ MainMenuScene (build index 0)
 |---|---|
 | `Awake` | Singletons se registran (`GameManager`, `UIManager`, `AudioManager`, `CoolerSystem`+DDOL, `PlayerWallet`+DDOL, `ToppingStock`+DDOL, `CoalConsumptionTracker`+DDOL, `BuildUndoHistory`). `GrillSystem.AssignGridCoordinates`. `CoolerSystem.BuildInitialStockRuntime()` (o restaura backup) |
 | `OnEnable` | Visualizadores y UI se suscriben a `OnInventoryChanged` / `OnMoneyChanged` |
-| `Start` | `ViewManager.Show(startView)` · `CustomerSystem` calcula la noche, aplica desbloqueos, crea `OrderSystem` y lanza `StartNight()` · `GameManager` se suscribe a `OnNightEnded` y publica el día en el HUD · buffers resuelven tipos por reflexión y llaman `RefreshVisuals()` |
+| `Start` | `ViewManager.Show(startView)` · `CustomerSystem` calcula los clientes esperados, aplica desbloqueos, crea `OrderSystem` y lanza `StartDay()`, que arranca el `DayClock` · `GameManager` se suscribe a `OnDayEnded` y publica el día en el HUD · buffers resuelven tipos por reflexión y llaman `RefreshVisuals()` |
 | `Update` | Ver 4.3 |
 
 > ⚠️ `TutorialManager.Start` y `CustomerSystem.Start` pueden correr en cualquier orden: el spawn forzado del tutorial espera un frame y reintenta hasta 5 s.
@@ -887,7 +939,8 @@ MainMenuScene (build index 0)
 | `Meat` | Efectos (calor/humo); si está agarrado: `HandleHeldInput` + `UpdateHoverPreview` |
 | `CustomerSystem` | Descuenta paciencia y expulsa clientes enojados |
 | `GrillNotificationManager` | Si la vista ≠ `Grill`: reagrupa las carnes por `MeatCutSO` y refresca las burbujas |
-| Corrutinas | `CustomerSystem.SpawnLoop` (cada `spawnIntervalSeconds`, def. `6 s`) |
+| `DayClock` | Avanza la hora con `Time.deltaTime`; al llegar al cierre se detiene y emite `OnClosingTime`. Escribe el HUD solo cuando cambia el texto |
+| Corrutinas | `CustomerSystem.SpawnLoop` (espera `NextSpawnDelaySeconds()`: ritmo base de la jornada × curva de afluencia; sin reloj, `spawnIntervalSeconds`) |
 | `CoalStackCounter` (×60) | **`LateUpdate`**: cuenta el stack del slot; solo toca texto/`SetActive` si el conteo o la visibilidad cambiaron |
 
 ### 4.4 Controles
@@ -908,13 +961,28 @@ MainMenuScene (build index 0)
 | `R` | Build, sin seleccionar | Limpiar el plato entero |
 | `M` | Build | Informar corte faltante |
 
-### 4.5 Ciclo de noche
+### 4.5 Ciclo de jornada
 
 ```
-GameScene ──[último cliente atendido/expulsado]──► CustomerSystem.OnNightEnded
-   └─► GameManager.EndNight()
+GameScene
+   06:30 ──────────────── DayClock corre 14,5 h en 300 s reales ──────────────── 21:00
+     │  CustomerSystem.SpawnLoop: un cliente cada (300/esperados) ÷ curva de afluencia
+     │                                                                            │
+     │                                                          DayClock.OnClosingTime
+     │                                                   HUD: "21:00" → "CERRADO"
+     │                                                   CustomerSystem corta el SpawnLoop
+     │                                                                            │
+     └──────────── se sigue atendiendo a los que quedaron adentro ────────────────┘
+                                          │
+                          [se va el último cliente] TryEndDay()
+                                          ▼
+                             CustomerSystem.OnDayEnded
+   └─► GameManager.EndDay()
+         ├─ DayClock.StopDay()
          ├─ CoalConsumptionTracker.RegisterDayCompleted()   // DaysPlayed++, aplica desbloqueos
          └─ LoadSceneByName("EndScene")
+
+   El botón "terminar el día" del menú de pausa llama al mismo GameManager.EndDay().
 
 EndScene
    ├─ EndScreen        muestra el dinero · botones: MainMenu / Retry / GoShopping

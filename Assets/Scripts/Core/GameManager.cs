@@ -48,7 +48,7 @@ public class GameManager : MonoBehaviour
         if (grillSystem != null)
             grillSystem.SetMeatVisualsVisible(true);
 
-        customerSystem.OnNightEnded += EndNight;
+        customerSystem.OnDayEnded += EndDay;
 
         CoalConsumptionTracker tracker = CoalConsumptionTracker.Instance;
 
@@ -504,11 +504,18 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
-    public void EndNight()
+    /// <summary>
+    /// Cierra la jornada y pasa a la pantalla de resumen. Lo dispara
+    /// <see cref="CustomerSystem.OnDayEnded"/> cuando se va el último cliente, o el botón
+    /// de terminar el día del menú de pausa.
+    /// </summary>
+    public void EndDay()
     {
-        customerSystem.OnNightEnded -= EndNight;
+        customerSystem.OnDayEnded -= EndDay;
 
-        Debug.Log("[GameManager] Terminando la noche.");
+        DayClock.Instance?.StopDay();
+
+        Debug.Log("[GameManager] Terminando la jornada.");
 
         CoalConsumptionTracker tracker = CoalConsumptionTracker.Instance;
 
@@ -521,7 +528,7 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogError(
                 "[GameManager] No existe ningún CoalConsumptionTracker. " +
-                "La noche terminó, pero no se pudo registrar el progreso."
+                "La jornada terminó, pero no se pudo registrar el progreso."
             );
         }
         else
@@ -531,14 +538,14 @@ public class GameManager : MonoBehaviour
             tracker.RegisterDayCompleted();
 
             Debug.Log(
-                "[GameManager] Noche " + nightBefore +
-                " completada correctamente. " +
-                "Próxima noche: " + tracker.CurrentNight
+                "[GameManager] Día " + nightBefore +
+                " completado correctamente. " +
+                "Próximo día: " + tracker.CurrentNight
             );
         }
 
         SceneManagementUtils.LoadSceneByName("EndScene");
     }
 
-    private void OnDestroy() => customerSystem.OnNightEnded -= EndNight;
+    private void OnDestroy() => customerSystem.OnDayEnded -= EndDay;
 }
