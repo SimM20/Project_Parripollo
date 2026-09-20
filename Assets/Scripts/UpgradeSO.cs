@@ -4,7 +4,9 @@ using UnityEngine;
 public enum UpgradeEffectType
 {
     CoalBurnTime,
-    MaxSimultaneousCustomers
+    MaxSimultaneousCustomers,
+    TipPercent,
+    CustomerPatience
 }
 
 [CreateAssetMenu(fileName = "Upgrade", menuName = "Asado/Upgrade")]
@@ -39,6 +41,14 @@ public class UpgradeSO : ItemDataSO
     [Tooltip("Clientes simultaneos que suma cada nivel comprado.")]
     [Min(1)] public int customersPerLevel = 1;
 
+    [Header("Efecto: propina")]
+    [Tooltip("Fraccion extra de propina que suma cada nivel comprado. 0.5 = +50% por nivel (aditivo).")]
+    [Min(0f)] public float tipBonusPerLevel = 0.5f;
+
+    [Header("Efecto: paciencia")]
+    [Tooltip("Fraccion extra de paciencia que suma cada nivel comprado. 0.15 = +15% por nivel (aditivo).")]
+    [Min(0f)] public float patienceBonusPerLevel = 0.15f;
+
     /// <summary>Niveles comprados, saneado contra maxLevel.</summary>
     public int CurrentLevel => Mathf.Clamp(currentLevel, 0, MaxLevel);
 
@@ -54,6 +64,24 @@ public class UpgradeSO : ItemDataSO
             ? CurrentLevel * Mathf.Max(1, customersPerLevel)
             : 0;
 
+    /// <summary>
+    /// Fraccion extra de propina que aporta la mejora en su nivel actual (aditiva).
+    /// Nivel 2 con `tipBonusPerLevel = 0.5` devuelve `1.0` (= +100%).
+    /// </summary>
+    public float TipMultiplierBonus =>
+        effectType == UpgradeEffectType.TipPercent
+            ? CurrentLevel * Mathf.Max(0f, tipBonusPerLevel)
+            : 0f;
+
+    /// <summary>
+    /// Fraccion extra de paciencia que aporta la mejora en su nivel actual (aditiva).
+    /// Nivel 1 con `patienceBonusPerLevel = 0.15` devuelve `0.15` (= +15%).
+    /// </summary>
+    public float PatienceMultiplierBonus =>
+        effectType == UpgradeEffectType.CustomerPatience
+            ? CurrentLevel * Mathf.Max(0f, patienceBonusPerLevel)
+            : 0f;
+
     /// <summary>Sube un nivel y aplica el efecto. Devuelve false si ya estaba al maximo.</summary>
     public bool Purchase()
     {
@@ -68,6 +96,10 @@ public class UpgradeSO : ItemDataSO
     /// Aplica el efecto. Idempotente: fija un valor absoluto, no acumula.
     /// `MaxSimultaneousCustomers` no muta nada aca: el bonus vive en `currentLevel` y lo lee
     /// `CustomerSystem` al arrancar la noche (la tienda es post-noche, no hay clientes vivos).
+    /// `TipPercent` tampoco muta nada: lo lee `GameManager` en cada entrega via
+    /// `FoodCatalogSO.GetTipMultiplier()`.
+    /// `CustomerPatience` tampoco muta nada: lo lee `CustomerSystem` al arrancar la noche via
+    /// `FoodCatalogSO.GetPatienceMultiplier()`.
     /// </summary>
     public void ApplyEffect()
     {
@@ -81,5 +113,7 @@ public class UpgradeSO : ItemDataSO
     {
         maxLevel = Mathf.Max(1, maxLevel);
         currentLevel = Mathf.Clamp(currentLevel, 0, maxLevel);
+        tipBonusPerLevel = Mathf.Max(0f, tipBonusPerLevel);
+        patienceBonusPerLevel = Mathf.Max(0f, patienceBonusPerLevel);
     }
 }

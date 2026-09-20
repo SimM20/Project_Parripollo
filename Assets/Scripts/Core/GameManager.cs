@@ -368,8 +368,10 @@ public class GameManager : MonoBehaviour
             ? (isSandwich ? cuts[0].sellPriceSandwich : cuts[0].sellPricePlate)
             : result.payment;
 
+        float tipMultiplier = catalog != null ? catalog.GetTipMultiplier() : 1f;
+
         var feedbackEval = CookingDeliveryEvaluator.EvaluateDeliveryFeedback(
-            customer, primaryBasePrice, result.worstOffset);
+            customer, primaryBasePrice, result.worstOffset, tipMultiplier);
 
         result.tip = feedbackEval.tipAmount;
         result.feedbackState = feedbackEval.state;

@@ -251,10 +251,14 @@ public static class CookingDeliveryEvaluator
     /// - Entrega excelente: corte en punto exacto + paciencia alta (>= 50%) -> 10% propina.
     /// - Entrega aceptable: corte con desfase 1 o paciencia media/baja -> 3% a 7% (5% promedio).
     /// - Sin propina: desfase >= 2, o propina anulada por faltante, o propina evaluada en 0 -> $0.
+    /// `tipMultiplier` es el bonus aditivo de las mejoras de tienda (`UpgradeEffectType.TipPercent`);
+    /// `1` = sin mejoras. Se aplica antes del redondeo y del piso de $1.
     /// </summary>
-    public static DeliveryFeedbackEvaluation EvaluateDeliveryFeedback(Customer customer, float basePrice, int worstOffset)
+    public static DeliveryFeedbackEvaluation EvaluateDeliveryFeedback(Customer customer, float basePrice, int worstOffset, float tipMultiplier = 1f)
     {
         var result = new DeliveryFeedbackEvaluation();
+
+        tipMultiplier = Mathf.Max(0f, tipMultiplier);
 
         if (customer == null || customer.IsTipAnulada)
         {
@@ -268,17 +272,17 @@ public static class CookingDeliveryEvaluator
             if (customer.type == CustomerType.Turista)
             {
                 result.state = CustomerFeedbackState.TuristaFeliz;
-                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.20f));
+                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.20f * tipMultiplier));
             }
             else if (customer.Patience01 >= 0.5f)
             {
                 result.state = CustomerFeedbackState.EntregaExcelente;
-                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.10f));
+                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.10f * tipMultiplier));
             }
             else
             {
                 result.state = CustomerFeedbackState.EntregaAceptable;
-                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.05f));
+                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.05f * tipMultiplier));
             }
         }
         else if (worstOffset == 1)
@@ -286,7 +290,7 @@ public static class CookingDeliveryEvaluator
             if (customer.Patience01 >= 0.3f)
             {
                 result.state = CustomerFeedbackState.EntregaAceptable;
-                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.05f));
+                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.05f * tipMultiplier));
             }
             else
             {
