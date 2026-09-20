@@ -528,14 +528,20 @@ public class CustomerSystem : MonoBehaviour
             return "<color=#EF4444>" + eval.rejectShort + "</color>";
 
         string payment = "$" + (int)eval.payment;
+        string line;
 
         if (eval.tip > 0f)
-            return "<color=#4ADE80>" + payment + " + $" + (int)eval.tip + " propina</color>";
+            line = "<color=#4ADE80>" + payment + " + $" + (int)eval.tip + " propina</color>";
+        else if (eval.worstOffset >= 2)
+            line = "<color=#F59E0B>" + payment + " (mitad) - sin propina</color>";
+        else
+            line = "<color=#FACC15>" + payment + " - sin propina</color>";
 
-        if (eval.worstOffset >= 2)
-            return "<color=#F59E0B>" + payment + " (mitad) - sin propina</color>";
+        // Toppings/pan mal entregados: se acepta igual, pero se avisa qué falló.
+        if (!string.IsNullOrEmpty(eval.extrasNote))
+            line += "\n<color=#FACC15>" + eval.extrasNote + "</color>";
 
-        return "<color=#FACC15>" + payment + " - sin propina</color>";
+        return line;
     }
 
     private void RefreshSelectionVisuals()

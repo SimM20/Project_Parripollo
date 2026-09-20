@@ -220,8 +220,16 @@ public class GameManager : MonoBehaviour
 
         public float payment;
         public float tip;
+        /// <summary>Peor desfase de toda la entrega: cocción de cada corte y extras (toppings/pan).</summary>
         public int worstOffset;
         public CustomerFeedbackState feedbackState;
+
+        /// <summary>
+        /// Toppings faltantes/sobrantes y pan de más, medidos en la misma escala de desfase
+        /// que la cocción. <c>extrasNote</c> lo resume para el jugador; null si no hay errores.
+        /// </summary>
+        public CookingDeliveryEvaluator.ExtrasResult extras;
+        public string extrasNote;
 
         /// <summary>
         /// Desfase por corte del plato, alineado con <c>BuildStationSystem.AssembledCuts</c>:
@@ -300,6 +308,10 @@ public class GameManager : MonoBehaviour
         bool isSandwich = customer.order.IsSandwich;
         result.cutOffsets = new int[cuts.Count];
 
+        // Parte del pago que todavía cobra precio completo: es la única que los extras pueden
+        // recortar. Lo que ya se recortó por cocción (desfase >= 2) no se vuelve a partir.
+        float unreducedPayment = 0f;
+
         for (int i = 0; i < cuts.Count; i++)
         {
             MeatCutSO cut = cuts[i];
@@ -317,9 +329,27 @@ public class GameManager : MonoBehaviour
             var cutResult = CookingDeliveryEvaluator.EvaluateCut(sideStates[i].sideA, sideStates[i].sideB, requested, basePrice);
             result.cutOffsets[i] = cutResult.worstOffset;
             result.payment += cutResult.price;
+            if (cutResult.worstOffset < 2)
+                unreducedPayment += cutResult.price;
             if (cutResult.worstOffset > result.worstOffset)
                 result.worstOffset = cutResult.worstOffset;
         }
+
+        // ── Extras: toppings faltantes/sobrantes y pan de más, misma escala que la cocción ──
+        // Cada error suma 1 de desfase: uno solo cuesta la propina, dos o más parten el precio.
+        result.extras = CookingDeliveryEvaluator.EvaluateExtras(
+            customer.order.toppings,
+            buildStationSystem.AssembledToppings,
+            isSandwich,
+            buildStationSystem.HasBread);
+        result.extrasNote = CookingDeliveryEvaluator.BuildExtrasMessage(result.extras);
+
+        if (result.extras.offset > result.worstOffset)
+            result.worstOffset = result.extras.offset;
+
+        if (result.extras.offset >= 2)
+            result.payment = (result.payment - unreducedPayment)
+                           + CookingDeliveryEvaluator.ApplyReducedPrice(unreducedPayment);
 
         if (result.validation.IsBlocked)
         {
@@ -447,6 +477,10 @@ public class GameManager : MonoBehaviour
             return false;
         }
 
+        // La entrega se acepta igual, pero el jugador tiene que saber por qué cobró menos.
+        if (!string.IsNullOrEmpty(eval.extrasNote))
+            DeliveryFeedbackText.Instance?.Show(eval.extrasNote);
+
         ClearBuildAssembly();
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
@@ -464,7 +498,8 @@ public class GameManager : MonoBehaviour
         customerSystem.TriggerDeliveryFeedback(customer, eval.payment, eval.tip, eval.feedbackState);
 
         Debug.Log("✔ Pedido entregado. Pago: " + eval.payment + " | Propinas: " + eval.tip
-                  + " | Desfase: " + eval.worstOffset + " | Estado: " + eval.feedbackState);
+                  + " | Desfase: " + eval.worstOffset + " | Estado: " + eval.feedbackState
+                  + (eval.extrasNote != null ? " | Extras: " + eval.extrasNote : ""));
         TutorialManager.NotifyProductDelivered();
         return true;
     }

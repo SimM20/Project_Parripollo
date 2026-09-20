@@ -110,6 +110,122 @@ public static class CookingDeliveryEvaluator
         return result;
     }
 
+    /// <summary>Precio con el mismo recorte que un corte con desfase >= 2.</summary>
+    public static float ApplyReducedPrice(float price)
+    {
+        return Mathf.Floor(price * ReducedPriceMultiplier);
+    }
+
+    // ── Extras: toppings y pan ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Resultado de comparar lo pedido contra lo armado en toppings y pan.
+    /// Cada faltante o sobrante cuenta como un punto de desfase, en la misma escala
+    /// que el punto de cocción: 1 tolera (sin propina), >= 2 mitad de precio.
+    /// </summary>
+    public struct ExtrasResult
+    {
+        public int offset;
+        public List<ToppingSO> missingToppings;
+        public List<ToppingSO> extraToppings;
+        /// <summary>Pidieron al plato y el armado tiene pan.</summary>
+        public bool extraBread;
+
+        public bool HasIssues => offset > 0;
+    }
+
+    /// <summary>
+    /// Compara toppings pedidos vs armados como conjuntos (verter dos veces la misma salsa
+    /// no es error) y detecta pan de más. La falta de pan no entra acá: bloquea antes en
+    /// BuildStationSystem.TryBuildSandwich.
+    /// </summary>
+    public static ExtrasResult EvaluateExtras(
+        IReadOnlyList<ToppingSO> requestedToppings,
+        IReadOnlyList<ToppingSO> assembledToppings,
+        bool breadRequested,
+        bool breadAssembled)
+    {
+        var result = new ExtrasResult
+        {
+            missingToppings = new List<ToppingSO>(),
+            extraToppings = new List<ToppingSO>()
+        };
+
+        if (requestedToppings != null)
+        {
+            for (int i = 0; i < requestedToppings.Count; i++)
+            {
+                ToppingSO topping = requestedToppings[i];
+                if (topping == null || result.missingToppings.Contains(topping)) continue;
+
+                if (!Contains(assembledToppings, topping))
+                    result.missingToppings.Add(topping);
+            }
+        }
+
+        if (assembledToppings != null)
+        {
+            for (int i = 0; i < assembledToppings.Count; i++)
+            {
+                ToppingSO topping = assembledToppings[i];
+                if (topping == null || result.extraToppings.Contains(topping)) continue;
+
+                if (!Contains(requestedToppings, topping))
+                    result.extraToppings.Add(topping);
+            }
+        }
+
+        result.extraBread = !breadRequested && breadAssembled;
+
+        result.offset = result.missingToppings.Count
+                      + result.extraToppings.Count
+                      + (result.extraBread ? 1 : 0);
+
+        return result;
+    }
+
+    private static bool Contains(IReadOnlyList<ToppingSO> list, ToppingSO topping)
+    {
+        if (list == null) return false;
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i] == topping)
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Resumen corto de los extras mal entregados, por ejemplo
+    /// "Falta Chimichurri · Sobra Salsa criolla · Sobra el pan". Null si no hay errores.
+    /// </summary>
+    public static string BuildExtrasMessage(ExtrasResult extras)
+    {
+        if (!extras.HasIssues)
+            return null;
+
+        var parts = new List<string>();
+
+        if (extras.missingToppings != null)
+        {
+            for (int i = 0; i < extras.missingToppings.Count; i++)
+                parts.Add("Falta " + extras.missingToppings[i].toppingName);
+        }
+
+        if (extras.extraToppings != null)
+        {
+            for (int i = 0; i < extras.extraToppings.Count; i++)
+                parts.Add("Sobra " + extras.extraToppings[i].toppingName);
+        }
+
+        if (extras.extraBread)
+            parts.Add("Sobra el pan");
+
+        return string.Join(" · ", parts);
+    }
+
     /// <summary>
     /// Propina de una pieza perfecta. Siempre mayor que cero; escala con la paciencia restante.
     /// Fórmula TBD de balance.
