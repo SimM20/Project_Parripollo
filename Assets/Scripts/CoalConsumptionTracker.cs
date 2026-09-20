@@ -4,9 +4,14 @@ public class CoalConsumptionTracker : MonoBehaviour
 {
     public static CoalConsumptionTracker Instance { get; private set; }
 
-    [Header("Night Unlocks")]
-    [Tooltip("Corte que se desbloquea al comenzar la segunda noche.")]
-    [SerializeField] private MeatCutSO nightTwoCut;
+    [Header("Progresión")]
+    [Tooltip("Calendario de desbloqueos por día y curva de duración de la jornada.")]
+    [SerializeField] private ProgressionConfigSO progression;
+
+    [Tooltip("Catálogo sobre el que se escriben los desbloqueos de cortes y variantes.")]
+    [SerializeField] private FoodCatalogSO catalog;
+
+    public ProgressionConfigSO Progression => progression;
 
     public int TotalCoalConsumed { get; private set; } = 0;
     public int DaysPlayed { get; private set; } = 0;
@@ -25,27 +30,25 @@ public class CoalConsumptionTracker : MonoBehaviour
             : 0f;
 
     
+    /// <summary>
+    /// Segundos que dura la ventana de entrada de clientes del día actual, según la curva
+    /// de progresión. Sin configuración devuelve 0 y el reloj usa su propio valor de respaldo.
+    /// </summary>
+    public float CurrentWindowSeconds =>
+        progression != null ? progression.GetWindowSeconds(CurrentNight) : 0f;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
         {
-            // Si el tracker persistente no tenía el corte configurado,
-            // toma la referencia configurada en esta copia antes de destruirla.
-            if (Instance.nightTwoCut == null && nightTwoCut != null)
-            {
-                Instance.nightTwoCut = nightTwoCut;
-
-                Debug.Log(
-                    "[NightProgression] Se copió el corte de desbloqueo al " +
-                    "tracker persistente: " + nightTwoCut.cutName
-                );
-
+            // El tracker persistente puede venir de una escena anterior sin las referencias
+            // de progresión: se las toma a esta copia antes de destruirla.
+            if (Instance.CopyProgressionFrom(this))
                 Instance.ApplyProgressionUnlocks();
-            }
 
             Debug.Log(
                 "[NightProgression] Se encontró otro CoalConsumptionTracker. " +
-                "Se mantiene el existente. Noche actual: " +
+                "Se mantiene el existente. Día actual: " +
                 Instance.CurrentNight
             );
 
@@ -62,11 +65,31 @@ public class CoalConsumptionTracker : MonoBehaviour
 
         Debug.Log(
             "[NightProgression] Tracker iniciado. " +
-            "Noches completadas: " + DaysPlayed +
-            " | Noche actual: " + CurrentNight +
-            " | Corte noche 2: " +
-            (nightTwoCut != null ? nightTwoCut.cutName : "SIN ASIGNAR")
+            "Días completados: " + DaysPlayed +
+            " | Día actual: " + CurrentNight +
+            " | Progresión: " + (progression != null ? progression.name : "SIN ASIGNAR") +
+            " | Catálogo: " + (catalog != null ? catalog.name : "SIN ASIGNAR")
         );
+    }
+
+    /// <summary>Copia las referencias que falten desde otra copia. True si cambió algo.</summary>
+    private bool CopyProgressionFrom(CoalConsumptionTracker other)
+    {
+        bool changed = false;
+
+        if (progression == null && other.progression != null)
+        {
+            progression = other.progression;
+            changed = true;
+        }
+
+        if (catalog == null && other.catalog != null)
+        {
+            catalog = other.catalog;
+            changed = true;
+        }
+
+        return changed;
     }
 
     private void OnDestroy()
@@ -87,63 +110,66 @@ public class CoalConsumptionTracker : MonoBehaviour
     }
 
     /// <summary>
-    /// Se llama al finalizar una noche.
+    /// Se llama al finalizar una jornada. Sube el contador de días y aplica en el acto los
+    /// desbloqueos del día siguiente: la tienda del final del día ya los ve, así que el
+    /// jugador puede llegar al día nuevo con stock del corte recién incorporado.
     /// </summary>
     public void RegisterDayCompleted()
     {
-        int completedNight = CurrentNight;
+        int completedDay = CurrentNight;
 
         DaysPlayed++;
 
         Debug.Log(
-            "[NightProgression] Terminó la noche " + completedNight +
-            ". Noches completadas: " + DaysPlayed +
-            " | Próxima noche: " + CurrentNight
+            "[NightProgression] Terminó el día " + completedDay +
+            ". Días completados: " + DaysPlayed +
+            " | Próximo día: " + CurrentNight
         );
 
         ApplyProgressionUnlocks();
     }
-    public void ConfigureNightTwoCut(MeatCutSO cut)
+
+    /// <summary>
+    /// Inyecta las referencias de progresión si el tracker no las tenía (por ejemplo, desde
+    /// una escena que sí las configura) y reaplica los desbloqueos.
+    /// </summary>
+    public void ConfigureProgression(ProgressionConfigSO newProgression, FoodCatalogSO newCatalog)
     {
-        if (cut == null)
+        bool changed = false;
+
+        if (progression == null && newProgression != null)
         {
-            Debug.LogWarning(
-                "[NightProgression] Se intentó configurar el corte de noche 2 con null."
-            );
-            return;
+            progression = newProgression;
+            changed = true;
         }
 
-        nightTwoCut = cut;
+        if (catalog == null && newCatalog != null)
+        {
+            catalog = newCatalog;
+            changed = true;
+        }
 
-        Debug.Log(
-            "[NightProgression] Corte de noche 2 configurado: " +
-            nightTwoCut.cutName +
-            " | Noche actual: " + CurrentNight
-        );
-
-        ApplyProgressionUnlocks();
+        if (changed)
+            ApplyProgressionUnlocks();
     }
 
+    /// <summary>
+    /// Reescribe el estado de desbloqueo de todos los cortes y variantes según el día actual.
+    /// Es idempotente y no depende de lo que haya quedado guardado en los assets.
+    /// </summary>
     private void ApplyProgressionUnlocks()
     {
-        if (nightTwoCut == null)
+        if (progression == null || catalog == null)
         {
             Debug.LogWarning(
-                "[NightProgression] No se asignó el corte de la noche 2 " +
-                "en CoalConsumptionTracker."
+                "[NightProgression] Falta " +
+                (progression == null ? "el ProgressionConfig" : "el FoodCatalog") +
+                " en CoalConsumptionTracker: no se aplican los desbloqueos por día."
             );
             return;
         }
 
-        bool shouldBeUnlocked = CurrentNight >= 2;
-
-        nightTwoCut.isUnlocked = shouldBeUnlocked;
-
-        Debug.Log(
-            "[NightProgression] Noche actual: " + CurrentNight +
-            " | Corte: " + nightTwoCut.cutName +
-            " | Desbloqueado: " + nightTwoCut.isUnlocked
-        );
+        progression.ApplyUnlocks(CurrentNight, catalog);
     }
 
     /// <summary>
@@ -159,7 +185,7 @@ public class CoalConsumptionTracker : MonoBehaviour
 
         Debug.Log(
             "[NightProgression] Progreso reiniciado. " +
-            "Noche actual: " + CurrentNight
+            "Día actual: " + CurrentNight
         );
     }
 }

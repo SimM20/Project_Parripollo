@@ -24,12 +24,21 @@ public class DeliveryFeedbackText : MonoBehaviour
 
     public void Show(string message)
     {
+        Show(message, showSeconds);
+    }
+
+    /// <summary>
+    /// Igual que <see cref="Show(string)"/> pero con una duración propia, para mensajes que
+    /// tienen que quedar más tiempo que el feedback de entrega (aviso de últimos clientes).
+    /// </summary>
+    public void Show(string message, float seconds)
+    {
         if (text == null) return;
 
         text.text = message;
 
         if (hideRoutine != null) StopCoroutine(hideRoutine);
-        hideRoutine = StartCoroutine(HideAfterDelay());
+        hideRoutine = StartCoroutine(HideAfterDelay(Mathf.Max(0.1f, seconds)));
     }
 
     public void HideNow()
@@ -50,9 +59,9 @@ public class DeliveryFeedbackText : MonoBehaviour
         if (text != null) text.text = string.Empty;
     }
 
-    private IEnumerator HideAfterDelay()
+    private IEnumerator HideAfterDelay(float seconds)
     {
-        yield return new WaitForSeconds(showSeconds);
+        yield return new WaitForSeconds(seconds);
         hideRoutine = null;
         if (text != null) text.text = string.Empty;
     }

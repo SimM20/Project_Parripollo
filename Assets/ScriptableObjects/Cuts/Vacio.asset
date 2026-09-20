@@ -38,6 +38,6 @@ MonoBehaviour:
   grillSpace: {x: 2, y: 1}
   servingMode: 0
   requiredBread: {fileID: 11400000, guid: 829722caacc1e9745856c2faeb47f743, type: 2}
-  isUnlocked: 1
+  isUnlocked: 0
   sellPricePlate: 120
   sellPriceSandwich: 120

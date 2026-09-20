@@ -24,14 +24,17 @@ MonoBehaviour:
     hecho: {fileID: 21300000, guid: e27fc8fe27303754d88f6327f229a5f6, type: 3}
     muyHecho: {fileID: 21300000, guid: 0046be8b1f113fb47ba07ac6fd4c9391, type: 3}
     pasado: {fileID: 21300000, guid: 5fcbcd1fe0a9acf4ca610bb157db271b, type: 3}
+    quemado: {fileID: 0}
   cookingSpritesB:
     crudo: {fileID: 21300000, guid: da97b655637c0754f84452fa38d8a92a, type: 3}
     jugoso: {fileID: 21300000, guid: bc3fd957f2f41f7468c9b8068ed052a8, type: 3}
     hecho: {fileID: 21300000, guid: e27fc8fe27303754d88f6327f229a5f6, type: 3}
     muyHecho: {fileID: 21300000, guid: 0046be8b1f113fb47ba07ac6fd4c9391, type: 3}
     pasado: {fileID: 21300000, guid: 5fcbcd1fe0a9acf4ca610bb157db271b, type: 3}
+    quemado: {fileID: 0}
   timeHeatA: 80
   timeHeatB: 55
+  heatScale: 0
   grillSpace: {x: 1, y: 2}
   servingMode: 2
   requiredBread: {fileID: 11400000, guid: 829722caacc1e9745856c2faeb47f743, type: 2}

@@ -188,6 +188,14 @@ MonoBehaviour:
     textColor: {r: 1, g: 1, b: 1, a: 1}
     offset: {x: -0.06, y: 0.06}
     sortingOrder: 50
+  showHeatMap: 1
+  heatMapLowColor: {r: 0.85, g: 0.15, b: 0.05, a: 1}
+  heatMapHighColor: {r: 1, g: 0.7, b: 0.2, a: 1}
+  heatMapMaxAlpha: 0.75
+  heatMapFullHeat: 6
+  heatMapGlowScale: 1.6
+  heatMapFlicker: 0.12
+  heatMapSortingOrder: -1
 --- !u!1 &8917083685848211823
 GameObject:
   m_ObjectHideFlags: 0
@@ -232,12 +240,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebf44d133e96948418ae1d7a5982d4d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CustomerSystem
-  maxSimultaneousCustomers: 4
-  customersFirstNight: 20
-  customersAddedPerNight: 5
-  maximumCustomersPerNight: 70
-  spawnIntervalSeconds: 6
+  maxSimultaneousCustomers: 3
+  spawnGapSeconds: 6
   autoStartNight: 1
+  lastCustomersMessage: "Ya no va a pasar nadie m\xE1s por ac\xE1. Estos son tus
+    \xFAltimos clientes."
+  lastCustomersMessageSeconds: 5
   slots: []
   autoFirstSlotPos: {x: -6, y: 3.2, z: 0}
   autoSlotSpacing: 2.6
@@ -249,6 +257,8 @@ MonoBehaviour:
   - cut: {fileID: 0}
     weight: 1
   availabilityService: {fileID: 0}
-  nightTwoCut: {fileID: 0}
-  nightTwoVariants: []
+  toppingOrderChance: 0.4
+  maxToppingsPerOrder: 2
+  progression: {fileID: 0}
   basePatienceSeconds: 30
+  feedbackConfig: {fileID: 0}

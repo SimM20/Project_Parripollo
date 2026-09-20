@@ -13,7 +13,15 @@ MonoBehaviour:
   m_Name: Matambre al plato
   m_EditorClassIdentifier: 
   displayName: Matambre al plato
+  variantSprite: {fileID: 0}
+  cookingSprites:
+    crudo: {fileID: 0}
+    jugoso: {fileID: 0}
+    hecho: {fileID: 0}
+    muyHecho: {fileID: 0}
+    pasado: {fileID: 0}
+    quemado: {fileID: 0}
   cut: {fileID: 11400000, guid: 8b8f10511e0bbdd428c59c72eac942b7, type: 2}
   bread: {fileID: 0}
   sellPrice: 100
-  isUnlocked: 1
+  isUnlocked: 0

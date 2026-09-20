@@ -2,85 +2,94 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Reloj de la jornada: mapea la franja horaria del local (06:30 → 21:00 por defecto)
-/// sobre una cantidad fija de segundos reales. Es el único dueño de la hora del juego;
-/// el resto la lee, nadie la escribe.
+/// Ventana de entrada de clientes de la jornada. Es el único dueño del tiempo de día.
 ///
-/// El reloj NO termina el día por sí solo. Al llegar a la hora de cierre se detiene y
-/// avisa con <see cref="OnClosingTime"/>: desde ahí no entra nadie más, pero los clientes
-/// que ya están adentro se siguen atendiendo. El día termina cuando se va el último
-/// (lo decide <see cref="CustomerSystem"/>), por más que afuera ya sea de noche.
+/// La ventana <b>no arranca al cargar la escena</b>: arranca exactamente cuando entra el
+/// primer cliente (<see cref="BeginWindow"/>). Su duración la fija la curva de progresión
+/// (<see cref="ProgressionConfigSO.GetWindowSeconds"/>): 3:00 el día 1, creciendo hasta un
+/// tope de 7:00.
 ///
-/// Corre con Time.deltaTime, así que <see cref="GamePause"/> (timeScale = 0) lo congela
-/// solo: no hay que acordarse de pausarlo a mano.
+/// El reloj <b>no termina el día</b>. Al agotarse la ventana se detiene y avisa con
+/// <see cref="OnClosingTime"/>: desde ahí no entra nadie más, pero los clientes que ya están
+/// adentro se siguen atendiendo con sus reglas de siempre. El día termina cuando se va el
+/// último (lo decide <see cref="CustomerSystem"/>).
 ///
-/// Es opcional: una escena sin DayClock (el tutorial) mantiene el modo viejo de
-/// "atender una cantidad fija de clientes".
+/// Corre con Time.deltaTime, así que <see cref="GamePause"/> (timeScale = 0) lo congela solo.
+///
+/// Por pedido del spec, el tiempo restante <b>existe internamente pero no se le muestra al
+/// jugador</b>: el mapeo a hora del día (06:30 → 21:00) y <see cref="HudLabel"/> quedan
+/// listos para cuando se defina el HUD temporal, detrás de <see cref="pushToHud"/>.
+///
+/// Es opcional: una escena sin DayClock (el tutorial) no tiene ventana ni entrada automática
+/// de clientes, y su día no termina solo.
 /// </summary>
 public class DayClock : MonoBehaviour
 {
     public static DayClock Instance { get; private set; }
 
-    [Header("Horario del local")]
+    [Header("Duración de la ventana")]
+    [Tooltip("Segundos de ventana cuando no hay ProgressionConfig que la defina (tutorial, pruebas). " +
+             "En la partida normal la pisa la curva de progresión del día.")]
+    [Min(1f)]
+    [SerializeField] private float fallbackWindowSeconds = 180f;
+
+    [Header("Hora del día (interna)")]
     [Tooltip("Hora de apertura en horas decimales: 6.5 = 06:30.")]
     [Range(0f, 24f)]
     [SerializeField] private float openingHour = 6.5f;
 
-    [Tooltip("Hora de cierre en horas decimales: 21 = 21:00. A esa hora deja de entrar gente.")]
+    [Tooltip("Hora de cierre en horas decimales: 21 = 21:00. La ventana entera se mapea sobre esta franja.")]
     [Range(0f, 24f)]
     [SerializeField] private float closingHour = 21f;
 
-    [Header("Duración real")]
-    [Tooltip("Segundos reales que tarda el reloj en ir de la apertura al cierre. 300 = 5 minutos.")]
-    [Min(1f)]
-    [SerializeField] private float dayDurationSeconds = 300f;
+    [Header("HUD (desactivado por spec)")]
+    [Tooltip("El spec pide que el reloj NO se muestre todavía. Encender solo cuando se defina " +
+             "el HUD temporal y exista un HudContainer de tipo Time en la escena.")]
+    [SerializeField] private bool pushToHud = false;
 
-    [Header("Display")]
-    [Tooltip("Redondeo de los minutos que muestra el HUD. Con 5 el reloj salta de 06:30 a 06:35: " +
-             "a esta velocidad, mostrar cada minuto es ilegible.")]
+    [Tooltip("Redondeo de los minutos mostrados. Con 5 el reloj salta de 06:30 a 06:35.")]
     [Range(1, 30)]
     [SerializeField] private int displayMinuteStep = 5;
 
-    [Tooltip("Texto del HUD una vez cerrado el local, mientras se atiende a los últimos clientes.")]
+    [Tooltip("Texto que reemplaza la hora una vez cerrada la ventana.")]
     [SerializeField] private string closedLabel = "CERRADO";
 
-    /// <summary>Se dispara una sola vez, al llegar a la hora de cierre.</summary>
+    /// <summary>Se dispara una sola vez, al agotarse la ventana de entrada.</summary>
     public event Action OnClosingTime;
 
-    /// <summary>True mientras el reloj avanza (entre la apertura y el cierre).</summary>
+    /// <summary>True mientras la ventana corre (ya entró el primer cliente y todavía no cerró).</summary>
     public bool IsRunning { get; private set; }
 
-    /// <summary>True desde que el reloj llegó a la hora de cierre. No vuelve a false hasta el próximo día.</summary>
+    /// <summary>True desde que la ventana se agotó. No vuelve a false hasta el próximo día.</summary>
     public bool HasClosed { get; private set; }
 
-    /// <summary>True mientras todavía puede entrar gente nueva.</summary>
-    public bool IsOpen => IsRunning && !HasClosed;
+    /// <summary>True mientras todavía puede entrar gente nueva (incluido antes del primer cliente).</summary>
+    public bool IsOpen => !HasClosed;
+
+    /// <summary>Duración de la ventana de hoy, en segundos.</summary>
+    public float WindowSeconds { get; private set; }
+
+    public float ElapsedSeconds { get; private set; }
+
+    /// <summary>Segundos de ventana que quedan. Es interno: no se le muestra al jugador.</summary>
+    public float RemainingSeconds => Mathf.Max(0f, WindowSeconds - ElapsedSeconds);
+
+    /// <summary>0 al abrir, 1 al cerrar.</summary>
+    public float Normalized01 =>
+        WindowSeconds > 0f ? Mathf.Clamp01(ElapsedSeconds / WindowSeconds) : 0f;
 
     public float OpeningHour => openingHour;
     public float ClosingHour => closingHour;
 
-    /// <summary>Segundos reales que dura la jornada de punta a punta.</summary>
-    public float DayDurationSeconds => dayDurationSeconds;
+    /// <summary>Hora del día en horas decimales (6.5 = 06:30), mapeando la ventana sobre la franja.</summary>
+    public float CurrentHour => Mathf.Lerp(openingHour, closingHour, Normalized01);
 
-    /// <summary>Hora actual en horas decimales (6.5 = 06:30).</summary>
-    public float CurrentHour { get; private set; }
-
-    /// <summary>0 en la apertura, 1 en el cierre. Es la entrada de la curva de afluencia.</summary>
-    public float Normalized01 =>
-        dayDurationSeconds > 0f
-            ? Mathf.Clamp01(elapsedSeconds / dayDurationSeconds)
-            : 1f;
-
-    /// <summary>Segundos reales que faltan para el cierre.</summary>
-    public float RemainingRealSeconds => Mathf.Max(0f, dayDurationSeconds - elapsedSeconds);
-
-    /// <summary>Hora actual como "HH:MM", ya redondeada al paso del display.</summary>
+    /// <summary>Hora actual como "HH:MM", redondeada al paso del display.</summary>
     public string TimeLabel => FormatHour(CurrentHour, displayMinuteStep);
 
-    /// <summary>Lo que va al HUD: la hora mientras está abierto, el cartel de cerrado después.</summary>
+    /// <summary>Lo que iría al HUD: la hora mientras está abierto, el cartel de cerrado después.</summary>
     public string HudLabel => HasClosed ? closedLabel : TimeLabel;
 
-    private float elapsedSeconds;
     private string lastPushedLabel;
 
     private void Awake()
@@ -92,7 +101,7 @@ public class DayClock : MonoBehaviour
         }
 
         Instance = this;
-        CurrentHour = openingHour;
+        WindowSeconds = fallbackWindowSeconds;
     }
 
     private void OnDestroy()
@@ -108,40 +117,54 @@ public class DayClock : MonoBehaviour
         if (!IsRunning)
             return;
 
-        elapsedSeconds += Time.deltaTime;
-
-        float t = Normalized01;
-        CurrentHour = Mathf.Lerp(openingHour, closingHour, t);
+        ElapsedSeconds += Time.deltaTime;
 
         PushLabel();
 
-        if (t >= 1f)
+        if (ElapsedSeconds >= WindowSeconds)
             Close();
     }
 
     /// <summary>
-    /// Arranca la jornada desde la hora de apertura. Lo llama <see cref="CustomerSystem.StartDay"/>:
-    /// el reloj y la entrada de clientes empiezan juntos.
+    /// Deja la ventana lista para la jornada, sin arrancarla. La arranca el primer cliente.
+    /// <paramref name="windowSeconds"/> en 0 o menos cae al valor de respaldo del inspector.
     /// </summary>
-    public void StartDay()
+    public void PrepareDay(float windowSeconds)
     {
-        elapsedSeconds = 0f;
-        CurrentHour = openingHour;
+        WindowSeconds = windowSeconds > 0f ? windowSeconds : fallbackWindowSeconds;
+        ElapsedSeconds = 0f;
         HasClosed = false;
-        IsRunning = true;
+        IsRunning = false;
         lastPushedLabel = null;
 
         PushLabel();
 
         Debug.Log(
-            "[DayClock] Jornada iniciada: " + FormatHour(openingHour) +
-            " → " + FormatHour(closingHour) +
-            " en " + dayDurationSeconds + "s reales."
+            "[DayClock] Ventana preparada: " + FormatSeconds(WindowSeconds) +
+            " (" + Mathf.RoundToInt(WindowSeconds) + "s). " +
+            "Arranca cuando entre el primer cliente."
         );
     }
 
     /// <summary>
-    /// Corta el reloj sin llegar a la hora de cierre (cambio de escena, final anticipado).
+    /// Arranca el contador. Lo llama <see cref="CustomerSystem"/> al entrar el primer cliente
+    /// del día. Llamarlo de nuevo no hace nada: la ventana arranca una sola vez.
+    /// </summary>
+    public void BeginWindow()
+    {
+        if (IsRunning || HasClosed)
+            return;
+
+        IsRunning = true;
+
+        Debug.Log(
+            "[DayClock] Entró el primer cliente: arranca la ventana de " +
+            FormatSeconds(WindowSeconds) + "."
+        );
+    }
+
+    /// <summary>
+    /// Corta la ventana sin agotarla (cambio de escena, final anticipado desde el menú).
     /// No dispara <see cref="OnClosingTime"/>.
     /// </summary>
     public void StopDay() => IsRunning = false;
@@ -153,14 +176,11 @@ public class DayClock : MonoBehaviour
 
         IsRunning = false;
         HasClosed = true;
-        CurrentHour = closingHour;
+        ElapsedSeconds = WindowSeconds;
 
         PushLabel();
 
-        Debug.Log(
-            "[DayClock] Cerró el local a las " + FormatHour(closingHour) +
-            ". No entra nadie más; el día termina cuando se vaya el último cliente."
-        );
+        Debug.Log("[DayClock] Se agotó la ventana de entrada: no entra nadie más.");
 
         OnClosingTime?.Invoke();
     }
@@ -168,6 +188,9 @@ public class DayClock : MonoBehaviour
     /// <summary>Manda el texto al HUD solo cuando cambia: si no, sería un string por frame.</summary>
     private void PushLabel()
     {
+        if (!pushToHud)
+            return;
+
         string label = HudLabel;
 
         if (label == lastPushedLabel)
@@ -194,9 +217,16 @@ public class DayClock : MonoBehaviour
         return hours.ToString("00") + ":" + minutes.ToString("00");
     }
 
+    /// <summary>Segundos → "M:SS", para los logs de duración de la ventana.</summary>
+    public static string FormatSeconds(float seconds)
+    {
+        int total = Mathf.Max(0, Mathf.RoundToInt(seconds));
+        return (total / 60) + ":" + (total % 60).ToString("00");
+    }
+
     private void OnValidate()
     {
-        // Un cierre anterior o igual a la apertura dejaría la jornada en duración cero.
+        // Un cierre anterior o igual a la apertura dejaría la franja horaria en cero.
         if (closingHour <= openingHour)
             closingHour = Mathf.Min(24f, openingHour + 0.5f);
     }

@@ -12,15 +12,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1405610c36759ba479e08c316fd0cc0e, type: 3}
   m_Name: Matambre
   m_EditorClassIdentifier: 
-  cutName: Matambre
-  price: 0
+  itemName: Matambre
+  basePrice: 0
+  category: 0
+  _visualOffset: {x: 0, y: 0, z: 0}
   meatSpriteA: {fileID: 0}
   meatSpriteB: {fileID: 0}
+  cookingSpritesA:
+    crudo: {fileID: 0}
+    jugoso: {fileID: 0}
+    hecho: {fileID: 0}
+    muyHecho: {fileID: 0}
+    pasado: {fileID: 0}
+    quemado: {fileID: 0}
+  cookingSpritesB:
+    crudo: {fileID: 0}
+    jugoso: {fileID: 0}
+    hecho: {fileID: 0}
+    muyHecho: {fileID: 0}
+    pasado: {fileID: 0}
+    quemado: {fileID: 0}
   timeHeatA: 0
   timeHeatB: 0
-  grillSpace: {x: 0, y: 0}
+  heatScale: 0
+  grillSpace: {x: 1, y: 1}
   servingMode: 2
   requiredBread: {fileID: 11400000, guid: 829722caacc1e9745856c2faeb47f743, type: 2}
-  isUnlocked: 1
+  isUnlocked: 0
   sellPricePlate: 100
   sellPriceSandwich: 100

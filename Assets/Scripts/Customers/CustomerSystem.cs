@@ -9,31 +9,11 @@ public class CustomerSystem : MonoBehaviour
 {
     [Header("Customer Limits")]
     [Min(1)]
-    [Tooltip("Base de clientes simultaneos. Las mejoras de la tienda le suman encima.")]
-    [SerializeField] private int maxSimultaneousCustomers = 4;
+    [Tooltip("Base de clientes simultáneos. Las mejoras de la tienda le suman encima.")]
+    [SerializeField] private int maxSimultaneousCustomers = 3;
 
-    [Header("Customers Per Night")]
-    [Min(1)]
-    [Tooltip("Clientes esperados durante la primera jornada. Con reloj no es un cupo: " +
-             "reparte el ritmo de llegada entre la apertura y el cierre.")]
-    [SerializeField] private int customersFirstNight = 20;
-
-    [Min(0)]
-    [Tooltip("Clientes esperados que se agregan por cada nueva jornada. Como el día dura " +
-             "siempre lo mismo, sumar clientes es apretar el ritmo de llegada.")]
-    [SerializeField] private int customersAddedPerNight = 5;
-
-    [Min(1)]
-    [Tooltip("Techo absoluto de clientes esperados en una jornada.")]
-    [SerializeField] private int maximumCustomersPerNight = 70;
-
-    /// <summary>
-    /// Clientes esperados en la jornada. Con <see cref="DayClock"/> no es un cupo duro:
-    /// solo fija el ritmo promedio de llegada (ver <see cref="BaseSpawnIntervalSeconds"/>),
-    /// y los que entren de verdad dependen del horario y de los slots libres. Sin reloj
-    /// (tutorial) sí es el cupo fijo de siempre.
-    /// </summary>
-    private int customersTargetTonight;
+    // La jornada ya no tiene un máximo total de clientes: cuántos pasan depende de cuánto
+    // dura la ventana y de qué tan rápido el jugador libera slots.
 
     // Base del inspector + bonus de las mejoras. Se resuelve una vez en Start.
     private int resolvedMaxSimultaneousCustomers;
@@ -45,18 +25,25 @@ public class CustomerSystem : MonoBehaviour
             : Mathf.Max(1, maxSimultaneousCustomers);
 
     [Header("Spawning")]
-    [Tooltip("Segundos entre clientes cuando NO hay DayClock en la escena (tutorial). " +
-             "Con reloj, el intervalo sale de repartir los clientes esperados en la jornada.")]
-    [SerializeField] private float spawnIntervalSeconds = 6f;
+    [Tooltip("Separación mínima entre dos entradas consecutivas, en segundos. Es una cola " +
+             "global: nunca hay un timer por slot. Con varios slots libres el primero entra " +
+             "ya y los demás se espacian por este valor.")]
+    [Min(0f)]
+    [SerializeField] private float spawnGapSeconds = 6f;
 
     [Tooltip("Arrancar la jornada sola al cargar la escena.")]
     [SerializeField] private bool autoStartNight = true;
 
-    [Tooltip("Cómo se reparte la llegada de clientes a lo largo de la jornada: 0 = apertura, " +
-             "1 = cierre. Es un multiplicador del ritmo (2 = entra el doble que el promedio, " +
-             "0.5 = la mitad). Se normaliza sola, así que el total del día lo sigue mandando " +
-             "la cantidad de clientes esperados. Una curva plana en 1 = llegada pareja.")]
-    [SerializeField] private AnimationCurve affluenceCurve = DefaultAffluenceCurve();
+    [Header("Fin de la ventana")]
+    [Tooltip("Aviso cuando se agota la ventana y todavía quedan clientes adentro.")]
+    [TextArea]
+    [SerializeField]
+    private string lastCustomersMessage =
+        "Ya no va a pasar nadie más por acá. Estos son tus últimos clientes.";
+
+    [Tooltip("Segundos que queda visible el aviso. No pausa ni bloquea nada.")]
+    [Min(0.1f)]
+    [SerializeField] private float lastCustomersMessageSeconds = 5f;
 
     /// <summary>Se dispara cuando se fue el último cliente del día. Solo una vez por jornada.</summary>
     public Action OnDayEnded;
@@ -91,12 +78,11 @@ public class CustomerSystem : MonoBehaviour
     [Tooltip("Máximo de toppings distintos por pedido. El pool sale de FoodCatalog.availableToppings.")]
     [SerializeField] [Min(1)] private int maxToppingsPerOrder = 2;
 
-    [Header("Night Progression")]
-    [SerializeField] private MeatCutSO nightTwoCut;
-    [SerializeField]
-    private List<ProductVariantSO> nightTwoVariants =
-        new List<ProductVariantSO>();
-   
+    [Header("Progresión")]
+    [Tooltip("Calendario de desbloqueos y curva de duración de la jornada. Se le pasa al " +
+             "CoalConsumptionTracker, que es el dueño del progreso.")]
+    [SerializeField] private ProgressionConfigSO progression;
+
     [Header("Patience")]
     [SerializeField] private float basePatienceSeconds = 30f;
 
@@ -120,76 +106,52 @@ public class CustomerSystem : MonoBehaviour
     private int spawnedTonight;
     private int servedToday;
     private bool dayEnded;
-    private float affluenceAverage = 1f;
     private Coroutine spawnRoutine;
 
-    /// <summary>
-    /// True mientras todavía puede entrar gente: con reloj, hasta la hora de cierre;
-    /// sin reloj, hasta cubrir el cupo de la noche.
-    /// </summary>
-    private bool DoorsOpen
-    {
-        get
-        {
-            DayClock clock = DayClock.Instance;
-
-            return clock != null
-                ? !clock.HasClosed
-                : spawnedTonight < customersTargetTonight;
-        }
-    }
+    /// <summary>Momento de la última entrada. Es el único timer: la cola es global.</summary>
+    private float lastSpawnTime = float.NegativeInfinity;
 
     /// <summary>
-    /// Ritmo promedio de llegada: reparte los clientes esperados a lo largo de toda la
-    /// jornada. Sin reloj cae al intervalo fijo del inspector.
+    /// True si la escena tiene ventana de entrada. Sin <see cref="DayClock"/> (tutorial) no
+    /// hay entrada automática de clientes ni final de día automático: todo lo maneja el tutorial.
     /// </summary>
-    private float BaseSpawnIntervalSeconds
-    {
-        get
-        {
-            DayClock clock = DayClock.Instance;
+    private bool HasWindow => DayClock.Instance != null;
 
-            if (clock == null)
-                return Mathf.Max(0.1f, spawnIntervalSeconds);
-
-            return Mathf.Max(
-                0.1f,
-                clock.DayDurationSeconds / Mathf.Max(1, customersTargetTonight)
-            );
-        }
-    }
+    /// <summary>
+    /// True mientras se permite que entre gente nueva: con ventana, hasta que se agote.
+    /// Sin ventana (tutorial) no hay restricción horaria — el tutorial pide sus propios
+    /// spawns y nadie los bloquea. El final del día ya está cubierto aparte por
+    /// <see cref="HasWindow"/> en <see cref="TryEndDay"/>.
+    /// </summary>
+    private bool DoorsOpen => !HasWindow || !DayClock.Instance.HasClosed;
 
     public bool IsReadyForSpawning =>
     orderSystem != null &&
-    slotViews != null &&
-    customersTargetTonight > 0;
+    slotViews != null;
 
     void Start()
     {
-        int currentNight =
+        int currentDay =
             CoalConsumptionTracker.Instance != null
                 ? CoalConsumptionTracker.Instance.CurrentNight
                 : 1;
-
-        customersTargetTonight =
-            CalculateCustomersForNight(currentNight);
 
         resolvedMaxSimultaneousCustomers =
             CalculateMaxSimultaneousCustomers();
 
         Debug.Log(
-            "[CustomerSystem] Iniciando noche " + currentNight +
-            " | Clientes de esta noche: " + customersTargetTonight +
-            " | Máximo configurado: " + maximumCustomersPerNight +
+            "[CustomerSystem] Iniciando día " + currentDay +
             " | Simultáneos: " + resolvedMaxSimultaneousCustomers +
             " (base " + Mathf.Max(1, maxSimultaneousCustomers) + ")"
         );
 
-        // Comunica al tracker cuál es el corte desbloqueable.
+        // Los desbloqueos del día los aplica el tracker; acá solo se le acerca el catálogo
+        // por si la escena lo tiene configurado y el tracker persistente no.
         if (CoalConsumptionTracker.Instance != null)
         {
-            CoalConsumptionTracker.Instance.ConfigureNightTwoCut(
-                nightTwoCut
+            CoalConsumptionTracker.Instance.ConfigureProgression(
+                progression,
+                Catalog
             );
         }
         else
@@ -197,17 +159,6 @@ public class CustomerSystem : MonoBehaviour
             Debug.LogError(
                 "[CustomerSystem] No existe CoalConsumptionTracker."
             );
-        }
-
-        // Desbloqueo de variantes.
-        bool variantsUnlocked = currentNight >= 2;
-
-        for (int i = 0; i < nightTwoVariants.Count; i++)
-        {
-            ProductVariantSO variant = nightTwoVariants[i];
-
-            if (variant != null)
-                variant.isUnlocked = variantsUnlocked;
         }
 
         List<WeightedOrderCut> cuts =
@@ -260,19 +211,6 @@ public class CustomerSystem : MonoBehaviour
         if (autoStartNight)
             StartDay();
     }
-    private int CalculateCustomersForNight(int nightNumber)
-    {
-        int safeNight = Mathf.Max(1, nightNumber);
-        int safeBase = Mathf.Max(1, customersFirstNight);
-        int safeIncrement = Mathf.Max(0, customersAddedPerNight);
-        int safeMaximum = Mathf.Max(safeBase, maximumCustomersPerNight);
-
-        int calculated =
-            safeBase + ((safeNight - 1) * safeIncrement);
-
-        return Mathf.Min(calculated, safeMaximum);
-    }
-
     /// <summary>
     /// Clientes simultaneos = base del inspector + los que sumaron las mejoras compradas
     /// en la tienda (`UpgradeSO` con `effectType == MaxSimultaneousCustomers`). El nivel de
@@ -315,8 +253,10 @@ public class CustomerSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Abre el local: arranca el reloj de la jornada y la llegada de clientes.
-    /// Sin <see cref="DayClock"/> en la escena (tutorial) mantiene el modo viejo de cupo fijo.
+    /// Deja la jornada lista y abre la cola de entrada. La ventana de tiempo NO arranca acá:
+    /// arranca cuando entra el primer cliente (spec: "el tiempo de jornada comienza
+    /// exactamente cuando entra el primer cliente").
+    /// Sin <see cref="DayClock"/> en la escena (tutorial) no hay ventana ni entrada automática.
     /// </summary>
     public void StartDay()
     {
@@ -325,54 +265,76 @@ public class CustomerSystem : MonoBehaviour
         spawnedTonight = 0;
         servedToday = 0;
         dayEnded = false;
+        lastSpawnTime = float.NegativeInfinity;
 
         UIManager.Instance?.SetServedCustomers(0);
         UIManager.Instance?.SetArrivedCustomers(0);
-
-        CacheAffluenceAverage();
 
         if (spawnRoutine != null)
             StopCoroutine(spawnRoutine);
 
         DayClock clock = DayClock.Instance;
 
-        if (clock != null)
+        if (clock == null)
         {
-            clock.OnClosingTime -= HandleClosingTime;
-            clock.OnClosingTime += HandleClosingTime;
-            clock.StartDay();
+            Debug.Log(
+                "[CustomerSystem] Escena sin DayClock: no hay ventana de entrada. " +
+                "Los clientes solo entran por spawns forzados."
+            );
 
-            Debug.Log(
-                "[CustomerSystem] Jornada iniciada de " +
-                DayClock.FormatHour(clock.OpeningHour) + " a " +
-                DayClock.FormatHour(clock.ClosingHour) +
-                " | Clientes esperados: " + customersTargetTonight +
-                " (uno cada " + BaseSpawnIntervalSeconds.ToString("0.0") + "s en promedio)"
-            );
+            return;
         }
-        else
-        {
-            Debug.Log(
-                "[CustomerSystem] Jornada iniciada sin reloj (cupo fijo). Objetivo: " +
-                customersTargetTonight + " clientes."
-            );
-        }
+
+        clock.OnClosingTime -= HandleClosingTime;
+        clock.OnClosingTime += HandleClosingTime;
+
+        float window = CoalConsumptionTracker.Instance != null
+            ? CoalConsumptionTracker.Instance.CurrentWindowSeconds
+            : 0f;
+
+        clock.PrepareDay(window);
+
+        Debug.Log(
+            "[CustomerSystem] Jornada lista | Ventana: " + DayClock.FormatSeconds(clock.WindowSeconds) +
+            " | Slots: " + resolvedMaxSimultaneousCustomers +
+            " | Separación entre entradas: " + spawnGapSeconds + "s"
+        );
 
         spawnRoutine = StartCoroutine(SpawnLoop());
     }
 
+    /// <summary>
+    /// Cola global de entrada. No hay intervalo periódico ni un timer por slot: mientras la
+    /// ventana esté abierta, entra un cliente en cuanto haya un slot libre, respetando una
+    /// separación mínima de <see cref="spawnGapSeconds"/> con la entrada anterior.
+    ///
+    /// De ahí salen solas las reglas del spec:
+    /// · arranque del día con los 3 slots libres → entradas a 0 s, 6 s y 12 s;
+    /// · un solo slot libre después de un rato → entra al toque;
+    /// · dos o tres slots libres a la vez → el primero al toque, los demás cada 6 s;
+    /// · un hueco que se libera durante la espera se suma a ESTA cola, no abre otra.
+    /// </summary>
     IEnumerator SpawnLoop()
     {
         while (DoorsOpen)
         {
-            yield return new WaitForSeconds(NextSpawnDelaySeconds());
-
-            // El local pudo cerrar mientras esperábamos: nadie entra después de hora.
-            if (!DoorsOpen)
-                break;
-
-            if (activeCustomers.Count >= resolvedMaxSimultaneousCustomers)
+            // Sin lugar: esperar a que se libere un slot. La ventana sigue corriendo igual.
+            if (activeCustomers.Count >= resolvedMaxSimultaneousCustomers ||
+                GetNextFreeSlotIndex() < 0)
+            {
+                yield return null;
                 continue;
+            }
+
+            float sinceLastSpawn = Time.time - lastSpawnTime;
+
+            if (sinceLastSpawn < spawnGapSeconds)
+            {
+                yield return new WaitForSeconds(spawnGapSeconds - sinceLastSpawn);
+
+                // Revalidar todo: la ventana pudo cerrar y el slot pudo volver a ocuparse.
+                continue;
+            }
 
             SpawnCustomer();
         }
@@ -383,62 +345,9 @@ public class CustomerSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Cuánto falta para el próximo cliente. La curva de afluencia aprieta o afloja el
-    /// ritmo según la hora (mediodía y noche son los picos), sin mover el total del día:
-    /// la curva se divide por su propio promedio.
-    /// </summary>
-    private float NextSpawnDelaySeconds()
-    {
-        float interval = BaseSpawnIntervalSeconds;
-
-        DayClock clock = DayClock.Instance;
-
-        if (clock == null || affluenceCurve == null || affluenceCurve.length == 0)
-            return interval;
-
-        float multiplier = Mathf.Max(
-            0.05f,
-            affluenceCurve.Evaluate(clock.Normalized01) / affluenceAverage
-        );
-
-        return interval / multiplier;
-    }
-
-    /// <summary>
-    /// Promedio de la curva de afluencia sobre la jornada. Dividir por él deja la curva
-    /// como puro reparto: cambia CUÁNDO entra la gente, no cuánta.
-    /// </summary>
-    private void CacheAffluenceAverage()
-    {
-        affluenceAverage = 1f;
-
-        if (affluenceCurve == null || affluenceCurve.length == 0)
-            return;
-
-        const int samples = 64;
-        float sum = 0f;
-
-        for (int i = 0; i < samples; i++)
-            sum += Mathf.Max(0f, affluenceCurve.Evaluate((i + 0.5f) / samples));
-
-        float average = sum / samples;
-
-        if (average <= 0.01f)
-        {
-            Debug.LogWarning(
-                "[CustomerSystem] La curva de afluencia es casi cero en toda la jornada: " +
-                "no entraría nadie. Se ignora y la llegada queda pareja."
-            );
-
-            return;
-        }
-
-        affluenceAverage = average;
-    }
-
-    /// <summary>
-    /// Cerró el local: no entra nadie más. Si adentro ya no quedaba nadie el día termina
-    /// acá; si queda gente, sigue hasta que se vaya el último.
+    /// Se agotó la ventana: no entra nadie más y se cancela cualquier entrada pendiente.
+    /// Si adentro ya no quedaba nadie, el día termina acá; si queda gente, se avisa y se
+    /// sigue jugando normalmente hasta que se vaya el último.
     /// </summary>
     private void HandleClosingTime()
     {
@@ -449,9 +358,13 @@ public class CustomerSystem : MonoBehaviour
         }
 
         Debug.Log(
-            "[CustomerSystem] Cerró el local con " + activeCustomers.Count +
+            "[CustomerSystem] Se cerró la entrada con " + activeCustomers.Count +
             " cliente(s) adentro."
         );
+
+        // El aviso no pausa ni bloquea nada: es solo texto.
+        if (activeCustomers.Count > 0 && !string.IsNullOrEmpty(lastCustomersMessage))
+            DeliveryFeedbackText.Instance?.Show(lastCustomersMessage, lastCustomersMessageSeconds);
 
         TryEndDay();
     }
@@ -459,44 +372,21 @@ public class CustomerSystem : MonoBehaviour
     /// <summary>
     /// Termina el día cuando ya no puede entrar nadie y se fue el último cliente.
     /// Único lugar que dispara <see cref="OnDayEnded"/>, y lo hace una sola vez.
+    /// Sin ventana (tutorial) el día nunca termina solo.
     /// </summary>
     private void TryEndDay()
     {
-        if (dayEnded || activeCustomers.Count > 0 || DoorsOpen)
+        if (!HasWindow || dayEnded || activeCustomers.Count > 0 || DoorsOpen)
             return;
 
         dayEnded = true;
 
         Debug.Log(
             "[CustomerSystem] Se fue el último cliente: termina el día. " +
-            "Atendidos: " + servedToday + "/" + spawnedTonight + "."
+            "Atendidos: " + servedToday + " de " + spawnedTonight + " que entraron."
         );
 
         OnDayEnded?.Invoke();
-    }
-
-    /// <summary>
-    /// Curva por defecto: mañana floja, pico del mediodía, bajón de la siesta y pico de la
-    /// noche. En una jornada de 06:30 a 21:00, t = 0.4 cae cerca de las 12:30 y t = 0.93,
-    /// de las 20:00.
-    /// </summary>
-    private static AnimationCurve DefaultAffluenceCurve()
-    {
-        AnimationCurve curve = new AnimationCurve(
-            new Keyframe(0f, 0.5f),
-            new Keyframe(0.20f, 0.7f),
-            new Keyframe(0.40f, 2f),
-            new Keyframe(0.50f, 1.8f),
-            new Keyframe(0.62f, 0.8f),
-            new Keyframe(0.80f, 0.9f),
-            new Keyframe(0.93f, 2f),
-            new Keyframe(1f, 1.5f)
-        );
-
-        for (int i = 0; i < curve.length; i++)
-            curve.SmoothTangents(i, 0f);
-
-        return curve;
     }
 
     public void SpawnCustomer(bool ignoreNightLimit = false)
@@ -511,8 +401,8 @@ public class CustomerSystem : MonoBehaviour
             return;
         }
 
-        // Los spawns normales respetan el horario del local (o el cupo, sin reloj).
-        // El tutorial puede ignorarlo.
+        // Los spawns normales solo ocurren con la ventana abierta. El tutorial, que no tiene
+        // ventana, entra siempre por acá con ignoreNightLimit.
         if (!ignoreNightLimit && !DoorsOpen)
             return;
 
@@ -585,6 +475,11 @@ public class CustomerSystem : MonoBehaviour
         activeCustomers.Add(customer);
 
         spawnedTonight++;
+        lastSpawnTime = Time.time;
+
+        // El tiempo de jornada arranca con el primer cliente, no al cargar la escena.
+        if (spawnedTonight == 1)
+            DayClock.Instance?.BeginWindow();
 
         if (SelectedCustomer == null)
             SelectCustomer(customer);
@@ -611,8 +506,8 @@ public class CustomerSystem : MonoBehaviour
             " | Cliente n° " +
             spawnedTonight +
             (DayClock.Instance != null
-                ? " | " + DayClock.Instance.TimeLabel
-                : "/" + customersTargetTonight) +
+                ? " | Quedan " + DayClock.FormatSeconds(DayClock.Instance.RemainingSeconds) + " de ventana"
+                : "") +
             (ignoreNightLimit ? " | Spawn forzado" : "")
         );
     }
@@ -1125,30 +1020,6 @@ public class CustomerSystem : MonoBehaviour
         CustomerHoverBubble.Instance?.Hide();
     }
   
-    private void ApplyNightUnlocks()
-    {
-        int currentNight =
-            (CoalConsumptionTracker.Instance?.DaysPlayed ?? 0) + 1;
-
-        bool patyUnlocked = currentNight >= 2;
-
-        if (nightTwoCut != null)
-        {
-            nightTwoCut.isUnlocked = patyUnlocked;
-
-            Debug.Log(
-                "[Progression] Noche actual: " + currentNight +
-                " | Paty desbloqueado: " + patyUnlocked
-            );
-        }
-        else
-        {
-            Debug.LogWarning(
-                "[Progression] No se asignó el corte de la noche 2 en CustomerSystem."
-            );
-        }
-    }
-
     private List<WeightedOrderCut> GetUnlockedOrderCuts()
     {
         var result = new List<WeightedOrderCut>();
