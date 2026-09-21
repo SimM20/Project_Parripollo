@@ -1,7 +1,7 @@
 # ARQUITECTURA — Project_Parripollo
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
-> Última revisión completa contra el código: **2026-09-20** (rama `development`, commit `9c4b7cf`).
+> Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
 
 ---
 
@@ -12,7 +12,7 @@
 | Motor | Unity **2022.3.62f3**, URP (2D), Input Manager legacy (`Input.GetKeyDown`) |
 | Cámara | **Perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). No es ortográfica — ver nota 22 |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`). `Scripts/Editor/` va a `Assembly-CSharp-Editor` |
-| Código propio | `Assets/Scripts/` — **126 archivos, ~19.7k líneas** |
+| Código propio | `Assets/Scripts/` — **133 archivos, ~21.2k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina **contrarreloj**: cocinar cortes, armar platos/sándwiches y entregar a los clientes que entran durante la jornada |
 | Jornada | **06:30 → 21:00 en 5 minutos reales** (`DayClock`). A las 21:00 cierra y deja de entrar gente; el día termina **cuando se va el último cliente**, no al cerrar |
@@ -62,7 +62,7 @@ Assets/Scripts/
 | **Food/** | Catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
 | **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene` y `ShopTutorial`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
 | **Strikes/** | Penalización de jornada por clientes que se van con paciencia 0 (`StrikeSystem`, singleton de escena), HUD de X (`StrikeHudView`), aviso “¡Te clavaron el cartel!” (`StrikeLimitNotice`) y popup modal de cierre anticipado en `EndScene` (`StrikeEndPopup`) | `StrikeSystem.cs`, `StrikeHudView.cs`, `StrikeLimitNotice.cs`, `StrikeEndPopup.cs` |
-| **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI` | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
+| **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
 | **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO` | `UpgradeStateResetter.cs` |
@@ -1143,7 +1143,7 @@ void ResetForNewNight();  bool RegisterPatienceStrike();  void MarkNightEndedByS
 | Fin anticipado | `TryEndNight`: con `!DoorsOpen && activeCustomers == 0`, si `IsSpawnBlocked` → `MarkNightEndedByStrikes()` antes de `OnNightEnded` (el flujo sigue por `GameManager.EndNight` → `EndScene` como siempre) |
 | HUD de X | `HudCanvas/MainPanel/HudContainer (Strikes)` + `StrikeHudView`: genera `MaxStrikes` X en `Start`/`OnReset` (se adapta al máximo), rojo al activarse, shake + punch sobre la nueva (duración/intensidad configurables). X procedural si no hay `strikeSprite` (placeholder hasta que Arte defina el estilo) |
 | Aviso “¡Te clavaron el cartel!” | `StrikeNoticeCanvas/Notice` + `StrikeLimitNotice`: overlay **sin `GraphicRaycaster`** y sin `raycastTarget` → no bloquea ni pausa; fade in/out, visible `LimitNoticeSeconds`; `WaitForSeconds` → se congela con la pausa. Posicionado arriba, por delante de los clientes y sin tapar la parrilla |
-| Popup de cierre | `EndScene/StrikeEndPopupCanvas` (order 20, sobre `ShopCanvas` 10) + `StrikeEndPopup`: en `Start` consume `LastNightEndedByStrikes`; si es `true` activa el root (fondo negro `raycastTarget` = tienda bloqueada) y “Ir a la tienda” lo cierra. Slot `illustration` (cliente enojado + cartel) queda vacío hasta que Arte lo entregue |
+| Popup de cierre | `EndScene/StrikeEndPopupCanvas` (order 20, sobre `ShopCanvas` 10) + `StrikeEndPopup`: en `Start` consume `LastNightEndedByStrikes`; si es `true` activa el root (fondo negro `raycastTarget` = tienda bloqueada) y “Ir a la tienda” lo cierra. Ilustración `illustration` = `Sprites/AngryCustomer.png` (cliente enojado); si el slot queda sin sprite, el `Image` se apaga solo |
 | SFX de strike | `AudioManager.strikeClip` (TBD por Audio: vacío = silencio). Suena aparte del `PlayNegativeFeedback` de la burbuja |
 | QA | `StrikeSystem` → menú contextual del componente en Play: *QA/Sumar un strike*, *QA/Reiniciar strikes* |
 
