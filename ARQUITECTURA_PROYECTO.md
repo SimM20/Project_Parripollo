@@ -1267,7 +1267,8 @@ de 2×1 con brasa bajo un solo slot recibía `Play()` y `Stop()` en el mismo fra
 **Mezcla continua, no switch de clip.** En `Start` crea un hijo `SizzleAudio` con dos `AudioSource` en loop
 (`softSound` = `MeatCookingSoft.wav`, `hardSound` = `MeatCookingHard.wav`) que heredan mixer group, `spatialBlend` y
 prioridad del `AudioSource` del prefab; ese source queda libre para los one-shots (`Meat.PlayFlipSound()`), así el flip
-suena siempre a volumen pleno. Los dos loops arrancan juntos y se funden por volumen:
+suena siempre a volumen pleno. `flipSound` vacío = flip mudo (TBD por Audio); **no** cae a `softSound`, porque ese es el
+loop de cocción de 18 s y como one-shot sonaba a chisporroteo sin calor. Los dos loops arrancan juntos y se funden por volumen:
 
 | Paso | Detalle |
 |---|---|

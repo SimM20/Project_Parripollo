@@ -512,19 +512,23 @@ public class Meat : Item
         }
     }
 
+    /// <summary>
+    /// Sin flipSound asignado el flip es mudo. No cae a softSound: ese es el loop de coccion
+    /// (18 s) y reproducirlo como one-shot sonaba a "la carne chisporrotea aunque no haya calor",
+    /// porque el sizzle de MeatInstance no controla el AudioSource base.
+    /// </summary>
     private void PlayFlipSound()
     {
-        AudioClip clipToPlay = flipSound != null ? flipSound : softSound;
-        if (clipToPlay == null) return;
+        if (flipSound == null) return;
 
         AudioSource src = GetComponent<AudioSource>();
         if (src != null)
         {
-            src.PlayOneShot(clipToPlay);
+            src.PlayOneShot(flipSound);
         }
         else
         {
-            AudioSource.PlayClipAtPoint(clipToPlay, transform.position);
+            AudioSource.PlayClipAtPoint(flipSound, transform.position);
         }
     }
 
