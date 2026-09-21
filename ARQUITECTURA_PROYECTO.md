@@ -2,7 +2,7 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
-> Última actualización parcial: **2026-09-21** (rama `development`) — layout del plato en `BuildFoodDropZone` (sección 3.4, nota 27).
+> Última actualización parcial: **2026-09-21** (rama `development`) — fondo por capas con ciclo de día y parallax (sección 3.9, nota 32).
 
 ---
 
@@ -43,6 +43,7 @@ Assets/Scripts/
 ├── Food/           Catálogo (SO), validación de platos, evaluación económica (cocción + extras)
 ├── Shop/           Tienda (post-noche): tabs + breadcrumb, compra individual. Dos capas de UI
 ├── Strikes/        Strikes por clientes perdidos: contador, HUD de X, aviso de gameplay, popup de cierre
+├── Background/     Fondo por capas que sigue la hora del DayClock (amanecer → noche) + nubes con parallax
 ├── UI/             ViewManager, Tutorial, SlidingPanel (base de paneles), notificaciones, HUD SO, feedback
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
 │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
@@ -63,6 +64,7 @@ Assets/Scripts/
 | **Food/** | Catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
 | **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene` y `ShopTutorial`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
 | **Strikes/** | Penalización de jornada por clientes que se van con paciencia 0 (`StrikeSystem`, singleton de escena), HUD de X (`StrikeHudView`), aviso “¡Te clavaron el cartel!” (`StrikeLimitNotice`) y popup modal de cierre anticipado en `EndScene` (`StrikeEndPopup`) | `StrikeSystem.cs`, `StrikeHudView.cs`, `StrikeLimitNotice.cs`, `StrikeEndPopup.cs` |
+| **Background/** | Fondo de `GameScene` en capas (cielo, estrellas, luna, sol, nubes, paisaje). `DayCycleBackground` lee la hora del `DayClock` y se la pasa a las capas; cada `DayCycleLayer` mezcla su color (y opcionalmente su sprite) entre claves horarias; `DayCycleArc` mueve sol y luna; `ParallaxLayer` desliza las nubes. Solo visual: no escribe la hora ni toca el gameplay | `DayCycleBackground.cs`, `DayCycleLayer.cs`, `DayCycleArc.cs`, `ParallaxLayer.cs` |
 | **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
@@ -88,7 +90,8 @@ Assets/ScriptableObjects/
 
 Prefabs relevantes: `Prefabs/GrillView.prefab` (contiene `StockPanel`, `MeatTray`, `ToBuild`), `Prefabs/[SYSTEMS].prefab`
 (las escenas son instancias; ahí viven `GrillSystem`, `CustomerSystem`, `UpgradeUnlockActivator`…), `Prefabs/UI/StockPanel.prefab`,
-`Prefabs/UI/PauseCanvas.prefab`, `Prefabs/FeedbackBubble.prefab`, `Prefabs/Cliente*.prefab`. `BuildView.prefab` y
+`Prefabs/UI/PauseCanvas.prefab`, `Prefabs/FeedbackBubble.prefab`, `Prefabs/Cliente*.prefab`, `Prefabs/FondoCicloDia.prefab`
+(fondo de `GameScene`, ver 3.9). `BuildView.prefab` y
 `CoolerView.prefab` siguen en el proyecto pero **no se alcanzan**.
 
 ---
@@ -398,7 +401,7 @@ static string FormatHour(float hour, int minuteStep = 1);
 Corre con `Time.deltaTime`, así que **`GamePause` lo congela solo** (`timeScale = 0`) — no hay
 que pausarlo a mano. Empuja el texto al HUD (`UIManager.SetDayTime`) **solo cuando cambia**, no por frame.
 El reloj **no termina el día**: al llegar al cierre se detiene y avisa; quién cierra la jornada es
-`CustomerSystem` (ver 3.5 y 4.5).
+`CustomerSystem` (ver 3.5 y 4.5). La hora la lee también el fondo (`DayCycleBackground`, ver 3.9) para el cielo.
 ⚠️ Es **opcional**: una escena sin `DayClock` (el tutorial) mantiene el modo viejo de cupo fijo de clientes.
 
 ### 3.2 Parrilla y cocción
@@ -1348,6 +1351,73 @@ los dos clips, el otro cubre todo el rango. `OnDisable` silencia sin fade.
 - `FlipPuff`: puff **breve** al dar vuelta la carne. Feedback de la acción, no del estado. `ParticleSystem` nativo
   emitido a mano con cantidad/tamaño/velocidad aleatorios por flip. Hijo del prefab de carne; `Meat.EmitFlipPuff()`.
 
+### 3.9 Fondo con ciclo de día
+
+El fondo de `GameScene` (`Prefabs/FondoCicloDia.prefab`, raíz de escena) está hecho de capas que siguen la hora del
+`DayClock`: a la apertura (06:30) amanece, pasa por el día, la hora dorada y el atardecer, y hacia el cierre (21:00) es
+de noche — y sigue de noche mientras se atiende a los últimos clientes, porque el reloj queda clavado en 21:00.
+**Solo visual**: no escribe la hora ni toca el gameplay.
+
+#### `DayCycleBackground` — `Background/DayCycleBackground.cs` · raíz del prefab
+```csharp
+interface IDayCycleVisual { void ApplyHour(float hour); }   // lo implementan las capas; se juntan en Awake (hijos, incluso inactivos)
+float VisualHour;                         // hora que muestra el fondo; durante un salto va detrás del reloj
+```
+
+| Campo de inspector | Valor | |
+|---|---|---|
+| `fallbackHour` | `12` | Hora fija si la escena no tiene `DayClock` (tutorial) |
+| `catchUpHoursPerSecond` | `3` | Tope de avance. El cierre anticipado (3er strike, salto a 21:00) se ve como un time-lapse de ~4 s en vez de un corte. El reloj normal va a ≈0,05 h/s: nunca lo toca |
+| `overrideHour` / `overrideHourValue` | `false` / `6.5` | **Debug en Play**: ignora el reloj y muestra la hora del slider |
+
+Reaplica **solo cuando la hora cambia** (en pausa o ya cerrado no hace nada). No es `[ExecuteAlways]`: en modo edición la
+escena se ve con los colores guardados en cada `SpriteRenderer` (el look de mediodía), así no ensucia la escena.
+
+#### Capas (hijos del prefab)
+| Capa | Sprite | `sortingOrder` | Componentes | Qué hace |
+|---|---|---|---|---|
+| `CieloHorizonte` | `CieloBase` (blanco, Sliced 22×4) | -60 | `DayCycleLayer` | Color del cielo en el horizonte |
+| `CieloCenit` | `CieloDegradado` (1×12 px, alfa 1 arriba → 0 abajo; Sliced 22×3,6) | -55 | `DayCycleLayer` | Color del cenit. Sobre el anterior arma el degradé en 12 franjas. `Filter Mode` en `Bilinear` = degradé liso |
+| `Estrellas` | `Estrellas` | -50 | `DayCycleLayer` | Solo alfa: aparecen desde ~19:25; a las 06:30 quedan unas pocas |
+| `Luna` | `Luna` | -45 | `DayCycleLayer` + `DayCycleArc` | Sale 19:24 por la derecha; a las 21:00 ya está alta |
+| `Sol` | `Sol` | -40 | `DayCycleLayer` + `DayCycleArc` | Sale 05:30 por la derecha (a las 06:30 asoma sobre los árboles), se pone 19:30 por la izquierda |
+| `NubesLejanas` | `NubesLejanas` (Tiled ×2) | -30 | `DayCycleLayer` + `ParallaxLayer` (`0.08` u/s) | 3 nubes, más lentas y apenas más apagadas: se distinguen cuando se cruzan |
+| `NubesCercanas` | `NubesCercanas` (Tiled ×2) | -20 | `DayCycleLayer` + `ParallaxLayer` (`0.16` u/s) | 2 nubes grandes, al doble de velocidad |
+| `Paisaje` | `Paisaje` | -5 | `DayCycleLayer` | Árboles, alambrado, cartel, ruta y pasto. Mismo lugar (`y = -5.5`) y order que el fondo viejo |
+
+Sol y luna salen por la **derecha** (lo correcto en el hemisferio sur mirando al norte) a propósito: la fila de clientes
+ocupa la mitad izquierda (slots en `x = −6, −3.4, −0.8…`, cabezas hasta `y ≈ 3.9`) y tapaba el amanecer y la luna.
+
+#### `DayCycleLayer` — `Background/DayCycleLayer.cs` · `[RequireComponent(SpriteRenderer)]`
+Claves `{ label, hour, color, sprite }` **en cualquier orden**; entre la anterior y la siguiente interpola lineal y
+después de la última vuelve a la primera pasando por la medianoche. Las capas de cielo, nubes y paisaje comparten 10
+claves: Madrugada 04:30 · Pre-alba 05:45 · **Amanecer 06:30** · Mañana 07:45 · Día 09:00 · Tarde 16:30 · Hora dorada 18:00 ·
+Atardecer 19:00 · Anochecer 20:00 · **Noche 20:45**. El color **multiplica** al sprite: los dibujados en blanco (cielo,
+sol, luna, estrellas) toman el color tal cual; en los que tienen arte (paisaje, nubes) blanco = el dibujo original.
+`sprite` por clave es opcional: si las dos claves que rodean a la hora tienen sprites distintos se **funden** con un hijo
+`Fundido` creado en runtime en `sortingOrder + 1`. Está para cuando Arte pinte la capa por momento del día en vez de teñirla.
+
+#### `DayCycleArc` — `Background/DayCycleArc.cs`
+Solo posición: `riseHour` → `risePoint`, `setHour` → `setPoint` (locales al padre, apenas bajo el horizonte para que el
+paisaje los tape), `arcHeight` sobre la recta. `setHour < riseHour` = cruza la medianoche (luna). Fuera del arco espera
+en la punta más cercana; ocultarlo es trabajo del alfa de su `DayCycleLayer`. Con el objeto seleccionado dibuja el recorrido (gizmo).
+
+#### `ParallaxLayer` — `Background/ParallaxLayer.cs` · `[RequireComponent(SpriteRenderer)]`
+Con la cámara quieta, el parallax es **deriva**: la capa se desliza en `x` a `driftSpeed` y la profundidad sale de la
+diferencia de velocidades. El renderer pasa a `Tiled` con `tiles` (2) copias y el objeto se corre ±½ sprite; al dar la
+vuelta salta un sprite entero y, como el dibujo se repite, no se ve. Requiere sprite al menos tan ancho como la vista
+(19,2 u vs ~18,9 u a 16:9) y `Mesh Type = Full Rect`. Corre con `Time.deltaTime`: la pausa frena las nubes.
+
+#### Arte — `Sprites/FondoCicloDia/`
+Salen de `Fondo Vista Ruta.aseprite` (una sola capa, 14 colores planos) **separando por color**: el celeste del cielo
+`(113,173,218)` pasa a transparente y el blanco de las nubes `(224,227,225)` va a dos tiras de 1920 px. Sol, luna y
+estrellas son nuevos, dibujados en blanco con píxel de 4 px (PPU 25) para que peguen con los bloques de los árboles.
+Todo `Point`, sin compresión, `Full Rect`. El `.aseprite` original no se tocó (lo siguen usando `TutorialScene` y `SampleScene`).
+⚠️ Si Arte retoca el fondo, hay que regenerar las capas — lo ideal es pasar el `.aseprite` a capas separadas.
+
+**Para ajustar colores/horarios**: en Play, prender `overrideHour` en la raíz y mover el slider; editar claves en Play
+se ve al instante (`OnValidate` reaplica), pero como todo cambio en Play **se pierde al salir**: pasar los valores al prefab.
+
 ---
 
 ## 4. Puntos de entrada e inicialización
@@ -1395,6 +1465,8 @@ MainMenuScene (build index 0)
 | `CustomerView` | `RefreshPatience` (color + temblor) |
 | `GrillNotificationManager` | Si la vista ≠ `Grill`: reagrupa carnes y refresca burbujas. **Nunca ocurre** con vista única |
 | `DayClock` | Avanza la hora con `Time.deltaTime`; al llegar al cierre se detiene y emite `OnClosingTime`. Escribe el HUD solo cuando cambia el texto |
+| `DayCycleBackground` | Lee `DayClock.CurrentHour` (o la hora fija / el override), la acerca con tope `catchUpHoursPerSecond` y, **solo si cambió**, se la pasa a las capas (`DayCycleLayer` → color/sprite, `DayCycleArc` → posición). Ver 3.9 |
+| `ParallaxLayer` (×2) | Desliza las nubes con `Time.deltaTime` y da la vuelta cada 19,2 u |
 | Corrutinas | `CustomerSystem.SpawnLoop` (espera `NextSpawnDelaySeconds()`: ritmo base de la jornada × curva de afluencia; sin reloj, `spawnIntervalSeconds`) · `CustomerFeedbackBubble.FeedbackSequenceRoutine` · `SlidingPanel` slide (unscaled) · `MoneyPopup` vuelo |
 | `CoalStackCounter` (×60) | **`LateUpdate`**: cuenta el stack del slot; solo toca texto/`SetActive` si el conteo o la visibilidad cambiaron |
 
@@ -1497,4 +1569,5 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 29 | **`SceneManagementUtils.RestartRun` usa `DestroyImmediate`, no `Destroy`**, sobre los cuatro DDOL. Carga `GameScene` en el mismo frame y `GameScene` trae sus propias copias: con destrucción diferida los viejos siguen vivos durante el `Awake` de los nuevos, los nuevos se autodestruyen por el guard de singleton y recién después mueren los viejos → las cuatro `Instance` quedan en `null`. `ReturnToMainMenu` no tiene el problema porque `MainMenuScene` no trae copias |
 | 30 | **`Electronic Highway Sign SDF` no tiene acentos ni `—` / `→`** y los dibuja como cuadrado (ya pasa en los labels viejos de `ShopNextButtonUI` y en `CantCarbones`). **`Bungee-Regular SDF` y `Nunito-Regular SDF` sí tienen los acentos**: para texto nuevo de tienda usar esas dos, y evitar igual los signos exóticos (`·`, `—`, `→`) |
 | 31 | **Los TMP del header de la tienda tienen `margin` negativo** (`CantCarbones`: `(-105, 0, -132, -18)`). Clonarlos para texto nuevo arrastra ese margen y el texto se dibuja corrido respecto de su `RectTransform`: poner `margin = Vector4.zero` en el clon |
+| 32 | **El fondo de `GameScene` es `FondoCicloDia` y usa los `sortingOrder` -60 a -4** (capas en -60/-55/-50/-45/-40/-30/-20, paisaje en -5; el fundido de sprites de `DayCycleLayer` dibuja en `order + 1`, así que el del paisaje cae en -4). Algo nuevo que vaya detrás de la carne pero delante del fondo va en -3 o más. El tinte del ciclo de día es **solo para esas capas**: parrilla, carne, clientes y HUD no se tiñen, porque leer el punto de cocción depende de sus colores. Ver 3.9 |
 | 26 | El feedback de clientes ocupa el slot 4 s (`IsInFeedback`): `MaxSimultaneousCustomers` los cuenta, `SpawnLoop` no spawnea en su lugar hasta que se van, y `OnNightEnded` espera a que termine el último feedback. `IsCustomerActive`, `SetDeliveryDragHover` y `EvaluateDelivery` los excluyen |
