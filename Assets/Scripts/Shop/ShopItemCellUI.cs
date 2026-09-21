@@ -105,9 +105,16 @@ public class ShopItemCellUI : MonoBehaviour
         if (subtotalText != null) subtotalText.text = $"Subtotal: ${price * pendingQty:N0}";
 
         bool canAfford = shop.Wallet != null && shop.Wallet.CanAfford(price * pendingQty);
+
+        // Spec punto 7: no se permite gastar la plata que hace falta para el mínimo del
+        // próximo día. Acá solo se apaga el botón; el guard real vive en ShopSystem.
+        bool allowedByMinimums = toppingItem != null
+            ? shop.IsPurchaseAllowedByRunMinimums(toppingItem, pendingQty)
+            : shop.IsPurchaseAllowedByRunMinimums(item, pendingQty);
+
         if (minusButton != null) minusButton.interactable = purchasable && pendingQty > 1;
         if (plusButton != null) plusButton.interactable = purchasable && pendingQty < MaxQty;
-        if (buyButton != null) buyButton.interactable = purchasable && canAfford;
+        if (buyButton != null) buyButton.interactable = purchasable && canAfford && allowedByMinimums;
     }
 
     private void OnMinus()

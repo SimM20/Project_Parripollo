@@ -45,6 +45,35 @@ public static class SceneManagementUtils
 
     public static string GetCurrentName() => SceneManager.GetActiveScene().name;
 
+    /// <summary>
+    /// Reinicia la run entera y arranca de nuevo en el Día 1. Lo usa el botón "Reintentar"
+    /// de la pantalla de Derrota Total.
+    ///
+    /// Hace lo mismo que <see cref="ReturnToMainMenu"/> con los DDOL, y además limpia lo que
+    /// ese camino no limpia: la racha de strikes y los ScriptableObject de mejoras.
+    /// </summary>
+    public static void RestartRun(FoodCatalogSO catalog)
+    {
+        CoolerSystem.PrepareForNewGame();
+
+        // DestroyImmediate y no Destroy: acá se carga GameScene en el mismo frame, y GameScene
+        // trae sus propias copias de los cuatro singletons. Con destrucción diferida los
+        // viejos siguen vivos durante el Awake de los nuevos, los nuevos se autodestruyen por
+        // el guard de singleton, y recién después mueren los viejos: quedan las cuatro
+        // Instance en null y la escena arranca rota.
+        // ReturnToMainMenu no tiene el problema porque MainMenuScene no trae copias.
+        if (PlayerWallet.Instance != null) UnityEngine.Object.DestroyImmediate(PlayerWallet.Instance.gameObject);
+        if (CoalConsumptionTracker.Instance != null) UnityEngine.Object.DestroyImmediate(CoalConsumptionTracker.Instance.gameObject);
+        if (CoolerSystem.Instance != null) UnityEngine.Object.DestroyImmediate(CoolerSystem.Instance.gameObject);
+        if (ToppingStock.Instance != null) UnityEngine.Object.DestroyImmediate(ToppingStock.Instance.gameObject);
+
+        StrikeSystem.ResetStreak();
+        DayStats.ResetDay();
+        RunStateReset.ResetRunState(catalog);
+
+        LoadSceneByName("GameScene");
+    }
+
     public static void ReturnToMainMenu()
     {
         CoolerSystem.PrepareForNewGame(); // clears backup so next new game starts clean
@@ -52,6 +81,13 @@ public static class SceneManagementUtils
         if (CoalConsumptionTracker.Instance != null) UnityEngine.Object.Destroy(CoalConsumptionTracker.Instance.gameObject);
         if (CoolerSystem.Instance != null) UnityEngine.Object.Destroy(CoolerSystem.Instance.gameObject);
         if (ToppingStock.Instance != null) UnityEngine.Object.Destroy(ToppingStock.Instance.gameObject);
+
+        // La racha de noches es un estatico: sobrevive el cambio de escena igual que los DDOL,
+        // asi que hay que limpiarla a mano o la run siguiente arranca con la racha de la anterior
+        // (y si venia en el tope, pierde en su primer EndScene).
+        StrikeSystem.ResetStreak();
+        DayStats.ResetDay();
+
         LoadSceneByName("MainMenuScene");
     }
 }

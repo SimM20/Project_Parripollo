@@ -1186,6 +1186,65 @@ void ResetForNewNight();  bool RegisterPatienceStrike();  void MarkNightEndedByS
 
 ---
 
+#### Derrota Total de la Run — `Run/` (spec "Sistema de Derrota y Finalización Anticipada del Día" v0.1, puntos 4-7)
+
+Segundo nivel de derrota, por encima de los strikes: los strikes terminan **una jornada**, esto termina **la run**.
+Se evalúa al llegar a `EndScene`. Si la run está perdida **no se pasa por la tienda**: `RunDefeatScreen` apaga
+`ShopCanvas` y `StrikeEndPopupCanvas` en su `Awake` y muestra la pantalla de derrota.
+
+**Dos condiciones de derrota**, en ese orden de prioridad:
+
+| Motivo (`RunDefeatReason`) | Cuándo |
+|---|---|
+| `StrikeStreak` | `StrikeSystem.ConsecutiveStrikeNights >= MaxConsecutiveStrikeNights` (3 noches **seguidas** cerradas con el cartel clavado). Regla acordada fuera del spec |
+| `InsufficientResources` | `!RunEconomyStatus.CanContinue`: no se llega a los mínimos del próximo día con el stock y la plata disponibles |
+
+```csharp
+// RunDefeatConfigSO — Assets/ScriptableObjects/RunDefeatConfig.asset
+int GetMeatRequirement(int day)   // 5 + 2*(N-1)   configurables
+int GetCoalRequirement(int day)   // 10 + 1*(N-1)  configurables
+bool strikeStreakDefeatEnabled;  int MaxConsecutiveStrikeNights;   // 3
+
+// RunEconomyEvaluator — static PURO, mismo criterio que CookingDeliveryEvaluator
+RunEconomyStatus Evaluate(day, config, meatStock, coalStock, money,
+                          cheapestCutPrice, anyCutForSale, anyCoalForSale,
+                          coalBagPrice, coalUnitsPerBag, coalStorageCap)
+// RunEconomyStatus: MeetsMinimums · CanAfford · HasBlockingGap · CanContinue · MoneyAfterMinimums
+```
+
+`N` sale de `CoalConsumptionTracker.CurrentNight`: en `EndScene` ya vale el **próximo** día, porque
+`GameManager.EndNight()` llama `RegisterDayCompleted()` antes de cargar la escena. "Día alcanzado" en la
+pantalla de derrota es `DaysPlayed`.
+
+| Pieza | Dónde vive |
+|---|---|
+| Racha de noches | `StrikeSystem.ConsecutiveStrikeNights` (**static**, sobrevive el cambio de escena igual que `LastNightEndedByStrikes`). La mueve `RegisterNightResult(bool)` desde `GameManager.EndNight()`, el único embudo de fin de jornada. ⚠️ `ResetForNewNight()` **no** la toca |
+| Qué suma a la racha | Una noche cerrada por el límite de strikes **o** cerrada a mano con el botón "terminar el día" del menú de pausa (`GameManager.EndNightEarly()` ← `PauseMenuHandler.EndGame`). Terminar a mano es abandonar la jornada. Cualquier otro cierre la vuelve a 0 |
+| Reset de la racha | `ResetStreak()` desde `SceneManagementUtils.RestartRun` **y** desde `ReturnToMainMenu`. ⚠️ Es un estático: sin limpiarlo en los dos caminos, la run siguiente hereda la racha anterior y, si venía en el tope, pierde en su primer `EndScene`. Los strikes del día se reinician solos (`StrikeSystem` es singleton **de escena**) más `ResetForNewNight()` desde `CustomerSystem.StartNight` |
+| Tope y switch de la racha | Cacheados en estáticos desde el SO en `StrikeSystem.Awake` — el SO no existe en `EndScene` |
+| Conteo de stock | `ShopSystem.GetTotalMeatCuts()` (espejo de `GetTotalCoalUnits()`, filtra `entry.Key is MeatCutSO`). Sin mínimo por tipo de corte: cualquier combinación sirve |
+| Costo del faltante | `GetCheapestPurchasableCutPrice()` × cortes faltantes + `ceil(faltante/unitsPerBag)` × precio de bolsa |
+| Bloqueo de compras | `ShopSystem.IsPurchaseAllowedByRunMinimums(...)` simula la compra y exige `CanContinue`. La UI apaga el botón (`ShopItemCellUI`); el guard real está en `TryBuyNow` / `TryBuyToppingNow` |
+| Gate de "arrancar el día" | `ShopNextButtonUI`: en el tab `Toppings` pide `MeetsMinimums`. Ahora escucha además `OnMoneyChanged` / `OnInventoryChanged` y usa `SceneManagementUtils.LoadSceneByName` |
+| Estado visual en tienda | `ShopRequirementsUI` en `EndScene/ShopCanvas/.../ShopContent/Requirements`: stock/mínimo de carne y carbón, cuánto falta, y la racha, en 2×2. Verde/rojo según se cumpla. Fuente **Bungee** (tiene acentos; ver nota 30) sobre `Fondo para Textos Corto` en `Sliced` |
+| Pantalla de derrota | `EndScene/RunDefeatCanvas` (order **30**, sobre `StrikeEndPopupCanvas` 20 y `ShopCanvas` 10) + `RunDefeatScreen`. Clon del popup de strikes: hijo `Popup` inactivo con fondo opaco `raycastTarget` |
+| Botones | *Menú principal* → `ReturnToMainMenu()` · *Reintentar* → `SceneManagementUtils.RestartRun(catalog)` |
+| Reset de run | `RunStateReset`: snapshot de `CoalSO.maxBurnTime` (lo toma `ShopSystem.Start`, primera llamada gana) y vuelta de `UpgradeSO.currentLevel` a 0. `MeatCutSO.isUnlocked` se corrige solo vía `CoalConsumptionTracker` |
+| QA | `StrikeSystem` → *QA/Sumar noche cerrada por strikes*, *QA/Reiniciar racha de noches*. `RunDefeatScreen` → *QA/Forzar derrota por recursos*, *QA/Forzar derrota por racha de strikes* |
+
+⚠️ **`ShopSystem.enforceRunMinimums`** está en `false` en `ShopTutorial.unity`: sin eso el tutorial queda
+bloqueado por mínimos que nunca se cumplen. En `GameScene` y `EndScene` va en `true`.
+
+⚠️ **Tope de almacenamiento.** `CoolerSystem.CoalStorageCap` (40, antes dos `40` hardcodeados) capea el carbón.
+Como el mínimo es `10 + (N-1)`, en el **día 31** el requisito llega a 40 y después es inalcanzable:
+`RunEconomyStatus.requirementAboveStorageCap` lo detecta y lo reporta como derrota explícita.
+
+⚠️ **Varios cortes tienen `basePrice = 0`** (`Paty`, `Chinchulín`, `Costillita de cerdo`, `Pechuga de pollo`,
+`Matambre`). Como el costo de la carne faltante usa el corte comprable más barato, hoy completar el mínimo de
+carne sale **$0** y la derrota económica depende solo del carbón. Es un tema de datos, no de código.
+
+---
+
 ### 3.7 Tutorial
 
 #### `TutorialManager` — `UI/TutorialManager.cs` · Singleton
@@ -1383,6 +1442,8 @@ GameScene
    El botón "terminar el día" del menú de pausa llama al mismo GameManager.EndNight().
 
 EndScene
+   ├─ RunDefeatScreen  Awake: si la run está perdida (recursos o 3 noches seguidas con el cartel)
+   │                   apaga ShopCanvas + StrikeEndPopupCanvas y muestra la Derrota Total (ver 3.6)
    ├─ StrikeEndPopup   si la noche cerró por strikes: popup modal sobre la tienda, “Ir a la tienda” lo cierra
    ├─ EndScreen        muestra el dinero · botones: MainMenu / Retry / GoShopping (su Canvas está desactivado: se entra directo a la tienda)
    ├─ ShopSystem       tabs Coal → Meat → Upgrades → Toppings  (arranca en Coal)
@@ -1432,4 +1493,8 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 27 | **La carne del plato siempre se dibuja sobre sides/toppings.** `plateMeatSortingBase` (400, en `MeatTransferBuffer`) tiene que quedar **por encima** de `BuildFoodDropZone.sideTopSortingOrder` (390) + cantidad de visuales; si se cambia uno, revisar el otro. Los visuales de sides/toppings van a slots fijos alrededor del `meatAnchorOffset` (ver 3.4): agregar un item nuevo al `ToppingsPanel` no requiere tocar el layout, solo si se quiere un tercer slot |
 | 24 | **Paneles encima de clientes.** Los dos `SlidingPanel` se despliegan sobre la fila de clientes y comparten z con ellos. Cualquier objeto nuevo con collider en esa zona tiene que gatearse igual que `CustomerView.ApplyPickingState` (`SlidingPanel.IsAreaCoveredByOpenPanel`) o va a robar clicks a las celdas del panel. Y al revés: un pick que no use `OnMouseXXX` tiene que preguntar `IsPointOverPanel` antes de aceptar el click (`PlateDeliveryDraggable` lo hace) |
 | 25 | **La bandeja no tiene tope** (decisión del refactor): apila sin límite en `trayWorldDirection × trayWorldSpacing`. Si se llena, es un problema visual, no lógico |
+| 28 | **La derrota total se decide en `Awake`, no en `Start`** (`RunDefeatScreen`): así apaga `ShopCanvas` y `StrikeEndPopupCanvas` antes de que corran sus `Start`, y `StrikeEndPopup` no llega a consumir su flag. Un componente nuevo de `EndScene` que asuma que la tienda está encendida tiene que contemplar este caso |
+| 29 | **`SceneManagementUtils.RestartRun` usa `DestroyImmediate`, no `Destroy`**, sobre los cuatro DDOL. Carga `GameScene` en el mismo frame y `GameScene` trae sus propias copias: con destrucción diferida los viejos siguen vivos durante el `Awake` de los nuevos, los nuevos se autodestruyen por el guard de singleton y recién después mueren los viejos → las cuatro `Instance` quedan en `null`. `ReturnToMainMenu` no tiene el problema porque `MainMenuScene` no trae copias |
+| 30 | **`Electronic Highway Sign SDF` no tiene acentos ni `—` / `→`** y los dibuja como cuadrado (ya pasa en los labels viejos de `ShopNextButtonUI` y en `CantCarbones`). **`Bungee-Regular SDF` y `Nunito-Regular SDF` sí tienen los acentos**: para texto nuevo de tienda usar esas dos, y evitar igual los signos exóticos (`·`, `—`, `→`) |
+| 31 | **Los TMP del header de la tienda tienen `margin` negativo** (`CantCarbones`: `(-105, 0, -132, -18)`). Clonarlos para texto nuevo arrastra ese margen y el texto se dibuja corrido respecto de su `RectTransform`: poner `margin = Vector4.zero` en el clon |
 | 26 | El feedback de clientes ocupa el slot 4 s (`IsInFeedback`): `MaxSimultaneousCustomers` los cuenta, `SpawnLoop` no spawnea en su lugar hasta que se van, y `OnNightEnded` espera a que termine el último feedback. `IsCustomerActive`, `SetDeliveryDragHover` y `EvaluateDelivery` los excluyen |

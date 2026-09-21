@@ -38,7 +38,8 @@ public class PauseMenuHandler : MonoBehaviour
     {
         if (!endGameButtton) return;
 
-        GameManager.Instance?.EndNight();
+        // Cierre anticipado a pedido del jugador: suma a la racha de noches de la run.
+        GameManager.Instance?.EndNightEarly();
     }
 
     private void BackToMenu()

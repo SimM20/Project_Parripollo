@@ -24,6 +24,9 @@ public class StrikeSystem : MonoBehaviour
     [Tooltip("Segundos que permanece visible el aviso '¡Te clavaron el cartel!' al llegar al límite.")]
     [SerializeField] private float limitNoticeSeconds = 5f;
 
+    [Tooltip("Config de derrota total de la run. De acá sale el tope de noches seguidas con el cartel clavado.")]
+    [SerializeField] private RunDefeatConfigSO runDefeatConfig;
+
     /// <summary>Strikes acumulados en la noche actual. Nunca supera <see cref="MaxStrikes"/>.</summary>
     public int CurrentStrikes { get; private set; }
 
@@ -40,6 +43,25 @@ public class StrikeSystem : MonoBehaviour
     /// (<see cref="ConsumeNightEndedByStrikes"/>). Se limpia también al empezar una noche.
     /// </summary>
     public static bool LastNightEndedByStrikes { get; private set; }
+
+    /// <summary>
+    /// Noches SEGUIDAS que terminaron por el límite de strikes. Es estático por el mismo
+    /// motivo que <see cref="LastNightEndedByStrikes"/>: tiene que sobrevivir el viaje
+    /// GameScene -> EndScene -> GameScene, y StrikeSystem no existe en EndScene.
+    /// A diferencia de los strikes, la racha NO se limpia al empezar una noche.
+    /// </summary>
+    public static int ConsecutiveStrikeNights { get; private set; }
+
+    /// <summary>Tope de noches seguidas, cacheado del SO para que EndScene lo pueda leer.</summary>
+    public static int MaxConsecutiveStrikeNights { get; private set; } = 3;
+
+    /// <summary>Si la racha puede provocar derrota. Cacheado del SO igual que el tope.</summary>
+    public static bool StrikeStreakDefeatEnabled { get; private set; } = true;
+
+    /// <summary>La racha llegó al tope: la run está perdida.</summary>
+    public static bool IsStrikeStreakDefeat
+        => StrikeStreakDefeatEnabled &&
+           ConsecutiveStrikeNights >= Mathf.Max(1, MaxConsecutiveStrikeNights);
 
     /// <summary>(strikes actuales, máximo). Dispara una vez por strike real, nunca por encima del máximo.</summary>
     public event Action<int, int> OnStrikeAdded;
@@ -59,6 +81,12 @@ public class StrikeSystem : MonoBehaviour
         }
 
         Instance = this;
+
+        if (runDefeatConfig != null)
+        {
+            MaxConsecutiveStrikeNights = runDefeatConfig.MaxConsecutiveStrikeNights;
+            StrikeStreakDefeatEnabled = runDefeatConfig.strikeStreakDefeatEnabled;
+        }
     }
 
     private void OnDestroy()
@@ -72,6 +100,9 @@ public class StrikeSystem : MonoBehaviour
         CurrentStrikes = 0;
         IsLimitReached = false;
         LastNightEndedByStrikes = false;
+
+        // OJO: ConsecutiveStrikeNights NO se toca acá. Los strikes son de la noche, la racha
+        // es de la run y solo la mueve RegisterNightResult al cerrar la jornada.
 
         OnReset?.Invoke();
     }
@@ -127,6 +158,41 @@ public class StrikeSystem : MonoBehaviour
     /// <summary>True si hay sistema de strikes en la escena y ya se alcanzó el límite.</summary>
     public static bool IsSpawnBlocked => Instance != null && Instance.IsLimitReached;
 
+    // ---- Racha de noches cerradas por strikes (derrota total de la run) ----
+
+    /// <summary>
+    /// Cierre de jornada: suma o resetea la racha. Lo llama <see cref="GameManager.EndNight"/>,
+    /// que es el único embudo de fin de día (tanto el último cliente como el botón del menú
+    /// de pausa terminan ahí).
+    /// </summary>
+    public static void RegisterNightResult(bool endedByStrikes)
+    {
+        ConsecutiveStrikeNights = endedByStrikes ? ConsecutiveStrikeNights + 1 : 0;
+
+        Debug.Log(
+            "[StrikeSystem] Noche cerrada " + (endedByStrikes ? "por strikes" : "normalmente") +
+            ". Racha: " + ConsecutiveStrikeNights + "/" + MaxConsecutiveStrikeNights
+        );
+    }
+
+    /// <summary>Vuelve la racha a cero. Lo usa el reinicio de run desde la pantalla de derrota.</summary>
+    public static void ResetStreak()
+    {
+        ConsecutiveStrikeNights = 0;
+        LastNightEndedByStrikes = false;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        // El Editor puede entrar a Play sin domain reload: los estáticos de la sesión
+        // anterior arrastrarían una racha ajena (mismo recurso que SlidingPanel).
+        ConsecutiveStrikeNights = 0;
+        LastNightEndedByStrikes = false;
+        MaxConsecutiveStrikeNights = 3;
+        StrikeStreakDefeatEnabled = true;
+    }
+
     // ---- QA: provocar cada estado de forma determinística desde el inspector en Play Mode ----
 
     [ContextMenu("QA/Sumar un strike")]
@@ -134,4 +200,10 @@ public class StrikeSystem : MonoBehaviour
 
     [ContextMenu("QA/Reiniciar strikes")]
     private void DebugReset() => ResetForNewNight();
+
+    [ContextMenu("QA/Sumar noche cerrada por strikes")]
+    private void DebugAddStrikeNight() => RegisterNightResult(true);
+
+    [ContextMenu("QA/Reiniciar racha de noches")]
+    private void DebugResetStreak() => ResetStreak();
 }

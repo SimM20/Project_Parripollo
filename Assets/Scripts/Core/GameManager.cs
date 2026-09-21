@@ -511,7 +511,15 @@ public class GameManager : MonoBehaviour
     /// <see cref="CustomerSystem.OnNightEnded"/> cuando se va el último cliente, o el botón
     /// de terminar el día del menú de pausa.
     /// </summary>
-    public void EndNight()
+    public void EndNight() => EndNight(false);
+
+    /// <summary>
+    /// Cierre manual desde el menú de pausa. Cuenta como noche fallida para la racha de la
+    /// run: terminar a mano es abandonar la jornada, no cerrarla bien.
+    /// </summary>
+    public void EndNightEarly() => EndNight(true);
+
+    private void EndNight(bool endedEarlyByPlayer)
     {
         customerSystem.OnNightEnded -= EndNight;
 
@@ -545,6 +553,12 @@ public class GameManager : MonoBehaviour
                 "Próximo día: " + tracker.CurrentNight
             );
         }
+
+        // Racha de la run: leer (sin consumir) el flag que dejó CustomerSystem.TryEndNight.
+        // El flag lo sigue consumiendo StrikeEndPopup ya en EndScene.
+        // Cerrar a mano desde la pausa cuenta igual que quedarse sin clientes por strikes.
+        bool failedNight = endedEarlyByPlayer || StrikeSystem.LastNightEndedByStrikes;
+        StrikeSystem.RegisterNightResult(failedNight);
 
         SceneManagementUtils.LoadSceneByName("EndScene");
     }
