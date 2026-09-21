@@ -23,6 +23,10 @@ public class AudioManager : MonoBehaviour
     [Tooltip("Se elige uno al azar en cada entrega. Vacio = no suena nada.")]
     [SerializeField] private AudioClip[] negativeFeedbackClips;
 
+    [Header("Strikes")]
+    [Tooltip("Suena al sumar un strike (cliente perdido por paciencia). Debe distinguirse del feedback negativo. TBD por Audio: vacio = no suena.")]
+    [SerializeField] private AudioClip strikeClip;
+
     private AudioSource audioSource;
 
     // Ultimo indice reproducido de cada grupo, para no repetir el mismo clip dos veces seguidas.
@@ -60,6 +64,12 @@ public class AudioManager : MonoBehaviour
     {
         if (tableSlide != null)
             audioSource?.PlayOneShot(tableSlide);
+    }
+
+    public void PlayStrike()
+    {
+        if (strikeClip != null)
+            audioSource?.PlayOneShot(strikeClip);
     }
 
     public void PlayPositiveFeedback()

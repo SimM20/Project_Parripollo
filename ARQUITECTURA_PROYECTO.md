@@ -40,6 +40,7 @@ Assets/Scripts/
 ├── Orders/         Modelo y generación de pedidos (corte + punto + pan/toppings)
 ├── Food/           Catálogo (SO), validación de platos, evaluación económica (cocción + extras)
 ├── Shop/           Tienda (post-noche): tabs + breadcrumb, compra individual. Dos capas de UI
+├── Strikes/        Strikes por clientes perdidos: contador, HUD de X, aviso de gameplay, popup de cierre
 ├── UI/             ViewManager, Tutorial, SlidingPanel (base de paneles), notificaciones, HUD SO, feedback
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
 │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
@@ -59,6 +60,7 @@ Assets/Scripts/
 | **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada con toppings | `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
 | **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene` y `ShopTutorial`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
+| **Strikes/** | Penalización de jornada por clientes que se van con paciencia 0 (`StrikeSystem`, singleton de escena), HUD de X (`StrikeHudView`), aviso “¡Te clavaron el cartel!” (`StrikeLimitNotice`) y popup modal de cierre anticipado en `EndScene` (`StrikeEndPopup`) | `StrikeSystem.cs`, `StrikeHudView.cs`, `StrikeLimitNotice.cs`, `StrikeEndPopup.cs` |
 | **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI` | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
@@ -186,6 +188,7 @@ graph TD
 |---|---|---|
 | `ViewManager` | `OnViewChanged(ViewType)` | `TutorialManager`, `GrillNotificationManager`, `SlidingPanel` (cierra fuera de Grill). En la práctica **ya no dispara**: solo hay una vista |
 | `CustomerSystem` | `OnNightEnded` (campo `Action`) | `GameManager.EndNight` |
+| `StrikeSystem` | `OnStrikeAdded(int actual, int max)`, `OnLimitReached`, `OnReset` | `StrikeHudView` (X + shake), `StrikeLimitNotice` (aviso 5 s) |
 | `SlidingPanel` | `static OnAnyPanelOpenChanged(bool)` | `CustomerView` (re-evalúa si el cliente queda tapado por un panel) |
 | `CustomerView` | `static OnDeliveryDragActiveChanged` | Cada `CustomerView` (durante el arrastre del plato vuelven a ser pickeables aunque haya paneles abiertos) |
 | `CoolerSystem` | `OnInventoryChanged` | `StockPanelController.RefreshSlots`, `ShopHeaderUI`, `ShopGridUI` |
@@ -1067,6 +1070,40 @@ con `TutorialStartAction.SetShopTab*`.
 
 ---
 
+#### Strikes por clientes perdidos — `Strikes/` (spec “Sistema de Strikes por Clientes Perdidos” v0.1, 2026-09-21)
+
+Penalización de jornada: cada cliente que se va porque su **paciencia llegó a 0** suma 1 strike. Al llegar al
+máximo dejan de entrar clientes nuevos, pero la noche sigue hasta que se atiende (o se pierde) al último activo;
+recién ahí termina anticipadamente y se pasa a la tienda con un popup explicativo. Sin castigo económico.
+
+```csharp
+// StrikeSystem — singleton de escena (GameScene: [SYSTEMS]/StrikeSystem). Null-safe: sin instancia no pasa nada.
+int   CurrentStrikes, MaxStrikes;          // maxStrikes (3) y limitNoticeSeconds (5) son [SerializeField], sujetos a playtesting
+bool  IsLimitReached;                      // estado de cierre por strikes (hasta terminar la noche)
+static bool IsSpawnBlocked;                // Instance != null && IsLimitReached
+static bool LastNightEndedByStrikes;       // sobrevive el cambio de escena; lo consume el popup de EndScene
+event Action<int,int> OnStrikeAdded;  event Action OnLimitReached, OnReset;
+void ResetForNewNight();  bool RegisterPatienceStrike();  void MarkNightEndedByStrikes();  static bool ConsumeNightEndedByStrikes();
+```
+
+| Regla del spec | Dónde vive |
+|---|---|
+| Reset al empezar la noche | `CustomerSystem.StartNight()` → `ResetForNewNight()` (strikes 0, spawn habilitado, HUD reiniciado) |
+| **Única causa**: paciencia 0 | `CustomerSystem.TriggerAngryLeaveFeedback` → `RegisterPatienceStrike()` + `AudioManager.PlayStrike()`. El guard `IsInFeedback` garantiza **una sola suma por cliente**. El faltante (`M` → `TriggerMissingCutChange`) no pasa por ahí → no suma |
+| Contador saturado | `RegisterPatienceStrike` devuelve `false` al máximo: el cliente se va igual, sin strike ni SFX |
+| Bloqueo de spawn | `SpawnLoop` corta con `yield break` tras el intervalo (invalida el spawn pendiente) y `SpawnCustomer` devuelve temprano si `IsSpawnBlocked` — también el forzado del tutorial |
+| Fin anticipado | `RemoveCustomer`: con `IsSpawnBlocked && activeCustomers == 0` → `MarkNightEndedByStrikes()` + `OnNightEnded` (el flujo sigue por `GameManager.EndNight` → `EndScene` como siempre) |
+| HUD de X | `HudCanvas/MainPanel/HudContainer (Strikes)` + `StrikeHudView`: genera `MaxStrikes` X en `Start`/`OnReset` (se adapta al máximo), rojo al activarse, shake + punch sobre la nueva (duración/intensidad configurables). X procedural si no hay `strikeSprite` (placeholder hasta que Arte defina el estilo) |
+| Aviso “¡Te clavaron el cartel!” | `StrikeNoticeCanvas/Notice` + `StrikeLimitNotice`: overlay **sin `GraphicRaycaster`** y sin `raycastTarget` → no bloquea ni pausa; fade in/out, visible `LimitNoticeSeconds`; `WaitForSeconds` → se congela con la pausa. Posicionado arriba, por delante de los clientes y sin tapar la parrilla |
+| Popup de cierre | `EndScene/StrikeEndPopupCanvas` (order 20, sobre `ShopCanvas` 10) + `StrikeEndPopup`: en `Start` consume `LastNightEndedByStrikes`; si es `true` activa el root (fondo negro `raycastTarget` = tienda bloqueada) y “Ir a la tienda” lo cierra. Slot `illustration` (cliente enojado + cartel) queda vacío hasta que Arte lo entregue |
+| SFX de strike | `AudioManager.strikeClip` (TBD por Audio: vacío = silencio). Suena aparte del `PlayNegativeFeedback` de la burbuja |
+| QA | `StrikeSystem` → menú contextual del componente en Play: *QA/Sumar un strike*, *QA/Reiniciar strikes* |
+
+> `Fondo para Textos Corto.png` ahora tiene `spriteBorder = 45` para usarse `Sliced` en el aviso y el popup; los usos `Simple` existentes no cambian.
+> El popup vive en la tienda porque hoy no hay pantalla de resumen; si se agrega, `StrikeEndPopupCanvas` se muda ahí sin tocar código.
+
+---
+
 ### 3.7 Tutorial
 
 #### `TutorialManager` — `UI/TutorialManager.cs` · Singleton
@@ -1241,12 +1278,14 @@ Ya **no existen**: `W`/`E`, `←`/`→` (cambio de vista), `A`/`D` (selección d
 
 ```
 GameScene ──[último cliente atendido/expulsado, tras su feedback]──► CustomerSystem.OnNightEnded
+   │    (o antes: 3 strikes por paciencia → no entran más clientes → se va el último activo → StrikeSystem.MarkNightEndedByStrikes)
    └─► GameManager.EndNight()
          ├─ CoalConsumptionTracker.RegisterDayCompleted()   // DaysPlayed++, aplica desbloqueos
          └─ LoadSceneByName("EndScene")
 
 EndScene
-   ├─ EndScreen        muestra el dinero · botones: MainMenu / Retry / GoShopping
+   ├─ StrikeEndPopup   si la noche cerró por strikes: popup modal sobre la tienda, “Ir a la tienda” lo cierra
+   ├─ EndScreen        muestra el dinero · botones: MainMenu / Retry / GoShopping (su Canvas está desactivado: se entra directo a la tienda)
    ├─ ShopSystem       tabs Coal → Meat → Upgrades → Toppings  (arranca en Coal)
    │     Header:     nombre de tienda · plata · total de carbón en el cooler
    │     Breadcrumb: 4 ShopTabButtonUI → SetTab (salto directo a cualquier tab)

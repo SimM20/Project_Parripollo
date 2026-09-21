@@ -291,6 +291,9 @@ public class CustomerSystem : MonoBehaviour
         ClearAllCustomers();
         spawnedTonight = 0;
 
+        // Los strikes pertenecen sólo a esta noche: contador en 0, spawn habilitado, HUD reiniciado.
+        StrikeSystem.Instance?.ResetForNewNight();
+
         UIManager.Instance?.SetActualCustomers(
             spawnedTonight
         );
@@ -317,6 +320,11 @@ public class CustomerSystem : MonoBehaviour
                 spawnIntervalSeconds
             );
 
+            // Límite de strikes alcanzado: no entra nadie más. El spawn que estaba
+            // esperando su intervalo queda invalidado acá mismo.
+            if (StrikeSystem.IsSpawnBlocked)
+                yield break;
+
             if (activeCustomers.Count >= resolvedMaxSimultaneousCustomers)
                 continue;
 
@@ -335,6 +343,11 @@ public class CustomerSystem : MonoBehaviour
 
             return;
         }
+
+        // Estado de cierre por strikes: la prohibición afecta sólo a la llegada de
+        // clientes nuevos, los que ya están se atienden normalmente.
+        if (StrikeSystem.IsSpawnBlocked)
+            return;
 
         // Los spawns normales respetan el límite de la noche.
         // El tutorial puede ignorarlo.
@@ -701,6 +714,15 @@ public class CustomerSystem : MonoBehaviour
 
         customer.StartFeedback();
 
+        // Único evento que suma strike: paciencia en 0. El guard de IsInFeedback de arriba
+        // garantiza una sola suma por cliente. Con el contador saturado el cliente se retira
+        // igual, pero no suma. El SFX es distinto del de retirada normal (spec).
+        if (StrikeSystem.Instance != null &&
+            StrikeSystem.Instance.RegisterPatienceStrike())
+        {
+            AudioManager.Instance?.PlayStrike();
+        }
+
         if (dragHoverView != null && dragHoverView.Customer == customer)
         {
             dragHoverView = null;
@@ -834,8 +856,21 @@ public class CustomerSystem : MonoBehaviour
         // opcional: compactar slots (corrés a la izquierda para no dejar huecos)
         CompactSlots();
 
-        if (spawnedTonight >= customersTargetTonight &&
-     activeCustomers.Count == 0)
+        if (activeCustomers.Count > 0)
+            return;
+
+        // Cierre anticipado por strikes: el límite ya se alcanzó (no llegan más clientes) y
+        // acaba de irse el último activo. Se marca antes de EndNight para que el popup de
+        // EndScene sepa que debe mostrarse.
+        if (StrikeSystem.IsSpawnBlocked)
+        {
+            StrikeSystem.Instance.MarkNightEndedByStrikes();
+            Debug.Log("[CustomerSystem] Noche terminada anticipadamente por strikes.");
+            OnNightEnded?.Invoke();
+            return;
+        }
+
+        if (spawnedTonight >= customersTargetTonight)
         {
             OnNightEnded?.Invoke();
         }
