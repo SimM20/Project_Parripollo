@@ -610,7 +610,8 @@ public class ToppingDraggable : MonoBehaviour
         }
 
         zone.BuildStation.AddTopping(toppingData);
-        bool visualSpawned = zone.SpawnPlateVisual(selfRenderer != null ? selfRenderer.sprite : null);
+        bool visualSpawned = zone.SpawnPlateVisual(
+            selfRenderer != null ? selfRenderer.sprite : null, BuildFoodDropZone.PlateVisualKind.Topping);
         BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
             zone.BuildStation, zone, toppingData, visualSpawned, this, activeSplatters.Count, currentSauceAmount));
         Debug.Log("[ToppingDraggable] Topping registrado: " + toppingData.toppingName);

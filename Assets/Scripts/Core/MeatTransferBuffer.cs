@@ -189,14 +189,16 @@ public class MeatTransferBuffer : MonoBehaviour
             return false;
 
         // TryAcceptMeatAt solo muta el armado si el punto cae dentro de la zona del plato.
-        if (!BuildFoodDropZone.TryAcceptMeatAt(dropWorldPoint, entry.cut, entry.state, entry.SideAState, entry.SideBState))
+        // El visual no queda donde se soltó: va al anclaje de carne del plato (meatWorldPoint).
+        if (!BuildFoodDropZone.TryAcceptMeatAt(dropWorldPoint, entry.cut, entry.state, entry.SideAState, entry.SideBState,
+                out Vector3 meatWorldPoint))
             return false;
 
         MeatCutSO cut = meat.cut;
         meat.ReleaseOccupiedSlots();
         Destroy(meat.gameObject);
 
-        GameObject visual = AdoptVisualIntoPlate(entry, null, dropWorldPoint);
+        GameObject visual = AdoptVisualIntoPlate(entry, null, meatWorldPoint);
         BuildUndoHistory.Instance?.Push(new AddMeatUndoAction(this, visual));
 
         Debug.Log("[Plato] Corte montado desde la parrilla: " + (cut != null ? cut.cutName : "Sin corte")
@@ -219,13 +221,14 @@ public class MeatTransferBuffer : MonoBehaviour
         if (entry == null || entry.cut == null)
             return false;
 
-        if (!BuildFoodDropZone.TryAcceptMeatAt(dropWorldPoint, entry.cut, entry.state, entry.SideAState, entry.SideBState))
+        if (!BuildFoodDropZone.TryAcceptMeatAt(dropWorldPoint, entry.cut, entry.state, entry.SideAState, entry.SideBState,
+                out Vector3 meatWorldPoint))
             return false;
 
         GameObject visual = entryId < trayVisuals.Count ? trayVisuals[entryId] : null;
         RemoveTrayEntryAt(entryId, false);
 
-        GameObject plated = AdoptVisualIntoPlate(entry, visual, dropWorldPoint);
+        GameObject plated = AdoptVisualIntoPlate(entry, visual, meatWorldPoint);
         BuildUndoHistory.Instance?.Push(new AddMeatUndoAction(this, plated));
 
         RefreshVisuals();

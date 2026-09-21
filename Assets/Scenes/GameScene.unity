@@ -12420,10 +12420,17 @@ MonoBehaviour:
   buildStationSystem: {fileID: 34340692}
   meatTransferBuffer: {fileID: 1918444612}
   zoneCollider: {fileID: 1310823262}
-  plateVisualWorldSpacing: 1.2
-  plateVisualDirection: {x: 0.8, y: 0, z: 0}
-  plateVisualSortingOrder: 500
-  plateVisualScale: {x: 0.12, y: 0.12, z: 0.12}
+  meatAnchorOffset: {x: -0.65, y: 0}
+  sideSlotOffsets:
+  - {x: 0.35, y: 0.3}
+  - {x: 0.9, y: -0.3}
+  sideVisualSize: 0.9
+  toppingSlotOffsets:
+  - {x: -0.2, y: -0.55}
+  - {x: 0.35, y: -0.6}
+  toppingVisualSize: 0.55
+  overflowStep: {x: 0.3, y: -0.15}
+  sideTopSortingOrder: 390
 --- !u!61 &1310823262
 BoxCollider2D:
   m_ObjectHideFlags: 0

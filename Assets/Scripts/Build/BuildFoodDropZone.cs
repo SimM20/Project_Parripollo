@@ -3,19 +3,57 @@ using UnityEngine;
 
 public class BuildFoodDropZone : MonoBehaviour
 {
+    /// <summary>Qué tipo de visual se apoya sobre el plato. Decide en qué slot del layout cae.</summary>
+    public enum PlateVisualKind { Side, Topping }
+
     [SerializeField] private BuildStationSystem buildStationSystem;
     [SerializeField] private MeatTransferBuffer meatTransferBuffer;
     [SerializeField] private Collider2D zoneCollider;
 
     public BuildStationSystem BuildStation => buildStationSystem;
 
-    [Header("Plate Visuals")]
-    [SerializeField] private float plateVisualWorldSpacing = 1.2f;
-    [SerializeField] private Vector3 plateVisualDirection = Vector3.right;
-    [SerializeField] private int plateVisualSortingOrder = 500;
-    [SerializeField] private Vector3 plateVisualScale = new Vector3(0.12f, 0.12f, 0.12f);
+    // Layout del plato. Todos los offsets son en UNIDADES DE MUNDO desde el centro de la zona
+    // (el transform del plato está escalado a ~0.22, así que los offsets locales serían ilegibles).
+    // La carne es la protagonista: va a un anclaje fijo y los acompañamientos se reparten
+    // alrededor, más chicos y dibujados por debajo, para acompañarla y no taparla.
+    [Header("Plate Layout (world units from zone center)")]
+    [Tooltip("Dónde se apoya el corte. El drop lo snapea acá sin importar dónde se soltó dentro del plato.")]
+    [SerializeField] private Vector2 meatAnchorOffset = new Vector2(-0.65f, 0f);
 
-    private readonly List<GameObject> plateSideTopVisuals = new List<GameObject>();
+    [Tooltip("Slots para guarniciones, en orden de llegada.")]
+    [SerializeField] private Vector2[] sideSlotOffsets =
+    {
+        new Vector2(0.35f, 0.3f),
+        new Vector2(0.9f, -0.3f),
+    };
+
+    [Tooltip("Tamaño de cada guarnición en unidades de mundo (media geométrica de ancho y alto del sprite).")]
+    [SerializeField] private float sideVisualSize = 0.9f;
+
+    [Tooltip("Slots para toppings/salsas, en orden de llegada.")]
+    [SerializeField] private Vector2[] toppingSlotOffsets =
+    {
+        new Vector2(-0.2f, -0.55f),
+        new Vector2(0.35f, -0.6f),
+    };
+
+    [Tooltip("Tamaño de cada topping en unidades de mundo (media geométrica de ancho y alto del sprite).")]
+    [SerializeField] private float toppingVisualSize = 0.55f;
+
+    [Tooltip("Si entran más visuales que slots, los sobrantes siguen desde el último slot con este paso.")]
+    [SerializeField] private Vector2 overflowStep = new Vector2(0.3f, -0.15f);
+
+    [Tooltip("Sorting base de sides/toppings. Va DEBAJO de la carne (MeatTransferBuffer.plateMeatSortingBase = 400) " +
+             "para que nunca la tapen; cada visual suma su índice.")]
+    [SerializeField] private int sideTopSortingOrder = 390;
+
+    private class PlateVisualEntry
+    {
+        public GameObject go;
+        public PlateVisualKind kind;
+    }
+
+    private readonly List<PlateVisualEntry> plateSideTopVisuals = new List<PlateVisualEntry>();
     private static readonly List<BuildFoodDropZone> ActiveZones = new List<BuildFoodDropZone>();
 
     void Awake()
@@ -89,7 +127,8 @@ public class BuildFoodDropZone : MonoBehaviour
             else if (item.sideData != null)
             {
                 zone.buildStationSystem.AddSide(item.sideData);
-                bool sideVisualSpawned = zone.SpawnPlateVisual(item.GetComponent<SpriteRenderer>()?.sprite);
+                bool sideVisualSpawned = zone.SpawnPlateVisual(
+                    item.GetComponent<SpriteRenderer>()?.sprite, PlateVisualKind.Side);
                 BuildUndoHistory.Instance?.Push(new AddSideUndoAction(
                     zone.buildStationSystem, zone, item.sideData, sideVisualSpawned));
                 Debug.Log("[Build] Acompañamiento arrastrado: " + item.sideData.sideName);
@@ -97,7 +136,8 @@ public class BuildFoodDropZone : MonoBehaviour
             else if (item.toppingData != null)
             {
                 zone.buildStationSystem.AddTopping(item.toppingData);
-                bool toppingVisualSpawned = zone.SpawnPlateVisual(item.GetComponent<SpriteRenderer>()?.sprite);
+                bool toppingVisualSpawned = zone.SpawnPlateVisual(
+                    item.GetComponent<SpriteRenderer>()?.sprite, PlateVisualKind.Topping);
                 BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
                     zone.buildStationSystem, zone, item.toppingData, toppingVisualSpawned, null, 0, 0f));
                 Debug.Log("[Build] Topping arrastrado: " + item.toppingData.toppingName);
@@ -121,6 +161,18 @@ public class BuildFoodDropZone : MonoBehaviour
 
     public static bool TryAcceptMeatAt(Vector3 worldPoint, MeatCutSO cut, MeatStates state, MeatStates sideAState, MeatStates sideBState)
     {
+        return TryAcceptMeatAt(worldPoint, cut, state, sideAState, sideBState, out _);
+    }
+
+    /// <summary>
+    /// Acepta el corte si el punto cae sobre un plato libre. <paramref name="meatWorldPoint"/> es
+    /// donde tiene que quedar el visual: el anclaje fijo de carne del plato, no el punto del drop.
+    /// </summary>
+    public static bool TryAcceptMeatAt(Vector3 worldPoint, MeatCutSO cut, MeatStates state,
+        MeatStates sideAState, MeatStates sideBState, out Vector3 meatWorldPoint)
+    {
+        meatWorldPoint = worldPoint;
+
         if (cut == null)
             return false;
 
@@ -141,6 +193,7 @@ public class BuildFoodDropZone : MonoBehaviour
             }
 
             zone.buildStationSystem.AddCut(cut, state, sideAState, sideBState);
+            meatWorldPoint = zone.GetMeatAnchorWorld(worldPoint.z);
             Debug.Log("[Build] Carne arrastrada: " + cut.cutName + " con estado " + state
                       + " (A: " + sideAState + " | B: " + sideBState + ")");
             return true;
@@ -186,11 +239,11 @@ public class BuildFoodDropZone : MonoBehaviour
         for (int i = 0; i < ActiveZones.Count; i++)
         {
             if (ActiveZones[i] == null) continue;
-            List<GameObject> visuals = ActiveZones[i].plateSideTopVisuals;
+            List<PlateVisualEntry> visuals = ActiveZones[i].plateSideTopVisuals;
             for (int j = 0; j < visuals.Count; j++)
             {
-                if (visuals[j] != null)
-                    visuals[j].SetActive(visible);
+                if (visuals[j].go != null)
+                    visuals[j].go.SetActive(visible);
             }
         }
     }
@@ -210,36 +263,48 @@ public class BuildFoodDropZone : MonoBehaviour
             if (zone == null)
                 continue;
 
-            List<GameObject> visuals = zone.plateSideTopVisuals;
+            List<PlateVisualEntry> visuals = zone.plateSideTopVisuals;
             for (int j = 0; j < visuals.Count; j++)
             {
-                if (visuals[j] != null && visuals[j].activeInHierarchy)
-                    into.Add(visuals[j].transform);
+                if (visuals[j].go != null && visuals[j].go.activeInHierarchy)
+                    into.Add(visuals[j].go.transform);
             }
         }
     }
 
-    public bool SpawnPlateVisual(Sprite sprite)
+    /// <summary>Punto de mundo donde se apoya la carne en este plato.</summary>
+    public Vector3 GetMeatAnchorWorld(float z)
+    {
+        Vector3 p = transform.position + (Vector3)meatAnchorOffset;
+        p.z = z;
+        return p;
+    }
+
+    /// <summary>
+    /// Apoya un visual de guarnición/topping en el siguiente slot libre de su tipo, escalado a un
+    /// tamaño uniforme y dibujado por debajo de la carne.
+    /// </summary>
+    public bool SpawnPlateVisual(Sprite sprite, PlateVisualKind kind)
     {
         if (sprite == null)
             return false;
 
-        Vector3 dir = plateVisualDirection.sqrMagnitude > 0f
-            ? plateVisualDirection.normalized
-            : Vector3.right;
+        int index = CountVisualsOfKind(kind);
+        Vector2[] slots = kind == PlateVisualKind.Side ? sideSlotOffsets : toppingSlotOffsets;
+        float size = kind == PlateVisualKind.Side ? sideVisualSize : toppingVisualSize;
 
-        Vector3 spawnPos = transform.position + dir * plateVisualWorldSpacing * plateSideTopVisuals.Count;
+        Vector3 spawnPos = transform.position + (Vector3)ResolveSlotOffset(slots, index);
         spawnPos.z = transform.position.z;
 
-        GameObject go = new GameObject("PlateVisual_" + plateSideTopVisuals.Count);
+        GameObject go = new GameObject("PlateVisual_" + kind + "_" + index);
         go.transform.position = spawnPos;
-        go.transform.localScale = plateVisualScale;
+        go.transform.localScale = Vector3.one * FitScale(sprite, size);
 
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = sprite;
-        sr.sortingOrder = plateVisualSortingOrder;
+        sr.sortingOrder = sideTopSortingOrder + plateSideTopVisuals.Count;
 
-        plateSideTopVisuals.Add(go);
+        plateSideTopVisuals.Add(new PlateVisualEntry { go = go, kind = kind });
         return true;
     }
 
@@ -250,19 +315,56 @@ public class BuildFoodDropZone : MonoBehaviour
         if (last < 0)
             return;
 
-        GameObject go = plateSideTopVisuals[last];
+        GameObject go = plateSideTopVisuals[last].go;
         plateSideTopVisuals.RemoveAt(last);
 
         if (go != null)
             Destroy(go);
     }
 
+    private int CountVisualsOfKind(PlateVisualKind kind)
+    {
+        int count = 0;
+        for (int i = 0; i < plateSideTopVisuals.Count; i++)
+        {
+            if (plateSideTopVisuals[i].kind == kind)
+                count++;
+        }
+        return count;
+    }
+
+    private Vector2 ResolveSlotOffset(Vector2[] slots, int index)
+    {
+        if (slots == null || slots.Length == 0)
+            return overflowStep * index;
+
+        if (index < slots.Length)
+            return slots[index];
+
+        // Sin slot libre: sigue en diagonal desde el último para no pisar el anterior.
+        return slots[slots.Length - 1] + overflowStep * (index - slots.Length + 1);
+    }
+
+    /// <summary>
+    /// Escala uniforme para que el sprite mida 'targetSize' unidades de mundo. Se usa la media
+    /// geométrica de ancho y alto (no el lado mayor): así un sprite apaisado como las papas no queda
+    /// enano al lado de uno cuadrado, y todos los acompañamientos ocupan un área parecida.
+    /// </summary>
+    private static float FitScale(Sprite sprite, float targetSize)
+    {
+        Vector3 bounds = sprite.bounds.size;
+        float reference = Mathf.Sqrt(Mathf.Max(0f, bounds.x * bounds.y));
+        if (reference <= 0f)
+            return 1f;
+        return targetSize / reference;
+    }
+
     private void ClearPlateItemVisuals()
     {
         for (int i = 0; i < plateSideTopVisuals.Count; i++)
         {
-            if (plateSideTopVisuals[i] != null)
-                Destroy(plateSideTopVisuals[i]);
+            if (plateSideTopVisuals[i].go != null)
+                Destroy(plateSideTopVisuals[i].go);
         }
 
         plateSideTopVisuals.Clear();
@@ -284,4 +386,25 @@ public class BuildFoodDropZone : MonoBehaviour
     {
         EnsureReferences();
     }
+
+#if UNITY_EDITOR
+    // Dibuja el layout en la Scene view para ajustar los slots sin entrar en Play.
+    void OnDrawGizmosSelected()
+    {
+        Vector3 center = transform.position;
+
+        Gizmos.color = new Color(0.9f, 0.3f, 0.2f, 0.9f);
+        Gizmos.DrawWireCube(center + (Vector3)meatAnchorOffset, new Vector3(1f, 1f, 0f));
+
+        Gizmos.color = new Color(0.95f, 0.8f, 0.2f, 0.9f);
+        if (sideSlotOffsets != null)
+            for (int i = 0; i < sideSlotOffsets.Length; i++)
+                Gizmos.DrawWireCube(center + (Vector3)sideSlotOffsets[i], new Vector3(sideVisualSize, sideVisualSize, 0f));
+
+        Gizmos.color = new Color(0.3f, 0.8f, 0.3f, 0.9f);
+        if (toppingSlotOffsets != null)
+            for (int i = 0; i < toppingSlotOffsets.Length; i++)
+                Gizmos.DrawWireCube(center + (Vector3)toppingSlotOffsets[i], new Vector3(toppingVisualSize, toppingVisualSize, 0f));
+    }
+#endif
 }

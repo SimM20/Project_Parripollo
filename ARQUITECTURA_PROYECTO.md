@@ -2,6 +2,7 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-09-21** (rama `development`) — layout del plato en `BuildFoodDropZone` (sección 3.4, nota 27).
 
 ---
 
@@ -222,12 +223,15 @@ Parrilla ──drag a la zona "ToBuild" (superficie naranja = plato)──► PL
    │  Meat.OnMouseUp → prioridad: TrashZone → MTB.TryPlateMeatFromGrill(meat, punto) → grilla → origen
    │  TryPlateMeatFromGrill → BuildFoodDropZone.TryAcceptMeatAt (rechaza si el plato YA tiene un corte)
    │                        → BuildStationSystem.AddCut(cut, state, A, B)   [conserva tiempos de cocción]
-   │                        → destruye el Meat, AdoptVisualIntoPlate → AddComponent<PlateDeliveryDraggable>
+   │                        → devuelve meatWorldPoint = anclaje de carne del plato (NO el punto del drop)
+   │                        → destruye el Meat, AdoptVisualIntoPlate(anclaje) → AddComponent<PlateDeliveryDraggable>
    │                        → BuildUndoHistory.Push(AddMeatUndoAction)
 
 ToppingsPanel [T] ──drag──► plato
    │  BuildDraggableFoodItem (pan / side) → BuildFoodDropZone.TryAcceptAt → SetBread / AddSide + visual + Push(undo)
    │  ToppingDraggable (frasco)           → verter sobre PouringZone → AddTopping + salpicaduras + Push(undo)
+   │  Los visuales de side/topping van a SLOTS fijos alrededor de la carne (SpawnPlateVisual(sprite, kind)),
+   │  con tamaño normalizado y sorting por DEBAJO del corte: acompañan, nunca tapan (ver 3.4 → Layout del plato)
 
 Undo  [RollBackButton → BuildUndoHistory.UndoLast]
    │  Pan/side/topping: se quitan del armado y del plato
@@ -683,6 +687,9 @@ void UpdateMeatHolderHover(MeatCutSO, Vector3, bool), ClearMeatHolderHover(), Re
 `AdoptVisualIntoPlate(entry, visual, punto)` es **el único lugar que crea visuales de carne en el plato**: instancia
 `visualPrefab` (o recicla el de la bandeja), lo deja en mundo con `fixedWorldScale`, sprite del estado, `sortingOrder`
 = `plateMeatSortingBase (400) + índice`, destruye cualquier `ToBuildDraggableMeat` y agrega `PlateDeliveryDraggable`.
+El `punto` que recibe **no es el del drop**: `TryPlateMeatFromGrill` y `TryPlateFromTrayById` usan la sobrecarga
+`TryAcceptMeatAt(..., out Vector3 meatWorldPoint)` y montan el visual en el **anclaje de carne** del plato
+(`BuildFoodDropZone.meatAnchorOffset`), así la composición es la misma sin importar dónde se soltó el corte.
 Anclas por nombre si faltan en el inspector: `ToBuild` y **`MeatTray`** bajo `GrillView` (`MeatTray` es el viejo
 `MeatHolder` de la Cooler View, renombrado). `IsOverMeatTray` mide solo el subárbol del anchor porque su padre es el
 root de `GrillView` y medirlo entero tragaba media parrilla.
@@ -722,14 +729,41 @@ ProductVariantSO TryResolveVariant()
 ```
 
 #### `BuildFoodDropZone` — `Build/BuildFoodDropZone.cs`
-Zona del plato (collider `ToBuild`). Registro estático `ActiveZones` + APIs estáticas:
-`TryAcceptAt(punto, BuildDraggableFoodItem)`, `TryAcceptMeatAt(punto, cut, state, A, B)`, `IsPlateOccupiedAt(punto)`,
-`ClearActivePlateVisuals()`, `SetActivePlateVisualsVisible(bool)`, `CollectActivePlateVisuals(List<Transform>)`.
+Zona del plato (collider en `GrillView/Plato`). Registro estático `ActiveZones` + APIs estáticas:
+`TryAcceptAt(punto, BuildDraggableFoodItem)`, `TryAcceptMeatAt(punto, cut, state, A, B[, out meatWorldPoint])`,
+`IsPlateOccupiedAt(punto)`, `ClearActivePlateVisuals()`, `SetActivePlateVisualsVisible(bool)`,
+`CollectActivePlateVisuals(List<Transform>)`. De instancia: `GetMeatAnchorWorld(z)`,
+`SpawnPlateVisual(Sprite, PlateVisualKind)`, `RemoveLastPlateVisual()`.
 
 ⚠️ **El plato admite un solo corte** (desde `45f2d74`, 2026-09-09): `TryAcceptMeatAt` devuelve `false` si
 `HasAnyCut`, y el corte sobrante vuelve a su origen. `IsPlateOccupiedAt` existe para que `Meat.OnMouseUp` no
 deje caer ese corte en los slots de la grilla que el plato tapa. Las listas `AssembledCuts` siguen siendo listas
 (el evaluador itera), pero en la práctica tienen 0 o 1 elemento.
+
+**Layout del plato** (desde 2026-09-21). Antes los visuales de sides/toppings salían del centro del plato en fila
+(`plateVisualWorldSpacing/Direction`), a escala fija `0.12` y con `sortingOrder 500`: el primero caía justo sobre
+la carne (400) y la tapaba. Ahora la zona es dueña de la composición:
+
+| Campo (header *Plate Layout*) | Valor en `GameScene` | Qué hace |
+|---|---|---|
+| `meatAnchorOffset` | `(-0.65, 0)` | Dónde se apoya el corte. El drop lo **snapea** ahí (parrilla → plato y bandeja → plato) |
+| `sideSlotOffsets` | `(0.35, 0.3)`, `(0.9, -0.3)` | Slots de guarniciones, en orden de llegada, a la derecha del corte |
+| `sideVisualSize` | `0.9` | Tamaño objetivo de cada guarnición |
+| `toppingSlotOffsets` | `(-0.2, -0.55)`, `(0.35, -0.6)` | Slots de toppings (frascos), al frente, más chicos |
+| `toppingVisualSize` | `0.55` | Tamaño objetivo de cada topping |
+| `overflowStep` | `(0.3, -0.15)` | Si entran más visuales que slots, siguen en diagonal desde el último |
+| `sideTopSortingOrder` | `390` | Base de sides/toppings (+ índice). **Debajo** de `plateMeatSortingBase` (400): nunca tapan al corte |
+
+- Todos los offsets son **unidades de mundo desde el centro de la zona**: el transform de `Plato` está escalado a
+  ~0.22, así que los visuales se crean sin padre (como siempre) y los offsets locales serían ilegibles.
+- Cada visual guarda su `PlateVisualKind` (`Side` / `Topping`); el slot se elige contando los vivos de ese tipo, así
+  un undo libera el slot y el siguiente lo reutiliza. `RemoveLastPlateVisual` sigue sacando el último sin mirar el tipo.
+- La escala se normaliza con `FitScale`: `targetSize / sqrt(ancho × alto)` del sprite. Se usa la **media geométrica**
+  y no el lado mayor porque las papas (sprite apaisado 26×16) quedaban enanas al lado de un bol cuadrado.
+- `OnDrawGizmosSelected` dibuja anclaje (rojo), slots de sides (amarillo) y de toppings (verde) en la Scene view
+  para ajustar sin entrar en Play.
+- `TutorialScene` y `SampleScene` conservan las claves viejas serializadas (`plateVisualWorldSpacing`…); Unity las
+  ignora y toman los defaults del script, que coinciden con los valores de `GameScene`.
 
 #### `PlateDeliveryDraggable` — `Build/PlateDeliveryDraggable.cs`
 
@@ -1393,7 +1427,8 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.AdoptVisualIntoPlate`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la zona del plato, tiene que pasar por ahí o ese plato no se podrá arrastrar |
 | 21 | Los clientes se instancian con `customersParent = null` (raíz de escena), así que **no** los alcanza el toggle de `ViewManager` y sus colliders siguen activos. De eso depende el hover de la entrega por arrastre (`Physics2D.OverlapPointNonAlloc`). El único que apaga su collider es `CustomerView.ApplyPickingState` (panel encima / feedback) |
 | 22 | **La cámara está en perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). Dos consecuencias, y las dos ya mordieron: (a) **nunca** `cam.ScreenToWorldPoint(Input.mousePosition)` a secas — con `z = 0` devuelve la posición de la cámara. Siempre `pos.z = Mathf.Abs(objeto.z - cam.z)` antes de convertir (`Item.GetMouseWorldPosition` es la referencia; lo repiten `Meat.RestoreHoverIfPointerOver`, `ToBuildDraggableMeat`, `StockPanelSlot`, `PlateDeliveryDraggable`; `MoneyPopup.TryGetHudTarget` hace lo mismo para el destino del vuelo). (b) El pick interno de Unity (`OnMouseDown` sobre `Collider2D`) reparte el click a **un solo** collider, y los visuales del plato quedan apoyados sobre el de la zona `ToBuild` — mismo plano `z = 0` y sin handler de mouse — así que se lo quedaba la zona y la carne del plato dejaba de ser agarrable. Por eso `PlateDeliveryDraggable` resuelve su propio pick en `Update`. Si algún otro objeto apilado sobre un collider "mudo" deja de responder al mouse, es el mismo caso |
-| 23 | **Un solo corte por plato** (`BuildFoodDropZone.TryAcceptMeatAt` rechaza el segundo). Si se vuelve a permitir más de uno hay que revisar `Meat.OnMouseUp` (`IsPlateOccupiedAt`), `AdoptVisualIntoPlate` (sorting por índice) y el preview de tintes, que ya iteran listas y deberían tolerarlo |
+| 23 | **Un solo corte por plato** (`BuildFoodDropZone.TryAcceptMeatAt` rechaza el segundo). Si se vuelve a permitir más de uno hay que revisar `Meat.OnMouseUp` (`IsPlateOccupiedAt`), `AdoptVisualIntoPlate` (sorting por índice), el preview de tintes, que ya iteran listas y deberían tolerarlo, **y el `meatAnchorOffset` único del layout del plato** (habría que pasar a una lista de anclajes) |
+| 27 | **La carne del plato siempre se dibuja sobre sides/toppings.** `plateMeatSortingBase` (400, en `MeatTransferBuffer`) tiene que quedar **por encima** de `BuildFoodDropZone.sideTopSortingOrder` (390) + cantidad de visuales; si se cambia uno, revisar el otro. Los visuales de sides/toppings van a slots fijos alrededor del `meatAnchorOffset` (ver 3.4): agregar un item nuevo al `ToppingsPanel` no requiere tocar el layout, solo si se quiere un tercer slot |
 | 24 | **Paneles encima de clientes.** Los dos `SlidingPanel` se despliegan sobre la fila de clientes y comparten z con ellos. Cualquier objeto nuevo con collider en esa zona tiene que gatearse igual que `CustomerView.ApplyPickingState` (`SlidingPanel.IsAreaCoveredByOpenPanel`) o va a robar clicks a las celdas del panel. Y al revés: un pick que no use `OnMouseXXX` tiene que preguntar `IsPointOverPanel` antes de aceptar el click (`PlateDeliveryDraggable` lo hace) |
 | 25 | **La bandeja no tiene tope** (decisión del refactor): apila sin límite en `trayWorldDirection × trayWorldSpacing`. Si se llena, es un problema visual, no lógico |
 | 26 | El feedback de clientes ocupa el slot 4 s (`IsInFeedback`): `MaxSimultaneousCustomers` los cuenta, `SpawnLoop` no spawnea en su lugar hasta que se van, y `OnNightEnded` espera a que termine el último feedback. `IsCustomerActive`, `SetDeliveryDragHover` y `EvaluateDelivery` los excluyen |
