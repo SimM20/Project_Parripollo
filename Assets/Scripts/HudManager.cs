@@ -69,8 +69,13 @@ public class HudManager : MonoBehaviour
                         container.UpdateText(FormatMoney(money));
                         break;
                     case HudContainers.Customers:
-                        newText = UIManager.Instance?.GetActualCustomers().ToString() + "/" + UIManager.Instance?.GetTotalCustomersPerDay().ToString();
-                        container.UpdateText(newText);
+                        int customers = UIManager.Instance != null ? UIManager.Instance.GetArrivedCustomers() : 0;
+                        container.UpdateText(customers.ToString());
+                        break;
+                    case HudContainers.Time:
+                        newText = UIManager.Instance?.GetDayTime();
+                        if (!string.IsNullOrEmpty(newText))
+                            container.UpdateText(newText);
                         break;
                 }
             }
@@ -85,6 +90,18 @@ public class HudManager : MonoBehaviour
         {
             if (container != null && container.GetContainerType() == HudContainers.Day)
                 container.UpdateText("DIA " + value.ToString());
+        }
+    }
+
+    /// <summary>Hora de la jornada ("06:30") o el cartel de cerrado. La manda <see cref="DayClock"/> vía UIManager.</summary>
+    public void UpdateTimeText(string value)
+    {
+        if (!gameObject.activeInHierarchy) return;
+
+        foreach (var container in containers)
+        {
+            if (container != null && container.GetContainerType() == HudContainers.Time)
+                container.UpdateText(value);
         }
     }
 
@@ -208,14 +225,18 @@ public class HudManager : MonoBehaviour
         return null;
     }
 
-    public void UpdateCustomersText(int value1, int value2)
+    /// <summary>
+    /// Clientes que aparecieron en lo que va del día: un contador que arranca en 0
+    /// y suma 1 por cada cliente nuevo.
+    /// </summary>
+    public void UpdateCustomersText(int customers)
     {
         if (!gameObject.activeInHierarchy) return;
 
         foreach (var container in containers)
         {
             if (container != null && container.GetContainerType() == HudContainers.Customers)
-                container.UpdateText(value1.ToString() + "/" + value2.ToString());
+                container.UpdateText(customers.ToString());
         }
     }
 

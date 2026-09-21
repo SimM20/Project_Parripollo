@@ -506,11 +506,18 @@ public class GameManager : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Cierra la jornada y pasa a la pantalla de resumen. Lo dispara
+    /// <see cref="CustomerSystem.OnNightEnded"/> cuando se va el último cliente, o el botón
+    /// de terminar el día del menú de pausa.
+    /// </summary>
     public void EndNight()
     {
         customerSystem.OnNightEnded -= EndNight;
 
-        Debug.Log("[GameManager] Terminando la noche.");
+        DayClock.Instance?.StopDay();
+
+        Debug.Log("[GameManager] Terminando la jornada.");
 
         CoalConsumptionTracker tracker = CoalConsumptionTracker.Instance;
 
@@ -523,7 +530,7 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogError(
                 "[GameManager] No existe ningún CoalConsumptionTracker. " +
-                "La noche terminó, pero no se pudo registrar el progreso."
+                "La jornada terminó, pero no se pudo registrar el progreso."
             );
         }
         else
@@ -533,9 +540,9 @@ public class GameManager : MonoBehaviour
             tracker.RegisterDayCompleted();
 
             Debug.Log(
-                "[GameManager] Noche " + nightBefore +
-                " completada correctamente. " +
-                "Próxima noche: " + tracker.CurrentNight
+                "[GameManager] Día " + nightBefore +
+                " completado correctamente. " +
+                "Próximo día: " + tracker.CurrentNight
             );
         }
 

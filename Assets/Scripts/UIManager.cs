@@ -10,10 +10,11 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject pauseCanvasPrefab;
     private GameObject pauseCanvasInstance;
 
-    private int actualCustomers;
-    private int totalCustomers;
+    private int servedCustomers;
+    private int arrivedCustomers;
     private int actualMoney;
     private int actualDay;
+    private string dayTime = "";
 
     private void Awake()
     {
@@ -67,18 +68,29 @@ public class UIManager : MonoBehaviour
             hudManager.UpdateDayText(actualDay);
     }
 
-    public void SetTotalCustomers(int newCustomers)
+    /// <summary>Hora de la jornada tal como la muestra el HUD ("06:30", "CERRADO"). La escribe <see cref="DayClock"/>.</summary>
+    public void SetDayTime(string newTime)
     {
-        totalCustomers = newCustomers;
+        dayTime = newTime;
         if (hudManager != null)
-            hudManager.UpdateCustomersText(actualCustomers, totalCustomers);
+            hudManager.UpdateTimeText(dayTime);
     }
 
-    public void SetActualCustomers(int newCustomers)
+    /// <summary>Clientes que aparecieron en lo que va del día: es el número que muestra el HUD.</summary>
+    public void SetArrivedCustomers(int newCustomers)
     {
-        actualCustomers = newCustomers;
+        arrivedCustomers = newCustomers;
         if (hudManager != null)
-            hudManager.UpdateCustomersText(actualCustomers, totalCustomers);
+            hudManager.UpdateCustomersText(arrivedCustomers);
+    }
+
+    /// <summary>
+    /// Clientes que se fueron con su pedido entregado. No se muestra en el HUD
+    /// (que cuenta los que aparecieron), queda para el resumen de la jornada.
+    /// </summary>
+    public void SetServedCustomers(int newCustomers)
+    {
+        servedCustomers = newCustomers;
     }
 
     public void SetActualMoney(float newMoney)
@@ -90,6 +102,7 @@ public class UIManager : MonoBehaviour
 
     public int GetActualDay() { return actualDay; }
     public int GetActualMoney() { return actualMoney; }
-    public int GetTotalCustomersPerDay() { return totalCustomers; }
-    public int GetActualCustomers() { return actualCustomers; }
+    public string GetDayTime() { return dayTime; }
+    public int GetArrivedCustomers() { return arrivedCustomers; }
+    public int GetServedCustomers() { return servedCustomers; }
 }

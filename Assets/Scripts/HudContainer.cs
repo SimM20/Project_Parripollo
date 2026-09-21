@@ -32,5 +32,7 @@ public enum HudContainers
     None,
     Day,
     Money,
-    Customers
+    Customers,
+    /// <summary>Reloj de la jornada: la hora que manda <see cref="DayClock"/>.</summary>
+    Time
 }
