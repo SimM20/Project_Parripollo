@@ -158,8 +158,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Tambi\xE9n estos clientes tienen un limite de paciencia, asi que ten cuidado
-    y asegurate de administrar correctamente tu tiempo!"
+  m_text: "Ojo con la barra de paciencia: si se vac\xEDa, el cliente se va enojado
+    y te clavan un strike. Con 3 strikes te cierran el local antes de hora."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -530,7 +530,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.74272704}
   m_AnchorMax: {x: 0.5, y: 0.74272704}
   m_AnchoredPosition: {x: -0.000078159, y: 3}
-  m_SizeDelta: {x: 517.5714, y: 70.9674}
+  m_SizeDelta: {x: 1000, y: 70.9674}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9119669365709871999
 CanvasRenderer:

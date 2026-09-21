@@ -158,8 +158,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Revisar el punto de la carne que pide el cliente, y cocina hasta el punto
-    deseado de la carne. PERO NO TE PASES DEL PUNTO O TENDR\xC1S QUE HACERLO DE NUEVO."
+  m_text: "Cocin\xE1 las dos caras hasta el punto que pidi\xF3 el cliente. Para ver
+    su pedido, cerr\xE1 el stock con Q y pas\xE1 el cursor sobre \xE9l. \xA1Ojo que
+    se quema!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -263,7 +264,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.74272704}
   m_AnchorMax: {x: 0.5, y: 0.74272704}
   m_AnchoredPosition: {x: 0.0000076298, y: 35.484}
-  m_SizeDelta: {x: 517.5714, y: 70.9674}
+  m_SizeDelta: {x: 1000, y: 70.9674}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9119669365709871999
 CanvasRenderer:

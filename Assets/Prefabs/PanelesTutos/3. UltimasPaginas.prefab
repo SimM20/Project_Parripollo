@@ -425,9 +425,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Tambi\xE9n ten en cuenta de la salsa que pidan! Pero cuidado, estas tienen
-    un limite y podr\xE1s no ganar propina si te quedas sin salsa para completar
-    los pedidos."
+  m_text: "Si el pedido lleva salsa, arrastr\xE1 el frasco del panel de la derecha
+    hasta el plato para servirla. Los frascos tienen salsa limitada, y si en el plato
+    falta o sobra algo cobr\xE1s menos."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -531,7 +531,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.806635}
   m_AnchorMax: {x: 0.5, y: 0.806635}
   m_AnchoredPosition: {x: 0.0000076294, y: 0.000045776367}
-  m_SizeDelta: {x: 534.9156, y: 70.9674}
+  m_SizeDelta: {x: 1000, y: 70.9674}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9119669365709871999
 CanvasRenderer:

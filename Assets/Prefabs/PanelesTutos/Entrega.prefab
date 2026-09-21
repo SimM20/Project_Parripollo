@@ -127,8 +127,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.0002425909, y: 0.0017700195}
-  m_SizeDelta: {x: 1754.4451, y: 95.7328}
+  m_AnchoredPosition: {x: 0.000022888, y: -32}
+  m_SizeDelta: {x: 764.9028, y: 176.1834}
   m_Pivot: {x: 0.5, y: 0.5000001}
 --- !u!222 &3973952360246278464
 CanvasRenderer:
@@ -158,8 +158,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: En el modo delivery podemos seleccionar a que cliente entregar la comida.
-    Prueba entregando el primer plato.
+  m_text: "Arrastr\xE1 el plato hasta el cliente y soltalo encima. Si el panel de
+    stock te lo tapa, cerralo con Q."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -245,7 +245,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6260844887796495417
 RectTransform:
   m_ObjectHideFlags: 0
@@ -338,7 +338,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.74272704}
   m_AnchorMax: {x: 0.5, y: 0.74272704}
   m_AnchoredPosition: {x: -0.000078159, y: 3}
-  m_SizeDelta: {x: 517.5714, y: 70.9674}
+  m_SizeDelta: {x: 1000, y: 70.9674}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9119669365709871999
 CanvasRenderer:
@@ -368,7 +368,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Tutorial 3: Build'
+  m_text: 'Tutorial 3: Entrega'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -473,10 +473,10 @@ RectTransform:
   - {fileID: 6260844887796495417}
   m_Father: {fileID: 4741358683784650070}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.020588579, y: 0}
-  m_AnchorMax: {x: 1, y: 0.41900003}
-  m_AnchoredPosition: {x: -15.073242, y: -0.5}
-  m_SizeDelta: {x: 586.1799, y: 132}
+  m_AnchorMin: {x: 0.50951684, y: 0.5458854}
+  m_AnchorMax: {x: 1, y: 0.94921875}
+  m_AnchoredPosition: {x: -2, y: 0}
+  m_SizeDelta: {x: 277.3582, y: 143}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7263035189658538346
 CanvasRenderer:
@@ -533,7 +533,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1080206181098692007
 RectTransform:
   m_ObjectHideFlags: 0

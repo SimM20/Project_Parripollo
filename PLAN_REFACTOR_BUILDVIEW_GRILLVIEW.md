@@ -4,6 +4,8 @@
 >
 > Implementado sobre `GameScene` únicamente. **`TutorialScene` no se tocó** y queda rota
 > (ya lo estaba desde el refactor del cooler; este refactor le suma los pasos 20–27).
+> **Actualización 2026-09-21:** `TutorialScene` se rehízo como clon de `GameScene` y los pasos del tutorial se
+> reescribieron para la vista única (ver `ARQUITECTURA_PROYECTO.md`, sección 3.7).
 >
 > Desvíos respecto del plan original, todos deliberados:
 > - **`ToBuild` conserva su nombre y su posición** (superficie naranja a la derecha de la parrilla).

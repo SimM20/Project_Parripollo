@@ -158,10 +158,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "La carne tiene un tiempo determinado en el que va pasando por diferentes
-    estados (Crudo, Jugoso, Hecho, Muy Hecho y Pasado) - La carne se cocinar\xE1
-    hasta llegar a diferentes estados. Si dejas el cursor por encima de la carne
-    podr\xE1s ver su estado."
+  m_text: "Cada cara de la carne pasa por distintos puntos: Crudo, Jugoso, Hecho,
+    Muy hecho, Pasado y Quemado. Pas\xE1 el cursor por encima de la carne para ver
+    c\xF3mo va cada una."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -532,7 +531,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.74272704}
   m_AnchorMax: {x: 0.5, y: 0.74272704}
   m_AnchoredPosition: {x: 0.0000076298, y: 35.484}
-  m_SizeDelta: {x: 517.5714, y: 70.9674}
+  m_SizeDelta: {x: 1000, y: 70.9674}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9119669365709871999
 CanvasRenderer:

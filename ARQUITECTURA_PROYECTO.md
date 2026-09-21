@@ -2,7 +2,7 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
-> Última actualización parcial: **2026-09-21** (rama `development`) — fondo por capas con ciclo de día y parallax (sección 3.9, nota 32).
+> Última actualización parcial: **2026-09-21** (rama `development`) — `TutorialScene` reconstruida desde `GameScene` y pasos del tutorial reescritos para la vista única (sección 3.7, nota 17).
 
 ---
 
@@ -286,6 +286,7 @@ public DeliveryEvaluation EvaluateDelivery(Customer) // reglas de entrega SIN ef
 public void ShowDeliveryPreviewOnPlate(DeliveryEvaluation), ClearDeliveryPreviewOnPlate()
 public bool TryDeliverToCustomer(Customer)        // ÚNICO lugar con efectos de entrega
 public void EndNight()   // desuscribe, DayClock.StopDay(), tracker.RegisterDayCompleted(), carga "EndScene"
+                         // (con tutorial activo sale antes por TutorialManager.TryExitTutorial: no cierra un día)
 // privados: TryToggleGrillLayer, ClearBuildAssembly, CleanAshes
 ```
 
@@ -765,8 +766,8 @@ la carne (400) y la tapaba. Ahora la zona es dueña de la composición:
   y no el lado mayor porque las papas (sprite apaisado 26×16) quedaban enanas al lado de un bol cuadrado.
 - `OnDrawGizmosSelected` dibuja anclaje (rojo), slots de sides (amarillo) y de toppings (verde) en la Scene view
   para ajustar sin entrar en Play.
-- `TutorialScene` y `SampleScene` conservan las claves viejas serializadas (`plateVisualWorldSpacing`…); Unity las
-  ignora y toman los defaults del script, que coinciden con los valores de `GameScene`.
+- `SampleScene` conserva las claves viejas serializadas (`plateVisualWorldSpacing`…); Unity las ignora y toman
+  los defaults del script, que coinciden con los valores de `GameScene`.
 
 #### `PlateDeliveryDraggable` — `Build/PlateDeliveryDraggable.cs`
 
@@ -1251,13 +1252,15 @@ carne sale **$0** y la derrota económica depende solo del carbón. Es un tema d
 ### 3.7 Tutorial
 
 #### `TutorialManager` — `UI/TutorialManager.cs` · Singleton
-Máquina de estados data-driven sobre `List<TutorialStepSO>` (**31 pasos**). **Solo arranca si
-`SceneManagementUtils.GetCurrentName()` es `"TutorialScene"` o `"ShopTutorial"`** (el mismo prefab de manager vive
-en las dos escenas; en `ShopTutorial` la lista arranca en los pasos de tienda).
+Máquina de estados data-driven sobre `List<TutorialStepSO>` (**28 pasos** en total). **Solo arranca si
+`SceneManagementUtils.GetCurrentName()` es `"TutorialScene"` o `"ShopTutorial"`**. Cada escena tiene su propio
+objeto `TutorialManager` con su lista: `TutorialScene` los pasos 1-18 (canvas `TutorialCanvas`) y `ShopTutorial`
+los 19-28 (canvas `ShopCanvas`).
 
 ```csharp
 static bool IsCookingPaused { get; }      // leído por Meat.Cook
 static bool IsBurnedDeliveryExempt(MeatCutSO)
+static bool TryExitTutorial()             // "terminar jornada" en el tutorial: sale a GameScene sin cerrar un día
 bool IsTutorialActive; int CurrentStepIndex; TutorialStepSO CurrentStep;
 void StartTutorial(), AdvanceStep()
 
@@ -1278,13 +1281,21 @@ static void NotifyDeliverySelectionBegun(), NotifyProductDelivered()
 ```
 
 - `StartTutorial()`: asegura un `EventSystem`, hace backup del stock del `CoolerSystem` y lo sustituye por el del
-  tutorial (`ChorizoTutorial=3`, `Coal=3`, `Chorizo`/`Tira de asado`=0), `ShowStep(0)`.
+  tutorial: **todos** los cortes con stock pasan a 0 (no una lista fija: la run puede traer cortes comprados y el
+  StockPanel muestra cualquiera con unidades), `ChorizoTutorial = tutorialCutAmount` (3) y carbón =
+  `tutorialCoalAmount` (3). Después `ShowStep(0)`.
 - `ShowStep(i)`: cancela corrutinas del paso anterior, destruye el panel previo, aplica `pauseCooking`, ejecuta
   `startAction`, instancia `panelPrefab` bajo el canvas (agrega `GraphicRaycaster` si falta), escribe `instructionText`,
   engancha `AdvanceStep` al botón si `conditionType == ConfirmButton`, y lo hace pulsar.
-- `EndTutorial()`: restaura el stock y carga `GameScene`.
+- **Pausa al llegar al punto**: cuando se cumple `MeatReachesDoneness`, la cocción queda frenada **durante el paso
+  siguiente** (llevar la carne al plato) y se reanuda al salir de él. Antes se reanudaba en el mismo frame.
+- `EndTutorial()`: restaura el stock, pone `IsCookingPaused = false` y carga `GameScene`. `OnDestroy` también lo
+  resetea: es estático, y salir al menú a mitad de un paso con pausa dejaba la partida siguiente sin cocinar.
+- `TryExitTutorial()`: lo llama `GameManager.EndNight` antes que nada. Con un tutorial activo, el botón "terminar
+  jornada" del menú de pausa sale por `EndTutorial()` — **no** registra un día ni suma a la racha de strikes.
 - **Gates**: cada acción del jugador pregunta antes (`Check*Allowed`). Fuera del paso que la pide, la acción se rechaza
   (por ejemplo, `R` y `C` nunca funcionan en tutorial; el StockPanel solo abre en pasos de arrastre).
+  `CheckBuildAssemblyAllowed` no tiene llamadores: el panel derecho (`E`) no está gateado.
 
 `TutorialConditionType` (16): `ChangeView, ConfirmButton, DragMeatToGrill, DragMeatToBuild, DragCoalToGrill,
 DragMeatToGrillSlots, ToggleGrillLayer, DragCoalToGrillSlots, FlipMeat, MeatReachesDoneness, DragMeatToMeatHolder,
@@ -1292,16 +1303,48 @@ BeginDeliverySelection, DeliverProduct, DragMeatToBuildZone, OpenStockPanel, Sho
 
 `TutorialStartAction`: `None, SpawnCustomer, ShowShop (carga ShopTutorial), SetShopTabCoal/Meat/Upgrades/Toppings`.
 
-**Secuencia (`ScriptableObjects/Tutorial/`)**: 1 intro → 2 abrir inventario (`OpenStockPanel`) → **3 `AbrirBuild`
-(`ChangeView → Build`)** → 4 info → **5 `VolverGrill` (`ChangeView → Grill`)** → 6-7 info → 8 spawn cliente → 9 info
-→ 10 abrir inventario → 11 carne a la parrilla → 12-14 capas y carbón → 15-17 info/flip/punto → 18 llevar carne al plato
-→ **19 `AbrirBuildStation` (`ChangeView → Build`)** → 20 montar en el plato → 21 comenzar entrega (`BeginDeliverySelection`)
-→ 22 entregar → 23 `ShowShop` → 24-27 explicación de tabs (en `ShopTutorial`) → 28-31 pantallas finales.
+**Secuencia** (`ScriptableObjects/Tutorial/`, un asset `N.Nombre` por paso; el texto vive en el prefab del panel,
+`Prefabs/PanelesTutos/`, porque `instructionText` está vacío en todos):
 
-⚠️ **`TutorialScene` está rota**: los pasos **3, 5 y 19** esperan `OnViewChanged` hacia/desde `Build`, y ese evento
-ya no dispara (`Show(Build)` redirige a `Grill`). Los pasos de arrastre y de entrega sí funcionan
-(`PlateDeliveryDraggable.BeginDrag` emite `NotifyDeliverySelectionBegun`). Pendiente: rehacer o saltear esos tres
-pasos, y wirear en `TutorialScene` los paneles y la bandeja (el refactor de vista única se hizo solo en `GameScene`).
+| # | Paso | Condición | Qué pide / explica |
+|---|---|---|---|
+| 1 | `IntroStep` | Confirm | Bienvenida |
+| 2-3 | `InfoPuesto`, `InfoJornada` | Confirm | Vista única (parrilla + plato + HUD) · jornada 06:30 → 21:00, reloj frenado en el tutorial |
+| 4-6 | `AprenderCocinar`, `SpawnCustomer`, `InfoCliente` | Confirm (5: `SpawnCustomer`) | Llega el cliente, hover para ver el pedido · paciencia y strikes |
+| 7 | `AbrirStock` | `OpenStockPanel` | `Q` o la pestaña |
+| 8 | `ArrastrarCarneGrill` | `DragMeatToGrillSlots` (`ChorizoTutorial`) | Stock → parrilla, `R` rota |
+| 9-11 | `CambiarLayerCarbon`, `ArrastrarCarbonGrill`, `CambiarLayerCarne` | `ToggleGrillLayer` / `DragCoalToGrillSlots` | Capas con `Espacio` o el botón; carbón debajo o al lado |
+| 12-14 | `CarneInfo` (pausa), `FlipCarne`, `EstadoCarne` | Confirm / `FlipMeat` / `MeatReachesDoneness` | Puntos de cocción, click derecho, cocinar al punto del pedido |
+| 15 | `LlevarCarnePlato` | `DragMeatToBuild` | Parrilla → plato en un gesto (cocción frenada durante el paso) |
+| 16-17 | `EntregarPlato`, `EntregaCompleta` | `DeliverProduct` / Confirm | Arrastrar el plato al cliente · pago y propina |
+| 18 | `ForzarShop` | `ShowShop` (+ acción `ShowShop`) | Carga `ShopTutorial` |
+| 19-23 | `Explicacion*` | Confirm (19-22 cambian de tab) | Carbón, carnes, mejoras, toppings · **23: mínimos para abrir y derrota** |
+| 24-27 | `PantallasFinal1-3`, `PantallasAtajos` | Confirm | Cenizas (`R`), acompañamientos y toppings (panel derecho, `E`), atajos (deshacer, `C`, `M`) |
+| 28 | `PantallasFinal4` | Confirm | Cierre → `EndTutorial` → `GameScene` |
+
+Paneles de los pasos de acción: los que se hacen sobre la parrilla o el stock van **arriba a la derecha** (8, 10, 14,
+16) o centrados (9, 11), para no tapar el panel de stock (arriba a la izquierda), la parrilla ni el plato. Un paso
+`ConfirmButton` **tiene** que tener un `Button` en el panel: si no, el tutorial no avanza.
+
+Los pasos 3/5/19 de la versión anterior (`ChangeView` hacia/desde `Build`), el "modo delivery" (`BeginDeliverySelection`)
+y el paso separado de montar en el plato (`DragMeatToBuildZone`) se eliminaron: con la vista única no existen. Las
+condiciones siguen en el enum (serializadas como int).
+
+#### `TutorialScene` — clon de `GameScene`
+Se rehízo copiando `GameScene` (se conserva el GUID de `TutorialScene`). Difiere **solo** en:
+
+| Qué | Valor en el tutorial |
+|---|---|
+| Sin `DayClock` | Modo "sin reloj" de `CustomerSystem`: con reloj el spawn se reparte por la jornada e ignora `spawnIntervalSeconds` |
+| Sin `TutorialOffer` (y su `Canvas`) | Es el diálogo de `GameScene` |
+| `TutorialManager` + `TutorialCanvas` | Overlay, orden 0, al final de la raíz: sobre la burbuja de pedidos, debajo de la pausa (que se instancia en runtime) |
+| Catálogo | `FoodCatalogTutorial` en `GameManager`, `BuildStation`, `FoodAvailabilityService`, `StockPanel` y `shopSystem` |
+| `CoolerSystem.initialStock` | `ChorizoTutorial 10`, `CoalData 10` (solo cuenta si se prueba la escena suelta) |
+| `CustomerSystem` | Solo `ClienteTutorial` (paciencia ×3) · solo `ChorizoTutorial` · `spawnIntervalSeconds 9999` (lo spawnea el paso 5) · `toppingOrderChance 0` · **`basePatienceSeconds 150`** (450 s: 240 no alcanzaba para leer con calma, y si el cliente se va el tutorial se traba) |
+| `FondoCicloDia.fallbackHour` | `6.5`: amanecer fijo, a juego con la hora del HUD (`06:30`, el texto guardado: sin reloj nadie lo escribe) |
+
+⚠️ Los cambios de `GameScene` **no llegan solos**: si se agrega o se mueve algo del gameplay, hay que repetirlo acá (o
+volver a clonar y reaplicar la tabla).
 
 #### `TutorialOfferController` — `UI/TutorialOfferController.cs`
 Diálogo al entrar a `GameScene` (`GamePause.SetDialogPaused(true)`): "sí" carga `TutorialScene`, "no" reanuda.
@@ -1412,7 +1455,8 @@ vuelta salta un sprite entero y, como el dibujo se repite, no se ve. Requiere sp
 Salen de `Fondo Vista Ruta.aseprite` (una sola capa, 14 colores planos) **separando por color**: el celeste del cielo
 `(113,173,218)` pasa a transparente y el blanco de las nubes `(224,227,225)` va a dos tiras de 1920 px. Sol, luna y
 estrellas son nuevos, dibujados en blanco con píxel de 4 px (PPU 25) para que peguen con los bloques de los árboles.
-Todo `Point`, sin compresión, `Full Rect`. El `.aseprite` original no se tocó (lo siguen usando `TutorialScene` y `SampleScene`).
+Todo `Point`, sin compresión, `Full Rect`. El `.aseprite` original no se tocó (lo sigue usando `SampleScene`).
+`TutorialScene` usa el mismo prefab con `fallbackHour = 6.5`: sin `DayClock`, el cielo queda fijo en el amanecer.
 ⚠️ Si Arte retoca el fondo, hay que regenerar las capas — lo ideal es pasar el `.aseprite` a capas separadas.
 
 **Para ajustar colores/horarios**: en Play, prender `overrideHour` en la raíz y mover el slider; editar claves en Play
@@ -1432,7 +1476,7 @@ MainMenuScene (build index 0)
   │     aplica Application.targetFrameRate + Screen.SetResolution
   └── MainMenuPanel: fade-in (CanvasGroup) + versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Salir → Quit (en Editor, sale de Play)
         botones con MenuButtonHover (escala al hover/click, unscaled) sobre sprites Boton Comenzar / Boton Continuar
-        └── TutorialOfferController: diálogo pausado → "sí" carga TutorialScene → (paso 23) ShopTutorial → GameScene
+        └── TutorialOfferController: diálogo pausado → "sí" carga TutorialScene → (paso 18) ShopTutorial → GameScene
 
 [RuntimeInitializeOnLoadMethod]
   SceneManagementUtils.Initialize()          BeforeSceneLoad        → engancha SceneManager.sceneLoaded
@@ -1555,7 +1599,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 14 | `CoalSO.unitsPerBag` pasó de `10` a **`1`**: una "bolsa" es una unidad, así que `Cooler.Add(coal, unitsPerBag × qty) == qty`. `GetSuggestedCoalBags()` y `CartCoalBags()` siguen razonando en bolsas — si `unitsPerBag` vuelve a subir, revisar también el texto del header (`GetTotalCoalUnits()` cuenta **unidades**, no bolsas) |
 | 15 | **Cooler View y Build View deprecadas.** Scripts que ya no se alcanzan: `CoolerStockVisualizer`, `CoalStockVisualizer`, `CoolerDraggableMeat`, `DraggableCoal`, `MeatHolderDraggableMeat`, `CoalHolderDraggableCoal`; assets `Prefabs/CoolerView.prefab`, `BuildView.prefab`, `StockPrefab.prefab`. La cabecera `DEPRECADO` de `DraggableCoal` avisa que descuenta stock **antes** de validar y **sin rollback**. No borrar sin revisar los overrides de escena |
 | 16 | `GrillView` tiene **escala no uniforme `(0.81, 1, 1)`** como override de escena. Cualquier hijo nuevo que deba verse sin deformar necesita contra-escala (`localScale.x = 1/0.81`). Es lo que hacen las instancias de `StockPanel` y del `ToppingsPanel` |
-| 17 | **`TutorialScene` está rota** por el refactor de vista única: los pasos `3.AbrirBuild`, `5.VolverGrill` y `19.AbrirBuildStation` usan `ChangeView` hacia/desde `Build` y ese evento ya no dispara. Además `TutorialScene` no tiene wireados los paneles ni la bandeja. Ver 3.7 |
+| 17 | **`TutorialScene` es un clon de `GameScene`** con una lista corta de diferencias (sin `DayClock` ni oferta, catálogo del tutorial, cliente y stock del tutorial; tabla en 3.7). Un cambio de layout o de sistemas en `GameScene` hay que replicarlo en `TutorialScene`, y si toca lo que se enseña, revisar el texto del panel del paso correspondiente (`Prefabs/PanelesTutos/`) |
 | 18 | **Toda pausa pasa por `GamePause`** (`Core/GamePause.cs`): nadie más escribe `Time.timeScale`. Una animación de UI que deba correr en pausa necesita `Time.unscaledDeltaTime` (`SlidingPanel` ya lo hace); un loop `yield return null` + unscaled **sigue corriendo en pausa** y necesita gate propio. Draggables nuevos: suscribirse a `GamePause.OnPaused` al agarrar, desuscribirse al soltar, y guardar `OnMouseDrag`/`OnMouseUp` con el flag de arrastre porque tras cancelar puede llegar un `OnMouseUp` tardío. Un pick que no use `OnMouseXXX` (como `PlateDeliveryDraggable.Update`) debe chequear `GamePause.IsPaused`: `eventMask` no lo frena |
 | 19 | La entrega tiene **una sola entrada y una sola lógica**: `PlateDeliveryDraggable` → `GameManager.TryDeliverToCustomer(Customer)`, cuyas reglas viven en `EvaluateDelivery`. Al tocar validaciones, pagos o mensajes, editar **solo `EvaluateDelivery`** (el preview del hover lo comparte). El `bool` de retorno decide si el plato vuelve a su sitio: un camino de rechazo nuevo tiene que devolver `false` o el plato desaparece del mostrador |
 | 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.AdoptVisualIntoPlate`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la zona del plato, tiene que pasar por ahí o ese plato no se podrá arrastrar |

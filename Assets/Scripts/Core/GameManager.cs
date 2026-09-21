@@ -521,6 +521,10 @@ public class GameManager : MonoBehaviour
 
     private void EndNight(bool endedEarlyByPlayer)
     {
+        // En el tutorial no hay jornada que cerrar: salir no suma un día ni cuenta para la racha.
+        if (TutorialManager.TryExitTutorial())
+            return;
+
         customerSystem.OnNightEnded -= EndNight;
 
         DayClock.Instance?.StopDay();

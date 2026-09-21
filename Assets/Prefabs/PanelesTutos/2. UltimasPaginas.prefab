@@ -425,8 +425,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "A veces los clientes pediran algunos acompa\xF1amientos para sus comidas,
-    \xA1Tenlo en cuenta para poder entregarlos!"
+  m_text: "Algunos pedidos llevan pan o guarnici\xF3n. Los encontr\xE1s en el panel
+    de la derecha, que se abre con E: arrastralos hasta el plato."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -530,7 +530,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.806635}
   m_AnchorMax: {x: 0.5, y: 0.806635}
   m_AnchoredPosition: {x: 0.000005722, y: -0.000045776367}
-  m_SizeDelta: {x: 786.6105, y: 70.9674}
+  m_SizeDelta: {x: 1000, y: 70.9674}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9119669365709871999
 CanvasRenderer:

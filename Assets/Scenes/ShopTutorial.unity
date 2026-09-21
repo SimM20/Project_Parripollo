@@ -5158,14 +5158,16 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 801ce7e6f6658cc4a92f62a37a724bc7, type: 2}
   - {fileID: 11400000, guid: 352c548fb36c8c049a90b6077d0d2a14, type: 2}
   - {fileID: 11400000, guid: 510b6f5cdc89fba418820b45914674c7, type: 2}
+  - {fileID: 11400000, guid: a89e64477e8505449a7ae5b37895fdea, type: 2}
   - {fileID: 11400000, guid: 8635bdf5fa2794f43b1b08586491f32f, type: 2}
   - {fileID: 11400000, guid: 157e997ef5ce5ac4ab4267ff6c8ee48d, type: 2}
   - {fileID: 11400000, guid: 1bd187e5e9056e04faf5d0ff5c65ef56, type: 2}
+  - {fileID: 11400000, guid: a925ca6154a73c0428cbcc6da2898185, type: 2}
   - {fileID: 11400000, guid: b907ae678b51bc04c9f4b7e27a9eb74a, type: 2}
-  chorizoItem: {fileID: 0}
-  tiraAsadoItem: {fileID: 0}
   chorizoTutorialItem: {fileID: 11400000, guid: 438750eb9ade6c041ba99d2ad3f8abff, type: 2}
   coalItem: {fileID: 11400000, guid: 9eaa56d6afb63b140989ce44c6b336c1, type: 2}
+  tutorialCutAmount: 3
+  tutorialCoalAmount: 3
 --- !u!1 &2122805894
 GameObject:
   m_ObjectHideFlags: 0

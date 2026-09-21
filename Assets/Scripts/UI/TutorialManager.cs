@@ -19,10 +19,13 @@ public class TutorialManager : MonoBehaviour
     [SerializeField] private List<TutorialStepSO> tutorialSteps = new List<TutorialStepSO>();
 
     [Header("Stock Configuration")]
-    [SerializeField] private ItemDataSO chorizoItem;
-    [SerializeField] private ItemDataSO tiraAsadoItem;
+    [Tooltip("Único corte que queda en el stock durante el tutorial. El resto de los cortes pasa a 0 y se restaura al salir.")]
     [SerializeField] private ItemDataSO chorizoTutorialItem;
     [SerializeField] private ItemDataSO coalItem;
+    [Min(1)]
+    [SerializeField] private int tutorialCutAmount = 3;
+    [Min(1)]
+    [SerializeField] private int tutorialCoalAmount = 3;
 
     private readonly Dictionary<ItemDataSO, int> tutorialStockBackup = new Dictionary<ItemDataSO, int>();
     private int currentStepIndex = -1;
@@ -30,6 +33,7 @@ public class TutorialManager : MonoBehaviour
     private ViewManager viewManager;
     private bool isTutorialActive = false;
     private bool pausedByDonenessCompletion = false;
+    private int donenessPauseStepIndex = -1;
     private Coroutine pulseRoutine;
     private Coroutine spawnCustomerRoutine;
 
@@ -43,27 +47,35 @@ public class TutorialManager : MonoBehaviour
 
         tutorialStockBackup.Clear();
 
-        // 1. Back up current values
-        if (chorizoItem != null)
-            tutorialStockBackup[chorizoItem] = CoolerSystem.Instance.GetCount(chorizoItem);
-        if (tiraAsadoItem != null)
-            tutorialStockBackup[tiraAsadoItem] = CoolerSystem.Instance.GetCount(tiraAsadoItem);
+        // 1. Back up current values. Todos los cortes con stock, no una lista fija: el panel de
+        //    stock muestra cualquier corte que tenga unidades, y la run puede venir con cortes comprados.
+        List<ItemDataSO> cutsToHide = new List<ItemDataSO>();
+
+        foreach (KeyValuePair<ItemDataSO, int> entry in CoolerSystem.Instance.EnumerateStock())
+        {
+            if (entry.Key is MeatCutSO && entry.Key != chorizoTutorialItem && entry.Value > 0)
+                cutsToHide.Add(entry.Key);
+        }
+
+        foreach (ItemDataSO cut in cutsToHide)
+            tutorialStockBackup[cut] = CoolerSystem.Instance.GetCount(cut);
         if (chorizoTutorialItem != null)
             tutorialStockBackup[chorizoTutorialItem] = CoolerSystem.Instance.GetCount(chorizoTutorialItem);
         if (coalItem != null)
             tutorialStockBackup[coalItem] = CoolerSystem.Instance.GetCount(coalItem);
 
         // 2. Adjust stock in CoolerSystem
-        if (chorizoItem != null)
-            CoolerSystem.Instance.SetStockDirectly(chorizoItem, 0);
-        if (tiraAsadoItem != null)
-            CoolerSystem.Instance.SetStockDirectly(tiraAsadoItem, 0);
+        foreach (ItemDataSO cut in cutsToHide)
+            CoolerSystem.Instance.SetStockDirectly(cut, 0);
         if (chorizoTutorialItem != null)
-            CoolerSystem.Instance.SetStockDirectly(chorizoTutorialItem, 3);
+            CoolerSystem.Instance.SetStockDirectly(chorizoTutorialItem, tutorialCutAmount);
         if (coalItem != null)
-            CoolerSystem.Instance.SetStockDirectly(coalItem, 3);
+            CoolerSystem.Instance.SetStockDirectly(coalItem, tutorialCoalAmount);
 
-        Debug.Log("[TutorialManager] Tutorial stock set up: Chorizo=0, Tira de Asado=0, ChorizoTutorial=3.");
+        Debug.Log(
+            "[TutorialManager] Tutorial stock set up: " + cutsToHide.Count + " cortes ocultos, " +
+            "ChorizoTutorial=" + tutorialCutAmount + ", carbón=" + tutorialCoalAmount + "."
+        );
     }
 
     private void RestoreTutorialStock()
@@ -116,6 +128,11 @@ public class TutorialManager : MonoBehaviour
         {
             RestoreTutorialStock();
         }
+
+        // Es estático: si el tutorial se corta durante un paso que pausa la cocción (salir al
+        // menú desde la pausa), la partida siguiente arrancaría con la carne sin cocinarse.
+        if (Instance == this)
+            IsCookingPaused = false;
     }
 
     public void StartTutorial()
@@ -184,7 +201,13 @@ public class TutorialManager : MonoBehaviour
             return;
         }
 
-        if (pausedByDonenessCompletion)
+        if (pausedByDonenessCompletion && index == donenessPauseStepIndex)
+        {
+            // El paso que sigue a "llegó al punto" (llevar la carne al plato) arranca con la
+            // cocción frenada: si no, la carne se sigue haciendo mientras se lee el panel.
+            IsCookingPaused = true;
+        }
+        else if (pausedByDonenessCompletion)
         {
             IsCookingPaused = false;
             pausedByDonenessCompletion = false;
@@ -839,6 +862,7 @@ public class TutorialManager : MonoBehaviour
 
         IsCookingPaused = true;
         pausedByDonenessCompletion = true;
+        donenessPauseStepIndex = currentStepIndex + 1;
 
         AdvanceStep();
     }
@@ -911,10 +935,27 @@ public class TutorialManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Salida anticipada: el botón "terminar jornada" del menú de pausa, dentro del tutorial, no
+    /// cierra un día de la run (no suma días ni racha de strikes) sino que termina el tutorial y
+    /// vuelve a GameScene con el stock restaurado. Sin tutorial activo devuelve false y el
+    /// llamador sigue con el cierre normal.
+    /// </summary>
+    public static bool TryExitTutorial()
+    {
+        if (Instance == null || !Instance.isTutorialActive)
+            return false;
+
+        Instance.EndTutorial();
+        return true;
+    }
+
     private void EndTutorial()
     {
         RestoreTutorialStock();
         isTutorialActive = false;
+        IsCookingPaused = false;
+        pausedByDonenessCompletion = false;
         if (currentPanelInstance != null)
         {
             Destroy(currentPanelInstance);
