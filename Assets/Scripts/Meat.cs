@@ -206,19 +206,27 @@ public class Meat : Item
 
     private bool IsCurrentlyCooking()
     {
-        if (occupiedSlots.Count == 0 || isHeldByMouse)
-            return false;
+        return IsOnGrill && GetTotalHeatReceived() > 0.01f;
+    }
 
+    /// <summary>
+    /// Calor total que recibe el corte este frame: la suma de todos los slots que ocupa.
+    /// Es la misma cantidad que acumula Cook(), y sirve para que audio y VFX se decidan
+    /// una vez por corte y no una vez por slot.
+    /// </summary>
+    protected float GetTotalHeatReceived()
+    {
+        float total = 0f;
         for (int i = 0; i < occupiedSlots.Count; i++)
         {
             GridSlot slot = occupiedSlots[i];
-            if (slot != null && slot.totalHeatReceived > 0.01f)
-            {
-                return true;
-            }
+            if (slot != null)
+                total += slot.totalHeatReceived;
         }
-        return false;
+        return total;
     }
+
+    protected int OccupiedSlotCount => occupiedSlots.Count;
 
     public void SetCut(MeatCutSO newCut)
     {
@@ -236,15 +244,7 @@ public class Meat : Item
 
         lastCookFrame = Time.frameCount;
 
-        float totalHeatInThisFrame = 0f;
-
-        foreach (var slot in occupiedSlots)
-        {
-            if (slot != null)
-                totalHeatInThisFrame += slot.totalHeatReceived;
-        }
-
-        float deltaHeat = totalHeatInThisFrame * Time.deltaTime;
+        float deltaHeat = GetTotalHeatReceived() * Time.deltaTime;
 
         // Solo acumula la cara apoyada; al alcanzar el umbral de Quemado deja de acumular (clamp).
         float burnThreshold = BurnThreshold;

@@ -1139,6 +1139,30 @@ Los tres de feedback eligen un clip al azar de su array **sin repetir el último
 `taskCompleted` si el array está vacío, negativo no suena. Llamadores: `CustomerSystem.SpawnCustomer` (campana),
 `BuildDraggableFoodItem` (topping), `SlidingPanel` (deslizamiento), `CustomerView` (feedback).
 
+#### Chisporroteo — `Grill/MeatInstance.cs` (`AudioSource` propio en el prefab de carne, loop)
+El sonido de cocción se decide **una vez por frame y por corte**, en `LateUpdate` (después de la propagación de
+calor y de `GridSlot.Update`), a partir de `Meat.GetTotalHeatReceived()` (suma del calor de todos los slots que
+ocupa) dividido por la cantidad de slots. No vive en `Cook()`: `GridSlot` llama `Cook` una vez por slot, y un corte
+de 2×1 con brasa bajo un solo slot recibía `Play()` y `Stop()` en el mismo frame.
+
+**Mezcla continua, no switch de clip.** En `Start` crea un hijo `SizzleAudio` con dos `AudioSource` en loop
+(`softSound` = `MeatCookingSoft.wav`, `hardSound` = `MeatCookingHard.wav`) que heredan mixer group, `spatialBlend` y
+prioridad del `AudioSource` del prefab; ese source queda libre para los one-shots (`Meat.PlayFlipSound()`), así el flip
+suena siempre a volumen pleno. Los dos loops arrancan juntos y se funden por volumen:
+
+| Paso | Detalle |
+|---|---|
+| Chisporrotea | `IsOnGrill` y no `IsCookingPaused` y calor total > 0.01 |
+| Mezcla objetivo | `InverseLerp(softOnlyHeat = 2, hardOnlyHeat = 7, calorPorSlot)` → 0 = solo soft, 1 = solo hard |
+| Suavizado | `SmoothDamp` con `mixSmoothTime` (0.6 s): poner/sacar carbón no salta |
+| Crossfade | Potencia constante: `soft = cos(mix·π/2)`, `hard = sin(mix·π/2)`. Lineal bajaba de volumen en el medio |
+| Volumen global | `Lerp(volumeAtLowHeat = 0.65, 1, mix)` × fade |
+| Fade | `fadeInTime` 0.35 s al apoyar; `fadeOutTime` 0.25 s al levantar o quedarse sin calor; los loops se paran al llegar a 0 |
+| Variación | Pitch ±`pitchVariation` (0.04) por corte y arranque en un punto aleatorio del clip, para que varios cortes no sumen en fase |
+
+El calor de un slot va de 0 a 10 (`GridSlot.AddExternalHeat` clampea); un carbón fresco aporta 6.5. Si falta uno de
+los dos clips, el otro cubre todo el rango. `OnDisable` silencia sin fade.
+
 #### VFX de parrilla — `Grill/BurnSmoke.cs`, `Grill/FlipPuff.cs`
 - `BurnSmoke`: humo **continuo** de un corte quemado. Va en el prefab que `Meat` instancia cuando `IsAnySideBurned`
   pasa a `true` (`smokePrefab`, bajo el `FxRoot` del corte); se apaga solo al desactivarse. Bocanadas superpuestas generadas por código.
