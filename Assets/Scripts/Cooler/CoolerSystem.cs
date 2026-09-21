@@ -12,6 +12,12 @@ public class CoolerSystem : MonoBehaviour
 
     public event Action<ItemDataSO> OnMissingItemRequested;
 
+    /// <summary>
+    /// Tope de unidades de carbón que el cooler puede guardar. Lo consume también
+    /// RunEconomyEvaluator: un mínimo requerido por encima de este tope es inalcanzable.
+    /// </summary>
+    public const int CoalStorageCap = 40;
+
     public static CoolerSystem Instance { get; private set; }
 
     // Static backup survives DDOL destruction; cleared explicitly on ReturnToMainMenu
@@ -72,7 +78,7 @@ public class CoolerSystem : MonoBehaviour
 
             if (entry.item is CoalSO)
             {
-                stockByItem[entry.item] = Mathf.Min(stockByItem[entry.item] + entry.amount, 40);
+                stockByItem[entry.item] = Mathf.Min(stockByItem[entry.item] + entry.amount, CoalStorageCap);
             }
             else
             {
@@ -106,7 +112,7 @@ public class CoolerSystem : MonoBehaviour
 
         if (item is CoalSO)
         {
-            newAmount = Mathf.Min(newAmount, 40);
+            newAmount = Mathf.Min(newAmount, CoalStorageCap);
         }
 
         stockByItem[item] = newAmount;

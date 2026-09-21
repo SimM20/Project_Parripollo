@@ -7,6 +7,13 @@ public class ShopSystem : MonoBehaviour
     [Header("References")]
     [SerializeField] private ShopConfigSO config;
     [SerializeField] private FoodCatalogSO catalog;
+
+    [Header("Derrota total de la run")]
+    [Tooltip("Mínimos de recursos para arrancar el próximo día. Sin asignar, no se gatea nada.")]
+    [SerializeField] private RunDefeatConfigSO runDefeatConfig;
+
+    [Tooltip("Apagar en ShopTutorial: ahí los mínimos no aplican y bloquearían el tutorial.")]
+    [SerializeField] private bool enforceRunMinimums = true;
     
     // Carrito paralelo para toppings
     private readonly Dictionary<ToppingSO, int> toppingCart = new Dictionary<ToppingSO, int>();
@@ -16,6 +23,10 @@ public class ShopSystem : MonoBehaviour
     public FoodCatalogSO Catalog => catalog;
     public PlayerWallet Wallet => PlayerWallet.Instance;
     public CoolerSystem Cooler => CoolerSystem.Instance;
+    public RunDefeatConfigSO RunDefeatConfig => runDefeatConfig;
+
+    /// <summary>Si esta tienda aplica los mínimos del próximo día (display, gating y derrota).</summary>
+    public bool EnforceRunMinimums => enforceRunMinimums && runDefeatConfig != null;
 
     private readonly Dictionary<ItemDataSO, int> cart = new Dictionary<ItemDataSO, int>();
 
@@ -34,6 +45,10 @@ public class ShopSystem : MonoBehaviour
     }
     private void Start()
     {
+        // Primera llamada gana: guarda la combustión original de los carbones antes de que
+        // cualquier mejora la pise. Lo consume el reinicio de run desde la pantalla de derrota.
+        RunStateReset.CaptureBaseline(catalog);
+
         int currentNight =
             CoalConsumptionTracker.Instance != null
                 ? CoalConsumptionTracker.Instance.CurrentNight
@@ -347,6 +362,13 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
+        if (!IsPurchaseAllowedByRunMinimums(item, qty))
+        {
+            message = "Esa compra te deja sin plata para el mínimo del próximo día.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
         if (!Wallet.TrySpend(total))
         {
             message = "No se pudo procesar el pago.";
@@ -407,6 +429,13 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
+        if (!IsPurchaseAllowedByRunMinimums(topping, qty))
+        {
+            message = "Esa compra te deja sin plata para el mínimo del próximo día.";
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
         if (!Wallet.TrySpend(total))
         {
             message = "No se pudo procesar el pago.";
@@ -418,5 +447,121 @@ public class ShopSystem : MonoBehaviour
         message = "Compra realizada por $" + total.ToString("F0");
         OnPurchaseResult?.Invoke(true, message);
         return true;
+    }
+
+    // ── Mínimos del próximo día / derrota total de la run ────────────────
+
+    /// <summary>
+    /// Suma todos los cortes del cooler, sin importar el tipo ni si están desbloqueados.
+    /// El mínimo se compone con cualquier combinación: no hay mínimo individual por corte.
+    /// Espejo de <see cref="GetTotalCoalUnits"/>.
+    /// </summary>
+    public int GetTotalMeatCuts()
+    {
+        if (Cooler == null) return 0;
+
+        int total = 0;
+        foreach (var entry in Cooler.EnumerateStock())
+        {
+            if (entry.Key is MeatCutSO)
+                total += entry.Value;
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Precio del corte comprable más barato: es el costo por unidad de carne que usa el
+    /// evaluador para saber si el jugador todavía puede llegar al mínimo.
+    /// </summary>
+    public float GetCheapestPurchasableCutPrice(out bool anyAvailable)
+    {
+        anyAvailable = false;
+        float cheapest = 0f;
+
+        if (catalog == null) return 0f;
+
+        var cuts = catalog.GetAllCuts();
+        for (int i = 0; i < cuts.Count; i++)
+        {
+            MeatCutSO cut = cuts[i];
+            if (cut == null || !IsPurchasable(cut)) continue;
+
+            if (!anyAvailable || cut.basePrice < cheapest)
+            {
+                cheapest = cut.basePrice;
+                anyAvailable = true;
+            }
+        }
+
+        return cheapest;
+    }
+
+    /// <summary>Situación económica frente a los mínimos del próximo día, tal cual está ahora.</summary>
+    public RunEconomyStatus GetRunStatus() => BuildRunStatus(0f, 0, 0);
+
+    /// <summary>
+    /// Arma la foto económica aplicando un delta hipotético. Con deltas en cero es el estado
+    /// real; con los deltas de una compra sirve para saber si esa compra brickea la run.
+    /// </summary>
+    private RunEconomyStatus BuildRunStatus(float moneySpent, int meatGained, int coalGained)
+    {
+        // En EndScene el tracker ya sumó la jornada que terminó, así que CurrentNight es el
+        // día que se intenta comenzar: exactamente la N de las fórmulas del spec.
+        int day = CoalConsumptionTracker.Instance != null
+            ? CoalConsumptionTracker.Instance.CurrentNight
+            : 1;
+
+        float money = (Wallet != null ? Wallet.Money : 0f) - moneySpent;
+
+        int meatStock = GetTotalMeatCuts() + meatGained;
+
+        int baseCoal = GetTotalCoalUnits();
+        int coalStock = baseCoal + coalGained;
+
+        // Comprar carbón por encima del tope del cooler tira la plata a la basura:
+        // la simulación no debe contar unidades que el Add va a descartar.
+        if (CoolerSystem.CoalStorageCap > 0 && coalStock > CoolerSystem.CoalStorageCap)
+            coalStock = Mathf.Max(baseCoal, CoolerSystem.CoalStorageCap);
+
+        float cheapestCut = GetCheapestPurchasableCutPrice(out bool anyCut);
+
+        bool anyCoal = config != null && config.coal != null;
+        float coalBagPrice = anyCoal ? config.coal.basePrice : 0f;
+        int coalUnitsPerBag = anyCoal ? config.coal.unitsPerBag : 1;
+
+        return RunEconomyEvaluator.Evaluate(
+            day, runDefeatConfig, meatStock, coalStock, money,
+            cheapestCut, anyCut, anyCoal, coalBagPrice, coalUnitsPerBag,
+            CoolerSystem.CoalStorageCap
+        );
+    }
+
+    /// <summary>
+    /// False si comprar esto dejaría los mínimos del próximo día fuera de alcance. Comprar
+    /// carne o carbón siempre acerca al mínimo, así que en la práctica solo bloquea mejoras
+    /// y toppings (y compras de más de lo necesario).
+    /// </summary>
+    public bool IsPurchaseAllowedByRunMinimums(ItemDataSO item, int qty)
+    {
+        if (!EnforceRunMinimums || item == null) return true;
+
+        qty = Mathf.Clamp(qty, 1, GetMaxPurchaseQty(item));
+        float cost = item.basePrice * qty;
+
+        int meatGained = 0;
+        int coalGained = 0;
+
+        if (item is CoalSO coal) coalGained = Mathf.Max(1, coal.unitsPerBag) * qty;
+        else if (item is MeatCutSO) meatGained = qty;
+
+        return BuildRunStatus(cost, meatGained, coalGained).CanContinue;
+    }
+
+    /// <summary>Igual que la sobrecarga de <see cref="ItemDataSO"/>: un topping nunca aporta al mínimo.</summary>
+    public bool IsPurchaseAllowedByRunMinimums(ToppingSO topping, int qty)
+    {
+        if (!EnforceRunMinimums || topping == null) return true;
+
+        return BuildRunStatus(topping.purchasePrice * Mathf.Max(1, qty), 0, 0).CanContinue;
     }
 }

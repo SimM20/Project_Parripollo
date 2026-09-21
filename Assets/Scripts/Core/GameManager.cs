@@ -546,6 +546,10 @@ public class GameManager : MonoBehaviour
             );
         }
 
+        // Racha de la run: leer (sin consumir) el flag que dejó CustomerSystem.TryEndNight.
+        // El flag lo sigue consumiendo StrikeEndPopup ya en EndScene.
+        StrikeSystem.RegisterNightResult(StrikeSystem.LastNightEndedByStrikes);
+
         SceneManagementUtils.LoadSceneByName("EndScene");
     }
 

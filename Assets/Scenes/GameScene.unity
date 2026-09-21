@@ -11082,6 +11082,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   config: {fileID: 11400000, guid: e286193d953fc9842a2cc9e71219fea3, type: 2}
   catalog: {fileID: 11400000, guid: c47218184b1c40747b898decc4e587c8, type: 2}
+  runDefeatConfig: {fileID: 11400000, guid: ee09b465772b7ce46b75a31047a8955f, type: 2}
+  enforceRunMinimums: 1
 --- !u!1001 &1041434599
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13548,6 +13550,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxStrikes: 3
   limitNoticeSeconds: 5
+  runDefeatConfig: {fileID: 11400000, guid: ee09b465772b7ce46b75a31047a8955f, type: 2}
 --- !u!1001 &1564889395
 PrefabInstance:
   m_ObjectHideFlags: 0

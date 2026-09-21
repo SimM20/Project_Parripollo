@@ -327,6 +327,7 @@ MonoBehaviour:
   fromMeatText: "Siguiente \u2014 Mejoras \u2192"
   fromUpgradesText: "Siguiente \u2014 Toppings \u2192"
   fromToppingsText: "Arrancar pr\xF3ximo d\xEDa \u2192"
+  blockedByMinimumsText: "Faltan recursos m\xEDnimos"
   gameSceneName: GameScene
 --- !u!1001 &107891372
 PrefabInstance:
@@ -1377,6 +1378,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   config: {fileID: 11400000, guid: e286193d953fc9842a2cc9e71219fea3, type: 2}
   catalog: {fileID: 11400000, guid: 14da2995d18d2b34981b3f2137a28e51, type: 2}
+  runDefeatConfig: {fileID: 0}
+  enforceRunMinimums: 0
 --- !u!1 &560071364
 GameObject:
   m_ObjectHideFlags: 0
@@ -3563,6 +3566,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moneyText: {fileID: 1464758034}
+  customersText: {fileID: 0}
   UI: {fileID: 1124966624}
   ShopRoot: {fileID: 0}
 --- !u!1 &1306363918
@@ -5027,6 +5031,7 @@ MonoBehaviour:
   shopNameText: {fileID: 277977412}
   moneyText: {fileID: 733932479}
   totalCoalText: {fileID: 650540922}
+  customersTodayText: {fileID: 0}
   shopName: Parilla 40
 --- !u!1 &1945915041
 GameObject:
