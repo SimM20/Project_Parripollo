@@ -1266,7 +1266,8 @@ MainMenuScene (build index 0)
   │     lee %USERPROFILE%/AppData/.../init.cfg  (Application.persistentDataPath)
   │     claves: TargetFPS=120, ResolutionX=1920, ResolutionY=1080, Fullscreen=true
   │     aplica Application.targetFrameRate + Screen.SetResolution
-  └── MainMenuPanel.StartNewGame() → LoadSceneByName("GameScene")
+  └── MainMenuPanel: fade-in (CanvasGroup) + versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Salir → Quit (en Editor, sale de Play)
+        botones con MenuButtonHover (escala al hover/click, unscaled) sobre sprites Boton Comenzar / Boton Continuar
         └── TutorialOfferController: diálogo pausado → "sí" carga TutorialScene → (paso 23) ShopTutorial → GameScene
 
 [RuntimeInitializeOnLoadMethod]
