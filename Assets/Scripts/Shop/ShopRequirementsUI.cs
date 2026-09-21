@@ -24,11 +24,12 @@ public class ShopRequirementsUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI strikeStreakText;
 
     [Header("Formatos")]
-    [SerializeField] private string meatFormat = "Carne: {0} / {1}";
-    [SerializeField] private string coalFormat = "Carbón: {0} / {1}";
-    [SerializeField] private string deficitFormat = "Falta comprar: {0}";
-    [SerializeField] private string requirementsMetText = "Listo para arrancar el día";
-    [SerializeField] private string strikeStreakFormat = "Noches seguidas con el cartel: {0} / {1}";
+    // En mayúsculas: la tienda usa Bungee, que es una tipografía de titulares.
+    [SerializeField] private string meatFormat = "CARNE   {0} / {1}";
+    [SerializeField] private string coalFormat = "CARBÓN  {0} / {1}";
+    [SerializeField] private string deficitFormat = "FALTA: {0}";
+    [SerializeField] private string requirementsMetText = "LISTO PARA ARRANCAR";
+    [SerializeField] private string strikeStreakFormat = "NOCHES SEGUIDAS: {0} / {1}";
 
     [Header("Colors")]
     [SerializeField] private Color metColor = new Color(0.45f, 0.85f, 0.4f);
@@ -116,10 +117,10 @@ public class ShopRequirementsUI : MonoBehaviour
 
     private static string BuildDeficitText(RunEconomyStatus status)
     {
-        string meat = status.meatDeficit + (status.meatDeficit == 1 ? " corte" : " cortes");
-        string coal = status.coalDeficit + (status.coalDeficit == 1 ? " carbón" : " carbones");
+        string meat = status.meatDeficit + (status.meatDeficit == 1 ? " CORTE" : " CORTES");
+        string coal = status.coalDeficit + (status.coalDeficit == 1 ? " CARBÓN" : " CARBONES");
 
-        if (status.meatDeficit > 0 && status.coalDeficit > 0) return meat + " y " + coal;
+        if (status.meatDeficit > 0 && status.coalDeficit > 0) return meat + ", " + coal;
         if (status.meatDeficit > 0) return meat;
         return coal;
     }

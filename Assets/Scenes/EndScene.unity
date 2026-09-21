@@ -156,8 +156,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 30, y: -14}
-  m_SizeDelta: {x: 380, y: 32}
+  m_AnchoredPosition: {x: 46, y: -16}
+  m_SizeDelta: {x: 250, y: 32}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &6040303
 MonoBehaviour:
@@ -181,8 +181,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Carbon: 0 / 0'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
-  m_sharedMaterial: {fileID: 2140032, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
+  m_sharedMaterial: {fileID: 2150445919236001146, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -206,8 +206,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25
-  m_fontSizeBase: 25
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -2366,8 +2366,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 420, y: -14}
-  m_SizeDelta: {x: 590, y: 32}
+  m_AnchoredPosition: {x: 315, y: -16}
+  m_SizeDelta: {x: 390, y: 32}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &575460201
 MonoBehaviour:
@@ -2391,8 +2391,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: '-'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
-  m_sharedMaterial: {fileID: 2140032, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
+  m_sharedMaterial: {fileID: 2150445919236001146, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2416,8 +2416,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25
-  m_fontSizeBase: 25
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -4866,8 +4866,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 30, y: 22}
-  m_SizeDelta: {x: 380, y: 32}
+  m_AnchoredPosition: {x: 46, y: 24}
+  m_SizeDelta: {x: 250, y: 32}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &1022723284
 MonoBehaviour:
@@ -4891,8 +4891,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Carne: 0 / 0'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
-  m_sharedMaterial: {fileID: 2140032, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
+  m_sharedMaterial: {fileID: 2150445919236001146, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4916,8 +4916,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25
-  m_fontSizeBase: 25
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -5452,8 +5452,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 420, y: 22}
-  m_SizeDelta: {x: 590, y: 32}
+  m_AnchoredPosition: {x: 315, y: 24}
+  m_SizeDelta: {x: 390, y: 32}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &1125010322
 MonoBehaviour:
@@ -5477,8 +5477,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: '-'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
-  m_sharedMaterial: {fileID: 2140032, guid: dc36b3fdc14f47ebb36fd484a67e268a, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
+  m_sharedMaterial: {fileID: 2150445919236001146, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -5502,8 +5502,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25
-  m_fontSizeBase: 25
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -5722,8 +5722,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -355, y: -454}
-  m_SizeDelta: {x: 1030, y: 96}
+  m_AnchoredPosition: {x: -500, y: -472}
+  m_SizeDelta: {x: 740, y: 112}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1225079177
 MonoBehaviour:
@@ -5743,11 +5743,11 @@ MonoBehaviour:
   coalText: {fileID: 6040303}
   deficitText: {fileID: 1125010322}
   strikeStreakText: {fileID: 575460201}
-  meatFormat: 'Carne: {0} / {1}'
-  coalFormat: "Carb\xF3n: {0} / {1}"
-  deficitFormat: 'Falta comprar: {0}'
-  requirementsMetText: "Listo para arrancar el d\xEDa"
-  strikeStreakFormat: 'Noches seguidas con el cartel: {0} / {1}'
+  meatFormat: CARNE   {0} / {1}
+  coalFormat: "CARB\xD3N  {0} / {1}"
+  deficitFormat: 'FALTA: {0}'
+  requirementsMetText: LISTO PARA ARRANCAR
+  strikeStreakFormat: 'NOCHES SEGUIDAS: {0} / {1}'
   metColor: {r: 0.45, g: 0.85, b: 0.4, a: 1}
   unmetColor: {r: 0.9, g: 0.35, b: 0.3, a: 1}
 --- !u!1 &1272566830
@@ -8725,8 +8725,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 4458579219124868804, guid: ad6762ce0f2c09f44b292efa2861da83, type: 3}
-  m_Type: 0
+  m_Sprite: {fileID: 21300000, guid: 8853601e3ff3fa94a81a086fd8578924, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -8734,7 +8734,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 1.6
 --- !u!222 &2028384195
 CanvasRenderer:
   m_ObjectHideFlags: 0

@@ -81,6 +81,13 @@ public static class SceneManagementUtils
         if (CoalConsumptionTracker.Instance != null) UnityEngine.Object.Destroy(CoalConsumptionTracker.Instance.gameObject);
         if (CoolerSystem.Instance != null) UnityEngine.Object.Destroy(CoolerSystem.Instance.gameObject);
         if (ToppingStock.Instance != null) UnityEngine.Object.Destroy(ToppingStock.Instance.gameObject);
+
+        // La racha de noches es un estatico: sobrevive el cambio de escena igual que los DDOL,
+        // asi que hay que limpiarla a mano o la run siguiente arranca con la racha de la anterior
+        // (y si venia en el tope, pierde en su primer EndScene).
+        StrikeSystem.ResetStreak();
+        DayStats.ResetDay();
+
         LoadSceneByName("MainMenuScene");
     }
 }
