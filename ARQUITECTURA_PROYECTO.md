@@ -1026,6 +1026,11 @@ Burbuja de pedido. **Un solo panel con dos estados**, no dos burbujas:
 - El ícono (`CustomerView.GetDishSprite`, el plato en el punto pedido) es **el mismo en los dos estados**: si cambia
   al expandir parece otro pedido. El dibujo es la identidad del plato; el punto como **texto** es lo que aporta la
   expandida. `GetNeutralOrderSprite()` queda de reserva para los cortes sin sprite por punto.
+- ⚠️ `GetDishSprite()` resuelve en **tres escalones**: variante del catálogo en el punto pedido → **sprite del propio
+  corte en el punto pedido** → null. El escalón del medio existe por el tutorial: `FoodCatalogTutorial` tiene 1 corte
+  y **cero variantes**, así que `GetVariantForOrder` siempre devuelve null y sin ese escalón la burbuja caía al
+  `GetDefaultSprite()` del corte — el chorizo **crudo**, con un punto que nunca era el del pedido. `ChorizoTutorial`
+  sí trae sus sprites por punto (`Chorizo Jugoso/Hecho/Muy Hecho/Pasado 90`).
 - El panel es un 9-sliced procedural (`SpriteDrawMode.Sliced` + `size`), así que **crece sin deformar las esquinas**.
   Crece hacia arriba (`growUpwards`): el borde de abajo queda fijo y la transición se lee como una sola burbuja.
 - Los íconos de acompañamientos **se desvanecen al expandir** porque ahí los mismos acompañamientos ya van escritos:

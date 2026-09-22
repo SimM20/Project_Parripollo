@@ -448,17 +448,34 @@ public class CustomerView : MonoBehaviour
 
     /// <summary>
     /// Sprite del plato para el pedido actual, resuelto por corte + punto de cocción
-    /// solicitado. Devuelve null si no hay pedido o variante en el catálogo.
+    /// solicitado. Devuelve null solo si no hay pedido, o si ni la variante ni el corte
+    /// tienen dibujo.
     /// </summary>
     public Sprite GetDishSprite()
     {
         Order order = customer?.order;
-        if (order == null || system == null || system.Catalog == null) return null;
+        if (order == null) return null;
 
-        var variant = system.Catalog.GetVariantForOrder(order);
-        if (variant == null) return null;
+        MeatStates requestedState = order.GetRequestedState(0);
 
-        return variant.GetSpriteForState(order.GetRequestedState(0));
+        if (system != null && system.Catalog != null)
+        {
+            var variant = system.Catalog.GetVariantForOrder(order);
+
+            if (variant != null)
+            {
+                Sprite fromVariant = variant.GetSpriteForState(requestedState);
+                if (fromVariant != null) return fromVariant;
+            }
+        }
+
+        // Sin variante se cae al sprite del propio corte en el punto pedido. Hace falta para
+        // el tutorial: `FoodCatalogTutorial` tiene 1 corte y CERO variantes, así que
+        // `GetVariantForOrder` siempre devuelve null y la burbuja terminaba mostrando el
+        // chorizo crudo pasara lo que pasara, con un punto que no era el del pedido.
+        // `ChorizoTutorial` sí trae sus sprites por punto.
+        MeatCutSO cut = order.PrimaryCut;
+        return cut != null ? cut.GetSpriteForState(requestedState, true) : null;
     }
     void OnMouseExit()
     {
