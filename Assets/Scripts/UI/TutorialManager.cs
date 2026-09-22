@@ -551,6 +551,17 @@ public class TutorialManager : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Arrastrar SOLO la carne del plato (reposicionarla, devolverla a la bandeja o a la parrilla).
+    /// Durante el tutorial se apaga: sacar la carne del plato en un paso cualquiera rompe el guion,
+    /// y agarrar la carne pasa a llevar el plato entero, como piden los pasos de entrega.
+    /// </summary>
+    public bool IsPlateMeatDragAllowed()
+    {
+        if (!isTutorialActive) return true;
+        return false;
+    }
+
     public static bool CheckViewChangeAllowed(ViewType targetView) => Instance == null || Instance.IsViewChangeAllowed(targetView);
     public static bool CheckStockPanelOpenAllowed() => Instance == null || Instance.IsStockPanelOpenAllowed();
     public static bool CheckStockDragAllowed(ItemDataSO item) => Instance == null || Instance.IsStockDragAllowed(item);
@@ -562,6 +573,7 @@ public class TutorialManager : MonoBehaviour
     public static bool CheckDeliveryConfirmAllowed() => Instance == null || Instance.IsDeliveryConfirmAllowed();
     public static bool CheckCleanAshesAllowed() => Instance == null || Instance.IsCleanAshesAllowed();
     public static bool CheckClearBuildPlateAllowed() => Instance == null || Instance.IsClearBuildPlateAllowed();
+    public static bool CheckPlateMeatDragAllowed() => Instance == null || Instance.IsPlateMeatDragAllowed();
 
     // ── Static Notifications ───────────────────────────────────────────
     public static void NotifyStockPanelOpened()

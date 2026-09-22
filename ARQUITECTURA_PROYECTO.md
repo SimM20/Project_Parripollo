@@ -2,7 +2,7 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
-> Última actualización parcial: **2026-09-21** (rama `development`) — `TutorialScene` reconstruida desde `GameScene` y pasos del tutorial reescritos para la vista única (sección 3.7, nota 17).
+> Última actualización parcial: **2026-09-21** (rama `development`) — dos gestos sobre el plato: agarrar **el plato** lo lleva entero al cliente (única entrega); agarrar **la carne** mueve solo la carne (reposicionar en el plato, bandeja o parrilla; nunca entrega). Sin anclaje de carne. Secciones 2.4 y 3.4, `TutorialManager.CheckPlateMeatDragAllowed`.
 
 ---
 
@@ -177,7 +177,7 @@ graph TD
 |---|---|---|
 | **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `HudManager`, `StockPanelController`, `ToppingsPanelController`, `MeatHoverBubble`, `MeatCookHoverBar`, `CustomerHoverBubble`, `CustomerSelectionFrame`, `DeliveryFeedbackText`, `CustomerFeedbackConfigSO` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
 | **Observer** (`event Action`) | Ver tabla 2.3 | Suscripción en `OnEnable`/`Start`, desuscripción en `OnDisable`/`OnDestroy` |
-| **Static notification hub + gates** | `TutorialManager.Notify*(...)` y `TutorialManager.Check*Allowed(...)` | 12 `Notify*` (no-op si `Instance == null`) y 11 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` el tutorial no existe y nada cambia |
+| **Static notification hub + gates** | `TutorialManager.Notify*(...)` y `TutorialManager.Check*Allowed(...)` | 12 `Notify*` (no-op si `Instance == null`) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` el tutorial no existe y nada cambia |
 | **Command** | `IBuildUndoAction` + `BuildUndoHistory` (pila) | `AddSideUndoAction`, `AddToppingUndoAction`, `SetBreadUndoAction`, **`AddMeatUndoAction`** (devuelve el corte a la bandeja) |
 | **Buffer / staging area** | `MeatTransferBuffer`, `CoalTransferBuffer` | `BufferedMeatData`/`BufferedCoalData` (POCO con tiempos de cocción) + visuales. `MeatTransferBuffer` hoy administra **plato + bandeja**; la cola `ToGrill/MeatHolder` es legado |
 | **Duck typing por reflexión / `SendMessage`** | `GameManager`→`MeatTransferBuffer`, `MeatHolderDraggableMeat`, `CoolerDraggableMeat`, `*StockVisualizer` | `Type.GetType` sobre todos los assemblies + `MethodInfo.Invoke` / `SendMessage(..., DontRequireReceiver)`. Rompe el binding estático a propósito |
@@ -226,8 +226,8 @@ Parrilla ──drag a la zona "ToBuild" (superficie naranja = plato)──► PL
    │  Meat.OnMouseUp → prioridad: TrashZone → MTB.TryPlateMeatFromGrill(meat, punto) → grilla → origen
    │  TryPlateMeatFromGrill → BuildFoodDropZone.TryAcceptMeatAt (rechaza si el plato YA tiene un corte)
    │                        → BuildStationSystem.AddCut(cut, state, A, B)   [conserva tiempos de cocción]
-   │                        → devuelve meatWorldPoint = anclaje de carne del plato (NO el punto del drop)
-   │                        → destruye el Meat, AdoptVisualIntoPlate(anclaje) → AddComponent<PlateDeliveryDraggable>
+   │                        → destruye el Meat, AdoptVisualIntoPlate(punto del drop) → AddComponent<PlateDeliveryDraggable>
+   │                        → la carne queda DONDE SE SOLTÓ: es libre dentro del plato, no hay anclaje
    │                        → BuildUndoHistory.Push(AddMeatUndoAction)
 
 ToppingsPanel [T] ──drag──► plato
@@ -243,15 +243,24 @@ Undo  [RollBackButton → BuildUndoHistory.UndoLast]
 Bandeja (MeatTray) ──drag (ToBuildDraggableMeat)──► plato   → MTB.TryPlateFromTrayById
                     ──drag──────────────────────► parrilla → MTB.TryDropFromTrayById  (vuelve a cocinarse con sus tiempos)
 
-Entrega — ÚNICA vía: arrastrar el plato (PlateDeliveryDraggable) hasta un cliente
-   │  Update (pick propio, sin OnMouseXXX) → agarra el plato COMPLETO como bloque (carne + sides/toppings)
+Carne del plato ──drag agarrando LA CARNE (PlateDeliveryDraggable, modo MeatOnly)──► se mueve SOLO la carne
+   │  Dentro del plato      → queda donde se soltó (la carne es libre, se reposiciona)
+   │  Sobre la bandeja      → MTB.TryReturnPlateMeatToTray
+   │  Sobre hueco de grilla → MTB.TryReturnPlateMeatToGrill (preview verde/rojo de slots, R rota el footprint)
+   │  Sobre un cliente / cualquier otro lado → vuelve a donde estaba. La carne sola NUNCA entrega
+   │  Gate: TutorialManager.CheckPlateMeatDragAllowed (false con tutorial activo → agarrar la carne lleva el plato entero)
+
+Entrega — ÚNICA vía: arrastrar EL PLATO (PlateDeliveryDraggable, modo WholePlate) hasta un cliente
+   │  Update (pick propio, sin OnMouseXXX) → agarrar el plato (BuildFoodDropZone.PlateBody, cualquier parte que no sea la carne)
+   │                  → se lleva el plato COMPLETO como bloque (sprite del plato + carne + sides/toppings); el plato vacío no se agarra
    │  Durante el drag → Physics2D.OverlapPointNonAlloc busca CustomerView bajo el mouse
    │                  → CustomerSystem.SetDeliveryDragHover(view) → recuadro + burbuja con PREVIEW ($ + propina o motivo)
    │                  → GameManager.ShowDeliveryPreviewOnPlate → tinte por corte
    │  Soltar sobre cliente → GameManager.TryDeliverToCustomer(view.Customer)
    │        false (rechazo) → el plato vuelve intacto a su sitio
-   │  Soltar al vacío     → sobre la bandeja: TryReturnPlateMeatToTray · sobre hueco libre de grilla: TryReturnPlateMeatToGrill
-   │                      → en cualquier otro lado: vuelve al plato
+   │        true            → la comida se destruye y el sprite del plato vuelve VACÍO al mostrador
+   │  Soltar en cualquier otro lado → el plato vuelve INTACTO al mostrador, con la carne donde estaba.
+   │                      Arrastrar el plato nunca saca la carne: para eso está el drag de solo-carne, el undo o la tecla C
 
   TryDeliverToCustomer(Customer) → bool
    │     1. EvaluateDelivery (puro): cliente válido y no en feedback → HasAnyCut → corte == order.PrimaryCut
@@ -674,8 +683,9 @@ bool TryPlateMeatFromGrill(Meat, Vector3)             // TryAcceptMeatAt → des
 bool TryPlateFromTrayById(int entryId, Vector3)       // TryAcceptMeatAt → recicla el visual → Push(AddMeatUndoAction)
 bool TryDropFromTrayById(int entryId, Vector3, bool rotateFootprint)   // TrySpawnMeatAtPoint + ApplyTo
 // Plato → Bandeja / Parrilla
-bool TryReturnPlateMeatToTray(GameObject plateVisual = null)          // undo y drop sobre la bandeja; null = último
-bool TryReturnPlateMeatToGrill(GameObject plateVisual, Vector3)       // solo si hay hueco libre
+bool TryReturnPlateMeatToTray(GameObject plateVisual = null)          // undo (AddMeatUndoAction) y drag de solo-carne; null = último
+bool TryReturnPlateMeatToGrill(GameObject plateVisual, Vector3[, bool rotateFootprint])  // solo si hay hueco libre; sin bool usa la rotación del corte
+bool TryGetPlateMeatInfo(GameObject plateVisual, out MeatCutSO, out bool isGridRotated)  // para el preview de slots del drag de solo-carne
 bool IsOverMeatTray(Vector3)                          // mide SOLO el subárbol del anchor MeatTray
 // Visuales del plato (los primeros 4 los llama GameManager por SendMessage)
 void ClearPlateMeatVisuals(), FlashPlateMeatVisuals(List<int>), SetPlateMeatTints(List<Color>), ClearPlateMeatTints()
@@ -691,9 +701,8 @@ void UpdateMeatHolderHover(MeatCutSO, Vector3, bool), ClearMeatHolderHover(), Re
 `AdoptVisualIntoPlate(entry, visual, punto)` es **el único lugar que crea visuales de carne en el plato**: instancia
 `visualPrefab` (o recicla el de la bandeja), lo deja en mundo con `fixedWorldScale`, sprite del estado, `sortingOrder`
 = `plateMeatSortingBase (400) + índice`, destruye cualquier `ToBuildDraggableMeat` y agrega `PlateDeliveryDraggable`.
-El `punto` que recibe **no es el del drop**: `TryPlateMeatFromGrill` y `TryPlateFromTrayById` usan la sobrecarga
-`TryAcceptMeatAt(..., out Vector3 meatWorldPoint)` y montan el visual en el **anclaje de carne** del plato
-(`BuildFoodDropZone.meatAnchorOffset`), así la composición es la misma sin importar dónde se soltó el corte.
+El `punto` que recibe **es el del drop**: la carne queda donde el jugador la soltó dentro del plato (libre, sin
+anclaje). Hubo un anclaje fijo (`meatAnchorOffset`) durante unas horas el 2026-09-21 y se descartó: clavaba la carne.
 Anclas por nombre si faltan en el inspector: `ToBuild` y **`MeatTray`** bajo `GrillView` (`MeatTray` es el viejo
 `MeatHolder` de la Cooler View, renombrado). `IsOverMeatTray` mide solo el subárbol del anchor porque su padre es el
 root de `GrillView` y medirlo entero tragaba media parrilla.
@@ -734,10 +743,17 @@ ProductVariantSO TryResolveVariant()
 
 #### `BuildFoodDropZone` — `Build/BuildFoodDropZone.cs`
 Zona del plato (collider en `GrillView/Plato`). Registro estático `ActiveZones` + APIs estáticas:
-`TryAcceptAt(punto, BuildDraggableFoodItem)`, `TryAcceptMeatAt(punto, cut, state, A, B[, out meatWorldPoint])`,
-`IsPlateOccupiedAt(punto)`, `ClearActivePlateVisuals()`, `SetActivePlateVisualsVisible(bool)`,
-`CollectActivePlateVisuals(List<Transform>)`. De instancia: `GetMeatAnchorWorld(z)`,
-`SpawnPlateVisual(Sprite, PlateVisualKind)`, `RemoveLastPlateVisual()`.
+`TryAcceptAt(punto, BuildDraggableFoodItem)`, `TryAcceptMeatAt(punto, cut, state, A, B)`,
+`IsPlateOccupiedAt(punto)`, **`IsOverPlateAt(punto)`** (cualquier zona, con o sin carne), `ClearActivePlateVisuals()`,
+`SetActivePlateVisualsVisible(bool)`, `CollectActivePlateVisuals(List<Transform>)`, **`CollectActivePlateBodies(List<Transform>)`** (sprite del plato de cada
+zona con carne montada), `Zones` (lectura). De instancia: `SpawnPlateVisual(Sprite, PlateVisualKind)`,
+`RemoveLastPlateVisual()`, **`PlateBody`** / **`HasLoadedPlate`** / **`ContainsPoint(punto)`** (para el agarre por el
+plato desde `PlateDeliveryDraggable`).
+
+`plateRenderer` (inspector, o el `SpriteRenderer` del propio objeto si falta) es **el sprite del plato en sí**. En
+`GameScene`/`TutorialScene` es el mismo GameObject `Plato` que tiene la zona: al arrastrar el plato se mueve el
+objeto entero (sprite + collider de la zona). Es seguro porque hay un solo mouse: mientras dura el arrastre nadie
+puede soltar nada sobre la zona, y `RestorePositions` la devuelve al soltar.
 
 ⚠️ **El plato admite un solo corte** (desde `45f2d74`, 2026-09-09): `TryAcceptMeatAt` devuelve `false` si
 `HasAnyCut`, y el corte sobrante vuelve a su origen. `IsPlateOccupiedAt` existe para que `Meat.OnMouseUp` no
@@ -750,8 +766,8 @@ la carne (400) y la tapaba. Ahora la zona es dueña de la composición:
 
 | Campo (header *Plate Layout*) | Valor en `GameScene` | Qué hace |
 |---|---|---|
-| `meatAnchorOffset` | `(-0.65, 0)` | Dónde se apoya el corte. El drop lo **snapea** ahí (parrilla → plato y bandeja → plato) |
-| `sideSlotOffsets` | `(0.35, 0.3)`, `(0.9, -0.3)` | Slots de guarniciones, en orden de llegada, a la derecha del corte |
+| *(la carne no tiene slot)* | — | El corte queda **donde se soltó** dentro del plato (parrilla → plato y bandeja → plato). Es libre |
+| `sideSlotOffsets` | `(0.35, 0.3)`, `(0.9, -0.3)` | Slots de guarniciones, en orden de llegada, a la derecha del plato |
 | `sideVisualSize` | `0.9` | Tamaño objetivo de cada guarnición |
 | `toppingSlotOffsets` | `(-0.2, -0.55)`, `(0.35, -0.6)` | Slots de toppings (frascos), al frente, más chicos |
 | `toppingVisualSize` | `0.55` | Tamaño objetivo de cada topping |
@@ -764,15 +780,22 @@ la carne (400) y la tapaba. Ahora la zona es dueña de la composición:
   un undo libera el slot y el siguiente lo reutiliza. `RemoveLastPlateVisual` sigue sacando el último sin mirar el tipo.
 - La escala se normaliza con `FitScale`: `targetSize / sqrt(ancho × alto)` del sprite. Se usa la **media geométrica**
   y no el lado mayor porque las papas (sprite apaisado 26×16) quedaban enanas al lado de un bol cuadrado.
-- `OnDrawGizmosSelected` dibuja anclaje (rojo), slots de sides (amarillo) y de toppings (verde) en la Scene view
+- `OnDrawGizmosSelected` dibuja los slots de sides (amarillo) y de toppings (verde) en la Scene view
   para ajustar sin entrar en Play.
 - `SampleScene` conserva las claves viejas serializadas (`plateVisualWorldSpacing`…); Unity las ignora y toman
   los defaults del script, que coinciden con los valores de `GameScene`.
 
 #### `PlateDeliveryDraggable` — `Build/PlateDeliveryDraggable.cs`
 
-Entrega del plato **arrastrándolo con el mouse** hasta un cliente. **Es la única vía de entrega**; termina en
-`GameManager.TryDeliverToCustomer`.
+Arrastre de lo que hay sobre el plato, con **dos gestos según qué cae bajo el click** (`DragMode`):
+
+- **`WholePlate`** — agarrar **el plato** (cualquier parte que no sea la carne): se lleva el plato servido entero hasta
+  un cliente. **Es la única vía de entrega**; termina en `GameManager.TryDeliverToCustomer`.
+- **`MeatOnly`** — agarrar **la carne**: se mueve solo la carne. Dentro del plato se reposiciona (es libre); sobre la
+  bandeja → `TryReturnPlateMeatToTray`; sobre un hueco libre de la grilla → `TryReturnPlateMeatToGrill` (con el preview
+  verde/rojo de slots de `UpdateMeatHolderHover`, `R` rota el footprint); sobre un cliente o en cualquier otro lado
+  vuelve a donde estaba. **La carne sola nunca entrega.** Gate `TutorialManager.CheckPlateMeatDragAllowed`: con el
+  tutorial activo este modo se apaga y agarrar la carne lleva el plato entero (los pasos de entrega siguen valiendo).
 
 ```csharp
 public void RefreshCollider()   // re-mide el BoxCollider2D contra el sprite actual
@@ -782,14 +805,15 @@ public void RefreshCollider()   // re-mide el BoxCollider2D contra el sprite act
 | Aspecto | Detalle |
 |---|---|
 | Creación | **Cero setup de escena.** `MeatTransferBuffer.AdoptVisualIntoPlate` lo hace `AddComponent` sobre cada visual de carne que entra al plato |
-| **Agarre (pick)** | **No usa `OnMouseDown`/`OnMouseDrag`/`OnMouseUp`.** El pick se resuelve en `Update`: `PickUnderPointer()` recorre las instancias, proyecta el mouse sobre el plano z de **cada candidato** (`GetMouseWorldPos`) y prueba `selfCollider.OverlapPoint`. Gana el de `sortingOrder` más alto. Chequea `GamePause.IsPaused`. Ver nota 22 |
-| Qué se arrastra | El plato **completo como bloque**: todas las instancias de `PlateDeliveryDraggable` + los visuales de sides/toppings que devuelve `BuildFoodDropZone.CollectActivePlateVisuals`. Agarrar cualquier sprite mueve todo |
-| Estado del arrastre | `static`: la instancia que conduce (`activeDragger`), el frame del último pick y las posiciones + `sortingOrder` de origen de cada visual. El `sortingOrder` sube `+5000` mientras dura y se restaura al soltar |
+| **Agarre (pick)** | **No usa `OnMouseDown`/`OnMouseDrag`/`OnMouseUp`.** El pick se resuelve en `Update`: `PickUnderPointer(out mode)` recorre las instancias, proyecta el mouse sobre el plano z de **cada candidato** (`GetMouseWorldPos`) y prueba `selfCollider.OverlapPoint`. Gana el de `sortingOrder` más alto → `MeatOnly` (o `WholePlate` si el tutorial lo veta). Si ninguna carne está bajo el mouse, `PickPlateBodyUnderPointer()` prueba **el plato en sí** (`BuildFoodDropZone.Zones` con `HasLoadedPlate` + `ContainsPoint`, proyectando al z del plato) → `WholePlate`, conduce la primera carne viva. Chequea `GamePause.IsPaused`. Ver nota 22 |
+| Qué se arrastra | `WholePlate`: el plato **completo como bloque**: el sprite del plato (`BuildFoodDropZone.CollectActivePlateBodies`) + todas las instancias de `PlateDeliveryDraggable` + los visuales de sides/toppings (`CollectActivePlateVisuals`). El plato conserva su orden relativo: `0 + 5000` queda debajo de sides (`390 + 5000`) y carne (`400 + 5000`). `MeatOnly`: solo el `transform` de la instancia agarrada |
+| Estado del arrastre | `static`: la instancia que conduce (`activeDragger`), el modo (`activeMode`), el frame del último pick y las posiciones + `sortingOrder` de origen de cada visual. El `sortingOrder` sube `+5000` mientras dura y se restaura al soltar. `MeatOnly` guarda además el `MeatTransferBuffer` y `cut` + rotación (`TryGetPlateMeatInfo`) para el preview |
 | Gate de paneles | Si el punto cae sobre un `SlidingPanel` abierto (`StockPanelController` / `ToppingsPanelController` → `IsPointOverPanel`) el pick devuelve `null`: el click es del panel |
-| Al agarrar | `GamePause.OnPaused += CancelDrag`, `CustomerView.SetDeliveryDragActive(true)` (los clientes tapados por paneles vuelven a ser detectables), `TutorialManager.NotifyDeliverySelectionBegun()` |
+| Al agarrar | `GamePause.OnPaused += CancelDrag`. Solo `WholePlate`: `CustomerView.SetDeliveryDragActive(true)` (los clientes tapados por paneles vuelven a ser detectables) y `TutorialManager.NotifyDeliverySelectionBegun()`. Solo `MeatOnly`: arranca el preview de slots |
 | Hover de cliente | `Physics2D.OverlapPointNonAlloc` sobre un buffer estático de 16 (sin GC por frame) → `GetComponentInParent<CustomerView>()` → `CustomerSystem.SetDeliveryDragHover(view)` |
-| Drop sobre cliente | `TryDeliverToCustomer`. Si devuelve `false`, cada visual vuelve a su posición sobre el plato. **Un rechazo del cliente deja el plato intacto** (los clientes pueden pisar slots de la parrilla; sin ese gate la carne rechazada volvía a cocinarse) |
-| Drop al vacío | Solo entonces la carne puede irse: sobre la bandeja → `TryReturnPlateMeatToTray`; sobre un hueco libre de la grilla → `TryReturnPlateMeatToGrill`; en cualquier otro lado vuelve al plato |
+| Drop sobre cliente | `TryDeliverToCustomer`. `RestorePositions` corre **siempre**: si devuelve `false`, cada visual vuelve a su posición sobre el plato y **un rechazo del cliente deja el plato intacto** (los clientes pueden pisar slots de la parrilla; sin ese gate la carne rechazada volvía a cocinarse); si devuelve `true`, la comida ya fue destruida (Destroy diferido) y lo que vuelve al mostrador es el plato vacío |
+| Drop al vacío (`WholePlate`) | El plato vuelve **intacto** al mostrador, con la carne donde estaba. Arrastrar el plato nunca saca la carne: para eso está el modo `MeatOnly`, el undo (→ bandeja) o la tecla `C` |
+| Drop (`MeatOnly`) | `EndMeatOnlyDrag`: limpia el preview; si el punto cae sobre el plato (`BuildFoodDropZone.IsOverPlateAt`) la carne **queda donde se soltó**; si no, primero `RestorePositions` y recién después, **solo si no hay un cliente bajo el mouse**, `IsOverMeatTray` → `TryReturnPlateMeatToTray`, si no `TryReturnPlateMeatToGrill(visual, punto, rotación)`. Si falla, ya está de vuelta en el plato. El gate del cliente evita que el corte se cocine bajo un cliente parado sobre la grilla |
 | Cancelación | `OnDisable`/`OnDestroy` del visual que conduce llaman `CancelDrag()`: restauran posiciones y `sortingOrder` sin intentar el drop |
 | Collider | Se re-mide en `Awake` y cada vez que el pan cambia sprite/escala/rotación del visual (`MeatTransferBuffer.UpdatePlateMeatSprite` y `RestorePlateMeatVisual` llaman a `RefreshCollider()`) |
 
@@ -1605,8 +1629,8 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.AdoptVisualIntoPlate`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la zona del plato, tiene que pasar por ahí o ese plato no se podrá arrastrar |
 | 21 | Los clientes se instancian con `customersParent = null` (raíz de escena), así que **no** los alcanza el toggle de `ViewManager` y sus colliders siguen activos. De eso depende el hover de la entrega por arrastre (`Physics2D.OverlapPointNonAlloc`). El único que apaga su collider es `CustomerView.ApplyPickingState` (panel encima / feedback) |
 | 22 | **La cámara está en perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). Dos consecuencias, y las dos ya mordieron: (a) **nunca** `cam.ScreenToWorldPoint(Input.mousePosition)` a secas — con `z = 0` devuelve la posición de la cámara. Siempre `pos.z = Mathf.Abs(objeto.z - cam.z)` antes de convertir (`Item.GetMouseWorldPosition` es la referencia; lo repiten `Meat.RestoreHoverIfPointerOver`, `ToBuildDraggableMeat`, `StockPanelSlot`, `PlateDeliveryDraggable`; `MoneyPopup.TryGetHudTarget` hace lo mismo para el destino del vuelo). (b) El pick interno de Unity (`OnMouseDown` sobre `Collider2D`) reparte el click a **un solo** collider, y los visuales del plato quedan apoyados sobre el de la zona `ToBuild` — mismo plano `z = 0` y sin handler de mouse — así que se lo quedaba la zona y la carne del plato dejaba de ser agarrable. Por eso `PlateDeliveryDraggable` resuelve su propio pick en `Update`. Si algún otro objeto apilado sobre un collider "mudo" deja de responder al mouse, es el mismo caso |
-| 23 | **Un solo corte por plato** (`BuildFoodDropZone.TryAcceptMeatAt` rechaza el segundo). Si se vuelve a permitir más de uno hay que revisar `Meat.OnMouseUp` (`IsPlateOccupiedAt`), `AdoptVisualIntoPlate` (sorting por índice), el preview de tintes, que ya iteran listas y deberían tolerarlo, **y el `meatAnchorOffset` único del layout del plato** (habría que pasar a una lista de anclajes) |
-| 27 | **La carne del plato siempre se dibuja sobre sides/toppings.** `plateMeatSortingBase` (400, en `MeatTransferBuffer`) tiene que quedar **por encima** de `BuildFoodDropZone.sideTopSortingOrder` (390) + cantidad de visuales; si se cambia uno, revisar el otro. Los visuales de sides/toppings van a slots fijos alrededor del `meatAnchorOffset` (ver 3.4): agregar un item nuevo al `ToppingsPanel` no requiere tocar el layout, solo si se quiere un tercer slot |
+| 23 | **Un solo corte por plato** (`BuildFoodDropZone.TryAcceptMeatAt` rechaza el segundo). Si se vuelve a permitir más de uno hay que revisar `Meat.OnMouseUp` (`IsPlateOccupiedAt`), `AdoptVisualIntoPlate` (sorting por índice), el preview de tintes, que ya iteran listas y deberían tolerarlo (la carne no tiene slot: cada corte queda donde se soltó, así que el layout no limita) |
+| 27 | **La carne del plato siempre se dibuja sobre sides/toppings.** `plateMeatSortingBase` (400, en `MeatTransferBuffer`) tiene que quedar **por encima** de `BuildFoodDropZone.sideTopSortingOrder` (390) + cantidad de visuales; si se cambia uno, revisar el otro. Los visuales de sides/toppings van a slots fijos desde el centro del plato (ver 3.4): agregar un item nuevo al `ToppingsPanel` no requiere tocar el layout, solo si se quiere un tercer slot |
 | 24 | **Paneles encima de clientes.** Los dos `SlidingPanel` se despliegan sobre la fila de clientes y comparten z con ellos. Cualquier objeto nuevo con collider en esa zona tiene que gatearse igual que `CustomerView.ApplyPickingState` (`SlidingPanel.IsAreaCoveredByOpenPanel`) o va a robar clicks a las celdas del panel. Y al revés: un pick que no use `OnMouseXXX` tiene que preguntar `IsPointOverPanel` antes de aceptar el click (`PlateDeliveryDraggable` lo hace) |
 | 25 | **La bandeja no tiene tope** (decisión del refactor): apila sin límite en `trayWorldDirection × trayWorldSpacing`. Si se llena, es un problema visual, no lógico |
 | 28 | **La derrota total se decide en `Awake`, no en `Start`** (`RunDefeatScreen`): así apaga `ShopCanvas` y `StrikeEndPopupCanvas` antes de que corran sus `Start`, y `StrikeEndPopup` no llega a consumir su flag. Un componente nuevo de `EndScene` que asuma que la tienda está encendida tiene que contemplar este caso |
