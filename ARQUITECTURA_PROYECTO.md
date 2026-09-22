@@ -913,7 +913,7 @@ float PatienceMultiplier { get; }
 FoodCatalogSO Catalog { get; }            // vía FoodAvailabilityService
 
 void StartNight()                         // arranca el DayClock y la llegada de clientes; se suscribe a OnClosingTime y a StrikeSystem.OnLimitReached
-void SpawnCustomer(bool ignoreNightLimit = false)          // → AudioManager.PlayNewClientBell
+void SpawnCustomer(bool ignoreNightLimit = false)          // → CustomerView.ApplySkin(PickCustomerSkin()) + AudioManager.PlayNewClientBell
 void SelectCustomer(Customer), SelectAdjacentCustomer(int), BeginDeliverySelection(), EndDeliverySelection()  // sin llamadores externos
 void ShowSelectedOrderBubble()
 bool IsCustomerActive(Customer)             // sigue esperando (no se fue, no fue atendido, no está en feedback)
@@ -947,6 +947,12 @@ noche siguiente. Sin `availabilityService` asignado no hay catálogo → warning
 ⚠️ Los slots extra se posicionan con `autoFirstSlotPos + right × autoSlotSpacing × i`: al subir la
 capacidad hay que verificar que los últimos slots sigan entrando en cámara.
 
+**Pinta del cliente** (`customerSkins`, `List<Sprite>`): pool **compartido por todos los tipos**. `PickCustomerSkin()`
+sortea uno en cada spawn y `CustomerView.ApplySkin` lo pisa sobre el `skinRenderer` del prefab. Con
+`avoidRepeatedSkinsOnScreen` (default `true`) se descartan las imágenes que ya lleva puestas algún cliente en
+pantalla; si hay más clientes simultáneos que imágenes se repite igual antes que dejar a alguien sin skin.
+Pool vacío (o todo `null`) → warning **una sola vez por noche** y cada prefab se queda con su propia imagen.
+
 `Update` descuenta paciencia (salteando los `IsInFeedback`) y a los `IsAngry` les dispara
 `TriggerAngryLeaveFeedback` en vez de expulsarlos en seco (ahí se suma el strike, ver 3.6).
 `CompactSlots()` corre las views a la izquierda al liberarse un slot y llama
@@ -974,6 +980,11 @@ El `OrderSystem` se construye con el pool de toppings del catálogo y `maxToppin
 (`StartFeedback()`/`EndFeedback()`); **`bool IsTipAnulada`**; `Init(...)`, `UpdatePatience(float)`.
 
 #### `CustomerView` — `Customers/CustomerView.cs`
+- **Imagen del cliente** (`skinRenderer`, hijo `Personaje 1` en los prefabs `Cliente*`): `ApplySkin(Sprite)` la
+  pisa en el spawn con la que sorteó `CustomerSystem.PickCustomerSkin()`. **La pinta no depende del tipo**: el
+  prefab define el comportamiento (paciencia, peso de spawn) y el pool define el dibujo, así que el mismo puede
+  tocarle a un apurado o a un camionero. Con `skinRenderer` sin asignar, `Awake` lo busca entre los hijos
+  descartando la barra de paciencia y la burbuja de feedback; con pool vacío se respeta la imagen del prefab.
 - **Barra de paciencia** (`patienceFill`, hijo `Completo` de `BarraPAciencia` en los prefabs `Cliente*`):
   `RefreshPatience()` escala el fill en X, **lo tiñe** (`patienceHighColor` → `Mid` en 50 % → `Low`) y **hace temblar
   el contenedor** por debajo de `urgentThreshold` (0.2). El temblor mueve `patienceFill.parent`, nunca el cliente.
@@ -988,6 +999,16 @@ El `OrderSystem` se construye con el pool de toppings del catálogo y `maxToppin
 - `ShowFeedback(state, payment, tip, isMissingReplacement, onComplete, config)`: marca `IsInFeedback`, apaga
   selección/collider/hover, oculta la barra, elige el SFX por categoría (`AudioManager.PlayPositive/Intermediate/NegativeFeedback`)
   y delega en `CustomerFeedbackBubble` (busca uno en hijos o lo crea). `GetDishSprite()` para la burbuja.
+
+#### `CustomerHoverBubble` — `Customers/CustomerHoverBubble.cs` · Singleton de escena (`dialgo` en `GameScene`)
+Burbuja de pedido del hover y del arrastre de plato. Sigue al cliente en `LateUpdate` con `worldOffset`
+y normaliza el sprite del plato a `dishTargetSize` recentrándolo por el centro real de sus `bounds`
+(los sprites del proyecto tienen distinto tamaño y pivot).
+⚠️ **El orden de dibujo se fuerza en `Awake`** (`baseSortingOrder` = 700 → círculo, plato +1, texto +2):
+no es un objeto hijo del cliente y sus renderers quedan **por detrás** del plano del cliente en z
+(`worldOffset.z = 0` y los hijos tienen `localZ` ≈ 1.69), así que con la cámara en perspectiva y el mismo
+sorting order el sprite del cliente ganaba por cercanía y tapaba la burbuja. Al agrandar los personajes
+dejó de verse. El orden se aplica por código para que no dependa de cómo quedó la escena.
 
 #### Feedback de entrega — `CustomerFeedbackBubble` / `CustomerFeedbackConfigSO` / `CustomerFeedbackState`
 Implementa el spec "Sistema Feedback de Entrega y Reacción del Cliente" (2026-09-08).

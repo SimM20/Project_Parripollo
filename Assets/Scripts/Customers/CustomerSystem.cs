@@ -84,6 +84,22 @@ public class CustomerSystem : MonoBehaviour
     [Header("Customer Prefabs")]
     [SerializeField] private List<CustomerPrefabEntry> customerPrefabs = new List<CustomerPrefabEntry>();
 
+    [Header("Customer Skins")]
+    [Tooltip("Pool de imagenes de cliente. La pinta no depende del tipo: al spawnear cada cliente " +
+             "saca una al azar de acá, asi que puede haber un apurado y un camionero con el mismo " +
+             "dibujo. Vacio = cada prefab se queda con la imagen que ya tiene.")]
+    [SerializeField] private List<Sprite> customerSkins = new List<Sprite>();
+
+    [Tooltip("Evita que dos clientes en pantalla al mismo tiempo compartan imagen. Si hay mas " +
+             "clientes simultaneos que imagenes en el pool, se repite igual.")]
+    [SerializeField] private bool avoidRepeatedSkinsOnScreen = true;
+
+    // Buffer reusable del sorteo de imagen, para no generar basura en cada spawn.
+    private readonly List<Sprite> skinCandidates = new List<Sprite>();
+
+    // El aviso de pool vacio se da una sola vez por noche y no en cada cliente.
+    private bool warnedEmptySkinPool;
+
     [Header("Order Cuts")]
     [SerializeField]
     private List<WeightedOrderCut> availableOrderCuts =
@@ -361,6 +377,7 @@ public class CustomerSystem : MonoBehaviour
         spawnedTonight = 0;
         servedToday = 0;
         nightEnded = false;
+        warnedEmptySkinPool = false;
 
         DayStats.ResetDay();
         UIManager.Instance?.SetServedCustomers(0);
@@ -668,6 +685,7 @@ public class CustomerSystem : MonoBehaviour
             return;
         }
 
+        view.ApplySkin(PickCustomerSkin());
         view.Init(customer, this);
 
         slotViews[slotIndex] = view;
@@ -1207,6 +1225,74 @@ public class CustomerSystem : MonoBehaviour
         }
 
         return customerPrefabs[customerPrefabs.Count - 1];
+    }
+
+    /// <summary>
+    /// Sortea la imagen del cliente que entra. Es independiente del tipo a propósito: el prefab
+    /// define el comportamiento (paciencia, peso de spawn) y el pool define la pinta. Devuelve
+    /// null si no hay pool configurado, y en ese caso el prefab se queda con su propia imagen.
+    /// </summary>
+    private Sprite PickCustomerSkin()
+    {
+        skinCandidates.Clear();
+
+        if (customerSkins != null)
+        {
+            for (int i = 0; i < customerSkins.Count; i++)
+            {
+                Sprite skin = customerSkins[i];
+
+                if (skin == null)
+                    continue;
+
+                if (avoidRepeatedSkinsOnScreen && IsSkinOnScreen(skin))
+                    continue;
+
+                skinCandidates.Add(skin);
+            }
+        }
+
+        // Todas las imagenes estan en uso (hay mas clientes simultaneos que dibujos):
+        // se repite antes que dejar al cliente con la imagen del prefab.
+        if (skinCandidates.Count == 0 && customerSkins != null)
+        {
+            for (int i = 0; i < customerSkins.Count; i++)
+            {
+                if (customerSkins[i] != null)
+                    skinCandidates.Add(customerSkins[i]);
+            }
+        }
+
+        if (skinCandidates.Count == 0)
+        {
+            if (!warnedEmptySkinPool)
+            {
+                warnedEmptySkinPool = true;
+
+                Debug.LogWarning(
+                    "[CustomerSystem] Customer Skins está vacío: los clientes se quedan con la " +
+                    "imagen que traiga cada prefab."
+                );
+            }
+
+            return null;
+        }
+
+        return skinCandidates[UnityEngine.Random.Range(0, skinCandidates.Count)];
+    }
+
+    /// <summary>True si alguno de los clientes que están en pantalla ya tiene puesta esa imagen.</summary>
+    private bool IsSkinOnScreen(Sprite skin)
+    {
+        if (slotViews == null) return false;
+
+        for (int i = 0; i < slotViews.Length; i++)
+        {
+            if (slotViews[i] != null && slotViews[i].CurrentSkin == skin)
+                return true;
+        }
+
+        return false;
     }
 
     private void ClearAllCustomers()

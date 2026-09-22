@@ -8047,6 +8047,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: dd74f019187152940a5589cb8c5b392e, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: autoFirstSlotPos.y
+      value: 1.94
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: toppingOrderChance
       value: 0
       objectReference: {fileID: 0}
@@ -11760,7 +11764,7 @@ MonoBehaviour:
   buildStationSystem: {fileID: 34340692}
   meatTransferBuffer: {fileID: 1918444612}
   zoneCollider: {fileID: 1310823262}
-  meatAnchorOffset: {x: -0.65, y: 0}
+  plateRenderer: {fileID: 1310823259}
   sideSlotOffsets:
   - {x: 0.35, y: 0.3}
   - {x: 0.9, y: -0.3}

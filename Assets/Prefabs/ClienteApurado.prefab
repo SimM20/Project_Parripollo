@@ -72,7 +72,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 10
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 0.5754717, g: 0.5754717, b: 0.5754717, a: 1}
   m_FlipX: 0
@@ -110,8 +110,8 @@ Transform:
   m_GameObject: {fileID: 3615436075577242487}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.0183, y: 0.032, z: -0.06}
-  m_LocalScale: {x: 0.896438, y: 0.09385956, z: 1}
+  m_LocalPosition: {x: 0.02, y: 0.037, z: 0.008101247}
+  m_LocalScale: {x: 0.896438, y: 0.08771176, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2235871506129277739}
@@ -156,7 +156,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 11
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 0.9716981, g: 0.9716981, b: 0.9716981, a: 1}
   m_FlipX: 0
@@ -193,9 +193,9 @@ Transform:
   m_GameObject: {fileID: 6433895788606064897}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.09066725, y: 0.638, z: -0.07075148}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalPosition: {x: -0.09066725, y: 0.96, z: -0.07075148}
+  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 264894030396785782}
   - {fileID: 6939269760691434799}
@@ -228,9 +228,9 @@ Transform:
   m_GameObject: {fileID: 8801573148142010138}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -12.619667, y: -0.76695365, z: 0.06265023}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalPosition: {x: -12.619667, y: 1.94, z: 0.06265023}
+  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 2235871506129277739}
   - {fileID: 6886192709066145402}
@@ -295,7 +295,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   patienceFill: {fileID: 264894030396785782}
-  fillFullX: 1
+  fillFullX: 0.896438
+  patienceHighColor: {r: 0.35, g: 0.85, b: 0.35, a: 1}
+  patienceMidColor: {r: 0.95, g: 0.8, b: 0.2, a: 1}
+  patienceLowColor: {r: 0.9, g: 0.2, b: 0.2, a: 1}
+  urgentThreshold: 0.2
+  urgentShakeAmplitude: 0.03
+  urgentShakeFrequency: 22
+  skinRenderer: {fileID: 40615033546133907}
   selectionHighlight: {fileID: 0}
   feedbackBubble: {fileID: 0}
 --- !u!1001 &2465341147091720615
@@ -494,6 +501,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Personaje 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3626916397498700004, guid: 470451a1fa4877c43a220db0ba0f0639, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 7d11adadbef25384ea869450238aa0ae, type: 3}
     - target: {fileID: 7878350319992209165, guid: 470451a1fa4877c43a220db0ba0f0639, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.42
@@ -512,7 +523,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7878350319992209165, guid: 470451a1fa4877c43a220db0ba0f0639, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -2.81
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7878350319992209165, guid: 470451a1fa4877c43a220db0ba0f0639, type: 3}
       propertyPath: m_LocalPosition.z
@@ -555,6 +566,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: -8435245712485981826, guid: 470451a1fa4877c43a220db0ba0f0639, type: 3}
+--- !u!212 &40615033546133907 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 3626916397498700004, guid: 470451a1fa4877c43a220db0ba0f0639, type: 3}
+  m_PrefabInstance: {fileID: 3658380949332017527}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &6886192709066145402 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7878350319992209165, guid: 470451a1fa4877c43a220db0ba0f0639, type: 3}

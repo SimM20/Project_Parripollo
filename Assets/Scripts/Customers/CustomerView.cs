@@ -5,9 +5,17 @@ using UnityEngine;
 
 public class CustomerView : MonoBehaviour
 {
+    // La barra de paciencia es sprites sueltos (Fondo + Completo) y la camara del juego es
+    // perspectiva, asi que separarlos en Z para decidir quien dibuja encima deforma la barra:
+    // el que queda mas cerca se ve mas grande y corrido hacia afuera del centro de la pantalla,
+    // y cuanto mas alto o mas al costado esta el cliente, mas se nota. Los dos hijos van al
+    // mismo Z y el orden de dibujo lo resuelve el sortingOrder del SpriteRenderer.
     [Header("Patience Bar (fill sprite)")]
     [SerializeField] private Transform patienceFill; // escalar en X (0..1)
-    [SerializeField] private float fillFullX = 1f;
+    [Tooltip("Escala en X del fill con la paciencia llena. En 0 se toma la que trae el prefab, " +
+             "que es la que esta encuadrada dentro del marco: si no coinciden, el verde se " +
+             "desborda de la barra gris apenas arranca la partida.")]
+    [SerializeField] private float fillFullX = 0f;
 
     [Header("Patience Urgency")]
     [Tooltip("Color del fill con la paciencia llena. Se interpola hacia Mid y Low a medida que baja.")]
@@ -20,6 +28,11 @@ public class CustomerView : MonoBehaviour
     [Tooltip("Amplitud del temblor en unidades locales del contenedor de la barra.")]
     [SerializeField] private float urgentShakeAmplitude = 0.03f;
     [SerializeField] private float urgentShakeFrequency = 22f;
+
+    [Header("Skin")]
+    [Tooltip("Renderer del cuerpo del cliente. Es el que recibe la imagen que le toca al spawnear, " +
+             "elegida del pool de CustomerSystem. Si queda vacio se busca solo entre los hijos.")]
+    [SerializeField] private SpriteRenderer skinRenderer;
 
     [Header("Selection Visual (optional)")]
     [SerializeField] private GameObject selectionHighlight;
@@ -47,6 +60,9 @@ public class CustomerView : MonoBehaviour
     private static event Action OnDeliveryDragActiveChanged;
 
     public Customer Customer => customer;
+
+    /// <summary>Imagen que tiene puesta ahora mismo este cliente, o null si no hay renderer de cuerpo.</summary>
+    public Sprite CurrentSkin => skinRenderer != null ? skinRenderer.sprite : null;
 
     // Con "Enter Play Mode" sin domain reload el estatico sobrevive entre sesiones de play.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -77,13 +93,70 @@ public class CustomerView : MonoBehaviour
         RefreshPatience();
     }
 
+    /// <summary>
+    /// Pone la imagen del cuerpo. La pinta del cliente no depende de su tipo: el pool vive en
+    /// <see cref="CustomerSystem"/> y sortea una al spawnear, asi que el mismo dibujo puede
+    /// tocarle a un apurado o a un camionero. Con null se deja la del prefab.
+    /// </summary>
+    public void ApplySkin(Sprite skin)
+    {
+        if (skin == null) return;
+
+        if (skinRenderer == null)
+            skinRenderer = ResolveSkinRenderer();
+
+        if (skinRenderer == null)
+        {
+            Debug.LogWarning(
+                "[CustomerView] " + name + " no tiene un SpriteRenderer de cuerpo: " +
+                "no se le puede aplicar la imagen '" + skin.name + "'."
+            );
+
+            return;
+        }
+
+        skinRenderer.sprite = skin;
+    }
+
+    /// <summary>
+    /// Busca el renderer del cuerpo cuando el prefab no lo trae asignado: se descartan la barra
+    /// de paciencia y la burbuja de feedback, y queda el primer SpriteRenderer suelto.
+    /// </summary>
+    private SpriteRenderer ResolveSkinRenderer()
+    {
+        var renderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            SpriteRenderer candidate = renderers[i];
+
+            if (patienceFill != null &&
+                (candidate.transform == patienceFill ||
+                 candidate.transform.IsChildOf(patienceFill.parent != null ? patienceFill.parent : patienceFill)))
+                continue;
+
+            if (candidate.GetComponentInParent<CustomerFeedbackBubble>(true) != null)
+                continue;
+
+            return candidate;
+        }
+
+        return null;
+    }
+
     void Awake()
     {
         pickCollider = GetComponent<Collider2D>();
         CachePickBounds();
 
+        if (skinRenderer == null)
+            skinRenderer = ResolveSkinRenderer();
+
         if (patienceFill != null)
         {
+            if (fillFullX <= 0f)
+                fillFullX = patienceFill.localScale.x;
+
             patienceFillRenderer = patienceFill.GetComponent<SpriteRenderer>();
             patienceBarRoot = patienceFill.parent;
             if (patienceBarRoot != null)
