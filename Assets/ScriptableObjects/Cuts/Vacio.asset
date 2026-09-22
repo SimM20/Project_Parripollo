@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Vacio
   m_EditorClassIdentifier: 
   itemName: "Vac\xEDo"
-  basePrice: 120
+  basePrice: 130
   category: 0
   _visualOffset: {x: 0, y: 0, z: 0}
   meatSpriteA: {fileID: 21300000, guid: a5bfd5a8325b8a140973565e6a79a8f4, type: 3}
@@ -32,7 +32,7 @@ MonoBehaviour:
     muyHecho: {fileID: 21300000, guid: fe0237e711856bf468a8075954e81304, type: 3}
     pasado: {fileID: 21300000, guid: c5ec22eaf1f2d6d4ebf02a1b3ba0b036, type: 3}
     quemado: {fileID: 0}
-  timeHeatA: 250
+  timeHeatA: 210
   timeHeatB: 180
   heatScale: 0
   grillSpace: {x: 2, y: 1}

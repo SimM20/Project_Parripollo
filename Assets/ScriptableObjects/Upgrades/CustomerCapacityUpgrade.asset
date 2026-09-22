@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: CustomerCapacityUpgrade
   m_EditorClassIdentifier: 
   itemName: Mesa extra
-  basePrice: 100
+  basePrice: 300
   category: 0
   icon: {fileID: 21300000, guid: 2eba78db35522b841bcd8592a5170807, type: 3}
   description: 'Una mesa mas en el patio: sumas un cliente simultaneo por cada nivel
@@ -26,3 +26,4 @@ MonoBehaviour:
   upgradedMaxBurnTime: 0
   customersPerLevel: 1
   tipBonusPerLevel: 0.5
+  patienceBonusPerLevel: 0.15

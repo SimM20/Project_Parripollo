@@ -8410,7 +8410,7 @@ PrefabInstance:
       objectReference: {fileID: 1159028469}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: basePatienceSeconds
-      value: 80
+      value: 95
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customersFirstNight
@@ -14863,7 +14863,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bcda3f1737e7f9499df733de17adcef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  nightTwoCut: {fileID: 0}
+  nightTwoCut: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
 --- !u!1 &1865235212
 GameObject:
   m_ObjectHideFlags: 0

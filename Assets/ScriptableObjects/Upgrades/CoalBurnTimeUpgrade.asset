@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: CoalBurnTimeUpgrade
   m_EditorClassIdentifier: 
   itemName: Carbon de Quebracho
-  basePrice: 500
+  basePrice: 700
   category: 1
   icon: {fileID: 7258142702659648963, guid: b814f052cc3b63f499ba2574cb208516, type: 3}
   description: 'Carbon mas denso: cada brasa dura mas del doble antes de volverse
@@ -25,3 +25,5 @@ MonoBehaviour:
   targetCoal: {fileID: 11400000, guid: 9eaa56d6afb63b140989ce44c6b336c1, type: 2}
   upgradedMaxBurnTime: 200
   customersPerLevel: 1
+  tipBonusPerLevel: 0.5
+  patienceBonusPerLevel: 0.15

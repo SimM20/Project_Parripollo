@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RadioUpgrade
   m_EditorClassIdentifier: 
   itemName: Radio
-  basePrice: 400
+  basePrice: 800
   category: 0
   icon: {fileID: 21300000, guid: fd5906d09f5b8b6469b6e3a0be09b975, type: 3}
   description: 'Una radio en el mostrador: la espera se hace mas corta y los clientes
