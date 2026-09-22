@@ -2,19 +2,25 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Permite entregar el plato armado arrastrándolo con el mouse hasta un cliente.
-/// Se agrega en runtime a cada visual de carne que queda en la zona del plato
-/// (ver MeatTransferBuffer.AdoptVisualIntoPlate), así que no necesita setup de escena.
+/// Arrastre de lo que hay sobre el plato. Se agrega en runtime a cada visual de carne que
+/// queda en la zona del plato (ver MeatTransferBuffer.AdoptVisualIntoPlate), así que no
+/// necesita setup de escena.
 ///
-/// Es la unica via de entrega: termina en GameManager.TryDeliverToCustomer.
+/// Dos gestos, según qué cae bajo el click:
 ///
-/// Al arrastrar se mueve el plato completo como un bloque (visuales de carne +
-/// acompañamientos/toppings). Si la entrega no se concreta, todo vuelve a su
-/// posición original sobre el plato.
+///  • Agarrar EL PLATO (BuildFoodDropZone.PlateBody, cualquier parte que no sea la carne)
+///    → se lleva el plato completo como un bloque: sprite del plato + carne + sides/toppings.
+///    Es la única vía de entrega: termina en GameManager.TryDeliverToCustomer. Si no se
+///    concreta (se soltó al vacío o el cliente rechazó) todo vuelve intacto al mostrador;
+///    si se concreta, la comida se destruye y el plato vuelve vacío.
 ///
-/// La carne no queda bloqueada en el plato: si se suelta sobre la bandeja vuelve a la
-/// bandeja, y si se suelta sobre un hueco libre de la parrilla vuelve a cocinarse ahí
-/// (ver MeatTransferBuffer.TryReturnPlateMeatToTray / TryReturnPlateMeatToGrill).
+///  • Agarrar LA CARNE → se mueve solo la carne. Dentro del plato se reposiciona (es libre);
+///    sobre la bandeja vuelve a la bandeja; sobre un hueco libre de la parrilla vuelve a
+///    cocinarse con sus tiempos (MeatTransferBuffer.TryReturnPlateMeatToTray / ToGrill), con
+///    el mismo preview de slots del arrastre desde la bandeja. Sobre un cliente o en
+///    cualquier otro lado vuelve a donde estaba: la carne sola NUNCA entrega, para no ver
+///    comida volando. Durante el tutorial este gesto se apaga
+///    (TutorialManager.CheckPlateMeatDragAllowed) y agarrar la carne lleva el plato entero.
 ///
 /// El agarre NO usa OnMouseDown/OnMouseDrag/OnMouseUp: el visual del plato queda
 /// apoyado sobre el collider de la zona 'ToBuild', que está en el mismo plano z y no
@@ -25,6 +31,8 @@ using UnityEngine;
 public class PlateDeliveryDraggable : MonoBehaviour
 {
     private const int DragSortingBoost = 5000;
+
+    private enum DragMode { WholePlate, MeatOnly }
 
     private struct DraggedVisual
     {
@@ -37,10 +45,12 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private static readonly List<PlateDeliveryDraggable> Instances = new List<PlateDeliveryDraggable>();
     private static readonly List<DraggedVisual> DraggedVisuals = new List<DraggedVisual>();
     private static readonly List<Transform> PlateItemVisuals = new List<Transform>();
+    private static readonly List<Transform> PlateBodies = new List<Transform>();
     private static readonly Collider2D[] OverlapResults = new Collider2D[16];
 
     /// <summary>Instancia que conduce el arrastre en curso. Hay un solo mouse: nunca hay dos a la vez.</summary>
     private static PlateDeliveryDraggable activeDragger;
+    private static DragMode activeMode;
 
     /// <summary>Frame en el que ya se resolvió qué visual agarra el click, para no repetir el pick por instancia.</summary>
     private static int lastPickFrame = -1;
@@ -49,6 +59,11 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private BoxCollider2D selfCollider;
     private Vector3 grabWorldPoint;
     private CustomerView hoveredView;
+
+    // Solo para MeatOnly: buffer y datos del corte para el preview de slots de la parrilla.
+    private MeatTransferBuffer transferBuffer;
+    private MeatCutSO draggedCut;
+    private bool draggedCutRotated;
 
     void Awake()
     {
@@ -123,9 +138,9 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
         lastPickFrame = Time.frameCount;
 
-        PlateDeliveryDraggable picked = PickUnderPointer();
+        PlateDeliveryDraggable picked = PickUnderPointer(out DragMode mode);
         if (picked != null)
-            picked.BeginDrag();
+            picked.BeginDrag(mode);
     }
 
     private void UpdateDrag()
@@ -148,16 +163,30 @@ public class PlateDeliveryDraggable : MonoBehaviour
             target.position = DraggedVisuals[i].startPosition + delta;
         }
 
-        SetHoveredView(FindCustomerViewAt(mouseWorld));
+        if (activeMode == DragMode.WholePlate)
+        {
+            SetHoveredView(FindCustomerViewAt(mouseWorld));
+            return;
+        }
+
+        // MeatOnly: R rota el footprint como en la bandeja, y el preview de slots sigue al corte.
+        if (Input.GetKeyDown(KeyCode.R))
+            draggedCutRotated = !draggedCutRotated;
+
+        if (transferBuffer != null)
+            transferBuffer.UpdateMeatHolderHover(draggedCut, transform.position, draggedCutRotated);
     }
 
     /// <summary>
-    /// Visual del plato bajo el puntero, o null. Cada candidato proyecta el mouse sobre su
-    /// propio plano z: con cámara en perspectiva un punto calculado en otro z cae desplazado.
-    /// Gana el de sortingOrder más alto, que es el que se ve arriba.
+    /// Qué agarra el click. Primero la carne: cada candidato proyecta el mouse sobre su
+    /// propio plano z (con cámara en perspectiva un punto calculado en otro z cae desplazado)
+    /// y gana el de sortingOrder más alto, que es el que se ve arriba. Si ninguna carne está
+    /// bajo el mouse, prueba el plato en sí.
     /// </summary>
-    private static PlateDeliveryDraggable PickUnderPointer()
+    private static PlateDeliveryDraggable PickUnderPointer(out DragMode mode)
     {
+        mode = DragMode.WholePlate;
+
         PlateDeliveryDraggable best = null;
         int bestSortingOrder = 0;
 
@@ -186,7 +215,60 @@ public class PlateDeliveryDraggable : MonoBehaviour
             }
         }
 
-        return best;
+        if (best != null)
+        {
+            // Agarrar la carne mueve solo la carne, salvo en el tutorial, donde lleva el plato.
+            mode = TutorialManager.CheckPlateMeatDragAllowed() ? DragMode.MeatOnly : DragMode.WholePlate;
+            return best;
+        }
+
+        return PickPlateBodyUnderPointer();
+    }
+
+    /// <summary>
+    /// Agarre por el plato en sí (no por la carne): si el click cae sobre una zona de plato
+    /// con carne montada, conduce el arrastre el primer visual de carne vivo. El plato vacío
+    /// no se agarra: sin carne no hay instancias y este Update ni siquiera corre.
+    /// </summary>
+    private static PlateDeliveryDraggable PickPlateBodyUnderPointer()
+    {
+        PlateDeliveryDraggable driver = null;
+        for (int i = 0; i < Instances.Count; i++)
+        {
+            PlateDeliveryDraggable candidate = Instances[i];
+            if (candidate != null && candidate.gameObject.activeInHierarchy)
+            {
+                driver = candidate;
+                break;
+            }
+        }
+
+        if (driver == null)
+            return null;
+
+        IReadOnlyList<BuildFoodDropZone> zones = BuildFoodDropZone.Zones;
+        for (int i = 0; i < zones.Count; i++)
+        {
+            BuildFoodDropZone zone = zones[i];
+            if (zone == null || !zone.HasLoadedPlate)
+                continue;
+
+            Transform body = zone.PlateBody;
+            if (body == null || !body.gameObject.activeInHierarchy)
+                continue;
+
+            // Mismo cuidado que con la carne: proyectar el mouse sobre el plano z del plato.
+            Vector3 pointerWorld = GetMouseWorldPosAtZ(body.position.z);
+            if (!zone.ContainsPoint(pointerWorld))
+                continue;
+
+            if (IsPointerOverSlidingPanel(pointerWorld))
+                return null;
+
+            return driver;
+        }
+
+        return null;
     }
 
     private static bool IsPointerOverSlidingPanel(Vector3 worldPoint)
@@ -200,8 +282,14 @@ public class PlateDeliveryDraggable : MonoBehaviour
         return false;
     }
 
-    private void BeginDrag()
+    private void BeginDrag(DragMode mode)
     {
+        if (mode == DragMode.MeatOnly)
+        {
+            BeginMeatOnlyDrag();
+            return;
+        }
+
         if (!TutorialManager.CheckDeliveryConfirmAllowed() && !TutorialManager.CheckDeliveryStartAllowed())
             return;
 
@@ -223,10 +311,19 @@ public class PlateDeliveryDraggable : MonoBehaviour
         for (int i = 0; i < PlateItemVisuals.Count; i++)
             AddDraggedVisual(PlateItemVisuals[i]);
 
+        // El plato viaja debajo de todo: su sortingOrder (0) + el boost queda por debajo del de
+        // sides/toppings (390) y carne (400) con el mismo boost, así la composición no cambia.
+        PlateBodies.Clear();
+        BuildFoodDropZone.CollectActivePlateBodies(PlateBodies);
+
+        for (int i = 0; i < PlateBodies.Count; i++)
+            AddDraggedVisual(PlateBodies[i]);
+
         if (DraggedVisuals.Count == 0)
             return;
 
         activeDragger = this;
+        activeMode = DragMode.WholePlate;
         GamePause.OnPaused += CancelDrag;
 
         // Los clientes apagan su collider mientras hay un panel desplegado; durante el
@@ -237,8 +334,32 @@ public class PlateDeliveryDraggable : MonoBehaviour
         TutorialManager.NotifyDeliverySelectionBegun();
     }
 
+    /// <summary>Arrastre de solo esta carne: reposicionar en el plato, o devolverla a la bandeja / parrilla.</summary>
+    private void BeginMeatOnlyDrag()
+    {
+        transferBuffer = Object.FindAnyObjectByType<MeatTransferBuffer>();
+        if (transferBuffer == null || !transferBuffer.TryGetPlateMeatInfo(gameObject, out draggedCut, out draggedCutRotated))
+            return;
+
+        DraggedVisuals.Clear();
+        grabWorldPoint = GetMouseWorldPos();
+        AddDraggedVisual(transform);
+
+        activeDragger = this;
+        activeMode = DragMode.MeatOnly;
+        GamePause.OnPaused += CancelDrag;
+
+        transferBuffer.UpdateMeatHolderHover(draggedCut, transform.position, draggedCutRotated);
+    }
+
     private void EndDrag()
     {
+        if (activeMode == DragMode.MeatOnly)
+        {
+            EndMeatOnlyDrag();
+            return;
+        }
+
         activeDragger = null;
         GamePause.OnPaused -= CancelDrag;
         RestoreSortingOrders();
@@ -254,30 +375,50 @@ public class PlateDeliveryDraggable : MonoBehaviour
             && GameManager.Instance != null
             && GameManager.Instance.TryDeliverToCustomer(dropView.Customer);
 
-        // Sin entrega el bloque vuelve al plato. Solo si se soltó al vacío (no sobre un
-        // cliente) la carne agarrada puede cambiar de destino: a la bandeja (MeatHolder /
-        // MeatList) o de vuelta a la parrilla. Un rechazo del cliente (crudo, quemado, corte
-        // incorrecto...) deja el plato tal cual: los clientes pueden quedar sobre slots de la
-        // parrilla y sin este gate la carne rechazada terminaba cocinándose de nuevo.
-        if (!delivered)
-        {
-            RestorePositions();
-
-            if (dropView == null)
-            {
-                MeatTransferBuffer transferBuffer = Object.FindAnyObjectByType<MeatTransferBuffer>();
-                if (transferBuffer != null)
-                {
-                    if (transferBuffer.IsOverMeatTray(dropPoint))
-                        transferBuffer.TryReturnPlateMeatToTray(gameObject);
-                    else
-                        transferBuffer.TryReturnPlateMeatToGrill(gameObject, dropPoint);
-                }
-            }
-        }
+        // El bloque siempre vuelve al mostrador tal cual estaba: se arrastra el plato servido,
+        // así que soltarlo en cualquier lado que no sea un cliente (o que un cliente lo rechace)
+        // lo deja intacto, con la carne donde estaba. Con entrega aceptada la comida ya fue
+        // destruida (Destroy diferido, los transforms siguen vivos este frame) y lo que vuelve
+        // es el plato vacío.
+        RestorePositions();
 
         DraggedVisuals.Clear();
         CustomerView.SetDeliveryDragActive(false);
+    }
+
+    private void EndMeatOnlyDrag()
+    {
+        activeDragger = null;
+        GamePause.OnPaused -= CancelDrag;
+        RestoreSortingOrders();
+
+        if (transferBuffer != null)
+            transferBuffer.ClearMeatHolderHover();
+
+        Vector3 dropPoint = GetMouseWorldPos();
+
+        // Dentro del plato: queda donde se soltó (la carne es libre). No hay nada que restaurar.
+        if (BuildFoodDropZone.IsOverPlateAt(dropPoint))
+        {
+            DraggedVisuals.Clear();
+            return;
+        }
+
+        // Fuera del plato: primero vuelve a su lugar y recién después se intenta el destino.
+        // Sobre un cliente nunca: la carne sola no entrega, y los clientes pueden pisar slots
+        // de la parrilla, así que sin este gate el corte terminaba cocinándose bajo el cliente.
+        RestorePositions();
+
+        bool overCustomer = FindCustomerViewAt(dropPoint) != null;
+        if (!overCustomer && transferBuffer != null)
+        {
+            if (transferBuffer.IsOverMeatTray(dropPoint))
+                transferBuffer.TryReturnPlateMeatToTray(gameObject);
+            else
+                transferBuffer.TryReturnPlateMeatToGrill(gameObject, dropPoint, draggedCutRotated);
+        }
+
+        DraggedVisuals.Clear();
     }
 
     /// <summary>Aborta el arrastre sin intentar el drop. Para cuando el visual que conduce se apaga o se destruye.</summary>
@@ -289,6 +430,10 @@ public class PlateDeliveryDraggable : MonoBehaviour
         RestorePositions();
         SetHoveredView(null);
         DraggedVisuals.Clear();
+
+        if (transferBuffer != null)
+            transferBuffer.ClearMeatHolderHover();
+
         CustomerView.SetDeliveryDragActive(false);
     }
 
@@ -375,10 +520,20 @@ public class PlateDeliveryDraggable : MonoBehaviour
         if (cam == null)
             return transform.position;
 
+        return GetMouseWorldPosAtZ(transform.position.z);
+    }
+
+    /// <summary>Punto del mouse sobre un plano z cualquiera (el del plato al agarrarlo por el plato).</summary>
+    private static Vector3 GetMouseWorldPosAtZ(float z)
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+            return new Vector3(0f, 0f, z);
+
         Vector3 pos = Input.mousePosition;
-        pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
+        pos.z = Mathf.Abs(z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
-        world.z = transform.position.z;
+        world.z = z;
         return world;
     }
 }
