@@ -38,7 +38,7 @@ Assets/Scripts/
 ├── Grill/          Vista Parrilla: cocción, capas carne/carbón, HUD de hover, VFX de humo/flip
 ├── Cooler/         Stock persistente (CoolerSystem). Vista Heladera DEPRECADA → StockPanel
 ├── Build/          Plato: zona de drop, pan/guarniciones/toppings, undo, entrega por arrastre
-├── Customers/      Clientes: spawn, paciencia, hover, burbujas de pedido y de feedback
+├── Customers/      Clientes: spawn, paciencia, hover, burbuja de pedido (base al pecho + expandida) y de feedback
 ├── Orders/         Modelo y generación de pedidos (corte + punto + pan/toppings)
 ├── Food/           Catálogo (SO), validación de platos, evaluación económica (cocción + extras)
 ├── Shop/           Tienda (post-noche): tabs + breadcrumb, compra individual. Dos capas de UI
@@ -59,7 +59,7 @@ Assets/Scripts/
 | **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón, VFX (`BurnSmoke`, `FlipPuff`) | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `CoalStackCounter.cs`, `BurnSmoke.cs`, `FlipPuff.cs` |
 | **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
 | **Build/** | Zona de drop del plato (`BuildFoodDropZone`, **un solo corte por plato**), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command, **incluye la carne**), **entrega del plato por arrastre** (`PlateDeliveryDraggable`, única vía de entrega) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (696), `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs` |
-| **Customers/** | Llegada de clientes según el horario del `DayClock` y la curva de afluencia, tick de paciencia, hover de entrega, view + burbuja de pedido + recuadro, **feedback de entrega/abandono/cambio** (burbuja de 4 s con estado, pago y propina), gateo de pick bajo paneles | `CustomerSystem.cs` (1030), `Customer.cs`, `CustomerView.cs`, `CustomerFeedbackBubble.cs`, `CustomerFeedbackConfigSO.cs`, `CustomerFeedbackState.cs` |
+| **Customers/** | Llegada de clientes según el horario del `DayClock` y la curva de afluencia, tick de paciencia, hover de entrega, view + **burbuja de pedido por cliente** (base al pecho siempre visible, expandida al hover) + recuadro, **feedback de entrega/abandono/cambio** (burbuja de 4 s con estado, pago y propina), gateo de pick bajo paneles | `CustomerSystem.cs` (1030), `Customer.cs`, `CustomerView.cs`, `CustomerOrderBubble.cs`, `CustomerFeedbackBubble.cs`, `CustomerFeedbackConfigSO.cs`, `CustomerFeedbackState.cs` |
 | **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada con toppings | `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
 | **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene` y `ShopTutorial`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
@@ -175,7 +175,7 @@ graph TD
 
 | Patrón | Dónde | Detalle |
 |---|---|---|
-| **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `HudManager`, `StockPanelController`, `ToppingsPanelController`, `MeatHoverBubble`, `MeatCookHoverBar`, `CustomerHoverBubble`, `CustomerSelectionFrame`, `DeliveryFeedbackText`, `CustomerFeedbackConfigSO` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
+| **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `HudManager`, `StockPanelController`, `ToppingsPanelController`, `MeatHoverBubble`, `MeatCookHoverBar`, `CustomerSelectionFrame`, `DeliveryFeedbackText`, `CustomerFeedbackConfigSO` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
 | **Observer** (`event Action`) | Ver tabla 2.3 | Suscripción en `OnEnable`/`Start`, desuscripción en `OnDisable`/`OnDestroy` |
 | **Static notification hub + gates** | `TutorialManager.Notify*(...)` y `TutorialManager.Check*Allowed(...)` | 12 `Notify*` (no-op si `Instance == null`) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` el tutorial no existe y nada cambia |
 | **Command** | `IBuildUndoAction` + `BuildUndoHistory` (pila) | `AddSideUndoAction`, `AddToppingUndoAction`, `SetBreadUndoAction`, **`AddMeatUndoAction`** (devuelve el corte a la bandeja) |
@@ -184,7 +184,7 @@ graph TD
 | **Registro estático de instancias** | `Coal.ActiveCoals`, `BuildFoodDropZone.ActiveZones`, `TrashZone.ActiveZones`, `ToppingDraggable.ActiveInstances`, `PlateDeliveryDraggable.Instances`, `SlidingPanel.OpenPanels` | Alta en `OnEnable`, baja en `OnDisable`/`OnDestroy`. Habilita APIs estáticas tipo `TryAcceptAt`, `ClearAllSplatters`, `AnyPanelOpen` |
 | **Data-driven (ScriptableObject)** | `ItemDataSO` → `MeatCutSO`, `CoalSO`, `UpgradeSO`; `BreadSO`, `SideSO`, `ToppingSO`, `ProductVariantSO`, `FoodCatalogSO`, `ShopConfigSO`, `TutorialStepSO`, `HudDatabaseSO`, `CustomerFeedbackConfigSO` | ⚠️ Los SO mutan en runtime (`isUnlocked`, `UpgradeSO.currentLevel`, `CoalSO._maxBurnTime`) → **el estado persiste entre sesiones de Editor** (ver `UpgradeStateResetter`) |
 | **Service / Facade** | `FoodAvailabilityService` | Cruza `FoodCatalogSO` (estático) con `CoolerSystem` (stock live) |
-| **Static utility / Extension methods** | `DishValidator`, `CookingDeliveryEvaluator`, `SceneManagementUtils`, `MeatHoverText.ToHoverString()`, `OrderText.ToHoverString()`, `CustomerFeedbackExtensions.GetCategory()` | Sin estado, testeables aisladamente |
+| **Static utility / Extension methods** | `DishValidator`, `CookingDeliveryEvaluator`, `SceneManagementUtils`, `MeatHoverText.ToHoverString()`, `OrderText.ToHoverString()` (sin uso), `CustomerFeedbackExtensions.GetCategory()` | Sin estado, testeables aisladamente |
 | **Object pool** | `GrillNotificationManager.groupPool`, `StockPanelController` (slots) | Reutilizan instancias |
 | **Construcción procedural de UI** | `GrillNotification*UI.CreateProcedural*`, `CustomerSelectionFrame.BuildBars`, `ToppingDraggable.CreateSauceBar`, `CustomerFeedbackBubble.EnsureVisualHierarchy`, `MoneyPopup`, `GridSlot.MakeRadialGlowSprite` | Generan jerarquía + sprites (`Texture2D`) en runtime si falta prefab |
 | **Template Method** | `Item` → `Meat` → `MeatInstance`; `GridSlot` → `GrillSlot`; **`SlidingPanel` → `StockPanelController` / `ToppingsPanelController`** | `virtual OnMouseUp/HandleHeldInput/OnPickedUp/UpdateHoverPreview/Cook`; hooks `OnPanelStarted/OnEnteredGrillView/OnPanelClosing/OnPanelOpened/CanOpen/ValidateReferences` |
@@ -924,9 +924,12 @@ void TriggerAngryLeaveFeedback(Customer)    // paciencia 0 → NoPagaSeVa
 void TriggerMissingCutChange(Customer, MeatCutSO)   // tecla M → cambia el pedido, IsTipAnulada = true, CambioPorFaltante
 CustomerView GetViewForCustomer(Customer)
 ```
-`SetDeliveryDragHover` reusa `CustomerSelectionFrame` + `CustomerHoverBubble` y llama `GameManager.EvaluateDelivery`
-para el preview; ignora clientes `IsInFeedback`. Si el cliente resaltado se va a mitad del arrastre, `RemoveCustomer`
-suelta el recuadro antes de destruir la view.
+`SetDeliveryDragHover` reusa `CustomerSelectionFrame` + la `CustomerOrderBubble` del cliente apuntado (la expande con
+la línea de preview) y llama `GameManager.EvaluateDelivery`; ignora clientes `IsInFeedback`. Si el cliente resaltado
+se va a mitad del arrastre, `RemoveCustomer` suelta el recuadro antes de destruir la view.
+`ShowSelectedOrderBubble` ya no muestra/oculta una burbuja compartida: recorre los slots y deja expandida solo la del
+cliente seleccionado (el arrastre manda sobre la selección). `CollapseAllOrderBubbles()` las devuelve a tamaño base —
+nunca las oculta, porque la base vive siempre sobre el pecho del cliente.
 
 **Clientes esperados en la jornada**: `min(customersFirstNight + (noche−1) × customersAddedPerNight, maximumCustomersPerNight)`
 (por defecto `20 + 5·(n−1)`, cap `70`; en `GameScene`: `21 + 4·(n−1)`, cap `63`).
@@ -994,21 +997,57 @@ El `OrderSystem` se construye con el pool de toppings del catálogo y `maxToppin
   (`SlidingPanel.IsAreaCoveredByOpenPanel(área del collider)`) y no hay arrastre de plato activo. El área se cachea
   en `Awake` desde `BoxCollider2D.offset/size` (con el collider apagado `bounds` no sirve). Se re-evalúa con
   `OnAnyPanelOpenChanged`, `OnDeliveryDragActiveChanged` y `RefreshPickingState()` (cambio de slot).
+- ⚠️ **El `BoxCollider2D` del cliente no puede bajar de `y = 0` en mundo.** Los clientes se paran en `y = 1.94`
+  justo encima de la parrilla, cuyo borde superior está en `y ≈ -0.66` (fila de slots más alta en `-0.93`, slot de
+  0.54 de alto). Los colliders venían de fábrica con `offset.y` −0.79 a −1.18 y `size.y` 3.11 a 3.84, o sea bajaban
+  hasta `y = -2.75 … -4.26`: cada cliente se comía una franja de 2 unidades de ancho sobre **la mitad superior de la
+  parrilla**, y como con cámara en perspectiva Unity manda `OnMouseDown`/`OnMouseEnter` al collider más cercano, el
+  cliente le robaba el click a los cortes y al carbón (y el hover le abría la burbuja de pedido). Hoy los cinco
+  prefabs están en `offset.y = -0.03`, `size.y = 1.88` → **`y` de 0.00 a 3.76**, que es el cuerpo visible: de ahí
+  para abajo el gráfico de la parrilla ya tapa las piernas. El eje X queda como venía (≈2 de ancho, siguiendo el
+  cuerpo de cada personaje). Si se retoca, verificar con `Physics2D.OverlapPointAll` sobre los 120 `GridSlot` que
+  ningún cliente aparezca.
 - `static SetDeliveryDragActive(bool)`: durante el arrastre del plato los clientes vuelven a ser detectables aunque
   haya paneles abiertos (la entrega los busca con `Physics2D`, no con eventos de mouse).
 - `ShowFeedback(state, payment, tip, isMissingReplacement, onComplete, config)`: marca `IsInFeedback`, apaga
   selección/collider/hover, oculta la barra, elige el SFX por categoría (`AudioManager.PlayPositive/Intermediate/NegativeFeedback`)
   y delega en `CustomerFeedbackBubble` (busca uno en hijos o lo crea). `GetDishSprite()` para la burbuja.
 
-#### `CustomerHoverBubble` — `Customers/CustomerHoverBubble.cs` · Singleton de escena (`dialgo` en `GameScene`)
-Burbuja de pedido del hover y del arrastre de plato. Sigue al cliente en `LateUpdate` con `worldOffset`
-y normaliza el sprite del plato a `dishTargetSize` recentrándolo por el centro real de sus `bounds`
-(los sprites del proyecto tienen distinto tamaño y pivot).
-⚠️ **El orden de dibujo se fuerza en `Awake`** (`baseSortingOrder` = 700 → círculo, plato +1, texto +2):
-no es un objeto hijo del cliente y sus renderers quedan **por detrás** del plano del cliente en z
-(`worldOffset.z = 0` y los hijos tienen `localZ` ≈ 1.69), así que con la cámara en perspectiva y el mismo
-sorting order el sprite del cliente ganaba por cercanía y tapaba la burbuja. Al agrandar los personajes
-dejó de verse. El orden se aplica por código para que no dependa de cómo quedó la escena.
+#### `CustomerOrderBubble` — `Customers/CustomerOrderBubble.cs` · Una por cliente (hijo `OrderBubble` del prefab)
+Burbuja de pedido. **Un solo panel con dos estados**, no dos burbujas:
+
+| | Base | Expandida |
+|---|---|---|
+| Cuándo | siempre, a la altura del pecho | hover, selección por teclado, arrastre del plato |
+| Tamaño | `baseSize` 1.95 × 0.9 | `expandedSize.x` 3.2; el **alto lo calcula `ComputeExpandedSize()`** según los renglones |
+| Contenido | ícono del plato + nombre del corte + fila de íconos de acompañamientos | **mismo ícono** + corte + `Punto: X` + al plato / en pan + acompañamientos por nombre + preview del arrastre |
+| Orden de dibujo | 20–23 | 30–33 |
+
+- El ícono (`CustomerView.GetDishSprite`, el plato en el punto pedido) es **el mismo en los dos estados**: si cambia
+  al expandir parece otro pedido. El dibujo es la identidad del plato; el punto como **texto** es lo que aporta la
+  expandida. `GetNeutralOrderSprite()` queda de reserva para los cortes sin sprite por punto.
+- El panel es un 9-sliced procedural (`SpriteDrawMode.Sliced` + `size`), así que **crece sin deformar las esquinas**.
+  Crece hacia arriba (`growUpwards`): el borde de abajo queda fijo y la transición se lee como una sola burbuja.
+- Los íconos de acompañamientos **se desvanecen al expandir** porque ahí los mismos acompañamientos ya van escritos:
+  la chica cuenta con dibujos (no entra texto) y la grande con palabras.
+- `Awake` normaliza la escala contra el `lossyScale` del padre (los prefabs de cliente vienen en x2), así que todas
+  las medidas del inspector son **unidades de mundo** y la burbuja mide lo mismo aunque se reescale al personaje.
+- ⚠️ La animación usa `Time.unscaledDeltaTime`: con `Time.deltaTime` se congelaba a medio crecer cada vez que el
+  juego pausaba (`timeScale` 0).
+- ⚠️ Base y expandida usan **bandas de sorting distintas** para que la burbuja abierta pase por delante de las de los
+  clientes de al lado, y las dos quedan **por debajo de los paneles deslizantes** (90) para que un panel abierto las tape.
+- `FitSprite` ajusta cada ícono **por alto** (con tope de ancho 1.3×) y lo recentra por el centro real de sus `bounds`:
+  los sprites vienen en lienzos de proporciones distintas (`criolla` es 2048x1266, `chimi` es cuadrado) y normalizar
+  por el lado mayor los dejaba de tamaños muy dispares en la misma fila.
+
+API: `Bind(Customer, CustomerView)`, `Refresh()`, `SetExpanded(bool, string preview = null)`,
+`SetExpandedImmediate(...)`, `HideAll()` / `ShowBase()` (el feedback apaga la burbuja de pedido y la devuelve
+en el cambio por faltante, ya releyendo el pedido nuevo). `CustomerView` la expone como `OrderBubble` y la
+envuelve en `SetOrderBubbleExpanded` / `RefreshOrderBubble`.
+
+> **Borrado (2026-09-22): `CustomerHoverBubble`.** Era la burbuja compartida del hover y del arrastre: una sola en la
+> escena, que aparecía al pasar el mouse y seguía al cliente en `LateUpdate`. La reemplazó `CustomerOrderBubble`. Se
+> eliminaron el script, el objeto `dialgo` de `GameScene` / `TutorialScene` / `SampleScene` y `Prefabs/Dialogo.prefab`.
 
 #### Feedback de entrega — `CustomerFeedbackBubble` / `CustomerFeedbackConfigSO` / `CustomerFeedbackState`
 Implementa el spec "Sistema Feedback de Entrega y Reacción del Cliente" (2026-09-08).

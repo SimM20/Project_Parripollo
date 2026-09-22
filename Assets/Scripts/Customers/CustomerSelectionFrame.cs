@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Recuadro de selección de 4 esquinas que envuelve al cliente seleccionado
 /// durante el modo de selección de entrega. Singleton de escena,
-/// mismo patrón que CustomerHoverBubble.
+/// mismo patrón que MeatHoverBubble.
 /// </summary>
 public class CustomerSelectionFrame : MonoBehaviour
 {

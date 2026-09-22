@@ -40,6 +40,11 @@ public class CustomerView : MonoBehaviour
     [Header("Feedback Bubble")]
     [SerializeField] private CustomerFeedbackBubble feedbackBubble;
 
+    [Header("Order Bubble")]
+    [Tooltip("Burbuja de pedido propia de este cliente: base al pecho siempre visible, " +
+             "expandida al hover. Si queda vacia se crea sola.")]
+    [SerializeField] private CustomerOrderBubble orderBubble;
+
     private Customer customer;
     private CustomerSystem system;
 
@@ -60,6 +65,12 @@ public class CustomerView : MonoBehaviour
     private static event Action OnDeliveryDragActiveChanged;
 
     public Customer Customer => customer;
+
+    /// <summary>Sistema dueño de este cliente. Lo usa la burbuja para llegar al catálogo.</summary>
+    public CustomerSystem System => system;
+
+    /// <summary>Burbuja de pedido de este cliente (base + expandida).</summary>
+    public CustomerOrderBubble OrderBubble => orderBubble;
 
     /// <summary>Imagen que tiene puesta ahora mismo este cliente, o null si no hay renderer de cuerpo.</summary>
     public Sprite CurrentSkin => skinRenderer != null ? skinRenderer.sprite : null;
@@ -91,6 +102,26 @@ public class CustomerView : MonoBehaviour
         system = owner;
         RefreshSelection(false);
         RefreshPatience();
+
+        if (orderBubble != null)
+            orderBubble.Bind(customer, this);
+    }
+
+    /// <summary>
+    /// Vuelve a leer el pedido en la burbuja. Hay que llamarla cuando el pedido cambia en
+    /// caliente, como en el cambio por faltante.
+    /// </summary>
+    public void RefreshOrderBubble()
+    {
+        if (orderBubble != null)
+            orderBubble.Refresh();
+    }
+
+    /// <summary>Abre o cierra la burbuja de este cliente. <paramref name="preview"/> = línea del arrastre.</summary>
+    public void SetOrderBubbleExpanded(bool expandedState, string preview = null)
+    {
+        if (orderBubble != null)
+            orderBubble.SetExpanded(expandedState, preview);
     }
 
     /// <summary>
@@ -171,6 +202,16 @@ public class CustomerView : MonoBehaviour
             var bubbleGo = new GameObject("FeedbackBubble");
             bubbleGo.transform.SetParent(transform, false);
             feedbackBubble = bubbleGo.AddComponent<CustomerFeedbackBubble>();
+        }
+
+        if (orderBubble == null)
+            orderBubble = GetComponentInChildren<CustomerOrderBubble>(true);
+
+        if (orderBubble == null)
+        {
+            var orderGo = new GameObject("OrderBubble");
+            orderGo.transform.SetParent(transform, false);
+            orderBubble = orderGo.AddComponent<CustomerOrderBubble>();
         }
     }
 
@@ -304,12 +345,9 @@ public class CustomerView : MonoBehaviour
         isHovered = true;
 
         if (customer?.order == null) return;
-        if (CustomerHoverBubble.Instance == null) return;
 
-        CustomerHoverBubble.Instance.Show(
-            customer.order.ToHoverString(),
-            transform,
-            GetDishSprite());
+        // La burbuja no se crea ni se mueve: la que ya está sobre el pecho se agranda.
+        SetOrderBubbleExpanded(true);
     }
 
     /// <summary>
@@ -336,10 +374,11 @@ public class CustomerView : MonoBehaviour
             pickCollider.enabled = false;
 
         if (isHovered)
-        {
             isHovered = false;
-            CustomerHoverBubble.Instance?.Hide();
-        }
+
+        // Durante el feedback manda la burbuja de feedback: la de pedido se apaga entera.
+        if (orderBubble != null)
+            orderBubble.HideAll();
 
         // Ocultar barra de paciencia durante el feedback (y dejarla quieta por si vuelve)
         if (patienceBarRoot != null && patienceShaking)
@@ -388,6 +427,12 @@ public class CustomerView : MonoBehaviour
                         customer.EndFeedback();
                         if (patienceFill != null && patienceFill.parent != null)
                             patienceFill.parent.gameObject.SetActive(true);
+
+                        // El cambio por faltante deja al cliente en su slot con un pedido
+                        // nuevo: la burbuja vuelve, ya releyendo el pedido nuevo.
+                        if (orderBubble != null)
+                            orderBubble.ShowBase();
+
                         ApplyPickingState();
                     }
 
@@ -422,15 +467,15 @@ public class CustomerView : MonoBehaviour
     }
 
     /// <summary>
-    /// En modo selección de entrega, restaura la burbuja del cliente seleccionado
-    /// en vez de ocultarla; fuera del modo, la oculta como siempre.
+    /// Al salir el mouse la burbuja vuelve a su tamaño base, salvo que este cliente sea el
+    /// seleccionado en modo entrega: ahí se queda abierta.
     /// </summary>
     private void RestoreBubbleAfterHover()
     {
+        SetOrderBubbleExpanded(false);
+
         if (system != null)
             system.ShowSelectedOrderBubble();
-        else if (CustomerHoverBubble.Instance != null)
-            CustomerHoverBubble.Instance.Hide();
     }
 
     public void RefreshSelection(bool selected)

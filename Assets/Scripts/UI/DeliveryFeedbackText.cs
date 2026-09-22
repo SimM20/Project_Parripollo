@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Mensaje breve de feedback para el flujo de entrega en Build Station.
-/// Singleton de escena, mismo patrón que CustomerHoverBubble.
+/// Singleton de escena, mismo patrón que MeatHoverBubble.
 /// Se muestra/oculta cambiando el texto (el GameObject queda activo bajo GrillView).
 /// </summary>
 public class DeliveryFeedbackText : MonoBehaviour

@@ -752,7 +752,7 @@ public class CustomerSystem : MonoBehaviour
     {
         IsDeliverySelectionActive = false;
         RefreshSelectionVisuals();
-        CustomerHoverBubble.Instance?.Hide();
+        CollapseAllOrderBubbles();
     }
 
     /// <summary>Navega al cliente ocupado siguiente (+1) o anterior (-1) por orden de slot, con wrap.</summary>
@@ -794,6 +794,10 @@ public class CustomerSystem : MonoBehaviour
     {
         if (dragHoverView == view) return;
 
+        // El cliente que se deja de apuntar cierra su burbuja antes de abrir la del nuevo.
+        if (dragHoverView != null)
+            dragHoverView.SetOrderBubbleExpanded(false);
+
         dragHoverView = view;
 
         if (view != null && view.Customer != null && !view.Customer.IsInFeedback)
@@ -805,19 +809,16 @@ public class CustomerSystem : MonoBehaviour
                 // Mientras se arrastra el plato, la misma evaluación que usa la entrega real
                 // alimenta dos previews: la línea de pago en la burbuja y el tinte por corte
                 // sobre el plato (verde exacto / amarillo desfase 1 / naranja mitad / rojo bloquea).
-                string message = view.Customer.order.ToHoverString();
+                string preview = null;
 
                 if (GameManager.Instance != null)
                 {
                     GameManager.DeliveryEvaluation eval = GameManager.Instance.EvaluateDelivery(view.Customer);
-                    message += "\n" + BuildDeliveryPreviewLine(eval);
+                    preview = BuildDeliveryPreviewLine(eval);
                     GameManager.Instance.ShowDeliveryPreviewOnPlate(eval);
                 }
 
-                CustomerHoverBubble.Instance?.Show(
-                    message,
-                    view.transform,
-                    view.GetDishSprite());
+                view.SetOrderBubbleExpanded(true, preview);
             }
 
             return;
@@ -827,7 +828,22 @@ public class CustomerSystem : MonoBehaviour
         RefreshSelectionVisuals();
 
         if (!IsDeliverySelectionActive)
-            CustomerHoverBubble.Instance?.Hide();
+            CollapseAllOrderBubbles();
+    }
+
+    /// <summary>
+    /// Deja todas las burbujas de pedido en su tamaño base. No las oculta: la base
+    /// está siempre a la vista sobre el pecho del cliente.
+    /// </summary>
+    private void CollapseAllOrderBubbles()
+    {
+        if (slotViews == null) return;
+
+        for (int i = 0; i < slotViews.Length; i++)
+        {
+            if (slotViews[i] != null)
+                slotViews[i].SetOrderBubbleExpanded(false);
+        }
     }
 
     /// <summary>
@@ -891,14 +907,22 @@ public class CustomerSystem : MonoBehaviour
     /// </summary>
     public void ShowSelectedOrderBubble()
     {
-        if (CustomerHoverBubble.Instance == null) return;
+        if (slotViews == null) return;
 
-        var view = IsDeliverySelectionActive ? GetSelectedView() : null;
+        var selected = IsDeliverySelectionActive ? GetSelectedView() : null;
 
-        if (view != null && view.Customer?.order != null)
-            CustomerHoverBubble.Instance.Show(view.Customer.order.ToHoverString(), view.transform, view.GetDishSprite());
-        else
-            CustomerHoverBubble.Instance.Hide();
+        for (int i = 0; i < slotViews.Length; i++)
+        {
+            CustomerView view = slotViews[i];
+            if (view == null) continue;
+
+            // El seleccionado se queda expandido; el resto vuelve a la base salvo que lo
+            // esté apuntando el arrastre del plato, que manda sobre la selección.
+            if (view == selected && view.Customer?.order != null)
+                view.SetOrderBubbleExpanded(true);
+            else if (view != dragHoverView)
+                view.SetOrderBubbleExpanded(false);
+        }
     }
 
     private CustomerView GetSelectedView()
@@ -942,7 +966,7 @@ public class CustomerSystem : MonoBehaviour
         {
             dragHoverView = null;
             CustomerSelectionFrame.Instance?.Hide();
-            CustomerHoverBubble.Instance?.Hide();
+            CollapseAllOrderBubbles();
         }
 
         if (SelectedCustomer == customer)
@@ -998,7 +1022,7 @@ public class CustomerSystem : MonoBehaviour
         {
             dragHoverView = null;
             CustomerSelectionFrame.Instance?.Hide();
-            CustomerHoverBubble.Instance?.Hide();
+            CollapseAllOrderBubbles();
         }
 
         if (SelectedCustomer == customer)
@@ -1096,7 +1120,7 @@ public class CustomerSystem : MonoBehaviour
         {
             dragHoverView = null;
             CustomerSelectionFrame.Instance?.Hide();
-            CustomerHoverBubble.Instance?.Hide();
+            CollapseAllOrderBubbles();
         }
 
         // destruir view
@@ -1314,7 +1338,7 @@ public class CustomerSystem : MonoBehaviour
         dragHoverView = null;
         IsDeliverySelectionActive = false;
         CustomerSelectionFrame.Instance?.Hide();
-        CustomerHoverBubble.Instance?.Hide();
+        CollapseAllOrderBubbles();
     }
   
     private void ApplyNightUnlocks()
