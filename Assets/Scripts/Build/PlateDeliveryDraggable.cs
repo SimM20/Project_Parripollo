@@ -32,6 +32,14 @@ public class PlateDeliveryDraggable : MonoBehaviour
 {
     private const int DragSortingBoost = 5000;
 
+    /// <summary>
+    /// Margen de agarre alrededor de la silueta del corte, en unidades locales del sprite
+    /// (100 px = 1 unidad, y el visual del plato va escalado a 0.5). Da un par de píxeles de
+    /// tolerancia para agarrar un corte finito sin volver a tragarse el plato: el margen viejo
+    /// era del 20% del lienzo entero, no del corte.
+    /// </summary>
+    private const float GrabPadding = 0.04f;
+
     private enum DragMode { WholePlate, MeatOnly }
 
     private struct DraggedVisual
@@ -56,7 +64,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private static int lastPickFrame = -1;
 
     private SpriteRenderer selfRenderer;
-    private BoxCollider2D selfCollider;
+    private Collider2D selfCollider;
     private Vector3 grabWorldPoint;
     private CustomerView hoveredView;
 
@@ -68,10 +76,6 @@ public class PlateDeliveryDraggable : MonoBehaviour
     void Awake()
     {
         selfRenderer = GetComponent<SpriteRenderer>();
-
-        selfCollider = GetComponent<BoxCollider2D>();
-        if (selfCollider == null)
-            selfCollider = gameObject.AddComponent<BoxCollider2D>();
 
         RefreshCollider();
 
@@ -94,27 +98,21 @@ public class PlateDeliveryDraggable : MonoBehaviour
     }
 
     /// <summary>
-    /// Reajusta el collider al sprite actual. El pan reemplaza sprite, escala y rotación
-    /// del visual del plato, así que hay que volver a medir para poder agarrarlo.
+    /// Reajusta el collider al sprite actual. Hay que volver a medir cada vez que cambia el
+    /// sprite: el visual sale del prefab genérico 'StockPrefab' y el corte se le asigna después,
+    /// y además el pan reemplaza sprite, escala y rotación del visual del plato.
+    ///
+    /// El collider calca la silueta del corte (ver SpriteColliderFitter). Antes era una caja
+    /// del lienzo entero + 20%, igual para todos los cortes: como los lienzos son de 100x100 px
+    /// y el corte ocupa solo una parte (el chorizo, 84x53), esa caja se comía los clicks del
+    /// plato alrededor de la carne.
     /// </summary>
     public void RefreshCollider()
     {
-        if (selfCollider == null)
-            return;
-
         if (selfRenderer == null)
             selfRenderer = GetComponent<SpriteRenderer>();
 
-        if (selfRenderer != null && selfRenderer.sprite != null)
-        {
-            selfCollider.size = (Vector2)selfRenderer.sprite.bounds.size * 1.2f;
-            selfCollider.offset = selfRenderer.sprite.bounds.center;
-        }
-        else
-        {
-            selfCollider.size = Vector2.one;
-            selfCollider.offset = Vector2.zero;
-        }
+        selfCollider = SpriteColliderFitter.Fit(gameObject, selfRenderer, GrabPadding);
     }
 
     void Update()

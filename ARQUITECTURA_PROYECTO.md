@@ -3,6 +3,7 @@
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
 > Última actualización parcial: **2026-09-21** (rama `development`) — dos gestos sobre el plato: agarrar **el plato** lo lleva entero al cliente (única entrega); agarrar **la carne** mueve solo la carne (reposicionar en el plato, bandeja o parrilla; nunca entrega). Sin anclaje de carne. Secciones 2.4 y 3.4, `TutorialManager.CheckPlateMeatDragAllowed`.
+> Última actualización parcial: **2026-09-23** (rama `development`) — el collider de los visuales de carne se calca sobre la **silueta de cada corte** (`Build/SpriteColliderFitter.cs`) en vez de ser el mismo cuadrado del lienzo para todos: el plato ya no pierde los clicks que caían al lado de la carne. `StockPrefab.prefab` quedó **sin collider** (lo construye el fitter en runtime). Secciones 3.3, 3.4 y nota 33.
 
 ---
 
@@ -13,7 +14,7 @@
 | Motor | Unity **2022.3.62f3**, URP (2D), Input Manager legacy (`Input.GetKeyDown`) |
 | Cámara | **Perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). No es ortográfica — ver nota 22 |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`). `Scripts/Editor/` va a `Assembly-CSharp-Editor` |
-| Código propio | `Assets/Scripts/` — **133 archivos, ~21.2k líneas** |
+| Código propio | `Assets/Scripts/` — **143 archivos, ~23.9k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina **contrarreloj**: cocinar cortes, armar platos/sándwiches y entregar a los clientes que entran durante la jornada |
 | Jornada | **06:30 → 21:00 en 5 minutos reales** (`DayClock`). A las 21:00 cierra y deja de entrar gente; el día termina **cuando se va el último cliente**, no al cerrar |
@@ -58,7 +59,7 @@ Assets/Scripts/
 | **Core/** | Input global y árbitro de la entrega (`GameManager`), **reloj de la jornada (`DayClock`)** y stats del día (`DayStats`), armado del plato (`BuildStationSystem`), **staging plato ↔ bandeja** (`MeatTransferBuffer`), draggable de la bandeja (`ToBuildDraggableMeat`), basura (`TrashZone`), pausa global (`GamePause`), activador de mejoras (`UpgradeUnlockActivator`) | `GameManager.cs`, `DayClock.cs`, `MeatTransferBuffer.cs` (1145), `BuildStationSystem.cs`, `GamePause.cs`, `ToBuildDraggableMeat.cs` |
 | **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón, VFX (`BurnSmoke`, `FlipPuff`) | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `CoalStackCounter.cs`, `BurnSmoke.cs`, `FlipPuff.cs` |
 | **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
-| **Build/** | Zona de drop del plato (`BuildFoodDropZone`, **un solo corte por plato**), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command, **incluye la carne**), **entrega del plato por arrastre** (`PlateDeliveryDraggable`, única vía de entrega) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (696), `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs` |
+| **Build/** | Zona de drop del plato (`BuildFoodDropZone`, **un solo corte por plato**), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command, **incluye la carne**), **entrega del plato por arrastre** (`PlateDeliveryDraggable`, única vía de entrega) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (696), `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs`, `SpriteColliderFitter.cs` |
 | **Customers/** | Llegada de clientes según el horario del `DayClock` y la curva de afluencia, tick de paciencia, hover de entrega, view + **burbuja de pedido por cliente** (base al pecho siempre visible, expandida al hover) + recuadro, **feedback de entrega/abandono/cambio** (burbuja de 4 s con estado, pago y propina), gateo de pick bajo paneles | `CustomerSystem.cs` (1030), `Customer.cs`, `CustomerView.cs`, `CustomerOrderBubble.cs`, `CustomerFeedbackBubble.cs`, `CustomerFeedbackConfigSO.cs`, `CustomerFeedbackState.cs` |
 | **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada con toppings | `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
@@ -700,7 +701,7 @@ void UpdateMeatHolderHover(MeatCutSO, Vector3, bool), ClearMeatHolderHover(), Re
 
 `AdoptVisualIntoPlate(entry, visual, punto)` es **el único lugar que crea visuales de carne en el plato**: instancia
 `visualPrefab` (o recicla el de la bandeja), lo deja en mundo con `fixedWorldScale`, sprite del estado, `sortingOrder`
-= `plateMeatSortingBase (400) + índice`, destruye cualquier `ToBuildDraggableMeat` y agrega `PlateDeliveryDraggable`.
+= `plateMeatSortingBase (400) + índice`, destruye cualquier `ToBuildDraggableMeat` y agrega `PlateDeliveryDraggable` (cuyo `Awake` recalca el collider sobre la silueta del corte recién asignado — el sprite se pone **antes** del `AddComponent`, y ese orden importa; ver nota 33).
 El `punto` que recibe **es el del drop**: la carne queda donde el jugador la soltó dentro del plato (libre, sin
 anclaje). Hubo un anclaje fijo (`meatAnchorOffset`) durante unas horas el 2026-09-21 y se descartó: clavaba la carne.
 Anclas por nombre si faltan en el inspector: `ToBuild` y **`MeatTray`** bajo `GrillView` (`MeatTray` es el viejo
@@ -710,7 +711,7 @@ root de `GrillView` y medirlo entero tragaba media parrilla.
 #### `ToBuildDraggableMeat` — `Core/ToBuildDraggableMeat.cs`
 Draggable de los cortes de la **bandeja** (el nombre es histórico). `Setup(cut, buffer, entryId, rotated)`.
 `OnMouseUp` → `TryPlateFromTrayById` y, si falla, `TryDropFromTrayById`; si ambos fallan vuelve a la bandeja.
-`R` rota el footprint. Se suscribe a `GamePause.OnPaused` al agarrar.
+`R` rota el footprint. Se suscribe a `GamePause.OnPaused` al agarrar. Su collider lo recalca `SpriteColliderFitter.Fit` sobre la silueta del corte en `Awake` y en cada `Setup` (el sprite cambia con el estado de cocción y los visuales se reciclan entre entradas de la bandeja) — ver nota 33.
 
 #### `CoalTransferBuffer` — `CoalTransferBuffer.cs`
 Dos colas (`ToGrill` → `CoalHolder`) heredadas de la Cooler View: `EnqueueToGrill[AtPoint]`, `MoveToCoalHolder()`,
@@ -798,7 +799,7 @@ Arrastre de lo que hay sobre el plato, con **dos gestos según qué cae bajo el 
   tutorial activo este modo se apaga y agarrar la carne lleva el plato entero (los pasos de entrega siguen valiendo).
 
 ```csharp
-public void RefreshCollider()   // re-mide el BoxCollider2D contra el sprite actual
+public void RefreshCollider()   // recalca el collider sobre la silueta del sprite actual (SpriteColliderFitter)
 // resto: Update (pick + drag + drop) + helpers estáticos
 ```
 
@@ -815,10 +816,36 @@ public void RefreshCollider()   // re-mide el BoxCollider2D contra el sprite act
 | Drop al vacío (`WholePlate`) | El plato vuelve **intacto** al mostrador, con la carne donde estaba. Arrastrar el plato nunca saca la carne: para eso está el modo `MeatOnly`, el undo (→ bandeja) o la tecla `C` |
 | Drop (`MeatOnly`) | `EndMeatOnlyDrag`: limpia el preview; si el punto cae sobre el plato (`BuildFoodDropZone.IsOverPlateAt`) la carne **queda donde se soltó**; si no, primero `RestorePositions` y recién después, **solo si no hay un cliente bajo el mouse**, `IsOverMeatTray` → `TryReturnPlateMeatToTray`, si no `TryReturnPlateMeatToGrill(visual, punto, rotación)`. Si falla, ya está de vuelta en el plato. El gate del cliente evita que el corte se cocine bajo un cliente parado sobre la grilla |
 | Cancelación | `OnDisable`/`OnDestroy` del visual que conduce llaman `CancelDrag()`: restauran posiciones y `sortingOrder` sin intentar el drop |
-| Collider | Se re-mide en `Awake` y cada vez que el pan cambia sprite/escala/rotación del visual (`MeatTransferBuffer.UpdatePlateMeatSprite` y `RestorePlateMeatVisual` llaman a `RefreshCollider()`) |
+| Collider | `SpriteColliderFitter.Fit(gameObject, selfRenderer, GrabPadding = 0.04)`: un `PolygonCollider2D` calcado sobre la **silueta del corte**, no una caja. Se re-mide en `Awake` y cada vez que el pan cambia sprite/escala/rotación del visual (`MeatTransferBuffer.UpdatePlateMeatSprite` y `RestorePlateMeatVisual` llaman a `RefreshCollider()`). Ver nota 33 |
 
 ⚠️ Las salpicaduras de salsa (`SauceSplatter`, creadas por `ToppingDraggable`) **no** siguen al plato
 durante el arrastre: quedan en el mostrador y se limpian con `ToppingDraggable.ClearAllSplatters()` en la entrega.
+
+#### `SpriteColliderFitter` — `Build/SpriteColliderFitter.cs` · **static**
+Ajusta el `Collider2D` de un visual a la **silueta real del sprite que está mostrando**.
+
+```csharp
+static Collider2D Fit(GameObject go, SpriteRenderer renderer, float padding = 0f)
+```
+
+Existe porque los visuales de carne salen todos del **mismo prefab genérico** (`StockPrefab`: `Transform` +
+`SpriteRenderer` vacío, **sin collider**) y el sprite del corte se les asigna después. Como **todos los cortes se dibujan sobre un
+lienzo de 100x100 px**, `sprite.bounds` da `1x1` para cualquiera de ellos: el chorizo ocupa 84x53 px de ese lienzo,
+el vacío 92x59, el paty 82x87 y el choripan 70x90. Medir el collider así daba **la misma caja para todos** y, en el
+plato, donde además llevaba un `* 1.2f` de margen, la caja del corte tapaba el plato de alrededor: al querer
+levantar el plato se levantaba la carne.
+
+| Paso | Detalle |
+|---|---|
+| Contorno | `sprite.GetPhysicsShapeCount()` / `GetPhysicsShape(i, ...)`. Los PNG de cortes se importan con `spriteGenerateFallbackPhysicsShape: 1`, así que Unity genera el contorno por alfa sin dibujar nada a mano (14-19 puntos por corte) |
+| Resultado | Un `PolygonCollider2D` (se crea si falta) con un path por shape válido. **El collider no viene del prefab: lo construye el fitter en runtime.** Si encuentra una `BoxCollider2D` (la dejó un fallback anterior) la **apaga**, no la destruye |
+| `padding` | Margen de agarre en **unidades locales del sprite** (100 px = 1 unidad). Empuja cada punto desde el centro del **contorno**, no del lienzo, para no deformar cortes dibujados descentrados. `PlateDeliveryDraggable` y `ToBuildDraggableMeat` usan `0.04` |
+| `flipX` / `flipY` | El `SpriteRenderer` espeja el **dibujo** pero no el physics shape: el fitter lo espeja a mano alrededor del centro del sprite (y reinvierte el sentido del path si el espejo fue en un solo eje). Sin esto la cara B de un corte queda con el collider de la cara A |
+| Fallback | Sin sprite o sin physics shape: `BoxCollider2D` de `sprite.bounds` (comportamiento viejo, sin el `1.2`), **creada en el momento** si el objeto no tenía, y apaga el polígono viejo si lo había |
+
+Tamaños resultantes en el plato (visual escalado a `fixedWorldScale = 0.5`, con el `padding` de `0.04`), contra la
+caja anterior de **0.60 x 0.60 para todos**: chorizo `0.48 x 0.32`, vacío `0.52 x 0.36`, paty `0.47 x 0.49`,
+choripan `0.41 x 0.51`. Ver nota 33.
 
 #### `CookingDeliveryEvaluator` — `Food/CookingDeliveryEvaluator.cs` · **static**
 Núcleo de la economía. Constantes: `ReducedPriceMultiplier = 0.5`, `TipPercentOfPrice = 0.2`, `MinimumPerfectTip = 1`.
@@ -1686,7 +1713,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 12 | El estado de cocción real vive en los `float sideACookTime/sideBCookTime`; `Meat.state` es solo caché visual derivado por `RefreshState()`. `BufferedMeatData` transporta esos floats entre parrilla, plato y bandeja |
 | 13 | `GridSlot.Update`, `GrillSystem.UpdateHeatPropagation`, `Meat.Cook` y `PlateDeliveryDraggable.Update` corren **por frame**: no agregar `Debug.Log` ni allocations ahí |
 | 14 | `CoalSO.unitsPerBag` pasó de `10` a **`1`**: una "bolsa" es una unidad, así que `Cooler.Add(coal, unitsPerBag × qty) == qty`. `GetSuggestedCoalBags()` y `CartCoalBags()` siguen razonando en bolsas — si `unitsPerBag` vuelve a subir, revisar también el texto del header (`GetTotalCoalUnits()` cuenta **unidades**, no bolsas) |
-| 15 | **Cooler View y Build View deprecadas.** Scripts que ya no se alcanzan: `CoolerStockVisualizer`, `CoalStockVisualizer`, `CoolerDraggableMeat`, `DraggableCoal`, `MeatHolderDraggableMeat`, `CoalHolderDraggableCoal`; assets `Prefabs/CoolerView.prefab`, `BuildView.prefab`, `StockPrefab.prefab`. La cabecera `DEPRECADO` de `DraggableCoal` avisa que descuenta stock **antes** de validar y **sin rollback**. No borrar sin revisar los overrides de escena |
+| 15 | **Cooler View y Build View deprecadas.** Scripts que ya no se alcanzan: `CoolerStockVisualizer`, `CoalStockVisualizer`, `CoolerDraggableMeat`, `DraggableCoal`, `MeatHolderDraggableMeat`, `CoalHolderDraggableCoal`; assets `Prefabs/CoolerView.prefab`, `BuildView.prefab`. **`StockPrefab.prefab` NO está deprecado**: es el `visualPrefab` vivo de `MeatTransferBuffer` (override de escena en `GameScene`), o sea el visual de cada corte en la bandeja y en el plato — ver nota 33. La cabecera `DEPRECADO` de `DraggableCoal` avisa que descuenta stock **antes** de validar y **sin rollback**. No borrar sin revisar los overrides de escena |
 | 16 | `GrillView` tiene **escala no uniforme `(0.81, 1, 1)`** como override de escena. Cualquier hijo nuevo que deba verse sin deformar necesita contra-escala (`localScale.x = 1/0.81`). Es lo que hacen las instancias de `StockPanel` y del `ToppingsPanel` |
 | 17 | **`TutorialScene` es un clon de `GameScene`** con una lista corta de diferencias (sin `DayClock` ni oferta, catálogo del tutorial, cliente y stock del tutorial; tabla en 3.7). Un cambio de layout o de sistemas en `GameScene` hay que replicarlo en `TutorialScene`, y si toca lo que se enseña, revisar el texto del panel del paso correspondiente (`Prefabs/PanelesTutos/`) |
 | 18 | **Toda pausa pasa por `GamePause`** (`Core/GamePause.cs`): nadie más escribe `Time.timeScale`. Una animación de UI que deba correr en pausa necesita `Time.unscaledDeltaTime` (`SlidingPanel` ya lo hace); un loop `yield return null` + unscaled **sigue corriendo en pausa** y necesita gate propio. Draggables nuevos: suscribirse a `GamePause.OnPaused` al agarrar, desuscribirse al soltar, y guardar `OnMouseDrag`/`OnMouseUp` con el flag de arrastre porque tras cancelar puede llegar un `OnMouseUp` tardío. Un pick que no use `OnMouseXXX` (como `PlateDeliveryDraggable.Update`) debe chequear `GamePause.IsPaused`: `eventMask` no lo frena |
@@ -1703,4 +1730,5 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 30 | **`Electronic Highway Sign SDF` no tiene acentos ni `—` / `→`** y los dibuja como cuadrado (ya pasa en los labels viejos de `ShopNextButtonUI` y en `CantCarbones`). **`Bungee-Regular SDF` y `Nunito-Regular SDF` sí tienen los acentos**: para texto nuevo de tienda usar esas dos, y evitar igual los signos exóticos (`·`, `—`, `→`) |
 | 31 | **Los TMP del header de la tienda tienen `margin` negativo** (`CantCarbones`: `(-105, 0, -132, -18)`). Clonarlos para texto nuevo arrastra ese margen y el texto se dibuja corrido respecto de su `RectTransform`: poner `margin = Vector4.zero` en el clon |
 | 32 | **El fondo de `GameScene` es `FondoCicloDia` y usa los `sortingOrder` -60 a -4** (capas en -60/-55/-50/-45/-40/-30/-20, paisaje en -5; el fundido de sprites de `DayCycleLayer` dibuja en `order + 1`, así que el del paisaje cae en -4). Algo nuevo que vaya detrás de la carne pero delante del fondo va en -3 o más. El tinte del ciclo de día es **solo para esas capas**: parrilla, carne, clientes y HUD no se tiñen, porque leer el punto de cocción depende de sus colores. Ver 3.9 |
+| 33 | **El collider de un visual de carne NO se mide con `sprite.bounds`.** Los visuales salen todos del prefab genérico `StockPrefab` — que es **solo `Transform` + `SpriteRenderer` vacío, sin collider** (el 2026-09-23 se le sacó la `BoxCollider2D` de `0.0001 × 0.0001` que arrastraba) — y el sprite del corte se les asigna después; además **todos los cortes se dibujan sobre un lienzo de 100x100 px**, así que `sprite.bounds` devuelve `1x1` para el chorizo (ocupa 84x53 px), el vacío (92x59) y el paty (82x87) por igual. Medir por ahí daba el mismo cuadrado para todos y, en el plato, con el `* 1.2f` de margen que llevaba el agarre, la caja del corte se comía los clicks del plato de alrededor: al querer levantar el plato se levantaba la carne. Se mide con **`SpriteColliderFitter.Fit`** (`Build/SpriteColliderFitter.cs`), que calca el **physics shape** del sprite en un `PolygonCollider2D` (los PNG de cortes se importan con `spriteGenerateFallbackPhysicsShape`, así que Unity genera el contorno por alfa: verificados los 61 sprites de los 10 `MeatCutSO` y los 28 de los `ProductVariantSO`) y cae a una caja ajustada solo si el sprite no trae shape. **El prefab ya no trae collider**: todos los caminos que lo instancian crean el suyo — plato (`PlateDeliveryDraggable.Awake`) y bandeja (`ToBuildDraggableMeat.Awake`/`Setup`) vía el fitter, y los dos draggables legados (`MeatHolderDraggableMeat`, `CoolerDraggableMeat`) con su `GetComponent ?? AddComponent`. La única pila que queda sin collider es la cola `toGrill`, que son visuales pasivos y hoy no tiene llamadores vivos. Lo usan `PlateDeliveryDraggable.RefreshCollider` y `ToBuildDraggableMeat.RefreshCollider`. Dos detalles que hay que respetar en cualquier variante nueva: el `padding` se empuja desde el centro del **contorno** (no del lienzo) y el **`flipX` del `SpriteRenderer` espeja el dibujo pero no el shape**, así que el fitter lo espeja a mano o la cara B queda con el collider de la cara A |
 | 26 | El feedback de clientes ocupa el slot 4 s (`IsInFeedback`): `MaxSimultaneousCustomers` los cuenta, `SpawnLoop` no spawnea en su lugar hasta que se van, y `OnNightEnded` espera a que termine el último feedback. `IsCustomerActive`, `SetDeliveryDragHover` y `EvaluateDelivery` los excluyen |

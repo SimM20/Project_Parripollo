@@ -6,6 +6,9 @@ using UnityEngine;
 /// </summary>
 public class ToBuildDraggableMeat : MonoBehaviour
 {
+    /// <summary>Margen de agarre alrededor de la silueta, en unidades locales del sprite (100 px = 1 unidad).</summary>
+    private const float TrayGrabPadding = 0.04f;
+
     private MeatCutSO cut;
     private MeatTransferBuffer buffer;
     private int entryId = -1;
@@ -29,6 +32,10 @@ public class ToBuildDraggableMeat : MonoBehaviour
         entryId = setupEntryId;
         isGridRotated = setupGridRotation;
         ApplyGridRotationPreview();
+
+        // El sprite ya lo puso RebuildStack; el corte cambia de visual entre estados de
+        // coccion y entre entradas recicladas, asi que el collider se vuelve a medir aca.
+        RefreshCollider();
     }
 
     void Awake()
@@ -36,7 +43,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
         if (selfRenderer == null)
             selfRenderer = GetComponent<SpriteRenderer>();
 
-        EnsureCollider2D();
+        RefreshCollider();
     }
 
     void OnMouseDown()
@@ -137,21 +144,17 @@ public class ToBuildDraggableMeat : MonoBehaviour
         transform.position = startPosition;
     }
 
-    private void EnsureCollider2D()
+    /// <summary>
+    /// Ajusta el collider a la silueta del corte que se esta mostrando. Los visuales salen del
+    /// prefab generico 'StockPrefab' y todos los cortes se dibujan sobre un lienzo de 100x100 px,
+    /// asi que medir por sprite.bounds daba la misma caja de 1x1 para un chorizo que para un paty.
+    /// </summary>
+    private void RefreshCollider()
     {
-        BoxCollider2D box = GetComponent<BoxCollider2D>();
-        if (box == null)
-            box = gameObject.AddComponent<BoxCollider2D>();
+        if (selfRenderer == null)
+            selfRenderer = GetComponent<SpriteRenderer>();
 
-        if (selfRenderer != null && selfRenderer.sprite != null)
-        {
-            box.size = selfRenderer.sprite.bounds.size;
-            box.offset = selfRenderer.sprite.bounds.center;
-        }
-        else
-        {
-            box.size = Vector2.one;
-        }
+        SpriteColliderFitter.Fit(gameObject, selfRenderer, TrayGrabPadding);
     }
 
     void OnDisable() => CancelDrag();
