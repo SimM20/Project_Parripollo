@@ -855,6 +855,10 @@ public class CustomerSystem : MonoBehaviour
         if (!eval.accepted)
             return "<color=#EF4444>" + eval.rejectShort + "</color>";
 
+        // Se entrega igual, pero con crudo/quemado el cliente se va sin pagar y cuesta un strike.
+        if (eval.causesStrike)
+            return "<color=#EF4444>" + eval.strikeShort + " - se va sin pagar (+1 strike)</color>";
+
         string payment = "$" + (int)eval.payment;
         string line;
 
@@ -1000,20 +1004,52 @@ public class CustomerSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Feedback de abandono por paciencia 0 (Estado 6: No paga / se va).
-    /// Permanece 4 segundos en su slot con Pedido: $0 y Propina: $0 antes de retirarse.
+    /// Abandono por paciencia 0 (Estado 6: No paga / se va) y strike.
     /// </summary>
     public void TriggerAngryLeaveFeedback(Customer customer)
+    {
+        TriggerLeaveWithStrike(
+            customer,
+            CustomerFeedbackState.NoPagaSeVa,
+            false,
+            "Se fue enojado");
+    }
+
+    /// <summary>
+    /// Le entregaron un corte con una cara Cruda o Quemada (Estado 7: Entrega cruda o quemada).
+    /// Mismo desenlace que la paciencia en 0 —no paga, suma strike y se va— pero con su propia
+    /// reacción en la burbuja. Lo llama <see cref="GameManager.TryDeliverToCustomer"/>;
+    /// <paramref name="burned"/> elige entre quejarse de carne cruda o de un carbón.
+    /// </summary>
+    public void TriggerBadCookingLeaveFeedback(Customer customer, bool burned)
+    {
+        TriggerLeaveWithStrike(
+            customer,
+            CustomerFeedbackState.EntregaCrudaOQuemada,
+            burned,
+            burned ? "Entrega quemada" : "Entrega cruda");
+    }
+
+    /// <summary>
+    /// Núcleo de las dos retiradas que cuestan strike. El cliente permanece 4 segundos en su
+    /// slot con Pedido: $0 y Propina: $0 y después se va; <paramref name="leaveReason"/> solo
+    /// va al log.
+    /// </summary>
+    private void TriggerLeaveWithStrike(
+        Customer customer,
+        CustomerFeedbackState state,
+        bool burnedVariant,
+        string leaveReason)
     {
         if (customer == null || customer.IsInFeedback) return;
 
         customer.StartFeedback();
 
-        // Único evento que suma strike: paciencia en 0. El guard de IsInFeedback de arriba
-        // garantiza una sola suma por cliente. Con el contador saturado el cliente se retira
-        // igual, pero no suma. El SFX es distinto del de retirada normal (spec).
+        // El guard de IsInFeedback de arriba garantiza una sola suma por cliente. Con el
+        // contador saturado el cliente se retira igual, pero no suma. El SFX es distinto
+        // del de retirada normal (spec).
         if (StrikeSystem.Instance != null &&
-            StrikeSystem.Instance.RegisterPatienceStrike())
+            StrikeSystem.Instance.RegisterStrike())
         {
             AudioManager.Instance?.PlayStrike();
         }
@@ -1041,17 +1077,18 @@ public class CustomerSystem : MonoBehaviour
         if (view != null)
         {
             view.ShowFeedback(
-                CustomerFeedbackState.NoPagaSeVa,
+                state,
                 0f,
                 0f,
                 false,
-                () => RemoveCustomer(customer, "Se fue enojado"),
-                feedbackConfig
+                () => RemoveCustomer(customer, leaveReason),
+                feedbackConfig,
+                burnedVariant
             );
         }
         else
         {
-            RemoveCustomer(customer, "Se fue enojado");
+            RemoveCustomer(customer, leaveReason);
         }
     }
 

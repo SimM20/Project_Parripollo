@@ -20,7 +20,13 @@ public enum CustomerFeedbackState
     CambioPorFaltante = 5,
 
     /// <summary>Estado 6: No paga / se va (abandono por paciencia 0, rojo fuerte intenso, 😡 / 💢)</summary>
-    NoPagaSeVa = 6
+    NoPagaSeVa = 6,
+
+    /// <summary>
+    /// Estado 7: Entrega cruda o quemada (le sirvieron un corte con una cara Cruda o Quemada;
+    /// no paga, suma strike y se va asqueado, rojo fuerte intenso, 🤢).
+    /// </summary>
+    EntregaCrudaOQuemada = 7
 }
 
 /// <summary>
@@ -52,6 +58,7 @@ public static class CustomerFeedbackExtensions
                 return CustomerFeedbackCategory.Negative;
 
             case CustomerFeedbackState.NoPagaSeVa:
+            case CustomerFeedbackState.EntregaCrudaOQuemada:
                 return CustomerFeedbackCategory.NegativeSevere;
 
             default:

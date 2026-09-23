@@ -135,7 +135,8 @@ public class CustomerFeedbackBubble : MonoBehaviour
         float tip,
         bool isMissingReplacement,
         CustomerFeedbackConfigSO config,
-        Action onComplete)
+        Action onComplete,
+        bool burnedVariant = false)
     {
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
@@ -155,7 +156,7 @@ public class CustomerFeedbackBubble : MonoBehaviour
         if (gameObject.activeInHierarchy)
         {
             sequenceCoroutine = StartCoroutine(
-                FeedbackSequenceRoutine(state, payment, tip, isMissingReplacement, config, onComplete)
+                FeedbackSequenceRoutine(state, payment, tip, isMissingReplacement, config, onComplete, burnedVariant)
             );
         }
         else
@@ -170,7 +171,8 @@ public class CustomerFeedbackBubble : MonoBehaviour
         float tip,
         bool isMissingReplacement,
         CustomerFeedbackConfigSO config,
-        Action onComplete)
+        Action onComplete,
+        bool burnedVariant)
     {
         if (config == null)
             config = CustomerFeedbackConfigSO.Instance;
@@ -216,7 +218,7 @@ public class CustomerFeedbackBubble : MonoBehaviour
         }
 
         // Frase de reacción
-        string phrase = config.GetRandomPhrase(state);
+        string phrase = config.GetRandomPhrase(state, burnedVariant);
         if (phraseText != null)
         {
             phraseText.text = phrase;
@@ -313,8 +315,9 @@ public class CustomerFeedbackBubble : MonoBehaviour
             if (tipText != null)
                 tipText.text = "<color=#E0E0E0>Propina:</color> <color=#EF4444>anulada</color>";
         }
-        else if (state == CustomerFeedbackState.NoPagaSeVa)
+        else if (state.GetCategory() == CustomerFeedbackCategory.NegativeSevere)
         {
+            // Se fue sin pagar (paciencia 0 o entrega cruda/quemada): $0 en rojo, no en verde.
             if (paymentText != null)
                 paymentText.text = "<color=#E0E0E0>Pedido:</color> <color=#EF4444><b>$0</b></color>";
 

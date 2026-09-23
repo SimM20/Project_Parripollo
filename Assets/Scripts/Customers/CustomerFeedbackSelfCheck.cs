@@ -35,6 +35,7 @@ public static class CustomerFeedbackSelfCheck
         Assert(CustomerFeedbackState.CambioPorFaltante.GetCategory() == CustomerFeedbackCategory.Intermediate, "CambioPorFaltante es Intermediate");
         Assert(CustomerFeedbackState.SinPropina.GetCategory() == CustomerFeedbackCategory.Negative, "SinPropina es Negative");
         Assert(CustomerFeedbackState.NoPagaSeVa.GetCategory() == CustomerFeedbackCategory.NegativeSevere, "NoPagaSeVa es NegativeSevere");
+        Assert(CustomerFeedbackState.EntregaCrudaOQuemada.GetCategory() == CustomerFeedbackCategory.NegativeSevere, "EntregaCrudaOQuemada es NegativeSevere");
 
         // 2. Validar Configuración y Timings
         var config = CustomerFeedbackConfigSO.Instance;
@@ -49,6 +50,8 @@ public static class CustomerFeedbackSelfCheck
         Assert(!string.IsNullOrEmpty(config.GetRandomPhrase(CustomerFeedbackState.SinPropina)), "Pool SinPropina tiene frases");
         Assert(!string.IsNullOrEmpty(config.GetRandomPhrase(CustomerFeedbackState.CambioPorFaltante)), "Pool CambioPorFaltante tiene frases");
         Assert(!string.IsNullOrEmpty(config.GetRandomPhrase(CustomerFeedbackState.NoPagaSeVa)), "Pool NoPagaSeVa tiene frases");
+        Assert(!string.IsNullOrEmpty(config.GetRandomPhrase(CustomerFeedbackState.EntregaCrudaOQuemada)), "Pool EntregaCrudaOQuemada (crudo) tiene frases");
+        Assert(!string.IsNullOrEmpty(config.GetRandomPhrase(CustomerFeedbackState.EntregaCrudaOQuemada, true)), "Pool EntregaCrudaOQuemada (quemado) tiene frases");
 
         // 4. Validar Evaluación Económica (Spec Doc)
         float basePrice = 1000f;

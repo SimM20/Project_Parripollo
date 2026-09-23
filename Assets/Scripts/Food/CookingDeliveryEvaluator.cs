@@ -4,7 +4,8 @@ using UnityEngine;
 /// <summary>
 /// Evaluación económica y de validez por corte según el Sistema de Calor y Cocción.
 /// Cada corte se evalúa por separado; la cara con mayor desvío determina el resultado.
-/// Crudo o Quemado en cualquier cara bloquean la entrega completa.
+/// Crudo o Quemado en cualquier cara no impiden entregar: la entrega se concreta sin cobrar,
+/// suma un strike y el cliente se va igual que si no lo hubieran atendido.
 /// </summary>
 public static class CookingDeliveryEvaluator
 {
@@ -27,7 +28,11 @@ public static class CookingDeliveryEvaluator
         public List<int> burnedIndices;
         public List<int> rawIndices;
 
-        public bool IsBlocked => rawCount > 0 || burnedCount > 0;
+        /// <summary>
+        /// Hay al menos una cara Cruda o Quemada: la entrega se acepta pero no paga,
+        /// suma un strike y el cliente se retira enojado.
+        /// </summary>
+        public bool CausesStrike => rawCount > 0 || burnedCount > 0;
     }
 
     /// <summary>
@@ -40,14 +45,14 @@ public static class CookingDeliveryEvaluator
     }
 
     /// <summary>
-    /// Igual que Validate, pero con una excepción opcional por corte para piezas quemadas:
-    /// si isBurnedExempt(cut) es true, esa pieza quemada se considera entregable y no bloquea
-    /// la entrega (usado por el tutorial). Sin el predicado, el comportamiento es el normal.
+    /// Igual que Validate, pero con una excepción opcional por corte: si isCookingExempt(cut)
+    /// es true, esa pieza cruda o quemada se evalúa como cualquier otra y no suma strike
+    /// (usado por el tutorial). Sin el predicado, el comportamiento es el normal.
     /// </summary>
     public static DeliveryValidation Validate(
         IReadOnlyList<BuildStationSystem.CutSideStates> sideStates,
         IReadOnlyList<MeatCutSO> cuts,
-        System.Func<MeatCutSO, bool> isBurnedExempt)
+        System.Func<MeatCutSO, bool> isCookingExempt)
     {
         var result = new DeliveryValidation
         {
@@ -60,16 +65,21 @@ public static class CookingDeliveryEvaluator
 
         for (int i = 0; i < sideStates.Count; i++)
         {
+            if (!sideStates[i].IsBurned && !sideStates[i].IsRaw)
+                continue;
+
+            // Excepción de entrega (tutorial): los cortes eximidos se cobran como cualquier
+            // otro y no suman strike, así el guion del tutorial no se rompe.
+            if (isCookingExempt != null && cuts != null && i < cuts.Count && isCookingExempt(cuts[i]))
+                continue;
+
+            // Quemado tiene prioridad: una pieza con una cara quemada cuenta solo como quemada.
             if (sideStates[i].IsBurned)
             {
-                // Excepción de entrega (tutorial): quemados eximidos no bloquean ni se descartan.
-                if (isBurnedExempt != null && cuts != null && i < cuts.Count && isBurnedExempt(cuts[i]))
-                    continue;
-
                 result.burnedCount++;
                 result.burnedIndices.Add(i);
             }
-            else if (sideStates[i].IsRaw)
+            else
             {
                 result.rawCount++;
                 result.rawIndices.Add(i);
@@ -308,10 +318,10 @@ public static class CookingDeliveryEvaluator
     }
 
     /// <summary>
-    /// Mensaje de bloqueo con contadores. Adapta singular/plural y omite contadores en cero.
-    /// No incluye instrucciones: la tecla para limpiar el plato la conoce GameManager.
+    /// Mensaje del strike por cocción, con contadores. Adapta singular/plural y omite
+    /// contadores en cero. La aclaración de que el cliente se fue la agrega GameManager.
     /// </summary>
-    public static string BuildBlockedMessage(int rawCount, int burnedCount)
+    public static string BuildBadCookingMessage(int rawCount, int burnedCount)
     {
         var sb = new System.Text.StringBuilder("El pedido tiene ");
 

@@ -47,14 +47,7 @@ public class MeatTransferBuffer : MonoBehaviour
     [Header("Visual Size")]
     [SerializeField] private Vector3 fixedWorldScale = Vector3.one;
 
-    [Header("Blocked Cut Flash")]
-    [Tooltip("Tinte de los cortes crudos/quemados cuando bloquean una entrega.")]
-    [SerializeField] private Color blockedFlashColor = new Color(1f, 0.25f, 0.25f);
-    [SerializeField] private int blockedFlashPulses = 3;
-    [SerializeField] private float blockedFlashPulseSeconds = 0.35f;
-
     private System.Type meatHolderDraggableType;
-    private Coroutine blockedFlashRoutine;
 
     private class BufferedMeatData
     {
@@ -473,8 +466,6 @@ public class MeatTransferBuffer : MonoBehaviour
 
     public void ClearPlateMeatVisuals()
     {
-        StopBlockedFlash();
-
         for (int i = 0; i < plateMeatVisuals.Count; i++)
         {
             if (plateMeatVisuals[i] != null)
@@ -486,91 +477,11 @@ public class MeatTransferBuffer : MonoBehaviour
     }
 
     /// <summary>
-    /// Parpadea en rojo los visuales del plato en 'indices' (crudos/quemados que bloquearon
-    /// una entrega). Lo invoca GameManager por SendMessage. Un flash nuevo corta el anterior
-    /// y restaura el color antes de arrancar, así nunca queda un corte teñido.
-    /// </summary>
-    public void FlashPlateMeatVisuals(List<int> indices)
-    {
-        StopBlockedFlash();
-
-        if (indices == null || indices.Count == 0)
-            return;
-
-        var renderers = new List<SpriteRenderer>(indices.Count);
-        for (int i = 0; i < indices.Count; i++)
-        {
-            int index = indices[i];
-            if (index < 0 || index >= plateMeatVisuals.Count || plateMeatVisuals[index] == null)
-                continue;
-
-            SpriteRenderer sr = plateMeatVisuals[index].GetComponent<SpriteRenderer>();
-            if (sr != null && !renderers.Contains(sr))
-                renderers.Add(sr);
-        }
-
-        if (renderers.Count > 0)
-            blockedFlashRoutine = StartCoroutine(BlockedFlashRoutine(renderers));
-    }
-
-    private void StopBlockedFlash()
-    {
-        if (blockedFlashRoutine == null)
-            return;
-
-        StopCoroutine(blockedFlashRoutine);
-        blockedFlashRoutine = null;
-
-        // Restaurar cualquier visual que haya quedado a mitad de pulso.
-        for (int i = 0; i < plateMeatVisuals.Count; i++)
-        {
-            if (plateMeatVisuals[i] == null) continue;
-            SpriteRenderer sr = plateMeatVisuals[i].GetComponent<SpriteRenderer>();
-            if (sr != null) sr.color = Color.white;
-        }
-    }
-
-    private System.Collections.IEnumerator BlockedFlashRoutine(List<SpriteRenderer> renderers)
-    {
-        float total = Mathf.Max(1, blockedFlashPulses) * Mathf.Max(0.05f, blockedFlashPulseSeconds);
-        float elapsed = 0f;
-
-        while (elapsed < total)
-        {
-            elapsed += Time.deltaTime;
-
-            // Onda 0→1→0 por pulso: tinte pleno en el medio, blanco en los bordes.
-            float phase = (elapsed / blockedFlashPulseSeconds) % 1f;
-            float k = Mathf.Sin(phase * Mathf.PI);
-            Color c = Color.Lerp(Color.white, blockedFlashColor, k);
-
-            for (int i = 0; i < renderers.Count; i++)
-            {
-                if (renderers[i] != null)
-                    renderers[i].color = c;
-            }
-
-            yield return null;
-        }
-
-        for (int i = 0; i < renderers.Count; i++)
-        {
-            if (renderers[i] != null)
-                renderers[i].color = Color.white;
-        }
-
-        blockedFlashRoutine = null;
-    }
-
-    /// <summary>
     /// Tinte de preview por corte (alineado con el orden de montaje) mientras el plato se
-    /// arrastra sobre un cliente. Lo invoca GameManager por SendMessage. Corta un flash en
-    /// curso: el preview es más reciente que el rechazo anterior.
+    /// arrastra sobre un cliente. Lo invoca GameManager por SendMessage.
     /// </summary>
     public void SetPlateMeatTints(List<Color> tints)
     {
-        StopBlockedFlash();
-
         for (int i = 0; i < plateMeatVisuals.Count; i++)
         {
             if (plateMeatVisuals[i] == null) continue;
@@ -584,10 +495,6 @@ public class MeatTransferBuffer : MonoBehaviour
 
     public void ClearPlateMeatTints()
     {
-        // Si hay un flash corriendo, él es dueño del color y lo restaura al terminar.
-        if (blockedFlashRoutine != null)
-            return;
-
         for (int i = 0; i < plateMeatVisuals.Count; i++)
         {
             if (plateMeatVisuals[i] == null) continue;

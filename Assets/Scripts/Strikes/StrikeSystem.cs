@@ -3,8 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// Sistema de Strikes por Clientes Perdidos (spec v0.1).
-/// Cuenta los clientes que se fueron porque su paciencia llegó a 0. Al alcanzar
-/// <see cref="MaxStrikes"/> se activa el estado de cierre anticipado: CustomerSystem deja
+/// Cuenta los clientes que se fueron enojados: paciencia agotada o entrega cruda/quemada.
+/// Al alcanzar <see cref="MaxStrikes"/> se activa el estado de cierre anticipado: CustomerSystem deja
 /// de generar clientes nuevos y la noche termina cuando ya no queda ninguno activo.
 ///
 /// Singleton de escena, null-safe: si no existe en la escena (ej. TutorialScene) los
@@ -108,12 +108,13 @@ public class StrikeSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// Suma exactamente 1 strike por un cliente cuya paciencia llegó a 0. Es la única causa
-    /// válida: cualquier otra retirada (faltante de stock, etc.) no debe pasar por acá.
+    /// Suma exactamente 1 strike por un cliente que se fue enojado. Dos causas válidas y nada
+    /// más: paciencia en 0, o una entrega con cortes crudos/quemados. Cualquier otra retirada
+    /// (faltante de stock, entrega cobrada, etc.) no debe pasar por acá.
     /// Devuelve false si el contador ya estaba saturado: el cliente se retira igual, pero el
     /// HUD sigue mostrando el máximo.
     /// </summary>
-    public bool RegisterPatienceStrike()
+    public bool RegisterStrike()
     {
         if (IsLimitReached)
             return false;
@@ -196,7 +197,7 @@ public class StrikeSystem : MonoBehaviour
     // ---- QA: provocar cada estado de forma determinística desde el inspector en Play Mode ----
 
     [ContextMenu("QA/Sumar un strike")]
-    private void DebugAddStrike() => RegisterPatienceStrike();
+    private void DebugAddStrike() => RegisterStrike();
 
     [ContextMenu("QA/Reiniciar strikes")]
     private void DebugReset() => ResetForNewNight();

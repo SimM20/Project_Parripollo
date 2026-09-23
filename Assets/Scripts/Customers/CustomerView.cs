@@ -360,7 +360,8 @@ public class CustomerView : MonoBehaviour
         float tip,
         bool isMissingReplacement,
         Action onComplete,
-        CustomerFeedbackConfigSO config = null)
+        CustomerFeedbackConfigSO config = null,
+        bool burnedVariant = false)
     {
         if (customer != null)
             customer.StartFeedback();
@@ -437,7 +438,8 @@ public class CustomerView : MonoBehaviour
                     }
 
                     onComplete?.Invoke();
-                }
+                },
+                burnedVariant
             );
         }
         else

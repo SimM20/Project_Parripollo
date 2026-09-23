@@ -214,8 +214,20 @@ public class GameManager : MonoBehaviour
         public string rejectReason;
         /// <summary>Versión corta de <c>rejectReason</c> para la burbuja de hover.</summary>
         public string rejectShort;
-        /// <summary>Rechazo por Crudo/Quemado; <c>validation</c> trae los índices afectados.</summary>
-        public bool cookingBlocked;
+
+        /// <summary>
+        /// La entrega tiene cortes Crudos o Quemados: se acepta igual (<c>accepted == true</c>),
+        /// pero no paga nada, suma un strike y el cliente se va enojado, exactamente como el
+        /// que se va sin ser atendido. <c>validation</c> trae los índices afectados.
+        /// </summary>
+        public bool causesStrike;
+        /// <summary>
+        /// Detalle de los cortes mal cocidos. No se muestra en pantalla: lo que ve el jugador
+        /// es la reacción del cliente en su burbuja. Va al log de la consola.
+        /// </summary>
+        public string strikeReason;
+        /// <summary>Versión corta de <c>strikeReason</c> para la burbuja de hover.</summary>
+        public string strikeShort;
         public CookingDeliveryEvaluator.DeliveryValidation validation;
 
         public float payment;
@@ -234,11 +246,12 @@ public class GameManager : MonoBehaviour
         /// <summary>
         /// Desfase por corte del plato, alineado con <c>BuildStationSystem.AssembledCuts</c>:
         /// 0 exacto, 1 aceptable, >=2 mitad de precio; <see cref="CutBlocked"/> si ese corte
-        /// bloquea (crudo/quemado) o si el corte es el equivocado. Null cuando la evaluación
-        /// no llegó a mirar los cortes (cliente inválido, plato vacío, falta pan...).
+        /// arruina la entrega (crudo/quemado) o si el corte es el equivocado. Null cuando la
+        /// evaluación no llegó a mirar los cortes (cliente inválido, plato vacío, falta pan...).
         /// </summary>
         public int[] cutOffsets;
 
+        /// <summary>Corte que no sirve: el equivocado, o uno crudo/quemado que cuesta el strike.</summary>
         public const int CutBlocked = -1;
     }
 
@@ -293,18 +306,18 @@ public class GameManager : MonoBehaviour
             return result;
         }
 
-        // ── Validación de cocción: Crudo/Quemado bloquean la entrega completa (atómica) ──
-        // El tutorial exime al chorizo tutorial quemado para evitar un softlock; en GameScene
+        // ── Validación de cocción: Crudo/Quemado no impiden entregar, pero cuestan un strike ──
+        // El tutorial exime al chorizo tutorial para no romper el guion; en GameScene
         // no hay TutorialManager, así que el predicado siempre es false y nada cambia.
         var cuts = buildStationSystem.AssembledCuts;
         var sideStates = buildStationSystem.AssembledCutSideStates;
 
         result.validation = CookingDeliveryEvaluator.Validate(
-            sideStates, cuts, TutorialManager.IsBurnedDeliveryExempt);
+            sideStates, cuts, TutorialManager.IsCookingDeliveryExempt);
 
         // ── Evaluación económica por corte: peor desfase de ambas caras ──
-        // Se calcula aunque la entrega esté bloqueada: el preview del arrastre tiñe cada
-        // corte por su desfase, y los que bloquean van en rojo.
+        // Se calcula aunque la entrega vaya a costar un strike: el preview del arrastre tiñe
+        // cada corte por su desfase, y los crudos/quemados van en rojo.
         bool isSandwich = customer.order.IsSandwich;
         result.cutOffsets = new int[cuts.Count];
 
@@ -351,15 +364,21 @@ public class GameManager : MonoBehaviour
             result.payment = (result.payment - unreducedPayment)
                            + CookingDeliveryEvaluator.ApplyReducedPrice(unreducedPayment);
 
-        if (result.validation.IsBlocked)
+        // ── Crudo/Quemado: la entrega se concreta, pero no paga y cuesta un strike ──
+        // El plato se consume igual y el cliente se retira enojado, como el que no fue atendido.
+        if (result.validation.CausesStrike)
         {
-            result.cookingBlocked = true;
-            result.rejectReason = BuildBlockedMessageWithCuts(result.validation, cuts);
-            result.rejectShort = result.validation.burnedCount > 0
+            result.causesStrike = true;
+            result.strikeReason = BuildBadCookingMessageWithCuts(result.validation, cuts);
+            result.strikeShort = result.validation.burnedCount > 0
                 ? (result.validation.rawCount > 0 ? "Crudo y quemado" : "Quemado")
                 : "Crudo";
             result.payment = 0f;
+            result.tip = 0f;
             result.worstOffset = 0;
+            result.extrasNote = null;
+            result.feedbackState = CustomerFeedbackState.EntregaCrudaOQuemada;
+            result.accepted = true;
             return result;
         }
 
@@ -411,15 +430,14 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Mensaje de bloqueo por cocción con el nombre de los cortes afectados, para que el
-    /// jugador sepa cuál es sin adivinar (el plato además los resalta en rojo). Si hay
-    /// quemados, indica la tecla configurada para limpiar el plato: es la única salida.
+    /// Detalle del strike por cocción con el nombre de los cortes afectados, para el log.
+    /// En pantalla no aparece nada: el jugador se entera por la reacción del cliente.
     /// </summary>
-    private string BuildBlockedMessageWithCuts(
+    private string BuildBadCookingMessageWithCuts(
         CookingDeliveryEvaluator.DeliveryValidation validation,
         System.Collections.Generic.IReadOnlyList<MeatCutSO> cuts)
     {
-        string message = CookingDeliveryEvaluator.BuildBlockedMessage(validation.rawCount, validation.burnedCount);
+        string message = CookingDeliveryEvaluator.BuildBadCookingMessage(validation.rawCount, validation.burnedCount);
 
         var sb = new System.Text.StringBuilder();
         AppendCutNames(sb, "Crudo", validation.rawIndices, cuts);
@@ -427,9 +445,6 @@ public class GameManager : MonoBehaviour
 
         if (sb.Length > 0)
             message = sb.ToString() + "\n" + message;
-
-        if (validation.burnedCount > 0)
-            message += "\nApretá " + clearPlateKey + " para limpiar el plato.";
 
         return message;
     }
@@ -457,6 +472,8 @@ public class GameManager : MonoBehaviour
     /// de entrega; la única entrada es el arrastre del plato con el mouse (PlateDeliveryDraggable).
     /// Devuelve true solo si la entrega se concretó y el plato quedó consumido; en cualquier
     /// rechazo devuelve false (el que arrastra usa eso para devolver el plato a su sitio).
+    /// Ojo: una entrega con cortes crudos o quemados también devuelve true (el plato se consume),
+    /// pero no cobra nada: suma un strike y el cliente se va enojado.
     /// </summary>
     public bool TryDeliverToCustomer(Customer customer)
     {
@@ -466,16 +483,6 @@ public class GameManager : MonoBehaviour
         {
             DeliveryFeedbackText.Instance?.Show(eval.rejectReason);
             Debug.Log("❌ " + eval.rejectReason.Replace('\n', ' '));
-
-            if (eval.cookingBlocked)
-            {
-                // Resaltar en el plato los cortes que bloquean, crudos y quemados por igual.
-                var blockedIndices = new System.Collections.Generic.List<int>();
-                if (eval.validation.rawIndices != null) blockedIndices.AddRange(eval.validation.rawIndices);
-                if (eval.validation.burnedIndices != null) blockedIndices.AddRange(eval.validation.burnedIndices);
-                meatTransferBuffer?.SendMessage("FlashPlateMeatVisuals", blockedIndices, SendMessageOptions.DontRequireReceiver);
-            }
-
             return false;
         }
 
@@ -487,6 +494,18 @@ public class GameManager : MonoBehaviour
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
         BuildFoodDropZone.ClearActivePlateVisuals();
         ToppingDraggable.ClearAllSplatters();
+
+        // ── Crudo/Quemado: el plato se consume, no se cobra nada y el cliente se va asqueado
+        // por el mismo camino que el que se queda sin paciencia (suma strike y SFX).
+        // A propósito no hay mensaje en pantalla: quien avisa es la burbuja del cliente.
+        if (eval.causesStrike)
+        {
+            Debug.Log("❌ Entrega cruda/quemada: +1 strike. " + eval.strikeReason.Replace('\n', ' '));
+
+            customerSystem.TriggerBadCookingLeaveFeedback(
+                customer, eval.validation.burnedCount > 0);
+            return true;
+        }
 
         // El popup se crea ANTES de sumar: así HudManager sabe que hay plata "en vuelo" y
         // recién actualiza el contador cuando aterriza.

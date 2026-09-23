@@ -61,6 +61,7 @@ public class CustomerFeedbackConfigSO : ScriptableObject
     [SerializeField] private Sprite sinPropinaSprite;
     [SerializeField] private Sprite cambioPorFaltanteSprite;
     [SerializeField] private Sprite noPagaSeVaSprite;
+    [SerializeField] private Sprite entregaCrudaOQuemadaSprite;
 
     [Header("Phrase Pools (Spec Doc)")]
     [SerializeField]
@@ -123,6 +124,28 @@ public class CustomerFeedbackConfigSO : ScriptableObject
         "Un desastre, che."
     };
 
+    [Tooltip("Entrega con una cara CRUDA. Se elige por el flag burnedVariant de GetRandomPhrase.")]
+    [SerializeField]
+    private List<string> entregaCrudaPhrases = new List<string>
+    {
+        "¡Esto está crudo, un asco!",
+        "¡Ni lo cocinaste, che!",
+        "Está crudo, no lo pienso comer.",
+        "¿Me querés matar? Está crudo.",
+        "Crudo, hermano. Qué asco."
+    };
+
+    [Tooltip("Entrega con una cara QUEMADA. Se elige por el flag burnedVariant de GetRandomPhrase.")]
+    [SerializeField]
+    private List<string> entregaQuemadaPhrases = new List<string>
+    {
+        "¡Esto está quemado, un asco!",
+        "Esto es carbón, no carne.",
+        "Lo quemaste todo, che.",
+        "Un asco, está hecho carbón.",
+        "¿Carbón me traés? Ni en pedo."
+    };
+
     public float FeedbackDuration => feedbackDuration;
     public float EconomicFeedbackDelay => economicFeedbackDelay;
     public float ExitAnimationDuration => exitAnimationDuration;
@@ -154,6 +177,7 @@ public class CustomerFeedbackConfigSO : ScriptableObject
             case CustomerFeedbackState.SinPropina: return sinPropinaSprite;
             case CustomerFeedbackState.CambioPorFaltante: return cambioPorFaltanteSprite;
             case CustomerFeedbackState.NoPagaSeVa: return noPagaSeVaSprite;
+            case CustomerFeedbackState.EntregaCrudaOQuemada: return entregaCrudaOQuemadaSprite;
             default: return null;
         }
     }
@@ -168,11 +192,17 @@ public class CustomerFeedbackConfigSO : ScriptableObject
             case CustomerFeedbackState.SinPropina: return "😐";
             case CustomerFeedbackState.CambioPorFaltante: return "😕";
             case CustomerFeedbackState.NoPagaSeVa: return "😡";
+            case CustomerFeedbackState.EntregaCrudaOQuemada: return "🤢";
             default: return "🙂";
         }
     }
 
-    public string GetRandomPhrase(CustomerFeedbackState state)
+    /// <summary>
+    /// Frase de reacción del estado. <paramref name="burnedVariant"/> solo lo mira
+    /// <see cref="CustomerFeedbackState.EntregaCrudaOQuemada"/>, que tiene un pool por motivo:
+    /// quejarse de carne cruda no es lo mismo que quejarse de un carbón.
+    /// </summary>
+    public string GetRandomPhrase(CustomerFeedbackState state, bool burnedVariant = false)
     {
         List<string> pool = null;
 
@@ -195,6 +225,9 @@ public class CustomerFeedbackConfigSO : ScriptableObject
                 break;
             case CustomerFeedbackState.NoPagaSeVa:
                 pool = noPagaSeVaPhrases;
+                break;
+            case CustomerFeedbackState.EntregaCrudaOQuemada:
+                pool = burnedVariant ? entregaQuemadaPhrases : entregaCrudaPhrases;
                 break;
         }
 

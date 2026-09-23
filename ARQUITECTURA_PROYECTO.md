@@ -265,11 +265,15 @@ Entrega — ÚNICA vía: arrastrar EL PLATO (PlateDeliveryDraggable, modo WholeP
 
   TryDeliverToCustomer(Customer) → bool
    │     1. EvaluateDelivery (puro): cliente válido y no en feedback → HasAnyCut → corte == order.PrimaryCut
-   │        → TryBuildSandwich / TryBuildPlatedDish → CookingDeliveryEvaluator.Validate (Crudo/Quemado BLOQUEAN)
+   │        → TryBuildSandwich / TryBuildPlatedDish → CookingDeliveryEvaluator.Validate (Crudo/Quemado → STRIKE)
    │        → EvaluateCut por corte → EvaluateExtras (toppings/pan) → EvaluateDeliveryFeedback (propina + estado)
-   │     2. Rechazo: DeliveryFeedbackText + FlashPlateMeatVisuals si bloqueó por cocción → return false
-   │     3. Aceptada: nota de extras (si hay) · limpiar plato · MoneyPopup.Spawn · PlayerWallet.Add
-   │        → CustomerSystem.TriggerDeliveryFeedback (burbuja 4 s, el slot sigue ocupado) → al terminar RemoveCustomer
+   │     2. Rechazo: DeliveryFeedbackText → return false (el plato vuelve intacto)
+   │     3. Aceptada: nota de extras (si hay) · limpiar plato
+   │        3a. causesStrike (crudo/quemado): CustomerSystem.TriggerBadCookingLeaveFeedback(customer, burned)
+   │            (EntregaCrudaOQuemada, $0, +1 strike) → return true · SIN mensaje en pantalla: avisa la burbuja
+   │            NO cobra, NO cuenta como atendido, NO avisa al tutorial
+   │        3b. normal: MoneyPopup.Spawn · PlayerWallet.Add
+   │            → CustomerSystem.TriggerDeliveryFeedback (burbuja 4 s, el slot sigue ocupado) → al terminar RemoveCustomer
 ```
 
 ---
@@ -306,16 +310,21 @@ transiciones de vista.
 
 **Evaluación vs. efectos.** Las reglas viven en `EvaluateDelivery(Customer)`, que es puro. `TryDeliverToCustomer`
 la llama y aplica los efectos. `CustomerSystem.SetDeliveryDragHover` también la llama para el **preview** en la
-burbuja mientras se arrastra el plato (`$X + $Y propina` / `$X - sin propina` / motivo del rechazo en rojo): lo que
-muestra la burbuja es exactamente lo que va a pasar al soltar. Al tocar una regla, tocar solo `EvaluateDelivery`.
+burbuja mientras se arrastra el plato (`$X + $Y propina` / `$X - sin propina` /
+`Crudo - se va sin pagar (+1 strike)` / motivo del rechazo en rojo): lo que muestra la burbuja es exactamente lo
+que va a pasar al soltar. Al tocar una regla, tocar solo `EvaluateDelivery`.
 
 Orden de las reglas: cliente válido y **no en feedback** → `HasAnyCut` → corte == `order.PrimaryCut` (si no, todos los
 `cutOffsets` en `CutBlocked`) → `TryBuildSandwich`/`TryBuildPlatedDish` → `Validate` (cocción) → `EvaluateCut` por corte
-→ **`EvaluateExtras`** (toppings y pan, ver 3.4) → si bloqueó por cocción: `payment = 0`, `rejectShort` = `Crudo` /
-`Quemado` / `Crudo y quemado` → `EvaluateDeliveryFeedback` con `catalog.GetTipMultiplier()`.
+→ **`EvaluateExtras`** (toppings y pan, ver 3.4) → si hay crudo/quemado: `causesStrike = true`, `accepted = true`,
+`payment = tip = 0`, `feedbackState = EntregaCrudaOQuemada`, `strikeShort` = `Crudo` / `Quemado` / `Crudo y quemado`
+→ si no, `EvaluateDeliveryFeedback` con `catalog.GetTipMultiplier()`.
 
-Si una entrega se bloquea por cocción, `GameManager` manda `FlashPlateMeatVisuals(List<int>)` a `MeatTransferBuffer`
-con los índices crudos + quemados y el mensaje nombra cada corte afectado. Si la entrega se acepta pero con extras
+Una entrega con crudo/quemado **se concreta igual** (el plato se consume) y saca al cliente por
+`CustomerSystem.TriggerBadCookingLeaveFeedback(customer, burned)`, el mismo camino del que se queda sin paciencia pero
+con su propio estado de burbuja. **A propósito no muestra nada en pantalla**: el único aviso es la reacción del cliente
+(`EntregaCrudaOQuemada`, ver 3.6). `strikeReason` —los cortes afectados— va sólo al log de la consola. No cobra, no
+suma a `servedToday` y no llama a `TutorialManager.NotifyProductDelivered`. Si la entrega se acepta y cobra pero con extras
 mal (`extrasNote != null`), el mensaje de `DeliveryFeedbackText` explica por qué cobró menos.
 
 `cutOffsets` (uno por corte, `CutBlocked = -1`) alimenta `ShowDeliveryPreviewOnPlate` → tintes por
@@ -495,12 +504,12 @@ Sprite GetSpriteForState(MeatStates, bool sideA)
 
 | Índice | Estado | Rango de calor acumulado |
 |---|---|---|
-| 0 | `Crudo` | `[0, S/6)` — no entregable |
+| 0 | `Crudo` | `[0, S/6)` — entregable, pero cuesta un strike |
 | 1 | `Jugoso` | `[S/6, 2S/6)` |
 | 2 | `Hecho` | `[2S/6, 3S/6)` |
 | 3 | `Muy_Hecho` (UI: "Bien Hecho") | `[3S/6, 4S/6)` |
 | 4 | `Pasado` | `[4S/6, 5S/6)` — último punto válido |
-| 5 | `Quemado` | `>= 5S/6` — irreversible, no entregable |
+| 5 | `Quemado` | `>= 5S/6` — irreversible; entregable, pero cuesta un strike |
 
 Cada cara acumula por separado. Solo acumula la cara **apoyada** (`isSideA`).
 
@@ -688,8 +697,8 @@ bool TryReturnPlateMeatToTray(GameObject plateVisual = null)          // undo (A
 bool TryReturnPlateMeatToGrill(GameObject plateVisual, Vector3[, bool rotateFootprint])  // solo si hay hueco libre; sin bool usa la rotación del corte
 bool TryGetPlateMeatInfo(GameObject plateVisual, out MeatCutSO, out bool isGridRotated)  // para el preview de slots del drag de solo-carne
 bool IsOverMeatTray(Vector3)                          // mide SOLO el subárbol del anchor MeatTray
-// Visuales del plato (los primeros 4 los llama GameManager por SendMessage)
-void ClearPlateMeatVisuals(), FlashPlateMeatVisuals(List<int>), SetPlateMeatTints(List<Color>), ClearPlateMeatTints()
+// Visuales del plato (los 3 los llama GameManager por SendMessage)
+void ClearPlateMeatVisuals(), SetPlateMeatTints(List<Color>), ClearPlateMeatTints()
 void SetPlateMeatVisualsVisible(bool), UpdatePlateMeatSprite(Sprite)
 bool TryCaptureLastPlateMeatVisual(out GameObject, out Sprite, out Vector3, out Vector3)  // undo del pan
 void RestorePlateMeatVisual(GameObject, Sprite, Vector3, Vector3)                          // undo del pan
@@ -852,17 +861,17 @@ Núcleo de la economía. Constantes: `ReducedPriceMultiplier = 0.5`, `TipPercent
 
 ```csharp
 struct CutResult          { int worstOffset; float price; bool tipEligible; }
-struct DeliveryValidation { int rawCount, burnedCount; List<int> rawIndices, burnedIndices; bool IsBlocked; }
+struct DeliveryValidation { int rawCount, burnedCount; List<int> rawIndices, burnedIndices; bool CausesStrike; }
 struct ExtrasResult       { int offset; List<ToppingSO> missingToppings, extraToppings; bool extraBread; bool HasIssues; }
 
 static DeliveryValidation Validate(IReadOnlyList<CutSideStates>,
-                                   IReadOnlyList<MeatCutSO>, Func<MeatCutSO,bool> isBurnedExempt)
+                                   IReadOnlyList<MeatCutSO>, Func<MeatCutSO,bool> isCookingExempt)
 static CutResult EvaluateCut(MeatStates sideA, MeatStates sideB, MeatStates requested, float basePrice)
 static float  ApplyReducedPrice(float price)                                   // floor(price × 0.5)
 static ExtrasResult EvaluateExtras(requestedToppings, assembledToppings, bool breadRequested, bool breadAssembled)
 static string BuildExtrasMessage(ExtrasResult)                                 // "Falta X · Sobra Y · Sobra el pan" | null
 static float  CalculateTip(float basePrice, float patience01)                  // ⚠️ CÓDIGO MUERTO — nadie lo llama
-static string BuildBlockedMessage(int rawCount, int burnedCount)
+static string BuildBadCookingMessage(int rawCount, int burnedCount)
 static DeliveryFeedbackEvaluation EvaluateDeliveryFeedback(Customer, float basePrice,
                                                            int worstOffset, float tipMultiplier = 1f)
 ```
@@ -903,7 +912,7 @@ que corre solo al entrar en Play. Si cambian los porcentajes, hay que actualizar
 ⚠️ `CalculateTip` y las constantes `TipPercentOfPrice` / `MinimumPerfectTip` son **código muerto**:
 quedaron de la fórmula vieja de propina. `tipEligible` de `CutResult` tampoco lo lee nadie.
 
-**Bloqueo**: cualquier cara `Crudo` o `Quemado` bloquea la entrega **completa** (atómica). `Quemado` tiene prioridad sobre `Crudo`. `isBurnedExempt` solo lo usa el tutorial (`TutorialManager.IsBurnedDeliveryExempt`) para evitar un softlock.
+**Strike por cocción** (`DeliveryValidation.CausesStrike`): cualquier cara `Crudo` o `Quemado` **no impide entregar**. La entrega se concreta, no paga nada, suma 1 strike y el cliente se retira asqueado (`EntregaCrudaOQuemada`) igual que si no lo hubieran atendido. `Quemado` tiene prioridad sobre `Crudo`. `isCookingExempt` solo lo usa el tutorial (`TutorialManager.IsCookingDeliveryExempt`): el chorizo tutorial crudo o quemado se cobra como cualquier corte, para que el cliente no se vaya a mitad del guion.
 
 #### `DishValidator` — `Food/DishValidator.cs` · **static**
 ```csharp
@@ -947,7 +956,9 @@ bool IsCustomerActive(Customer)             // sigue esperando (no se fue, no fu
 void SetDeliveryDragHover(CustomerView)     // resaltado + preview durante el arrastre del plato; null limpia
 void CompleteCustomer(Customer)             // atajo → TriggerDeliveryFeedback(..., EntregaExcelente)
 void TriggerDeliveryFeedback(Customer, float payment, float tip, CustomerFeedbackState)
-void TriggerAngryLeaveFeedback(Customer)    // paciencia 0 → NoPagaSeVa
+void TriggerAngryLeaveFeedback(Customer)                       // paciencia 0 → NoPagaSeVa
+void TriggerBadCookingLeaveFeedback(Customer, bool burned)     // entrega cruda/quemada → EntregaCrudaOQuemada
+// las dos comparten el núcleo privado TriggerLeaveWithStrike(customer, state, burnedVariant, leaveReason)
 void TriggerMissingCutChange(Customer, MeatCutSO)   // tecla M → cambia el pedido, IsTipAnulada = true, CambioPorFaltante
 CustomerView GetViewForCustomer(Customer)
 ```
@@ -1092,17 +1103,25 @@ Implementa el spec "Sistema Feedback de Entrega y Reacción del Cliente" (2026-0
 | `SinPropina` (4) | Negative · rojo | offset ≥ 2, offset 1 sin paciencia, o `IsTipAnulada` |
 | `CambioPorFaltante` (5) | Intermediate · amarillo | tecla `M` → `TriggerMissingCutChange` |
 | `NoPagaSeVa` (6) | NegativeSevere · rojo fuerte | paciencia 0 → `TriggerAngryLeaveFeedback` |
+| `EntregaCrudaOQuemada` (7) | NegativeSevere · rojo fuerte | le entregaron una cara `Crudo`/`Quemado` → `TriggerBadCookingLeaveFeedback` |
 
 `CustomerFeedbackBubble.Show(...)` corre una corrutina en 4 etapas: **reacción** (sprite o emoji fallback + frase al
 azar, con rebote) → tras `economicFeedbackDelay` (0.35 s) **resultado económico** (`Pedido: $X` / `Propina: $Y`, o
 "pendiente"/"anulada" en el cambio por faltante) → **permanencia** hasta completar `feedbackDuration` (4 s) →
 **salida** (`exitAnimationDuration` 0.25 s) y callback. El callback de entrega/abandono es `RemoveCustomer`; el de
-cambio por faltante deja al cliente en su slot con el pedido nuevo. Durante el feedback el slot **sigue ocupado**
+cambio por faltante deja al cliente en su slot con el pedido nuevo. Los dos estados `NegativeSevere` muestran
+`Pedido: $0` / `Propina: $0` en rojo (la rama la elige la **categoría**, no el estado, así un estado severo nuevo
+entra solo). Durante el feedback el slot **sigue ocupado**
 (cuenta para `MaxSimultaneousCustomers`) y el cliente no responde a hover/click/arrastre. Todo usa
 `WaitForSeconds` → se congela con la pausa. Jerarquía visual autogenerada si el prefab no la trae
 (`EnsureVisualHierarchy`). Config única en `ScriptableObjects/CustomerFeedbackSO.asset`
 (`CustomerFeedbackConfigSO.Instance` con fallback a `Resources`): tiempos, colores por categoría, sprites por estado
 (opcionales), pools de frases.
+
+`EntregaCrudaOQuemada` es el único estado con **dos pools**: `entregaCrudaPhrases` y `entregaQuemadaPhrases`. Los
+elige el flag `burnedVariant` que viaja `GameManager` → `TriggerBadCookingLeaveFeedback` → `CustomerView.ShowFeedback`
+→ `CustomerFeedbackBubble.Show` → `GetRandomPhrase(state, burnedVariant)`, porque quejarse de carne cruda no es lo
+mismo que quejarse de un carbón. `GameManager` lo saca de `validation.burnedCount > 0` (quemado tiene prioridad).
 
 #### `OrderSystem` / `Order` — `Orders/`
 ```csharp
@@ -1274,7 +1293,8 @@ con `TutorialStartAction.SetShopTab*`.
 
 #### Strikes por clientes perdidos — `Strikes/` (spec “Sistema de Strikes por Clientes Perdidos” v0.1, 2026-09-21)
 
-Penalización de jornada: cada cliente que se va porque su **paciencia llegó a 0** suma 1 strike. Al llegar al
+Penalización de jornada: cada cliente que **se va enojado** suma 1 strike. Dos causas: su **paciencia llegó a 0**,
+o le **entregaron un corte crudo/quemado** (ver 3.3). Al llegar al
 máximo dejan de entrar clientes nuevos, pero la noche sigue hasta que se atiende (o se pierde) al último activo;
 recién ahí termina anticipadamente y se pasa a la tienda con un popup explicativo. Sin castigo económico.
 
@@ -1285,14 +1305,14 @@ bool  IsLimitReached;                      // estado de cierre por strikes (hast
 static bool IsSpawnBlocked;                // Instance != null && IsLimitReached
 static bool LastNightEndedByStrikes;       // sobrevive el cambio de escena; lo consume el popup de EndScene
 event Action<int,int> OnStrikeAdded;  event Action OnLimitReached, OnReset;
-void ResetForNewNight();  bool RegisterPatienceStrike();  void MarkNightEndedByStrikes();  static bool ConsumeNightEndedByStrikes();
+void ResetForNewNight();  bool RegisterStrike();  void MarkNightEndedByStrikes();  static bool ConsumeNightEndedByStrikes();
 ```
 
 | Regla del spec | Dónde vive |
 |---|---|
 | Reset al empezar la noche | `CustomerSystem.StartNight()` → `ResetForNewNight()` (strikes 0, spawn habilitado, HUD reiniciado) |
-| **Única causa**: paciencia 0 | `CustomerSystem.TriggerAngryLeaveFeedback` → `RegisterPatienceStrike()` + `AudioManager.PlayStrike()`. El guard `IsInFeedback` garantiza **una sola suma por cliente**. El faltante (`M` → `TriggerMissingCutChange`) no pasa por ahí → no suma |
-| Contador saturado | `RegisterPatienceStrike` devuelve `false` al máximo: el cliente se va igual, sin strike ni SFX |
+| **Dos causas**: paciencia 0 · entrega cruda/quemada | Las dos pasan por `CustomerSystem.TriggerAngryLeaveFeedback(customer, leaveReason)` → `RegisterStrike()` + `AudioManager.PlayStrike()`. La primera la dispara el tick de paciencia en `Update`; la segunda, `GameManager.TryDeliverToCustomer` cuando `eval.causesStrike`. El guard `IsInFeedback` garantiza **una sola suma por cliente**. El faltante (`M` → `TriggerMissingCutChange`) no pasa por ahí → no suma |
+| Contador saturado | `RegisterStrike` devuelve `false` al máximo: el cliente se va igual, sin strike ni SFX |
 | Bloqueo de spawn | `DoorsOpen` devuelve `false` con `IsSpawnBlocked` (corta `SpawnLoop` tras el intervalo e invalida el spawn pendiente) y `SpawnCustomer` devuelve temprano — también el forzado del tutorial. Con `DayClock`, `HandleStrikeLimit` además lo fuerza al cierre (`CloseEarly`): el reloj marca 21:00 / `CERRADO` |
 | Fin anticipado | `TryEndNight`: con `!DoorsOpen && activeCustomers == 0`, si `IsSpawnBlocked` → `MarkNightEndedByStrikes()` antes de `OnNightEnded` (el flujo sigue por `GameManager.EndNight` → `EndScene` como siempre) |
 | HUD de X | `HudCanvas/MainPanel/HudContainer (Strikes)` + `StrikeHudView`: genera `MaxStrikes` X en `Start`/`OnReset` (se adapta al máximo), rojo al activarse, shake + punch sobre la nueva (duración/intensidad configurables). X procedural si no hay `strikeSprite` (placeholder hasta que Arte defina el estilo) |
@@ -1697,7 +1717,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | # | Nota |
 |---|---|
 | 1 | **`MeatCutSO` vive en `Grill/MeatType.cs`**; `GrillSlot` en `Grill/GrillSlots.cs`. Los nombres de archivo no siempre coinciden con la clase. `Grill/GrillSys2.cs` está **vacío**. `ShopGlobalBar2D.cs` declara `ShopHeader2D` |
-| 2 | `GameManager` habla con `MeatTransferBuffer` **solo por `SendMessage`** (campo tipado `MonoBehaviour`). Renombrar `ClearPlateMeatVisuals`, `FlashPlateMeatVisuals`, `SetPlateMeatTints`, `ClearPlateMeatTints` **rompe en silencio**. `MoveToMeatHolder` / `MoveToCoalHolder` / `MoveToBuildMeatHolder` ya no se invocan desde ningún lado |
+| 2 | `GameManager` habla con `MeatTransferBuffer` **solo por `SendMessage`** (campo tipado `MonoBehaviour`). Renombrar `ClearPlateMeatVisuals`, `SetPlateMeatTints` o `ClearPlateMeatTints` **rompe en silencio**. `MoveToMeatHolder` / `MoveToCoalHolder` / `MoveToBuildMeatHolder` ya no se invocan desde ningún lado |
 | 3 | `MeatHolderDraggableMeat` y `CoolerDraggableMeat` invocan al buffer por **reflexión** (`MethodInfo`). Son legado de la Cooler View: hoy no se instancian |
 | 4 | Los visualizadores deprecados hacen `AddComponent(Type resuelto por nombre)` + `SendMessage("SetCut"/...)`. No copiar el patrón |
 | 5 | Los `ScriptableObject` **mutan en runtime** (`isUnlocked`, `UpgradeSO.currentLevel`, `CoalSO._maxBurnTime`, `ProductVariantSO.isUnlocked`) → el estado se filtra entre sesiones del Editor. `UpgradeStateResetter` cubre solo mejoras y carbones |
