@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Serialization;
 
 [CreateAssetMenu(fileName = "MeatCut", menuName = "Asado/Meat Cut")]
@@ -35,6 +35,12 @@ public class MeatCutSO : ItemDataSO
     [SerializeField] private Vector2Int grillSpace;
 
     public Vector2Int GrillSpace => grillSpace;
+
+    /// <summary>
+    /// Un corte de footprint cuadrado (2x2, 4x4...) ocupa los mismos slots rotado que sin rotar,
+    /// asi que rotarlo no aporta nada: solo los rectangulares se pueden rotar.
+    /// </summary>
+    public bool CanRotate => grillSpace.x != grillSpace.y;
 
     public Sprite GetDefaultSprite()
     {

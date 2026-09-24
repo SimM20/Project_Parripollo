@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Arrastre de un corte que esta en la bandeja (cortes devueltos del plato).
@@ -30,7 +30,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
         cut = setupCut;
         buffer = setupBuffer;
         entryId = setupEntryId;
-        isGridRotated = setupGridRotation;
+        isGridRotated = setupGridRotation && CanRotate;
         ApplyGridRotationPreview();
 
         // El sprite ya lo puso RebuildStack; el corte cambia de visual entre estados de
@@ -111,13 +111,16 @@ public class ToBuildDraggableMeat : MonoBehaviour
     {
         if (!isDragging || cut == null || buffer == null) return;
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R) && CanRotate)
         {
             isGridRotated = !isGridRotated;
             ApplyGridRotationPreview();
             buffer.UpdateMeatHolderHover(cut, transform.position, isGridRotated);
         }
     }
+
+    /// <summary>Los cortes de footprint cuadrado no se rotan: quedarian identicos.</summary>
+    private bool CanRotate => cut != null && cut.CanRotate;
 
     private void ApplyGridRotationPreview()
     {

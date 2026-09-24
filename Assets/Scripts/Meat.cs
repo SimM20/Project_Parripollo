@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -231,6 +231,8 @@ public class Meat : Item
     public void SetCut(MeatCutSO newCut)
     {
         cut = newCut;
+        if (!CanRotate && isGridRotated)
+            SetGridRotation(false);
         ApplyCutVisual();
     }
 
@@ -532,15 +534,20 @@ public class Meat : Item
         }
     }
 
+    /// <summary>Los cortes de footprint cuadrado no se rotan: quedarian identicos.</summary>
+    public bool CanRotate => cut != null && cut.CanRotate;
+
     public void ToggleGridRotation()
     {
+        if (!CanRotate) return;
+
         SetGridRotation(!isGridRotated);
         if (isHeldByMouse) UpdateHoverPreview();
     }
 
     public void SetGridRotation(bool rotated)
     {
-        isGridRotated = rotated;
+        isGridRotated = rotated && CanRotate;
         ApplyGridRotationPreview();
     }
 

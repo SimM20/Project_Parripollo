@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -168,7 +168,8 @@ public class PlateDeliveryDraggable : MonoBehaviour
         }
 
         // MeatOnly: R rota el footprint como en la bandeja, y el preview de slots sigue al corte.
-        if (Input.GetKeyDown(KeyCode.R))
+        // Los cortes de footprint cuadrado no se rotan: quedarian identicos.
+        if (Input.GetKeyDown(KeyCode.R) && draggedCut != null && draggedCut.CanRotate)
             draggedCutRotated = !draggedCutRotated;
 
         if (transferBuffer != null)
@@ -338,6 +339,9 @@ public class PlateDeliveryDraggable : MonoBehaviour
         transferBuffer = Object.FindAnyObjectByType<MeatTransferBuffer>();
         if (transferBuffer == null || !transferBuffer.TryGetPlateMeatInfo(gameObject, out draggedCut, out draggedCutRotated))
             return;
+
+        if (draggedCut != null && !draggedCut.CanRotate)
+            draggedCutRotated = false;
 
         DraggedVisuals.Clear();
         grabWorldPoint = GetMouseWorldPos();

@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using UnityEngine;
 
 public class MeatHolderDraggableMeat : MonoBehaviour
@@ -33,9 +33,12 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     public void SetTransferEntryId(int setupTransferEntryId) => transferEntryId = setupTransferEntryId;
 
+    /// <summary>Los cortes de footprint cuadrado no se rotan: quedarian identicos.</summary>
+    private bool CanRotate => cut != null && cut.CanRotate;
+
     public void SetInitialGridRotation(bool setupGridRotation)
     {
-        isGridRotated = setupGridRotation;
+        isGridRotated = setupGridRotation && CanRotate;
         ApplyGridRotationPreview();
     }
 
@@ -170,6 +173,8 @@ public class MeatHolderDraggableMeat : MonoBehaviour
 
     private void ToggleGridRotation()
     {
+        if (!CanRotate) return;
+
         isGridRotated = !isGridRotated;
         ApplyGridRotationPreview();
         UpdateHoverPreview(transform.position);

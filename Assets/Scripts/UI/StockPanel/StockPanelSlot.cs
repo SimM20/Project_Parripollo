@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -278,8 +278,13 @@ public class StockPanelSlot : MonoBehaviour
         cooler.Add(droppedItem, 1);
     }
 
+    /// <summary>Los cortes de footprint cuadrado no se rotan: quedarian identicos.</summary>
+    private bool CanRotate => draggingItem is MeatCutSO cut && cut.CanRotate;
+
     private void ToggleGridRotation()
     {
+        if (!CanRotate) return;
+
         isGridRotated = !isGridRotated;
         ApplyGhostRotation();
         UpdateHoverPreview(GetMouseWorldPosition());
