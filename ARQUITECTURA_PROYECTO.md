@@ -4,6 +4,7 @@
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
 > Última actualización parcial: **2026-09-21** (rama `development`) — dos gestos sobre el plato: agarrar **el plato** lo lleva entero al cliente (única entrega); agarrar **la carne** mueve solo la carne (reposicionar en el plato, bandeja o parrilla; nunca entrega). Sin anclaje de carne. Secciones 2.4 y 3.4, `TutorialManager.CheckPlateMeatDragAllowed`.
 > Última actualización parcial: **2026-09-23** (rama `development`) — el collider de los visuales de carne se calca sobre la **silueta de cada corte** (`Build/SpriteColliderFitter.cs`) en vez de ser el mismo cuadrado del lienzo para todos: el plato ya no pierde los clicks que caían al lado de la carne. `StockPrefab.prefab` quedó **sin collider** (lo construye el fitter en runtime). Secciones 3.3, 3.4 y nota 33.
+> Última actualización parcial: **2026-09-24** (rama `development`) — feedback de **cambio de punto** en la parrilla: contracción, brillo, bocanada y etiqueta del punto (`Grill/MeatCookStateFeedback.cs`, `Grill/CookStateLabel.cs`, evento `Meat.OnCookStateAdvanced`). Secciones 3.2 y 3.8.
 
 ---
 
@@ -485,6 +486,7 @@ void RefreshState()                     // deriva estado del calor → NotifyMea
 `R` mientras se arrastra rota el footprint. `MeatInstance : Meat` añade audio de chisporroteo.
 VFX: `smokePrefab` (con `BurnSmoke`) se instancia cuando `IsAnySideBurned` pasa a `true`; `FlipPuff` (hijo,
 `ParticleSystem` emitido a mano) dispara en cada `Flip()` sin importar el estado.
+`event OnCookStateAdvanced(MeatStates, MeatStates)`: la cara apoyada cambió de punto cocinándose → `MeatCookStateFeedback` (ver 3.8).
 
 #### `MeatCutSO : ItemDataSO` — **`Grill/MeatType.cs`** (nombre de archivo ≠ clase)
 ```csharp
@@ -1529,6 +1531,21 @@ los dos clips, el otro cubre todo el rango. `OnDisable` silencia sin fade.
   pasa a `true` (`smokePrefab`, bajo el `FxRoot` del corte); se apaga solo al desactivarse. Bocanadas superpuestas generadas por código.
 - `FlipPuff`: puff **breve** al dar vuelta la carne. Feedback de la acción, no del estado. `ParticleSystem` nativo
   emitido a mano con cantidad/tamaño/velocidad aleatorios por flip. Hijo del prefab de carne; `Meat.EmitFlipPuff()`.
+  `Play(pos, intensity, tint)` es la variante que usa el cambio de punto (más partículas, color propio).
+
+#### Cambio de punto — `Grill/MeatCookStateFeedback.cs` + `Grill/CookStateLabel.cs`
+El cambio de sprite solo no se notaba con varios cortes a la vez. `MeatCookStateFeedback` (en `Meat1.prefab`) escucha
+`Meat.OnCookStateAdvanced(anterior, nuevo)`, que dispara **solo desde `Cook()` y con el corte en la parrilla**: no al
+dar vuelta (el flip asigna `state` directo) ni al restaurar tiempos desde plato/bandeja (`BufferedMeatData.ApplyTo`).
+Todo con `Time.deltaTime` → `GamePause` lo congela. Capas, todas apagables/ajustables en el inspector:
+
+| Capa | Detalle |
+|---|---|
+| Contracción | Squash de 0.22 s (X+, Y−) sobre `Meat.BaseLocalScale`, más fuerte en Pasado/Quemado. Cede si arranca un flip o la levantan |
+| Brillo de brasa | Hijo `CookStateGlow`: copia del sprite (mismo material, orden +1, misma z) tenida de ámbar que sube y se apaga (~0.45 s). No corre durante el flip |
+| Bocanada | `FlipPuff.Play` desde la base del corte: vapor claro en Jugoso → humo oscuro y más cargado hacia Quemado |
+| Etiqueta | `CookStateLabel.Spawn`: TMP world-space en la raíz (no rota con R), sobre el borde superior del sprite; pop → sube → fade (~1 s). Crema para puntos normales, naranja en Pasado, rojo en Quemado. No sale si `MeatHoverBubble.IsShowing(meat)`. Estilo en `CookStateLabelStyle` |
+| Sonido | `stateChangeSound` one-shot sobre el `AudioSource` del prefab. **Vacío = mudo** (TBD por Audio; no usar los loops de cocción) |
 
 ### 3.9 Fondo con ciclo de día
 

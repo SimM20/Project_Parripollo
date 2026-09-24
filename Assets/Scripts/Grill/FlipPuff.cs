@@ -4,6 +4,8 @@ using UnityEngine;
 /// Puff breve de vapor/humo al dar vuelta un corte. Es feedback de la ACCION de flip,
 /// no del estado de coccion: sale igual con la carne cruda, hecha o quemada, y no tiene
 /// relacion con el humo continuo de quemado (ver Meat.UpdateEffects / smokePrefab).
+/// MeatCookStateFeedback reusa el mismo sistema (Play con intensidad y color) para la
+/// bocanada que marca el cambio de punto.
 ///
 /// Usa el ParticleSystem nativo de Unity emitiendo a mano: cada flip decide cuantas
 /// particulas, de que tamano y con que velocidad, asi no se repite siempre la misma animacion.
@@ -61,9 +63,20 @@ public class FlipPuff : MonoBehaviour
     /// <summary>Dispara un puff en un punto del mundo. Cada llamada varia levemente.</summary>
     public void Play(Vector3 worldPosition)
     {
+        Play(worldPosition, 1f, tint);
+    }
+
+    /// <summary>
+    /// Variante con intensidad y color: la usa MeatCookStateFeedback para la bocanada del
+    /// cambio de punto (vapor claro al principio, humo mas oscuro y cargado hacia el quemado).
+    /// intensity escala la cantidad y el tamano de las particulas.
+    /// </summary>
+    public void Play(Vector3 worldPosition, float intensity, Color puffTint)
+    {
         if (ps == null) return;
 
-        int count = Random.Range(minParticles, maxParticles + 1);
+        intensity = Mathf.Max(0.1f, intensity);
+        int count = Mathf.Max(1, Mathf.RoundToInt(Random.Range(minParticles, maxParticles + 1) * intensity));
 
         for (int i = 0; i < count; i++)
         {
@@ -74,7 +87,7 @@ public class FlipPuff : MonoBehaviour
                 Random.Range(-spawnHeightJitter, spawnHeightJitter),
                 -0.02f);
 
-            ep.startSize = Random.Range(sizeMin, sizeMax);
+            ep.startSize = Random.Range(sizeMin, sizeMax) * Mathf.Sqrt(intensity);
             ep.startLifetime = Random.Range(lifetimeMin, lifetimeMax);
             ep.rotation = Random.Range(-rotationRange, rotationRange);
             ep.angularVelocity = Random.Range(-angularSpeed, angularSpeed);
@@ -84,8 +97,8 @@ public class FlipPuff : MonoBehaviour
                 Random.Range(riseSpeedMin, riseSpeedMax),
                 0f);
 
-            Color c = tint;
-            c.a = tint.a * Random.Range(opacityMin, opacityMax);
+            Color c = puffTint;
+            c.a = puffTint.a * Random.Range(opacityMin, opacityMax);
             ep.startColor = c;
 
             ps.Emit(ep, 1);

@@ -5467,6 +5467,7 @@ GameObject:
   - component: {fileID: 4821455943213506977}
   - component: {fileID: 4094711164824335326}
   - component: {fileID: 5517633732265657858}
+  - component: {fileID: 5315262722554756468}
   m_Layer: 0
   m_Name: Meat1
   m_TagString: Untagged
@@ -5511,9 +5512,6 @@ MonoBehaviour:
   heatOffset: {x: 0, y: 0, z: 0}
   smokeOffset: {x: 0, y: 0.05, z: -0.05}
   smokeSortingOrderOffset: 4
-  driveBurnShader: 1
-  burnVisualStart: 0.6
-  burnVisualMax: 1
   flipPuff: {fileID: 161407075749097421}
   flipPuffContactOffsetY: 0.04
   hardSound: {fileID: 8300000, guid: f9664a6745285f54bb5c333b900cf4cf, type: 3}
@@ -5528,6 +5526,14 @@ MonoBehaviour:
   sideBCookTime: 0
   isSideA: 1
   state: 0
+  softOnlyHeat: 2
+  hardOnlyHeat: 7
+  mixSmoothTime: 0.6
+  volumeAtLowHeat: 0.65
+  fadeInTime: 0.35
+  fadeOutTime: 0.25
+  pitchVariation: 0.04
+  randomizeStartOffset: 1
 --- !u!212 &-7293428179474734505
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -5733,6 +5739,50 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &5315262722554756468
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5369905810012751788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3df66fc811a91224fa08338c9d1d6dd1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pulseDuration: 0.22
+  pulseStrength: 0.07
+  pulseStrengthNearBurn: 1.5
+  glowEnabled: 1
+  glowColor: {r: 1, g: 0.7, b: 0.35, a: 1}
+  glowAlpha: 0.45
+  glowAttack: 0.05
+  glowRelease: 0.4
+  glowSortingOrderOffset: 1
+  puffEnabled: 1
+  steamTint: {r: 0.93, g: 0.91, b: 0.87, a: 1}
+  smokeTint: {r: 0.42, g: 0.39, b: 0.37, a: 1}
+  puffIntensityFirst: 1.8
+  puffIntensityBurned: 3.2
+  puffContactOffsetY: 0.04
+  labelEnabled: 1
+  labelStyle:
+    font: {fileID: 0}
+    fontSize: 3
+    normalColor: {r: 1, g: 0.95, b: 0.84, a: 1}
+    warningColor: {r: 1, g: 0.66, b: 0.2, a: 1}
+    burnedColor: {r: 1, g: 0.3, b: 0.24, a: 1}
+    outlineColor: {r: 0.12, g: 0.06, b: 0.03, a: 0.85}
+    outlineWidth: 0.28
+    sortingOrder: 5000
+    popInSeconds: 0.12
+    holdSeconds: 0.55
+    fadeSeconds: 0.3
+    rise: 0.35
+    offset: {x: 0, y: 0.12, z: 0}
+  stateChangeSound: {fileID: 0}
+  soundVolume: 0.6
 --- !u!1 &7330619039017914170
 GameObject:
   m_ObjectHideFlags: 0

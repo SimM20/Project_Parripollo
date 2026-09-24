@@ -53,6 +53,12 @@ public class MeatHoverBubble : MonoBehaviour
         lastState = meat.ActiveSideState;
     }
 
+    /// <summary>True si la burbuja esta mostrando el estado en vivo de este corte.</summary>
+    public bool IsShowing(Meat meat)
+    {
+        return meat != null && source == meat && gameObject.activeSelf;
+    }
+
     public void Hide()
     {
         followTarget = null;

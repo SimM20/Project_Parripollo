@@ -73,6 +73,14 @@ public class Meat : Item
     public bool IsSideAActive => isSideA;
     public bool IsGridRotated => isGridRotated;
     public bool IsFlipping => isFlipping;
+    public Vector3 BaseLocalScale => (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : Vector3.one;
+    public SpriteRenderer MainSpriteRenderer => spriteRenderer;
+
+    /// <summary>
+    /// La cara apoyada paso de punto COCINANDOSE en la parrilla (anterior, nuevo). No dispara
+    /// al dar vuelta el corte ni al restaurar tiempos desde la bandeja/plato: solo desde Cook().
+    /// </summary>
+    public event System.Action<MeatStates, MeatStates> OnCookStateAdvanced;
 
     protected virtual void Awake()
     {
@@ -256,7 +264,11 @@ public class Meat : Item
         else
             sideBCookTime = Mathf.Min(sideBCookTime + deltaHeat, burnThreshold);
 
+        MeatStates previous = state;
         RefreshState();
+
+        if (state != previous && IsOnGrill)
+            OnCookStateAdvanced?.Invoke(previous, state);
     }
 
     public override void OnMouseUp()
