@@ -110,6 +110,14 @@ public class BuildFoodDropZone : MonoBehaviour
 
             if (item.breadData != null)
             {
+                // El pan envuelve a la carne, no se sirve solo: sin corte en el plato no hay
+                // sandwich posible y el armado quedaria con un pan que no se ve ni se entrega.
+                if (!zone.buildStationSystem.HasAnyCut)
+                {
+                    Debug.Log("[Build] El plato no tiene carne: se rechaza el pan " + item.breadData.breadName + ".");
+                    return false;
+                }
+
                 BreadSO previousBread = zone.buildStationSystem.AssembledBread;
                 GameObject plateMeatVisual = null;
                 Sprite previousSprite = null;

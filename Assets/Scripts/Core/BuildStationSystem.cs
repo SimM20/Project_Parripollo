@@ -70,6 +70,7 @@ public class BuildStationSystem : MonoBehaviour
             assembledCutStates.RemoveAt(assembledCutStates.Count - 1);
         if (assembledCutSideStates.Count > assembledCuts.Count)
             assembledCutSideStates.RemoveAt(assembledCutSideStates.Count - 1);
+        DropBreadIfNoCuts();
         OnAssemblyChanged?.Invoke();
     }
 
@@ -82,11 +83,32 @@ public class BuildStationSystem : MonoBehaviour
             assembledCutStates.RemoveAt(index);
         if (index < assembledCutSideStates.Count)
             assembledCutSideStates.RemoveAt(index);
+        DropBreadIfNoCuts();
         OnAssemblyChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// El pan solo existe acompanando a una carne. Si sacar el corte deja el plato vacio, el pan
+    /// se va con el: si no, quedaria un pan invisible en el armado que el drop ya no deja poner.
+    /// </summary>
+    private void DropBreadIfNoCuts()
+    {
+        if (assembledCuts.Count > 0 || assembledBread == null) return;
+
+        assembledBread = null;
+        Debug.Log("[BuildStation] Plato sin cortes: se quita el pan.");
     }
 
     public void SetBread(BreadSO bread)
     {
+        // Invariante del armado: no hay pan sin carne. Lo respeta el drop, pero tambien puede
+        // llegar aca desde un undo posterior a que el corte saliera del plato.
+        if (bread != null && !HasAnyCut)
+        {
+            Debug.Log("[BuildStation] Plato sin cortes: se ignora el pan " + bread.breadName + ".");
+            return;
+        }
+
         assembledBread = bread;
         OnAssemblyChanged?.Invoke();
         Debug.Log("[BuildStation] Pan asignado: " + (bread != null ? bread.breadName : "ninguno"));
