@@ -9,6 +9,8 @@ public class ShopSubtitleUI : MonoBehaviour
 
     [Header("Textos por tab")]
     [SerializeField] private string coalTitle = "CONSUMO PROMEDIO:";
+    [SerializeField] private string coalDetailFormat = "Venís usando {0} unidades de carbón por jornada.";
+    [SerializeField] private string coalFirstNightDetail = "Primera jornada: todavía no hay datos de consumo.";
     [SerializeField] private string meatTitle = "CORTES DE CARNE";
     [SerializeField] private string meatDetail = "Elegí los cortes para la noche.";
     [SerializeField] private string upgradesTitle = "MEJORAS PARA LA PARRILLA";
@@ -45,36 +47,39 @@ public class ShopSubtitleUI : MonoBehaviour
 
     private void Refresh()
     {
-        if (shop == null || titleText == null || detailText == null) return;
+        if (shop == null) return;
 
+        // El título es opcional: si la tab activa ya dice en qué sección estás, alcanza con el detalle.
         switch (shop.CurrentTab)
         {
             case ShopTabType.Coal:
-                titleText.text = coalTitle;
-                detailText.text = BuildCoalDetail();
+                SetTexts(coalTitle, BuildCoalDetail());
                 break;
             case ShopTabType.Meat:
-                titleText.text = meatTitle;
-                detailText.text = meatDetail;
+                SetTexts(meatTitle, meatDetail);
                 break;
             case ShopTabType.Upgrades:
-                titleText.text = upgradesTitle;
-                detailText.text = upgradesDetail;
+                SetTexts(upgradesTitle, upgradesDetail);
                 break;
             case ShopTabType.Toppings:
-                titleText.text = toppingsTitle;
-                detailText.text = toppingsDetail;
+                SetTexts(toppingsTitle, toppingsDetail);
                 break;
         }
+    }
+
+    private void SetTexts(string title, string detail)
+    {
+        if (titleText != null) titleText.text = title;
+        if (detailText != null) detailText.text = detail;
     }
 
     private string BuildCoalDetail()
     {
         var tracker = CoalConsumptionTracker.Instance;
         if (tracker == null || tracker.DaysPlayed == 0)
-            return "PRIMERA NOCHE — SIN DATOS DE CONSUMO";
+            return coalFirstNightDetail;
 
         int avg = Mathf.RoundToInt(tracker.AverageCoalPerDay);
-        return $"USASTE {avg} UNIDADES DE CARBÓN";
+        return string.Format(coalDetailFormat, avg);
     }
 }

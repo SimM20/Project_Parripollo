@@ -10,6 +10,8 @@ public class ShopHeaderUI : MonoBehaviour
     [Tooltip("Cartel con los clientes que pasaron por el local en la jornada que acaba de terminar.")]
     [SerializeField] private TextMeshProUGUI customersTodayText;
     [SerializeField] private string shopName = "LA PARRILLA DE DON COCO";
+    [SerializeField] private string customersFormat = "Hoy vinieron {0} clientes";
+    [SerializeField] private string oneCustomerFormat = "Hoy vino {0} cliente";
 
     private bool started;
 
@@ -52,6 +54,9 @@ public class ShopHeaderUI : MonoBehaviour
 
         // Clientes de la jornada que acaba de terminar (lo dejó CustomerSystem en DayStats).
         if (customersTodayText != null)
-            customersTodayText.text = $"Clientes: {DayStats.CustomersToday}";
+        {
+            int customers = DayStats.CustomersToday;
+            customersTodayText.text = string.Format(customers == 1 ? oneCustomerFormat : customersFormat, customers);
+        }
     }
 }

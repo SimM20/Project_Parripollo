@@ -15,6 +15,10 @@ public class ShopTabButtonUI : MonoBehaviour
     [SerializeField] private Color activeTextColor = Color.white;
     [SerializeField] private Color inactiveTextColor = new Color(0.7f, 0.7f, 0.7f);
 
+    [Tooltip("Opcionales: si están, la tab cambia de chapa en vez de teñirla (los colores de fondo se ignoran).")]
+    [SerializeField] private Sprite activeSprite;
+    [SerializeField] private Sprite inactiveSprite;
+
     public ShopTabType Tab => tab;
     public System.Action<ShopTabType> OnTabClicked;
 
@@ -35,7 +39,18 @@ public class ShopTabButtonUI : MonoBehaviour
     public void SetActiveState(bool isActive)
     {
         if (background != null)
-            background.color = isActive ? activeBgColor : inactiveBgColor;
+        {
+            Sprite sprite = isActive ? activeSprite : inactiveSprite;
+            if (sprite != null)
+            {
+                background.sprite = sprite;
+                background.color = Color.white;
+            }
+            else
+            {
+                background.color = isActive ? activeBgColor : inactiveBgColor;
+            }
+        }
         if (label != null)
             label.color = isActive ? activeTextColor : inactiveTextColor;
     }

@@ -10,13 +10,13 @@ public class ShopNextButtonUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI label;
 
     [Header("Textos por tab actual")]
-    [SerializeField] private string fromCoalText = "Siguiente — Cortes de Carne →";
-    [SerializeField] private string fromMeatText = "Siguiente — Mejoras →";
-    [SerializeField] private string fromUpgradesText = "Siguiente — Toppings →";
-    [SerializeField] private string fromToppingsText = "Arrancar próximo día →";
+    [SerializeField] private string fromCoalText = "Siguiente: Carnes";
+    [SerializeField] private string fromMeatText = "Siguiente: Mejoras";
+    [SerializeField] private string fromUpgradesText = "Siguiente: Toppings";
+    [SerializeField] private string fromToppingsText = "Arrancar el día";
 
     [Tooltip("Reemplaza al texto del último tab mientras falten los recursos mínimos.")]
-    [SerializeField] private string blockedByMinimumsText = "Faltan recursos mínimos";
+    [SerializeField] private string blockedByMinimumsText = "Faltan recursos";
 
     [Header("Scene")]
     [SerializeField] private string gameSceneName = "GameScene";

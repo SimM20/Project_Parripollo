@@ -15,7 +15,23 @@ public class ShopItemCellUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI qtyText;
     [SerializeField] private TextMeshProUGUI subtotalText;
 
+    [Tooltip("Cuánto tiene ya el jugador de este item (o el nivel, si es una mejora).")]
+    [SerializeField] private TextMeshProUGUI stockText;
+
+    [Header("Formatos")]
+    // En mayúsculas: la tienda usa Bungee, que es una tipografía de titulares.
+    [SerializeField] private string stockFormat = "TENÉS: {0}";
+    [SerializeField] private string coalStockFormat = "TENÉS: {0} U.";
+    [SerializeField] private string coalNameFormat = "{0} x{1}";
+    // La descripción va en Nunito (texto de cuerpo), no en Bungee: minúsculas normales.
+    [SerializeField] private string coalBagFormat = "Bolsa de {0} unidades";
+    [SerializeField] private string upgradeLevelFormat = "NIVEL {0}/{1}";
+    [Tooltip("Solo se muestra comprando más de una unidad: con una, el total es el precio.")]
+    [SerializeField] private string subtotalFormat = "Total: ${0:N0}";
+
     [Header("Buttons")]
+    [Tooltip("Contenedor de −/cantidad/+. Se oculta en los items que se compran de a uno (mejoras).")]
+    [SerializeField] private GameObject stepperRoot;
     [SerializeField] private Button minusButton;
     [SerializeField] private Button plusButton;
     [SerializeField] private Button buyButton;
@@ -73,6 +89,7 @@ public class ShopItemCellUI : MonoBehaviour
         Sprite icon;
         string name;
         string description = "";
+        string stock;
         float price;
 
         if (toppingItem != null)
@@ -81,6 +98,7 @@ public class ShopItemCellUI : MonoBehaviour
             icon = toppingItem.toppingSprite;
             name = toppingItem.toppingName;
             price = toppingItem.purchasePrice;
+            stock = string.Format(stockFormat, shop.Toppings != null ? shop.Toppings.GetCount(toppingItem) : 0);
         }
         else if (item != null)
         {
@@ -89,6 +107,7 @@ public class ShopItemCellUI : MonoBehaviour
             name = ResolveName(item);
             description = ResolveDescription(item);
             price = item.basePrice;
+            stock = ResolveStock(item);
         }
         else return;
 
@@ -96,13 +115,17 @@ public class ShopItemCellUI : MonoBehaviour
         {
             iconImage.sprite = icon;
             iconImage.color = purchasable ? normalIconColor : lockedIconColor;
+            // Sin sprite, un Image dibuja un cuadrado blanco: mejor no mostrar nada.
+            iconImage.enabled = icon != null;
         }
         if (lockedOverlay != null) lockedOverlay.enabled = !purchasable;
         if (nameText != null) nameText.text = name;
         if (descriptionText != null) descriptionText.text = description;
+        if (stockText != null) stockText.text = stock;
         if (priceText != null) priceText.text = $"${price:N0}";
         if (qtyText != null) qtyText.text = pendingQty.ToString();
-        if (subtotalText != null) subtotalText.text = $"Subtotal: ${price * pendingQty:N0}";
+        if (subtotalText != null) subtotalText.text = pendingQty > 1 ? string.Format(subtotalFormat, price * pendingQty) : "";
+        if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1);
 
         bool canAfford = shop.Wallet != null && shop.Wallet.CanAfford(price * pendingQty);
 
@@ -112,9 +135,20 @@ public class ShopItemCellUI : MonoBehaviour
             ? shop.IsPurchaseAllowedByRunMinimums(toppingItem, pendingQty)
             : shop.IsPurchaseAllowedByRunMinimums(item, pendingQty);
 
-        if (minusButton != null) minusButton.interactable = purchasable && pendingQty > 1;
-        if (plusButton != null) plusButton.interactable = purchasable && pendingQty < MaxQty;
-        if (buyButton != null) buyButton.interactable = purchasable && canAfford && allowedByMinimums;
+        SetInteractable(minusButton, purchasable && pendingQty > 1);
+        SetInteractable(plusButton, purchasable && pendingQty < MaxQty);
+        SetInteractable(buyButton, purchasable && canAfford && allowedByMinimums);
+    }
+
+    // El ColorTint del Button solo oscurece la chapa: el texto también se apaga, así un botón
+    // deshabilitado no se confunde con uno que tiene el mouse encima.
+    private static void SetInteractable(Button button, bool interactable)
+    {
+        if (button == null) return;
+        button.interactable = interactable;
+
+        var label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label != null) label.alpha = interactable ? 1f : 0.45f;
     }
 
     private void OnMinus()
@@ -150,23 +184,30 @@ public class ShopItemCellUI : MonoBehaviour
         return null;
     }
 
-    private static string ResolveName(ItemDataSO item)
+    private string ResolveName(ItemDataSO item)
     {
         if (item == null) return "";
         if (item is MeatCutSO cut) return cut.cutName;
+        if (item is CoalSO coal && coal.unitsPerBag > 1)
+            return string.Format(coalNameFormat, coal.itemName, coal.unitsPerBag);
         return item.itemName;
     }
 
-    private static string ResolveDescription(ItemDataSO item)
+    private string ResolveDescription(ItemDataSO item)
     {
+        // Una compra de carbón suma unitsPerBag unidades al cooler, no una.
+        if (item is CoalSO coal)
+            return coal.unitsPerBag > 1 ? string.Format(coalBagFormat, coal.unitsPerBag) : "";
+
         if (item is UpgradeSO up)
         {
             string text = up.description ?? "";
 
-            // Las mejoras de varios niveles muestran en que nivel van.
-            if (up.MaxLevel > 1)
+            // Las mejoras de varios niveles muestran en que nivel van. Si la celda tiene
+            // línea de stock, el nivel va ahí (ResolveStock) y no se repite acá.
+            if (stockText == null && up.MaxLevel > 1)
             {
-                string level = "Nivel " + up.CurrentLevel + "/" + up.MaxLevel;
+                string level = FormatUpgradeLevel(up);
                 text = string.IsNullOrEmpty(text) ? level : text + System.Environment.NewLine + level;
             }
 
@@ -174,4 +215,16 @@ public class ShopItemCellUI : MonoBehaviour
         }
         return "";
     }
+
+    private string ResolveStock(ItemDataSO item)
+    {
+        // Una mejora no se acumula en el cooler: lo que "se tiene" es su nivel.
+        if (item is UpgradeSO up) return FormatUpgradeLevel(up);
+
+        int count = shop.Cooler != null ? shop.Cooler.GetCount(item) : 0;
+        return string.Format(item is CoalSO ? coalStockFormat : stockFormat, count);
+    }
+
+    private string FormatUpgradeLevel(UpgradeSO up)
+        => string.Format(upgradeLevelFormat, up.CurrentLevel, up.MaxLevel);
 }
