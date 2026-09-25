@@ -15,6 +15,18 @@ public class ShopItemCellUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI qtyText;
     [SerializeField] private TextMeshProUGUI subtotalText;
 
+    [Tooltip("Cuánto tiene ya el jugador de este item (o el nivel, si es una mejora).")]
+    [SerializeField] private TextMeshProUGUI stockText;
+
+    [Header("Formatos")]
+    // En mayúsculas: la tienda usa Bungee, que es una tipografía de titulares.
+    [SerializeField] private string stockFormat = "TENÉS: {0}";
+    [SerializeField] private string coalStockFormat = "TENÉS: {0} U.";
+    [SerializeField] private string coalNameFormat = "{0} x{1}";
+    // La descripción va en Nunito (texto de cuerpo), no en Bungee: minúsculas normales.
+    [SerializeField] private string coalBagFormat = "Bolsa de {0} unidades";
+    [SerializeField] private string upgradeLevelFormat = "NIVEL {0}/{1}";
+
     [Header("Buttons")]
     [SerializeField] private Button minusButton;
     [SerializeField] private Button plusButton;
@@ -73,6 +85,7 @@ public class ShopItemCellUI : MonoBehaviour
         Sprite icon;
         string name;
         string description = "";
+        string stock;
         float price;
 
         if (toppingItem != null)
@@ -81,6 +94,7 @@ public class ShopItemCellUI : MonoBehaviour
             icon = toppingItem.toppingSprite;
             name = toppingItem.toppingName;
             price = toppingItem.purchasePrice;
+            stock = string.Format(stockFormat, shop.Toppings != null ? shop.Toppings.GetCount(toppingItem) : 0);
         }
         else if (item != null)
         {
@@ -89,6 +103,7 @@ public class ShopItemCellUI : MonoBehaviour
             name = ResolveName(item);
             description = ResolveDescription(item);
             price = item.basePrice;
+            stock = ResolveStock(item);
         }
         else return;
 
@@ -100,6 +115,7 @@ public class ShopItemCellUI : MonoBehaviour
         if (lockedOverlay != null) lockedOverlay.enabled = !purchasable;
         if (nameText != null) nameText.text = name;
         if (descriptionText != null) descriptionText.text = description;
+        if (stockText != null) stockText.text = stock;
         if (priceText != null) priceText.text = $"${price:N0}";
         if (qtyText != null) qtyText.text = pendingQty.ToString();
         if (subtotalText != null) subtotalText.text = $"Subtotal: ${price * pendingQty:N0}";
@@ -150,23 +166,30 @@ public class ShopItemCellUI : MonoBehaviour
         return null;
     }
 
-    private static string ResolveName(ItemDataSO item)
+    private string ResolveName(ItemDataSO item)
     {
         if (item == null) return "";
         if (item is MeatCutSO cut) return cut.cutName;
+        if (item is CoalSO coal && coal.unitsPerBag > 1)
+            return string.Format(coalNameFormat, coal.itemName, coal.unitsPerBag);
         return item.itemName;
     }
 
-    private static string ResolveDescription(ItemDataSO item)
+    private string ResolveDescription(ItemDataSO item)
     {
+        // Una compra de carbón suma unitsPerBag unidades al cooler, no una.
+        if (item is CoalSO coal)
+            return coal.unitsPerBag > 1 ? string.Format(coalBagFormat, coal.unitsPerBag) : "";
+
         if (item is UpgradeSO up)
         {
             string text = up.description ?? "";
 
-            // Las mejoras de varios niveles muestran en que nivel van.
-            if (up.MaxLevel > 1)
+            // Las mejoras de varios niveles muestran en que nivel van. Si la celda tiene
+            // línea de stock, el nivel va ahí (ResolveStock) y no se repite acá.
+            if (stockText == null && up.MaxLevel > 1)
             {
-                string level = "Nivel " + up.CurrentLevel + "/" + up.MaxLevel;
+                string level = FormatUpgradeLevel(up);
                 text = string.IsNullOrEmpty(text) ? level : text + System.Environment.NewLine + level;
             }
 
@@ -174,4 +197,16 @@ public class ShopItemCellUI : MonoBehaviour
         }
         return "";
     }
+
+    private string ResolveStock(ItemDataSO item)
+    {
+        // Una mejora no se acumula en el cooler: lo que "se tiene" es su nivel.
+        if (item is UpgradeSO up) return FormatUpgradeLevel(up);
+
+        int count = shop.Cooler != null ? shop.Cooler.GetCount(item) : 0;
+        return string.Format(item is CoalSO ? coalStockFormat : stockFormat, count);
+    }
+
+    private string FormatUpgradeLevel(UpgradeSO up)
+        => string.Format(upgradeLevelFormat, up.CurrentLevel, up.MaxLevel);
 }

@@ -29,7 +29,7 @@ public class ShopRequirementsUI : MonoBehaviour
     [SerializeField] private string coalFormat = "CARBÓN  {0} / {1}";
     [SerializeField] private string deficitFormat = "FALTA: {0}";
     [SerializeField] private string requirementsMetText = "LISTO PARA ARRANCAR";
-    [SerializeField] private string strikeStreakFormat = "NOCHES SEGUIDAS: {0} / {1}";
+    [SerializeField] private string strikeStreakFormat = "NOCHES SEGUIDAS CON STRIKES: {0} / {1}";
 
     [Header("Colors")]
     [SerializeField] private Color metColor = new Color(0.45f, 0.85f, 0.4f);

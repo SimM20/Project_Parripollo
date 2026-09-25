@@ -2416,12 +2416,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20
+  m_fontSize: 19.65
   m_fontSizeBase: 20
   m_fontWeight: 400
-  m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 16
+  m_fontSizeMax: 20
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 4096
@@ -5747,7 +5747,7 @@ MonoBehaviour:
   coalFormat: "CARB\xD3N  {0} / {1}"
   deficitFormat: 'FALTA: {0}'
   requirementsMetText: LISTO PARA ARRANCAR
-  strikeStreakFormat: 'NOCHES SEGUIDAS: {0} / {1}'
+  strikeStreakFormat: 'NOCHES SEGUIDAS CON STRIKES: {0} / {1}'
   metColor: {r: 0.45, g: 0.85, b: 0.4, a: 1}
   unmetColor: {r: 0.9, g: 0.35, b: 0.3, a: 1}
 --- !u!1 &1272566830
