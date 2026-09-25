@@ -26,8 +26,12 @@ public class ShopItemCellUI : MonoBehaviour
     // La descripción va en Nunito (texto de cuerpo), no en Bungee: minúsculas normales.
     [SerializeField] private string coalBagFormat = "Bolsa de {0} unidades";
     [SerializeField] private string upgradeLevelFormat = "NIVEL {0}/{1}";
+    [Tooltip("Solo se muestra comprando más de una unidad: con una, el total es el precio.")]
+    [SerializeField] private string subtotalFormat = "Total: ${0:N0}";
 
     [Header("Buttons")]
+    [Tooltip("Contenedor de −/cantidad/+. Se oculta en los items que se compran de a uno (mejoras).")]
+    [SerializeField] private GameObject stepperRoot;
     [SerializeField] private Button minusButton;
     [SerializeField] private Button plusButton;
     [SerializeField] private Button buyButton;
@@ -111,6 +115,8 @@ public class ShopItemCellUI : MonoBehaviour
         {
             iconImage.sprite = icon;
             iconImage.color = purchasable ? normalIconColor : lockedIconColor;
+            // Sin sprite, un Image dibuja un cuadrado blanco: mejor no mostrar nada.
+            iconImage.enabled = icon != null;
         }
         if (lockedOverlay != null) lockedOverlay.enabled = !purchasable;
         if (nameText != null) nameText.text = name;
@@ -118,7 +124,8 @@ public class ShopItemCellUI : MonoBehaviour
         if (stockText != null) stockText.text = stock;
         if (priceText != null) priceText.text = $"${price:N0}";
         if (qtyText != null) qtyText.text = pendingQty.ToString();
-        if (subtotalText != null) subtotalText.text = $"Subtotal: ${price * pendingQty:N0}";
+        if (subtotalText != null) subtotalText.text = pendingQty > 1 ? string.Format(subtotalFormat, price * pendingQty) : "";
+        if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1);
 
         bool canAfford = shop.Wallet != null && shop.Wallet.CanAfford(price * pendingQty);
 
@@ -128,9 +135,20 @@ public class ShopItemCellUI : MonoBehaviour
             ? shop.IsPurchaseAllowedByRunMinimums(toppingItem, pendingQty)
             : shop.IsPurchaseAllowedByRunMinimums(item, pendingQty);
 
-        if (minusButton != null) minusButton.interactable = purchasable && pendingQty > 1;
-        if (plusButton != null) plusButton.interactable = purchasable && pendingQty < MaxQty;
-        if (buyButton != null) buyButton.interactable = purchasable && canAfford && allowedByMinimums;
+        SetInteractable(minusButton, purchasable && pendingQty > 1);
+        SetInteractable(plusButton, purchasable && pendingQty < MaxQty);
+        SetInteractable(buyButton, purchasable && canAfford && allowedByMinimums);
+    }
+
+    // El ColorTint del Button solo oscurece la chapa: el texto también se apaga, así un botón
+    // deshabilitado no se confunde con uno que tiene el mouse encima.
+    private static void SetInteractable(Button button, bool interactable)
+    {
+        if (button == null) return;
+        button.interactable = interactable;
+
+        var label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label != null) label.alpha = interactable ? 1f : 0.45f;
     }
 
     private void OnMinus()

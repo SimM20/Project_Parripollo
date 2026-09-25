@@ -110,8 +110,10 @@ public class ShopRequirementsUI : MonoBehaviour
             int streak = StrikeSystem.ConsecutiveStrikeNights;
             int max = StrikeSystem.MaxConsecutiveStrikeNights;
 
+            // Sin racha no hay nada que avisar: la línea aparece recién con la primera noche de strikes.
+            strikeStreakText.gameObject.SetActive(streak > 0);
             strikeStreakText.text = string.Format(strikeStreakFormat, streak, max);
-            strikeStreakText.color = streak > 0 ? unmetColor : metColor;
+            strikeStreakText.color = unmetColor;
         }
     }
 

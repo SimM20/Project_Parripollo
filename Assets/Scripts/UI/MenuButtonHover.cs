@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 /// <summary>
 /// Juice mínimo para botones de menú: escala suave al pasar el mouse y un pequeño
@@ -14,6 +15,7 @@ public class MenuButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [SerializeField] private float smoothTime = 0.08f;
 
     private RectTransform rect;
+    private Selectable selectable;
     private Vector3 baseScale;
     private float target = 1f;
     private float current = 1f;
@@ -24,6 +26,7 @@ public class MenuButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExit
     private void Awake()
     {
         rect = GetComponent<RectTransform>();
+        selectable = GetComponent<Selectable>();
         baseScale = rect.localScale;
     }
 
@@ -37,7 +40,9 @@ public class MenuButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     private void Update()
     {
-        target = pressed ? pressedScale : (hovered ? hoverScale : 1f);
+        // Un botón deshabilitado no reacciona: agrandarlo invitaría a clickear algo que no hace nada.
+        bool interactable = selectable == null || selectable.IsInteractable();
+        target = !interactable ? 1f : pressed ? pressedScale : (hovered ? hoverScale : 1f);
 
         if (Mathf.Abs(current - target) < 0.0005f && Mathf.Abs(velocity) < 0.0005f)
             return;
