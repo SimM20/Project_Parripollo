@@ -46,7 +46,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
         RefreshCollider();
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         if (cut == null || buffer == null) return;
 
@@ -68,15 +68,18 @@ public class ToBuildDraggableMeat : MonoBehaviour
         buffer.UpdateMeatHolderHover(cut, transform.position, isGridRotated);
     }
 
-    void OnMouseDrag()
+    void OnWorldPointerDrag()
     {
         if (!isDragging || cut == null || buffer == null) return;
 
-        transform.position = GetMouseWorldPosition() + dragOffset;
+        // Con gamepad y un bloque de la parrilla seleccionado, el corte se apoya justo donde va a caer.
+        transform.position = InputManager.TryGetGridSnap(out Vector3 snap)
+            ? new Vector3(snap.x, snap.y, transform.position.z)
+            : GetMouseWorldPosition() + dragOffset;
         buffer.UpdateMeatHolderHover(cut, transform.position, isGridRotated);
     }
 
-    void OnMouseUp()
+    void OnWorldPointerUp()
     {
         if (!isDragging) return;
         isDragging = false;
@@ -111,7 +114,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
     {
         if (!isDragging || cut == null || buffer == null) return;
 
-        if (Input.GetKeyDown(KeyCode.R) && CanRotate)
+        if (InputManager.WasPressed(GameAction.Rotate) && CanRotate)
         {
             isGridRotated = !isGridRotated;
             ApplyGridRotationPreview();
@@ -121,6 +124,9 @@ public class ToBuildDraggableMeat : MonoBehaviour
 
     /// <summary>Los cortes de footprint cuadrado no se rotan: quedarian identicos.</summary>
     private bool CanRotate => cut != null && cut.CanRotate;
+
+    public MeatCutSO Cut => cut;
+    public bool IsGridRotated => isGridRotated;
 
     private void ApplyGridRotationPreview()
     {
@@ -134,7 +140,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
     {
         Camera cam = Camera.main;
         if (cam == null) return transform.position;
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
         world.z = transform.position.z;

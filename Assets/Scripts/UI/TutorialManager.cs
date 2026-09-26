@@ -148,7 +148,8 @@ public class TutorialManager : MonoBehaviour
         {
             GameObject eventSystemGo = new GameObject("EventSystem");
             eventSystemGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            eventSystemGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            var uiModule = eventSystemGo.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            InputManager.Instance?.ConfigureUIModule(uiModule);
             Debug.Log("[TutorialManager] EventSystem was missing in the scene. Created one dynamically.");
         }
 

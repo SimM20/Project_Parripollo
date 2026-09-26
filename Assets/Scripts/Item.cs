@@ -10,7 +10,7 @@ public class Item : MonoBehaviour
     protected bool isHeldByMouse;
     private readonly List<GridSlot> hoveredSlots = new List<GridSlot>();
 
-    protected void OnMouseDown()
+    protected void OnWorldPointerDown()
     {
         startPosition = transform.position;
         isHeldByMouse = true;
@@ -19,7 +19,7 @@ public class Item : MonoBehaviour
         UpdateHoverPreview();
     }
 
-    protected void OnMouseDrag()
+    protected void OnWorldPointerDrag()
     {
         if (!isHeldByMouse) return;
 
@@ -38,7 +38,7 @@ public class Item : MonoBehaviour
         if (cam == null)
             return transform.position;
 
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
 
         Vector3 world = cam.ScreenToWorldPoint(pos);
@@ -55,7 +55,7 @@ public class Item : MonoBehaviour
         UpdateHoverPreview();
     }
 
-    public virtual void OnMouseUp()
+    public virtual void OnWorldPointerUp()
     {
         if (!EndHold()) return;
 
@@ -76,8 +76,8 @@ public class Item : MonoBehaviour
     }
 
     /// <summary>
-    /// Cierra el agarre. Devuelve false si no había uno activo (p. ej. un OnMouseUp tardío
-    /// tras una cancelación por pausa). Las subclases lo llaman al inicio de OnMouseUp.
+    /// Cierra el agarre. Devuelve false si no había uno activo (p. ej. un OnWorldPointerUp tardío
+    /// tras una cancelación por pausa). Las subclases lo llaman al inicio de OnWorldPointerUp.
     /// </summary>
     protected bool EndHold()
     {

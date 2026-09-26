@@ -20,7 +20,7 @@ public class StockPanelTab : MonoBehaviour
             Debug.LogWarning("[StockPanelTab] Falta la referencia 'controller'. La pestaña no abre ningún panel.");
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         if (controller == null)
             return;

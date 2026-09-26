@@ -15,6 +15,9 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Degrees per second the container rotates when inside the zone.")]
     [SerializeField] private float rotationSpeed = 360f;
 
+    /// <summary>Zona donde el frasco se da vuelta y vierte (el destino al arrastrarlo).</summary>
+    public Collider2D PouringZone => rotationZone;
+
     [Header("Pour Visual")]
     [Tooltip("Color of the sauce thread. Used for the LineRenderer.")]
     [SerializeField] private Color sauceColor = new Color(0.18f, 0.54f, 0.14f, 1f);
@@ -143,7 +146,7 @@ public class ToppingDraggable : MonoBehaviour
         CreateSauceBar();
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         isDragging = true;
         GamePause.OnPaused += CancelDrag;
@@ -160,7 +163,7 @@ public class ToppingDraggable : MonoBehaviour
         }
     }
 
-    void OnMouseDrag()
+    void OnWorldPointerDrag()
     {
         if (!isDragging) return;
 
@@ -208,7 +211,7 @@ public class ToppingDraggable : MonoBehaviour
         UpdateSauceBar();
     }
 
-    void OnMouseUp()
+    void OnWorldPointerUp()
     {
         if (!isDragging) return;
         isDragging = false;
@@ -633,7 +636,7 @@ public class ToppingDraggable : MonoBehaviour
         Camera cam = Camera.main;
         if (cam == null) return transform.position;
 
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
         world.z = transform.position.z;

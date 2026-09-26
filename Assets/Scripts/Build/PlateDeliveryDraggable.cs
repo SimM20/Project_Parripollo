@@ -22,7 +22,7 @@ using UnityEngine;
 ///    comida volando. Durante el tutorial este gesto se apaga
 ///    (TutorialManager.CheckPlateMeatDragAllowed) y agarrar la carne lleva el plato entero.
 ///
-/// El agarre NO usa OnMouseDown/OnMouseDrag/OnMouseUp: el visual del plato queda
+/// El agarre NO usa OnWorldPointerDown/Drag/Up (WorldPointerDispatcher): el visual del plato queda
 /// apoyado sobre el collider de la zona 'ToBuild', que está en el mismo plano z y no
 /// tiene handler de mouse. Con la cámara en perspectiva ese collider se queda con el
 /// click y la carne deja de ser agarrable. El pick se resuelve acá, proyectando el
@@ -59,6 +59,19 @@ public class PlateDeliveryDraggable : MonoBehaviour
     /// <summary>Instancia que conduce el arrastre en curso. Hay un solo mouse: nunca hay dos a la vez.</summary>
     private static PlateDeliveryDraggable activeDragger;
     private static DragMode activeMode;
+
+    /// <summary>Hay un arrastre del plato entero en curso (el que entrega al cliente).</summary>
+    public static bool IsDraggingWholePlate => activeDragger != null && activeMode == DragMode.WholePlate;
+    /// <summary>Hay un arrastre de solo la carne del plato en curso.</summary>
+    public static bool IsDraggingPlateMeat => activeDragger != null && activeMode == DragMode.MeatOnly;
+
+    /// <summary>Corte y rotación de la carne del plato que se está arrastrando (solo carne).</summary>
+    public static bool TryGetDraggedCut(out MeatCutSO cut, out bool rotated)
+    {
+        cut = IsDraggingPlateMeat ? activeDragger.draggedCut : null;
+        rotated = cut != null && activeDragger.draggedCutRotated;
+        return cut != null;
+    }
 
     /// <summary>Frame en el que ya se resolvió qué visual agarra el click, para no repetir el pick por instancia.</summary>
     private static int lastPickFrame = -1;
@@ -117,7 +130,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
     void Update()
     {
-        // Único pick que no pasa por OnMouseXXX (ver nota de clase): eventMask no lo frena.
+        // Único pick que no pasa por OnWorldPointerXXX (ver nota de clase): eventMask no lo frena.
         if (GamePause.IsPaused)
             return;
 
@@ -127,7 +140,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
             return;
         }
 
-        if (activeDragger != null || !Input.GetMouseButtonDown(0))
+        if (activeDragger != null || !InputManager.PrimaryPressed)
             return;
 
         // El pick es global: la primera instancia que corre este frame lo resuelve para todas.
@@ -143,7 +156,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
     private void UpdateDrag()
     {
-        if (!Input.GetMouseButton(0))
+        if (!InputManager.PrimaryHeld)
         {
             EndDrag();
             return;
@@ -151,6 +164,13 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
         Vector3 mouseWorld = GetMouseWorldPos();
         Vector3 delta = mouseWorld - grabWorldPoint;
+
+        // Con gamepad y un bloque de la parrilla seleccionado, la carne se apoya justo donde va a caer.
+        if (activeMode == DragMode.MeatOnly && DraggedVisuals.Count > 0 && InputManager.TryGetGridSnap(out Vector3 snap))
+        {
+            Vector3 start = DraggedVisuals[0].startPosition;
+            delta = new Vector3(snap.x - start.x, snap.y - start.y, 0f);
+        }
 
         for (int i = 0; i < DraggedVisuals.Count; i++)
         {
@@ -169,7 +189,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
         // MeatOnly: R rota el footprint como en la bandeja, y el preview de slots sigue al corte.
         // Los cortes de footprint cuadrado no se rotan: quedarian identicos.
-        if (Input.GetKeyDown(KeyCode.R) && draggedCut != null && draggedCut.CanRotate)
+        if (InputManager.WasPressed(GameAction.Rotate) && draggedCut != null && draggedCut.CanRotate)
             draggedCutRotated = !draggedCutRotated;
 
         if (transferBuffer != null)
@@ -532,7 +552,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
         if (cam == null)
             return new Vector3(0f, 0f, z);
 
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
         world.z = z;

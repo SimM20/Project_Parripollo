@@ -25,7 +25,7 @@ public class ShopTabButton2D : MonoBehaviour
             label.color = isActive ? activeTextColor : inactiveTextColor;
     }
 
-    void OnMouseUpAsButton()
+    void OnWorldPointerClick()
     {
         OnTabClicked?.Invoke(tab);
     }

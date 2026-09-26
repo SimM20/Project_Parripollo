@@ -22,6 +22,9 @@ public class BuildFoodDropZone : MonoBehaviour
     /// <summary>Transform del sprite del plato (el que se arrastra al entregar), o null si no hay sprite.</summary>
     public Transform PlateBody => plateRenderer != null ? plateRenderer.transform : null;
 
+    /// <summary>Área del plato donde se sueltan carne, pan y guarniciones.</summary>
+    public Collider2D ZoneCollider => zoneCollider;
+
     /// <summary>True si este plato tiene una carne montada: hay algo para entregar.</summary>
     public bool HasLoadedPlate => isActiveAndEnabled && buildStationSystem != null && buildStationSystem.HasAnyCut;
 

@@ -53,7 +53,7 @@ public class GrillLayerToggle : MonoBehaviour
         ShowLayer(startLayer);
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         Toggle();
     }

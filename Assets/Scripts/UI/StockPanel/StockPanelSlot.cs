@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Celda del panel de stock: un ícono + un contador numérico por variedad.
-/// Es dueña de todo el arrastre (Unity nunca transfiere OnMouseDrag/OnMouseUp a otro collider):
+/// Es dueña de todo el arrastre (WorldPointerDispatcher nunca transfiere Drag/Up a otro collider):
 /// crea un ghost visual, muestra el preview sobre la grilla y al soltar descuenta del cooler
 /// y spawnea en la parrilla, con rollback si el spawn falla.
 /// </summary>
@@ -31,6 +31,9 @@ public class StockPanelSlot : MonoBehaviour
 
     /// <summary>True si la celda puede iniciar un arrastre (hay stock y está habilitada).</summary>
     public bool IsInteractable => isInteractable;
+
+    /// <summary>El corte que se está arrastrando desde esta celda va rotado (R / B).</summary>
+    public bool IsDragRotated => isGridRotated;
 
     private ItemDataSO item;
     private StockPanelController owner;
@@ -60,7 +63,7 @@ public class StockPanelSlot : MonoBehaviour
         if (!(draggingItem is MeatCutSO))
             return;
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (InputManager.WasPressed(GameAction.Rotate))
             ToggleGridRotation();
     }
 
@@ -128,7 +131,7 @@ public class StockPanelSlot : MonoBehaviour
 
     // ── Arrastre ────────────────────────────────────────────────────────────
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         if (!isInteractable || item == null || owner == null)
             return;
@@ -157,7 +160,7 @@ public class StockPanelSlot : MonoBehaviour
         UpdateHoverPreview(mouseWorld);
     }
 
-    void OnMouseDrag()
+    void OnWorldPointerDrag()
     {
         if (!isDragging || draggingItem == null)
             return;
@@ -170,7 +173,7 @@ public class StockPanelSlot : MonoBehaviour
         UpdateHoverPreview(mouseWorld);
     }
 
-    void OnMouseUp()
+    void OnWorldPointerUp()
     {
         if (!isDragging || draggingItem == null)
             return;
@@ -416,7 +419,7 @@ public class StockPanelSlot : MonoBehaviour
         if (cam == null)
             return transform.position;
 
-        Vector3 screenPoint = Input.mousePosition;
+        Vector3 screenPoint = InputManager.PointerPosition;
         screenPoint.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
 
         Vector3 world = cam.ScreenToWorldPoint(screenPoint);

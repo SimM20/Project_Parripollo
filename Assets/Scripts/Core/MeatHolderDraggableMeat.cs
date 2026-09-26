@@ -50,7 +50,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
         EnsureCollider2D();
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         if (cut == null || transferBuffer == null) return;
 
@@ -72,7 +72,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
         UpdateHoverPreview(transform.position);
     }
 
-    void OnMouseDrag()
+    void OnWorldPointerDrag()
     {
         if (!isDragging || cut == null || transferBuffer == null) return;
 
@@ -80,7 +80,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
         UpdateHoverPreview(transform.position);
     }
 
-    void OnMouseUp()
+    void OnWorldPointerUp()
     {
         if (!isDragging) return;
         isDragging = false;
@@ -168,7 +168,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
     private void Update()
     {
         if (!isDragging || cut == null || transferBuffer == null) return;
-        if (Input.GetKeyDown(KeyCode.R)) ToggleGridRotation();
+        if (InputManager.WasPressed(GameAction.Rotate)) ToggleGridRotation();
     }
 
     private void ToggleGridRotation()
@@ -192,7 +192,7 @@ public class MeatHolderDraggableMeat : MonoBehaviour
     {
         Camera cam = Camera.main;
         if (cam == null) return transform.position;
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
         world.z = transform.position.z;

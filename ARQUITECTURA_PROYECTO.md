@@ -6,6 +6,11 @@
 > Última actualización parcial: **2026-09-23** (rama `development`) — el collider de los visuales de carne se calca sobre la **silueta de cada corte** (`Build/SpriteColliderFitter.cs`) en vez de ser el mismo cuadrado del lienzo para todos: el plato ya no pierde los clicks que caían al lado de la carne. `StockPrefab.prefab` quedó **sin collider** (lo construye el fitter en runtime). Secciones 3.3, 3.4 y nota 33.
 > Última actualización parcial: **2026-09-25** (rama `Store-Fixes`) — la celda de la tienda muestra cuánto se **tiene** de cada item (línea `ItemStock` → `ShopItemCellUI.stockText`; en las mejoras, el nivel) y el carbón aclara que la bolsa trae `unitsPerBag` unidades. La racha de `ShopRequirementsUI` dice "NOCHES SEGUIDAS CON STRIKES". Sección 3.6 y nota 14.
 > Última actualización parcial: **2026-09-25** (rama `Store-Fixes`) — **rediseño de la tienda**: el canvas pasó a ser `Prefabs/UI/ShopCanvas.prefab`, compartido por `EndScene` y `ShopTutorial`. Header con cartel y plata, tabs en fila pareja, una línea de ayuda, tarjetas nuevas, requisitos y "Siguiente" abajo. Solo Bungee + Nunito, y chapas oscura/dorada. Sección 3.6 → *UI de tienda* y nota 34.
+> Última actualización parcial: **2026-09-26** (rama `feature/gamepad-input`) — **soporte de joystick**: el input pasó al
+> **Input System nuevo** detrás de un `InputManager` (carpeta `Input/`). Xbox, PlayStation (DualShock 4 / DualSense) y genéricos;
+> con gamepad la **selección salta entre elementos** (stick izquierdo / cruceta, `GamepadNavigator`) y el stick derecho mueve
+> un cursor libre. Los `OnMouseXXX` se reemplazaron por `OnWorldPointerXXX` (`WorldPointerDispatcher`) y el `GameManager`
+> ya no lee teclas. Secciones 3.1 → *Input*, 4.3, 4.4 y nota 35.
 
 ---
 
@@ -13,10 +18,10 @@
 
 | Campo | Valor |
 |---|---|
-| Motor | Unity **2022.3.62f3**, URP (2D), Input Manager legacy (`Input.GetKeyDown`) |
+| Motor | Unity **2022.3.62f3**, URP (2D), **Input System 1.19** (Active Input Handling = *Both*) detrás de `InputManager` — ver 3.1 → *Input* |
 | Cámara | **Perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). No es ortográfica — ver nota 22 |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`). `Scripts/Editor/` va a `Assembly-CSharp-Editor` |
-| Código propio | `Assets/Scripts/` — **143 archivos, ~23.9k líneas** |
+| Código propio | `Assets/Scripts/` — **147 archivos, ~24.8k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina **contrarreloj**: cocinar cortes, armar platos/sándwiches y entregar a los clientes que entran durante la jornada |
 | Jornada | **06:30 → 21:00 en 5 minutos reales** (`DayClock`). A las 21:00 cierra y deja de entrar gente; el día termina **cuando se va el último cliente**, no al cerrar |
@@ -47,6 +52,7 @@ Assets/Scripts/
 ├── Shop/           Tienda (post-noche): tabs + breadcrumb, compra individual. Dos capas de UI
 ├── Strikes/        Strikes por clientes perdidos: contador, HUD de X, aviso de gameplay, popup de cierre
 ├── Background/     Fondo por capas que sigue la hora del DayClock (amanecer → noche) + nubes con parallax
+├── Input/          InputManager (Input System nuevo, teclado/mouse + gamepad), navegación por saltos, cursor, eventos de puntero del mundo
 ├── UI/             ViewManager, Tutorial, SlidingPanel (base de paneles), notificaciones, HUD SO, feedback
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
 │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
@@ -58,7 +64,7 @@ Assets/Scripts/
 | Carpeta | Responsabilidad | Archivos clave |
 |---|---|---|
 | **raíz** | Singletons de sesión (`UIManager`, `AudioManager`, `PlayerWallet`, `CoalConsumptionTracker`), modelo base drag&drop (`Item`), grilla (`GridSlot`), entidades físicas (`Meat`, `Coal`), buffer de carbón, arranque (`Init`), utilidades de escena, `HudManager` | `Item.cs`, `GridSlot.cs`, `Meat.cs`, `Coal.cs`, `PlayerWallet.cs`, `CoalConsumptionTracker.cs`, `AudioManager.cs`, `HudManager.cs`, `SceneManagementUtils.cs` |
-| **Core/** | Input global y árbitro de la entrega (`GameManager`), **reloj de la jornada (`DayClock`)** y stats del día (`DayStats`), armado del plato (`BuildStationSystem`), **staging plato ↔ bandeja** (`MeatTransferBuffer`), draggable de la bandeja (`ToBuildDraggableMeat`), basura (`TrashZone`), pausa global (`GamePause`), activador de mejoras (`UpgradeUnlockActivator`) | `GameManager.cs`, `DayClock.cs`, `MeatTransferBuffer.cs` (1145), `BuildStationSystem.cs`, `GamePause.cs`, `ToBuildDraggableMeat.cs` |
+| **Core/** | Comandos de input de la partida (lee `InputManager`) y árbitro de la entrega (`GameManager`), **reloj de la jornada (`DayClock`)** y stats del día (`DayStats`), armado del plato (`BuildStationSystem`), **staging plato ↔ bandeja** (`MeatTransferBuffer`), draggable de la bandeja (`ToBuildDraggableMeat`), basura (`TrashZone`), pausa global (`GamePause`), activador de mejoras (`UpgradeUnlockActivator`) | `GameManager.cs`, `DayClock.cs`, `MeatTransferBuffer.cs` (1145), `BuildStationSystem.cs`, `GamePause.cs`, `ToBuildDraggableMeat.cs` |
 | **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón, VFX (`BurnSmoke`, `FlipPuff`) | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `CoalStackCounter.cs`, `BurnSmoke.cs`, `FlipPuff.cs` |
 | **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
 | **Build/** | Zona de drop del plato (`BuildFoodDropZone`, **un solo corte por plato**), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command, **incluye la carne**), **entrega del plato por arrastre** (`PlateDeliveryDraggable`, única vía de entrega) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (696), `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs`, `SpriteColliderFitter.cs` |
@@ -68,6 +74,7 @@ Assets/Scripts/
 | **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene` y `ShopTutorial`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
 | **Strikes/** | Penalización de jornada por clientes que se van con paciencia 0 (`StrikeSystem`, singleton de escena), HUD de X (`StrikeHudView`), aviso “¡Te clavaron el cartel!” (`StrikeLimitNotice`) y popup modal de cierre anticipado en `EndScene` (`StrikeEndPopup`) | `StrikeSystem.cs`, `StrikeHudView.cs`, `StrikeLimitNotice.cs`, `StrikeEndPopup.cs` |
 | **Background/** | Fondo de `GameScene` en capas (cielo, estrellas, luna, sol, nubes, paisaje). `DayCycleBackground` lee la hora del `DayClock` y se la pasa a las capas; cada `DayCycleLayer` mezcla su color (y opcionalmente su sprite) entre claves horarias; `DayCycleArc` mueve sol y luna; `ParallaxLayer` desliza las nubes. Solo visual: no escribe la hora ni toca el gameplay | `DayCycleBackground.cs`, `DayCycleLayer.cs`, `DayCycleArc.cs`, `ParallaxLayer.cs` |
+| **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI. Bindings en `Assets/Input/GameControls.inputactions` | `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
 | **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú y de la tienda; no reacciona si el `Selectable` está deshabilitado) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
@@ -112,7 +119,8 @@ graph TD
         TS[ToppingStock]
     end
 
-    GM[GameManager<br/>input + entrega]
+    IM[InputManager<br/>DDOL · Input System]
+    GM[GameManager<br/>comandos + entrega]
     VM[ViewManager]
     CUS[CustomerSystem]
     GS[GrillSystem]
@@ -131,7 +139,9 @@ graph TD
     GM -->|MoneyPopup.Spawn| HUD[HudManager]
     GM -->|TriggerDeliveryFeedback / TriggerMissingCutChange| CUS
     GM -->|EndNight| CCT
-    GM -->|Toggle por tecla| SP
+    GM -->|Toggle por acción| SP
+    IM -->|WasPressed GameAction| GM
+    IM -.->|SendMessage OnWorldPointerXXX| MEAT & PDD & SP & CV
 
     CUS -->|event OnNightEnded| GM
     DC[DayClock] -->|event OnClosingTime| CUS
@@ -183,14 +193,14 @@ graph TD
 | **Static notification hub + gates** | `TutorialManager.Notify*(...)` y `TutorialManager.Check*Allowed(...)` | 12 `Notify*` (no-op si `Instance == null`) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` el tutorial no existe y nada cambia |
 | **Command** | `IBuildUndoAction` + `BuildUndoHistory` (pila) | `AddSideUndoAction`, `AddToppingUndoAction`, `SetBreadUndoAction`, **`AddMeatUndoAction`** (devuelve el corte a la bandeja) |
 | **Buffer / staging area** | `MeatTransferBuffer`, `CoalTransferBuffer` | `BufferedMeatData`/`BufferedCoalData` (POCO con tiempos de cocción) + visuales. `MeatTransferBuffer` hoy administra **plato + bandeja**; la cola `ToGrill/MeatHolder` es legado |
-| **Duck typing por reflexión / `SendMessage`** | `GameManager`→`MeatTransferBuffer`, `MeatHolderDraggableMeat`, `CoolerDraggableMeat`, `*StockVisualizer` | `Type.GetType` sobre todos los assemblies + `MethodInfo.Invoke` / `SendMessage(..., DontRequireReceiver)`. Rompe el binding estático a propósito |
+| **Duck typing por reflexión / `SendMessage`** | `WorldPointerDispatcher`→ colliders del mundo (`OnWorldPointerXXX`, igual que los `OnMouseXXX` nativos), `GameManager`→`MeatTransferBuffer`, `MeatHolderDraggableMeat`, `CoolerDraggableMeat`, `*StockVisualizer` | `Type.GetType` sobre todos los assemblies + `MethodInfo.Invoke` / `SendMessage(..., DontRequireReceiver)`. Rompe el binding estático a propósito |
 | **Registro estático de instancias** | `Coal.ActiveCoals`, `BuildFoodDropZone.ActiveZones`, `TrashZone.ActiveZones`, `ToppingDraggable.ActiveInstances`, `PlateDeliveryDraggable.Instances`, `SlidingPanel.OpenPanels` | Alta en `OnEnable`, baja en `OnDisable`/`OnDestroy`. Habilita APIs estáticas tipo `TryAcceptAt`, `ClearAllSplatters`, `AnyPanelOpen` |
 | **Data-driven (ScriptableObject)** | `ItemDataSO` → `MeatCutSO`, `CoalSO`, `UpgradeSO`; `BreadSO`, `SideSO`, `ToppingSO`, `ProductVariantSO`, `FoodCatalogSO`, `ShopConfigSO`, `TutorialStepSO`, `HudDatabaseSO`, `CustomerFeedbackConfigSO` | ⚠️ Los SO mutan en runtime (`isUnlocked`, `UpgradeSO.currentLevel`, `CoalSO._maxBurnTime`) → **el estado persiste entre sesiones de Editor** (ver `UpgradeStateResetter`) |
 | **Service / Facade** | `FoodAvailabilityService` | Cruza `FoodCatalogSO` (estático) con `CoolerSystem` (stock live) |
 | **Static utility / Extension methods** | `DishValidator`, `CookingDeliveryEvaluator`, `SceneManagementUtils`, `MeatHoverText.ToHoverString()`, `OrderText.ToHoverString()` (sin uso), `CustomerFeedbackExtensions.GetCategory()` | Sin estado, testeables aisladamente |
 | **Object pool** | `GrillNotificationManager.groupPool`, `StockPanelController` (slots) | Reutilizan instancias |
 | **Construcción procedural de UI** | `GrillNotification*UI.CreateProcedural*`, `CustomerSelectionFrame.BuildBars`, `ToppingDraggable.CreateSauceBar`, `CustomerFeedbackBubble.EnsureVisualHierarchy`, `MoneyPopup`, `GridSlot.MakeRadialGlowSprite` | Generan jerarquía + sprites (`Texture2D`) en runtime si falta prefab |
-| **Template Method** | `Item` → `Meat` → `MeatInstance`; `GridSlot` → `GrillSlot`; **`SlidingPanel` → `StockPanelController` / `ToppingsPanelController`** | `virtual OnMouseUp/HandleHeldInput/OnPickedUp/UpdateHoverPreview/Cook`; hooks `OnPanelStarted/OnEnteredGrillView/OnPanelClosing/OnPanelOpened/CanOpen/ValidateReferences` |
+| **Template Method** | `Item` → `Meat` → `MeatInstance`; `GridSlot` → `GrillSlot`; **`SlidingPanel` → `StockPanelController` / `ToppingsPanelController`** | `virtual OnWorldPointerUp/HandleHeldInput/OnPickedUp/UpdateHoverPreview/Cook`; hooks `OnPanelStarted/OnEnteredGrillView/OnPanelClosing/OnPanelOpened/CanOpen/ValidateReferences` |
 
 ### 2.3 Catálogo de eventos
 
@@ -212,9 +222,9 @@ graph TD
 
 ```
 StockPanel [Q] ──drag directo──► GridSlot de la parrilla
-   │  StockPanelSlot.OnMouseDown  → spawnea un "fantasma" sin collider que sigue al mouse
+   │  StockPanelSlot.OnWorldPointerDown → spawnea un "fantasma" sin collider que sigue al mouse
    │                              → hover preview vía MeatTransferBuffer.UpdateMeatHolderHover / CoalTransferBuffer.UpdateCoalHolderHover
-   │  StockPanelSlot.OnMouseUp    → CoolerSystem.TryTake(item,1)
+   │  StockPanelSlot.OnWorldPointerUp   → CoolerSystem.TryTake(item,1)
    │                              → GrillSystem.TrySpawnMeatAtPoint / TrySpawnCoalAtPoint
    │                              → si el spawn falla: CoolerSystem.Add(item,1)  [rollback]
    │  Soltar sobre el propio panel cancela. Sin buffer intermedio.
@@ -226,7 +236,7 @@ Parrilla (cocción por frame)
    │  Click derecho           → MeatClickable → Meat.Flip() (cambia cara activa) + FlipPuff
 
 Parrilla ──drag a la zona "ToBuild" (superficie naranja = plato)──► PLATO
-   │  Meat.OnMouseUp → prioridad: TrashZone → MTB.TryPlateMeatFromGrill(meat, punto) → grilla → origen
+   │  Meat.OnWorldPointerUp → prioridad: TrashZone → MTB.TryPlateMeatFromGrill(meat, punto) → grilla → origen
    │  TryPlateMeatFromGrill → BuildFoodDropZone.TryAcceptMeatAt (rechaza si el plato YA tiene un corte)
    │                        → BuildStationSystem.AddCut(cut, state, A, B)   [conserva tiempos de cocción]
    │                        → destruye el Meat, AdoptVisualIntoPlate(punto del drop) → AddComponent<PlateDeliveryDraggable>
@@ -254,7 +264,7 @@ Carne del plato ──drag agarrando LA CARNE (PlateDeliveryDraggable, modo Meat
    │  Gate: TutorialManager.CheckPlateMeatDragAllowed (false con tutorial activo → agarrar la carne lleva el plato entero)
 
 Entrega — ÚNICA vía: arrastrar EL PLATO (PlateDeliveryDraggable, modo WholePlate) hasta un cliente
-   │  Update (pick propio, sin OnMouseXXX) → agarrar el plato (BuildFoodDropZone.PlateBody, cualquier parte que no sea la carne)
+   │  Update (pick propio, sin OnWorldPointerXXX) → agarrar el plato (BuildFoodDropZone.PlateBody, cualquier parte que no sea la carne)
    │                  → se lleva el plato COMPLETO como bloque (sprite del plato + carne + sides/toppings); el plato vacío no se agarra
    │  Durante el drag → Physics2D.OverlapPointNonAlloc busca CustomerView bajo el mouse
    │                  → CustomerSystem.SetDeliveryDragHover(view) → recuadro + burbuja con PREVIEW ($ + propina o motivo)
@@ -263,7 +273,7 @@ Entrega — ÚNICA vía: arrastrar EL PLATO (PlateDeliveryDraggable, modo WholeP
    │        false (rechazo) → el plato vuelve intacto a su sitio
    │        true            → la comida se destruye y el sprite del plato vuelve VACÍO al mostrador
    │  Soltar en cualquier otro lado → el plato vuelve INTACTO al mostrador, con la carne donde estaba.
-   │                      Arrastrar el plato nunca saca la carne: para eso está el drag de solo-carne, el undo o la tecla C
+   │                      Arrastrar el plato nunca saca la carne: para eso está el drag de solo-carne, el undo o ClearPlate (C / LT)
 
   TryDeliverToCustomer(Customer) → bool
    │     1. EvaluateDelivery (puro): cliente válido y no en feedback → HasAnyCut → corte == order.PrimaryCut
@@ -285,13 +295,13 @@ Entrega — ÚNICA vía: arrastrar EL PLATO (PlateDeliveryDraggable, modo WholeP
 ### 3.1 Orquestación
 
 #### `GameManager` — `Core/GameManager.cs` · Singleton
-Bucle de input global y árbitro de la entrega. **No** contiene lógica de cocción ni de vistas.
+Traduce las acciones de `InputManager` a comandos de la partida y es el árbitro de la entrega. **No** lee
+teclas ni botones (eso es de `InputManager`) y **no** contiene lógica de cocción ni de vistas.
 
 | Campos clave | |
 |---|---|
 | `[SF] customerSystem, grillSystem, coolerSystem, viewManager, buildStationSystem, shopSystem, wallet, grillLayerToggle, foodAvailabilityService, catalog` | Referencias de inspector |
 | `[SF] MonoBehaviour meatTransferBuffer, coalTransferBuffer` | ⚠️ Tipados como `MonoBehaviour`: `meatTransferBuffer` se invoca **solo por `SendMessage`**; `coalTransferBuffer` ya no se usa desde acá |
-| `[SF] KeyCode stockPanelToggleKey = Q, toppingsPanelToggleKey = T, clearPlateKey = C` | Teclas configurables |
 | `[SF] Color previewExactTint / OffByOne / OffByTwo / Blocked` | Header *Delivery Preview Tints* |
 
 ```csharp
@@ -307,8 +317,9 @@ public void EndNight()   // desuscribe, DayClock.StopDay(), tracker.RegisterDayC
 ```
 
 `Start()` fuerza `grillSystem.SetMeatVisualsVisible(true)` (vista única: la parrilla siempre se ve y siempre
-cocina), se suscribe a `OnNightEnded` y publica la noche en el HUD. `Update()` es solo input (ver 4.4); no hay
-transiciones de vista.
+cocina), se suscribe a `OnNightEnded` y publica la noche en el HUD. `Update()` solo consulta
+`InputManager.WasPressed(GameAction.X)` y ejecuta el comando (ver 4.4); no hay transiciones de vista. Los bindings
+se cambian en `GameControls.inputactions`, no acá.
 
 **Evaluación vs. efectos.** Las reglas viven en `EvaluateDelivery(Customer)`, que es puro. `TryDeliverToCustomer`
 la llama y aplica los efectos. `CustomerSystem.SetDeliveryDragHover` también la llama para el **preview** en la
@@ -333,7 +344,7 @@ mal (`extrasNote != null`), el mensaje de `DeliveryFeedbackText` explica por qu�
 `SendMessage("SetPlateMeatTints", List<Color>)`; al salir del cliente `ClearDeliveryPreviewOnPlate` →
 `ClearPlateMeatTints`. Un tinte nuevo corta un flash en curso; un `Clear` con flash en curso no hace nada.
 
-`M` (corte faltante): busca un sustituto con stock en `foodAvailabilityService.GetAvailableCuts()` y llama
+`MissingCut` (`M` / View-Share): busca un sustituto con stock en `foodAvailabilityService.GetAvailableCuts()` y llama
 `customerSystem.TriggerMissingCutChange(cliente, sustituto)` (cambia el pedido, anula la propina, burbuja de
 feedback amarilla). Sin sustituto, solo avisa.
 
@@ -386,7 +397,9 @@ pausado mientras cualquiera esté activa.
 
 - `timeScale = 0` congela todo lo que usa `deltaTime` / `Time.time` / `WaitForSeconds`: cocción,
   carbón, paciencia, `SpawnLoop`, feedback de clientes, flips, salsas, burbujas.
-- `eventMask = 0` apaga los `OnMouseXXX` de los colliders del mundo: solo responde la UI del canvas de pausa.
+- `eventMask = 0` apaga los `OnWorldPointerXXX` de los colliders del mundo (`WorldPointerDispatcher` lo respeta igual
+  que el `SendMouseEvents` nativo): solo responde la UI del canvas de pausa. El cursor del gamepad se sigue moviendo
+  (usa `unscaledDeltaTime`).
 - `AudioListener.pause = true` silencia los SFX en curso.
 - `OnPaused` cancela los arrastres en curso: cada draggable se suscribe al agarrar y se desuscribe al
   soltar/cancelar, y al pausar vuelve a su origen (`Item`, `MeatHolderDraggableMeat`,
@@ -394,6 +407,43 @@ pausado mientras cualquiera esté activa.
   `StockPanelSlot`, `PlateDeliveryDraggable`).
 - `SceneManagementUtils` llama `Reset()` antes de cada carga: `timeScale` y `AudioListener.pause`
   persisten entre escenas.
+
+#### Input — `Input/` · `InputManager` Singleton + DDOL
+**Única puerta de entrada del input.** Nadie más usa `UnityEngine.Input`, `OnMouseXXX` ni lee dispositivos: todos
+preguntan intenciones a `InputManager`. Corre con `[DefaultExecutionOrder(-1000)]`, así el resto lee un estado ya
+resuelto para el frame.
+
+```csharp
+static Vector3 PointerPosition;            // píxeles de pantalla, reemplaza a Input.mousePosition
+static bool PrimaryPressed, PrimaryHeld, PrimaryReleased;   // click izquierdo  ·  A / ✕
+static bool SecondaryPressed;              // click derecho  ·  X / □   (flip de la carne)
+static bool WasPressed(GameAction);        // flanco, como GetKeyDown
+static InputScheme ActiveScheme;           // KeyboardMouse | Gamepad
+static GamepadFamily ActiveGamepadFamily;  // Xbox | PlayStation | Generic → para íconos de botones
+static bool HasNavFocus; static NavTarget NavFocus;   // elemento seleccionado por la navegación (recuadro)
+static bool FreeCursorActive;              // se está moviendo el cursor libre (stick derecho)
+static event Action<InputScheme> OnSchemeChanged;
+void ConfigureUIModule(InputSystemUIInputModule)
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `Assets/Input/GameControls.inputactions` | Mapa **`Gameplay`**: una acción por cada `GameAction` (mismo nombre) + `Navigate` (stick izq. + cruceta), `CursorMove` (stick der.), `PointerPrimary`, `PointerSecondary` (solo gamepad: los botones del mouse se leen directo del mouse real). Mapa **`UI`**: `Point/Click/RightClick/MiddleClick/ScrollWheel` desde cualquier `<Mouse>`, `Navigate` (flechas), `Submit` (Enter), `Cancel` (Esc). Control schemes `KeyboardMouse` y `Gamepad` |
+| `Resources/InputManager.prefab` | `InputManager` + `GamepadCursorView`. `InputManager.Bootstrap` (`BeforeSceneLoad`) lo instancia antes de la primera escena, así existe en todas sin setup. Ahí se ajustan velocidad y curva del cursor y los umbrales de cambio de esquema |
+| **Esquema activo** | Pasa a `Gamepad` al mover el stick o apretar un botón del gamepad; vuelve a `KeyboardMouse` al mover el mouse (≥ 3 px), scrollear o clickear. **El teclado no cambia el esquema** (se puede apretar una tecla con el cursor del gamepad). Si se desconecta el último gamepad, vuelve al mouse |
+| **Navegación por saltos** (`GamepadNavigator`) | Con gamepad el puntero es virtual y **se apoya sobre el elemento seleccionado**: el stick izquierdo / la cruceta saltan al elemento más cercano en esa dirección (en pantalla: avance + desvío lateral × 2.5, cono de ~65°; repite a los 0.32 s y cada 0.12 s manteniendo). Agarrar, soltar y clickear siguen pasando por el mismo puntero, así que no hay lógica de juego duplicada. Al apretar A la selección se suelta y el puntero queda quieto (lo agarrado lo sigue); **arrastrando, los saltos recorren solo destinos**; al soltar se re-selecciona lo que quedó bajo el puntero (radio 8 % de la pantalla). Al abrirse un panel lateral se selecciona su primer elemento (arriba a la izquierda). Si lo seleccionado deja de valer (panel cerrado, cliente que se va), busca lo más cercano |
+| **Qué se puede seleccionar** (`GamepadNavTargets`) | **Sin nada agarrado:** botones de UI (`Selectable` interactuable, visible y que sea lo primero que toca el raycast de UI en su centro: descarta los tapados por un popup o recortados por máscara) y, en el mundo, celdas del stock con unidades (panel abierto), panes/guarniciones/frascos (panel de toppings abierto), pestañas de los paneles, botón de capa, carne y carbón de la capa activa, carne de la bandeja, carne del plato, **el plato** (punto del plato fuera de la carne, preferentemente el borde de abajo: ahí el agarre lleva el plato entero) y clientes (hover = ver el pedido). **Arrastrando** (`DragKind` según lo que recibió el Down): carne del stock/bandeja → bloques de la parrilla y plato; carne de la parrilla → bloques, plato, tacho; carbón → huecos de carbón (`CanPlaceItem`), tacho; carne del plato → bandeja, bloques, plato; plato entero → clientes; pan/guarnición → plato; frasco → su zona de vertido. Nada tapado por un panel abierto (salvo lo del propio panel). Con el juego en pausa, solo UI |
+| **Bloques de carne** | La carne no recorre huecos sueltos: sus destinos en la parrilla son **todos los bloques libres del tamaño real del corte** (`GrillSpace`, rotado si corresponde), enumerados con `GridSlot.CollectContiguousPlacements` — la misma búsqueda que usa `TryFindContiguousPlacement` para decidir dónde cae, así que el bloque seleccionado es exactamente donde queda. Cada salto corre el bloque un slot; el recuadro cubre el bloque entero. El footprint sale de `GamepadNavTargets.TryGetMeatFootprint` (stock: `StockPanelSlot.IsDragRotated`; parrilla: `Meat.IsGridRotated`; bandeja: `ToBuildDraggableMeat.IsGridRotated`; plato: `PlateDeliveryDraggable.TryGetDraggedCut`). Al empezar a arrastrar carne de la parrilla se selecciona su propio bloque; al rotar (B) el bloque deja de valer y se elige el más cercano con el footprint nuevo. `InputManager.TryGetGridSnap` da el centro del bloque: la bandeja y la carne del plato, que se arrastran con agarre desplazado, lo usan para dibujar el corte justo sobre los slots (la carne de la parrilla y el fantasma del stock ya siguen al puntero, que está en ese centro). Con `visualOffset` distinto de cero habría que sumarlo ahí |
+| **Cursor libre** | El stick derecho mueve el puntero libre (velocidad `cursorSpeed` = 0.8 alturas de pantalla/s, curva `cursorResponseExponent`, `unscaledDeltaTime` para que ande en pausa): suelta la selección y muestra la flecha. Sirve para apuntar fino (ubicar la carne en un punto del plato, mover el frasco mientras vierte) |
+| **Visual** (`GamepadCursorView`) | Canvas overlay propio, por encima de todo. **Recuadro de esquinas con latido** alrededor de lo seleccionado: amarillo = algo para agarrar/clickear, verde = destino. **Flecha** solo con el cursor libre o sin nada seleccionado (sprite asignable; si no hay, la genera en runtime; se achica mientras se mantiene A). El cursor del sistema se oculta con gamepad |
+| **UI (uGUI)** | El gamepad maneja un `Mouse` **virtual** (`VirtualCursorMouse`, `InputSystem.QueueStateEvent`): para el `InputSystemUIInputModule` es un mouse más, así que botones, hovers (`MenuButtonHover`) y scroll de Canvas andan con el cursor sin código extra. Los `EventSystem` de las 5 escenas usan `InputSystemUIInputModule` con el mapa `UI`; si aparece un `StandaloneInputModule` (o un módulo sin configurar, como el que crea `TutorialManager`) `InputManager` lo reemplaza/configura en runtime con un warning |
+| **`WorldPointerDispatcher`** | Reemplazo de `SendMouseEvents` para los colliders del mundo con el puntero de `InputManager`: `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` ≡ `OnMouseDown/Drag/Up/UpAsButton/Enter/Over/Exit`. Misma semántica que el nativo: raycast 3D y 2D por cámara (por `depth`), máscara `cullingMask & eventMask`, `eventMask == 0` corta, `Drag`/`Up` siempre al objeto del `Down`, entrega por `SendMessage` |
+| **Familia del gamepad** | `DualShockGamepad` (incluye DualSense) → `PlayStation`; `XInputController` → `Xbox`; el resto → `Generic`. Un genérico en modo DirectInput que Unity no reconozca como `Gamepad` entra como `Joystick`: solo mueve el cursor (`<Joystick>/stick`) y hace click (`<Joystick>/trigger`) |
+
+⚠️ **Gamepad y `Submit` de UI.** El mapa `UI` **no** tiene bindings de gamepad para `Navigate`/`Submit`/`Cancel` a
+propósito: después de clickear un botón con el cursor (p. ej. RollBack) el botón queda seleccionado, y un `Submit` en
+A lo volvería a disparar cada vez que se agarra algo. La navegación con D-pad de menú principal y tienda queda para
+cuando se adapten esas pantallas (ver nota 35).
 
 ---
 
@@ -481,10 +531,10 @@ void SetCut(MeatCutSO), SetGridRotation(bool), ToggleGridRotation()
 void RegisterOccupiedSlot(GridSlot), UnregisterOccupiedSlot(GridSlot), ReleaseOccupiedSlots()
 void RefreshState()                     // deriva estado del calor → NotifyMeatStateChanged
 ```
-`OnMouseUp` prioriza: `TrashZone` → `MeatTransferBuffer.TryPlateMeatFromGrill` (gateado por
+`OnWorldPointerUp` prioriza: `TrashZone` → `MeatTransferBuffer.TryPlateMeatFromGrill` (gateado por
 `TutorialManager.CheckMeatDragToBuildAllowed`) → si el punto cae sobre un plato **ya ocupado** vuelve al origen
 (`BuildFoodDropZone.IsPlateOccupiedAt`, para no caer en los slots que el plato tapa) → colocación en grilla → origen.
-`R` mientras se arrastra rota el footprint. `MeatInstance : Meat` añade audio de chisporroteo.
+`GameAction.Rotate` (`R` / B-○) mientras se arrastra rota el footprint. Click derecho / X-□ da vuelta la carne (`MeatClickable`). `MeatInstance : Meat` añade audio de chisporroteo.
 VFX: `smokePrefab` (con `BurnSmoke`) se instancia cuando `IsAnySideBurned` pasa a `true`; `FlipPuff` (hijo,
 `ParticleSystem` emitido a mano) dispara en cada `Flip()` sin importar el estado.
 
@@ -534,8 +584,8 @@ static bool IsItemTypeAllowed(ItemType)   // gatea GridSlot.CanPlaceItem
 void Toggle(), ShowLayer(GrillLayer), RefreshVisibility()
 ```
 La capa inactiva queda visible con `inactiveAlpha` y colliders desactivados.
-Dos entradas para `Toggle()`: el `OnMouseDown` del propio botón en la escena y `Space` desde
-`GameManager.TryToggleGrillLayer()` (ignorado si hay un botón del mouse apretado). Ambas pasan por `ShowLayer`,
+Dos entradas para `Toggle()`: el `OnWorldPointerDown` del propio botón en la escena y `ToggleGrillLayer`
+(`Space` / Y-△) desde `GameManager.TryToggleGrillLayer()` (ignorado con `InputManager.PrimaryHeld`). Ambas pasan por `ShowLayer`,
 así que el icono del botón y `TutorialManager.NotifyGrillLayerChanged` quedan siempre sincronizados.
 
 #### Mapa de calor (`GridSlot.LateUpdate`)
@@ -652,18 +702,18 @@ bool IsPointInDropArea(Vector3)
 
 #### `StockPanelSlot` — `UI/StockPanel/StockPanelSlot.cs`
 Una celda = una variedad. `Bind(ItemDataSO, count, owner)`, `SetSortingOrder(int)`, `CancelDrag()`.
-Maneja el arrastre completo desde `OnMouseDown` hasta `OnMouseUp` **en el mismo componente**: Unity
-no transfiere `OnMouseDrag`/`OnMouseUp` a otro collider, así que el fantasma que sigue al mouse no
+Maneja el arrastre completo desde `OnWorldPointerDown` hasta `OnWorldPointerUp` **en el mismo componente**: el
+dispatcher no transfiere `Drag`/`Up` a otro collider, así que el fantasma que sigue al mouse no
 puede hacerse cargo del drag. El preview de colocación lo dibujan los buffers (`MeatBuffer.UpdateMeatHolderHover`,
 `CoalBuffer.UpdateCoalHolderHover`) — es el único uso vivo de esas APIs. `FitIconToSlot()` escala el ícono por
-`sprite.bounds`. `R` rota el footprint (solo carne). El arrastre pide permiso a `TutorialManager.CheckStockDragAllowed(item)`.
+`sprite.bounds`. `GameAction.Rotate` rota el footprint (solo carne). El arrastre pide permiso a `TutorialManager.CheckStockDragAllowed(item)`.
 
 Gates del drop, **antes** de cualquier `TryTake`:
 1. Soltar sobre el propio panel cancela siempre (`IsPointOverPanel`).
 2. `requireDropAreaHit` + `dropArea` (opcional, **off** por defecto) exige soltar dentro de un collider concreto.
 
 #### `StockPanelTab` — `UI/StockPanel/StockPanelTab.cs`
-Pestaña lateral con `BoxCollider2D` + `OnMouseDown` → `controller.Toggle()`.
+Pestaña lateral con `BoxCollider2D` + `OnWorldPointerDown` → `controller.Toggle()`.
 
 #### `ToppingsPanelController : SlidingPanel` — `UI/ToppingsPanel/ToppingsPanelController.cs` · Singleton
 Panel derecho (espejo del StockPanel, arriba a la derecha). Reemplaza al `FoodItemsContainer` de la Build View.
@@ -721,7 +771,7 @@ root de `GrillView` y medirlo entero tragaba media parrilla.
 
 #### `ToBuildDraggableMeat` — `Core/ToBuildDraggableMeat.cs`
 Draggable de los cortes de la **bandeja** (el nombre es histórico). `Setup(cut, buffer, entryId, rotated)`.
-`OnMouseUp` → `TryPlateFromTrayById` y, si falla, `TryDropFromTrayById`; si ambos fallan vuelve a la bandeja.
+`OnWorldPointerUp` → `TryPlateFromTrayById` y, si falla, `TryDropFromTrayById`; si ambos fallan vuelve a la bandeja.
 `R` rota el footprint. Se suscribe a `GamePause.OnPaused` al agarrar. Su collider lo recalca `SpriteColliderFitter.Fit` sobre la silueta del corte en `Awake` y en cada `Setup` (el sprite cambia con el estado de cocción y los visuales se reciclan entre entradas de la bandeja) — ver nota 33.
 
 #### `CoalTransferBuffer` — `CoalTransferBuffer.cs`
@@ -768,7 +818,7 @@ objeto entero (sprite + collider de la zona). Es seguro porque hay un solo mouse
 puede soltar nada sobre la zona, y `RestorePositions` la devuelve al soltar.
 
 ⚠️ **El plato admite un solo corte** (desde `45f2d74`, 2026-09-09): `TryAcceptMeatAt` devuelve `false` si
-`HasAnyCut`, y el corte sobrante vuelve a su origen. `IsPlateOccupiedAt` existe para que `Meat.OnMouseUp` no
+`HasAnyCut`, y el corte sobrante vuelve a su origen. `IsPlateOccupiedAt` existe para que `Meat.OnWorldPointerUp` no
 deje caer ese corte en los slots de la grilla que el plato tapa. Las listas `AssembledCuts` siguen siendo listas
 (el evaluador itera), pero en la práctica tienen 0 o 1 elemento.
 
@@ -817,7 +867,7 @@ public void RefreshCollider()   // recalca el collider sobre la silueta del spri
 | Aspecto | Detalle |
 |---|---|
 | Creación | **Cero setup de escena.** `MeatTransferBuffer.AdoptVisualIntoPlate` lo hace `AddComponent` sobre cada visual de carne que entra al plato |
-| **Agarre (pick)** | **No usa `OnMouseDown`/`OnMouseDrag`/`OnMouseUp`.** El pick se resuelve en `Update`: `PickUnderPointer(out mode)` recorre las instancias, proyecta el mouse sobre el plano z de **cada candidato** (`GetMouseWorldPos`) y prueba `selfCollider.OverlapPoint`. Gana el de `sortingOrder` más alto → `MeatOnly` (o `WholePlate` si el tutorial lo veta). Si ninguna carne está bajo el mouse, `PickPlateBodyUnderPointer()` prueba **el plato en sí** (`BuildFoodDropZone.Zones` con `HasLoadedPlate` + `ContainsPoint`, proyectando al z del plato) → `WholePlate`, conduce la primera carne viva. Chequea `GamePause.IsPaused`. Ver nota 22 |
+| **Agarre (pick)** | **No usa `OnWorldPointerDown`/`Drag`/`Up`.** El pick se resuelve en `Update` (con `InputManager.PrimaryPressed` y `PointerPosition`): `PickUnderPointer(out mode)` recorre las instancias, proyecta el mouse sobre el plano z de **cada candidato** (`GetMouseWorldPos`) y prueba `selfCollider.OverlapPoint`. Gana el de `sortingOrder` más alto → `MeatOnly` (o `WholePlate` si el tutorial lo veta). Si ninguna carne está bajo el mouse, `PickPlateBodyUnderPointer()` prueba **el plato en sí** (`BuildFoodDropZone.Zones` con `HasLoadedPlate` + `ContainsPoint`, proyectando al z del plato) → `WholePlate`, conduce la primera carne viva. Chequea `GamePause.IsPaused`. Ver nota 22 |
 | Qué se arrastra | `WholePlate`: el plato **completo como bloque**: el sprite del plato (`BuildFoodDropZone.CollectActivePlateBodies`) + todas las instancias de `PlateDeliveryDraggable` + los visuales de sides/toppings (`CollectActivePlateVisuals`). El plato conserva su orden relativo: `0 + 5000` queda debajo de sides (`390 + 5000`) y carne (`400 + 5000`). `MeatOnly`: solo el `transform` de la instancia agarrada |
 | Estado del arrastre | `static`: la instancia que conduce (`activeDragger`), el modo (`activeMode`), el frame del último pick y las posiciones + `sortingOrder` de origen de cada visual. El `sortingOrder` sube `+5000` mientras dura y se restaura al soltar. `MeatOnly` guarda además el `MeatTransferBuffer` y `cut` + rotación (`TryGetPlateMeatInfo`) para el preview |
 | Gate de paneles | Si el punto cae sobre un `SlidingPanel` abierto (`StockPanelController` / `ToppingsPanelController` → `IsPointOverPanel`) el pick devuelve `null`: el click es del panel |
@@ -1032,7 +1082,7 @@ El `OrderSystem` se construye con el pool de toppings del catálogo y `maxToppin
   `RefreshPatience()` escala el fill en X, **lo tiñe** (`patienceHighColor` → `Mid` en 50 % → `Low`) y **hace temblar
   el contenedor** por debajo de `urgentThreshold` (0.2). El temblor mueve `patienceFill.parent`, nunca el cliente.
 - **Gateo de pick por paneles** (`ApplyPickingState`): los paneles deslizantes se abren encima de los slots de
-  clientes y comparten z, así que un cliente tapado le robaba el `OnMouseDown` a las celdas (softlock: no se podía
+  clientes y comparten z, así que un cliente tapado le robaba el `OnWorldPointerDown` a las celdas (softlock: no se podía
   agarrar el carbón). Se apaga `pickCollider` **solo** si `SlidingPanel.AnyPanelOpen && IsCoveredByOpenPanel()`
   (`SlidingPanel.IsAreaCoveredByOpenPanel(área del collider)`) y no hay arrastre de plato activo. El área se cachea
   en `Awake` desde `BoxCollider2D.offset/size` (con el collider apagado `bounds` no sirve). Se re-evalúa con
@@ -1041,7 +1091,7 @@ El `OrderSystem` se construye con el pool de toppings del catálogo y `maxToppin
   justo encima de la parrilla, cuyo borde superior está en `y ≈ -0.66` (fila de slots más alta en `-0.93`, slot de
   0.54 de alto). Los colliders venían de fábrica con `offset.y` −0.79 a −1.18 y `size.y` 3.11 a 3.84, o sea bajaban
   hasta `y = -2.75 … -4.26`: cada cliente se comía una franja de 2 unidades de ancho sobre **la mitad superior de la
-  parrilla**, y como con cámara en perspectiva Unity manda `OnMouseDown`/`OnMouseEnter` al collider más cercano, el
+  parrilla**, y como con cámara en perspectiva el pick manda `OnWorldPointerDown`/`Enter` al collider más cercano, el
   cliente le robaba el click a los cortes y al carbón (y el hover le abría la burbuja de pedido). Hoy los cinco
   prefabs están en `offset.y = -0.03`, `size.y = 1.88` → **`y` de 0.00 a 3.76**, que es el cuerpo visible: de ahí
   para abajo el gráfico de la parrilla ya tapa las piernas. El eje X queda como venía (≈2 de ancho, siguiendo el
@@ -1448,7 +1498,7 @@ static void NotifyMeatFlipped(MeatCutSO), NotifyMeatStateChanged(Meat)
 static void NotifyDeliverySelectionBegun(), NotifyProductDelivered()
 ```
 
-- `StartTutorial()`: asegura un `EventSystem`, hace backup del stock del `CoolerSystem` y lo sustituye por el del
+- `StartTutorial()`: asegura un `EventSystem` (con `InputSystemUIInputModule` configurado por `InputManager`), hace backup del stock del `CoolerSystem` y lo sustituye por el del
   tutorial: **todos** los cortes con stock pasan a 0 (no una lista fija: la run puede traer cortes comprados y el
   StockPanel muestra cualquiera con unidades), `ChorizoTutorial = tutorialCutAmount` (3) y carbón =
   `tutorialCoalAmount` (3). Después `ShowStep(0)`.
@@ -1647,6 +1697,8 @@ MainMenuScene (build index 0)
         └── TutorialOfferController: diálogo pausado → "sí" carga TutorialScene → (paso 18) ShopTutorial → GameScene
 
 [RuntimeInitializeOnLoadMethod]
+  InputManager.ResetStatics()                SubsystemRegistration  → Instance / OnSchemeChanged a null
+  InputManager.Bootstrap()                   BeforeSceneLoad        → instancia Resources/InputManager.prefab (DDOL)
   SceneManagementUtils.Initialize()          BeforeSceneLoad        → engancha SceneManager.sceneLoaded
   SlidingPanel.ResetStaticState()            SubsystemRegistration  → limpia OpenPanels / OnAnyPanelOpenChanged
   GrillNotificationManager.AutoInitialize()  AfterSceneLoad         → crea el manager si no existe
@@ -1668,7 +1720,8 @@ MainMenuScene (build index 0)
 
 | Componente | `Update` |
 |---|---|
-| `GameManager` | `Esc` → `UIManager.PauseGame/UnPauseGame` (ignorada durante el diálogo de oferta); con `GamePause.IsPaused` corta el resto del input global. Teclas de 4.4 |
+| `InputManager` (**primero**, orden -1000) | Esquema activo → puntero (mouse o cursor virtual) y flancos de los botones → alimenta el mouse virtual de la UI → configura el módulo del `EventSystem` si cambió → `WorldPointerDispatcher.Tick` (manda los `OnWorldPointerXXX` del frame, antes de cualquier otro `Update`, como el `SendMouseEvents` nativo) |
+| `GameManager` | `Pause` → `UIManager.PauseGame/UnPauseGame` (ignorada durante el diálogo de oferta); con `GamePause.IsPaused` corta el resto de los comandos. Acciones de 4.4 |
 | `GrillSystem` | `UpdateHeatPropagation()` — recalcula el calor de todos los slots |
 | `GridSlot` (×N) | Quema carbones → calcula calor interno → `meat.Cook(totalHeatReceived)`; `LateUpdate`: heat glow |
 | `Meat` | Efectos (humo de quemado); si está agarrado: `HandleHeldInput` + `UpdateHoverPreview` |
@@ -1684,21 +1737,31 @@ MainMenuScene (build index 0)
 
 ### 4.4 Controles
 
-| Tecla | Contexto | Acción |
-|---|---|---|
-| `Esc` | Global | Pausa / reanudar vía `GamePause`: congela tiempo, audio e input del mundo y cancela arrastres. Ignorada mientras el diálogo de oferta del tutorial está abierto |
-| `Q` | Parrilla | Abre / cierra el **StockPanel** (`stockPanelToggleKey`). Abrir pide `TutorialManager.CheckStockPanelOpenAllowed` |
-| `T` | Parrilla | Abre / cierra el **ToppingsPanel** (`toppingsPanelToggleKey`) |
-| `Space` | Parrilla | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; ignorado con un botón del mouse apretado) |
-| `R` | Parrilla | `CleanAshes()` — destruye carbones en `Ceniza` (gateado por el tutorial) |
-| `R` | mientras se arrastra carne | Rotar footprint del corte (parrilla, StockPanel, bandeja) |
-| Click derecho | sobre carne en parrilla | `Meat.Flip()` |
-| `C` | Parrilla | Limpiar el plato entero (`clearPlateKey`): armado + visuales de carne + sides/toppings + salpicaduras |
-| `M` | Parrilla | Informar corte faltante → sustituye el pedido por un corte con stock (`TriggerMissingCutChange`, propina anulada) |
-| Arrastrar carne a `ToBuild` | Parrilla | Monta el corte en el plato (uno solo) |
-| Arrastrar el plato | Parrilla | Entrega por **drag & drop**: soltar sobre un cliente entrega; rechazo → vuelve al plato; soltar sobre la bandeja / un hueco de la grilla → la carne se va ahí |
-| Botón RollBack | Parrilla | `BuildUndoHistory.UndoLast()` (pan / side / topping / **carne → bandeja**) |
-| Pestañas laterales | Parrilla | `StockPanelTab.OnMouseDown` → `Toggle()` |
+Bindings en `Assets/Input/GameControls.inputactions` (mapa `Gameplay`): cambiar una tecla o un botón es editar el
+asset, no código. Gamepad en notación Xbox / PlayStation.
+
+| `GameAction` / puntero | Teclado + mouse | Gamepad | Contexto | Acción |
+|---|---|---|---|---|
+| Seleccionar | mouse | stick izquierdo / cruceta | Global | Salta al elemento más cercano en esa dirección (3.1 → *Input*); arrastrando, solo entre destinos |
+| Cursor libre | mouse | stick derecho | Global | Mueve el puntero libre, para apuntar fino |
+| `PointerPrimary` | click izquierdo | A / ✕ | Global | Agarrar / soltar / click (mundo y UI) |
+| `PointerSecondary` | click derecho | X / □ | sobre carne en parrilla | `Meat.Flip()` |
+| `Pause` | `Esc` | Menu / Options | Global | Pausa / reanudar vía `GamePause`: congela tiempo, audio e input del mundo y cancela arrastres. Ignorada mientras el diálogo de oferta del tutorial está abierto |
+| `ToggleStockPanel` | `Q` | LB / L1 | Parrilla | Abre / cierra el **StockPanel**. Abrir pide `TutorialManager.CheckStockPanelOpenAllowed` |
+| `ToggleToppingsPanel` | `E` | RB / R1 | Parrilla | Abre / cierra el **ToppingsPanel** |
+| `ToggleGrillLayer` | `Space` | Y / △ | Parrilla | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; ignorado con `PrimaryHeld`) |
+| `CleanAshes` | `R` | RT / R2 | Parrilla | `CleanAshes()` — destruye carbones en `Ceniza` (gateado por el tutorial) |
+| `Rotate` | `R` | B / ○ | mientras se arrastra carne | Rotar footprint del corte (parrilla, StockPanel, bandeja, plato) |
+| `ClearPlate` | `C` | LT / L2 | Parrilla | Limpiar el plato entero: armado + visuales de carne + sides/toppings + salpicaduras |
+| `MissingCut` | `M` | View / Share | Parrilla | Informar corte faltante → sustituye el pedido por un corte con stock (`TriggerMissingCutChange`, propina anulada) |
+| Arrastrar carne a `ToBuild` | | | Parrilla | Monta el corte en el plato (uno solo) |
+| Arrastrar el plato | | | Parrilla | Entrega por **drag & drop**: soltar sobre un cliente entrega; rechazo → vuelve al plato; soltar sobre la bandeja / un hueco de la grilla → la carne se va ahí |
+| Botón RollBack | | | Parrilla | `BuildUndoHistory.UndoLast()` (pan / side / topping / **carne → bandeja**) |
+| Pestañas laterales | | | Parrilla | `StockPanelTab.OnWorldPointerDown` → `Toggle()` |
+
+En el teclado `R` sigue haciendo las dos cosas a la vez (limpiar cenizas y rotar), como antes; en el gamepad son dos
+botones. El panel de toppings va en `E` (antes era una tecla configurable del `GameManager` que `GameScene` y
+`TutorialScene` pisaban con `E`).
 
 Ya **no existen**: `W`/`E`, `←`/`→` (cambio de vista), `A`/`D` (selección de cliente), `Space` en Build, `X` (descartar quemados).
 
@@ -1768,14 +1831,14 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 15 | **Cooler View y Build View deprecadas.** Scripts que ya no se alcanzan: `CoolerStockVisualizer`, `CoalStockVisualizer`, `CoolerDraggableMeat`, `DraggableCoal`, `MeatHolderDraggableMeat`, `CoalHolderDraggableCoal`; assets `Prefabs/CoolerView.prefab`, `BuildView.prefab`. **`StockPrefab.prefab` NO está deprecado**: es el `visualPrefab` vivo de `MeatTransferBuffer` (override de escena en `GameScene`), o sea el visual de cada corte en la bandeja y en el plato — ver nota 33. La cabecera `DEPRECADO` de `DraggableCoal` avisa que descuenta stock **antes** de validar y **sin rollback**. No borrar sin revisar los overrides de escena |
 | 16 | `GrillView` tiene **escala no uniforme `(0.81, 1, 1)`** como override de escena. Cualquier hijo nuevo que deba verse sin deformar necesita contra-escala (`localScale.x = 1/0.81`). Es lo que hacen las instancias de `StockPanel` y del `ToppingsPanel` |
 | 17 | **`TutorialScene` es un clon de `GameScene`** con una lista corta de diferencias (sin `DayClock` ni oferta, catálogo del tutorial, cliente y stock del tutorial; tabla en 3.7). Un cambio de layout o de sistemas en `GameScene` hay que replicarlo en `TutorialScene`, y si toca lo que se enseña, revisar el texto del panel del paso correspondiente (`Prefabs/PanelesTutos/`) |
-| 18 | **Toda pausa pasa por `GamePause`** (`Core/GamePause.cs`): nadie más escribe `Time.timeScale`. Una animación de UI que deba correr en pausa necesita `Time.unscaledDeltaTime` (`SlidingPanel` ya lo hace); un loop `yield return null` + unscaled **sigue corriendo en pausa** y necesita gate propio. Draggables nuevos: suscribirse a `GamePause.OnPaused` al agarrar, desuscribirse al soltar, y guardar `OnMouseDrag`/`OnMouseUp` con el flag de arrastre porque tras cancelar puede llegar un `OnMouseUp` tardío. Un pick que no use `OnMouseXXX` (como `PlateDeliveryDraggable.Update`) debe chequear `GamePause.IsPaused`: `eventMask` no lo frena |
+| 18 | **Toda pausa pasa por `GamePause`** (`Core/GamePause.cs`): nadie más escribe `Time.timeScale`. Una animación de UI que deba correr en pausa necesita `Time.unscaledDeltaTime` (`SlidingPanel` ya lo hace); un loop `yield return null` + unscaled **sigue corriendo en pausa** y necesita gate propio. Draggables nuevos: suscribirse a `GamePause.OnPaused` al agarrar, desuscribirse al soltar, y guardar `OnWorldPointerDrag`/`OnWorldPointerUp` con el flag de arrastre porque tras cancelar puede llegar un `OnWorldPointerUp` tardío. Un pick que no use `OnWorldPointerXXX` (como `PlateDeliveryDraggable.Update`) debe chequear `GamePause.IsPaused`: `eventMask` no lo frena |
 | 19 | La entrega tiene **una sola entrada y una sola lógica**: `PlateDeliveryDraggable` → `GameManager.TryDeliverToCustomer(Customer)`, cuyas reglas viven en `EvaluateDelivery`. Al tocar validaciones, pagos o mensajes, editar **solo `EvaluateDelivery`** (el preview del hover lo comparte). El `bool` de retorno decide si el plato vuelve a su sitio: un camino de rechazo nuevo tiene que devolver `false` o el plato desaparece del mostrador |
 | 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.AdoptVisualIntoPlate`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la zona del plato, tiene que pasar por ahí o ese plato no se podrá arrastrar |
 | 21 | Los clientes se instancian con `customersParent = null` (raíz de escena), así que **no** los alcanza el toggle de `ViewManager` y sus colliders siguen activos. De eso depende el hover de la entrega por arrastre (`Physics2D.OverlapPointNonAlloc`). El único que apaga su collider es `CustomerView.ApplyPickingState` (panel encima / feedback) |
-| 22 | **La cámara está en perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). Dos consecuencias, y las dos ya mordieron: (a) **nunca** `cam.ScreenToWorldPoint(Input.mousePosition)` a secas — con `z = 0` devuelve la posición de la cámara. Siempre `pos.z = Mathf.Abs(objeto.z - cam.z)` antes de convertir (`Item.GetMouseWorldPosition` es la referencia; lo repiten `Meat.RestoreHoverIfPointerOver`, `ToBuildDraggableMeat`, `StockPanelSlot`, `PlateDeliveryDraggable`; `MoneyPopup.TryGetHudTarget` hace lo mismo para el destino del vuelo). (b) El pick interno de Unity (`OnMouseDown` sobre `Collider2D`) reparte el click a **un solo** collider, y los visuales del plato quedan apoyados sobre el de la zona `ToBuild` — mismo plano `z = 0` y sin handler de mouse — así que se lo quedaba la zona y la carne del plato dejaba de ser agarrable. Por eso `PlateDeliveryDraggable` resuelve su propio pick en `Update`. Si algún otro objeto apilado sobre un collider "mudo" deja de responder al mouse, es el mismo caso |
-| 23 | **Un solo corte por plato** (`BuildFoodDropZone.TryAcceptMeatAt` rechaza el segundo). Si se vuelve a permitir más de uno hay que revisar `Meat.OnMouseUp` (`IsPlateOccupiedAt`), `AdoptVisualIntoPlate` (sorting por índice), el preview de tintes, que ya iteran listas y deberían tolerarlo (la carne no tiene slot: cada corte queda donde se soltó, así que el layout no limita) |
+| 22 | **La cámara está en perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). Dos consecuencias, y las dos ya mordieron: (a) **nunca** `cam.ScreenToWorldPoint(InputManager.PointerPosition)` a secas — con `z = 0` devuelve la posición de la cámara. Siempre `pos.z = Mathf.Abs(objeto.z - cam.z)` antes de convertir (`Item.GetMouseWorldPosition` es la referencia; lo repiten `Meat.RestoreHoverIfPointerOver`, `ToBuildDraggableMeat`, `StockPanelSlot`, `PlateDeliveryDraggable`; `MoneyPopup.TryGetHudTarget` hace lo mismo para el destino del vuelo). (b) El pick de `WorldPointerDispatcher` (`OnWorldPointerDown` sobre `Collider2D`, misma lógica que el `OnMouseDown` nativo) reparte el click a **un solo** collider, y los visuales del plato quedan apoyados sobre el de la zona `ToBuild` — mismo plano `z = 0` y sin handler de mouse — así que se lo quedaba la zona y la carne del plato dejaba de ser agarrable. Por eso `PlateDeliveryDraggable` resuelve su propio pick en `Update`. Si algún otro objeto apilado sobre un collider "mudo" deja de responder al mouse, es el mismo caso |
+| 23 | **Un solo corte por plato** (`BuildFoodDropZone.TryAcceptMeatAt` rechaza el segundo). Si se vuelve a permitir más de uno hay que revisar `Meat.OnWorldPointerUp` (`IsPlateOccupiedAt`), `AdoptVisualIntoPlate` (sorting por índice), el preview de tintes, que ya iteran listas y deberían tolerarlo (la carne no tiene slot: cada corte queda donde se soltó, así que el layout no limita) |
 | 27 | **La carne del plato siempre se dibuja sobre sides/toppings.** `plateMeatSortingBase` (400, en `MeatTransferBuffer`) tiene que quedar **por encima** de `BuildFoodDropZone.sideTopSortingOrder` (390) + cantidad de visuales; si se cambia uno, revisar el otro. Los visuales de sides/toppings van a slots fijos desde el centro del plato (ver 3.4): agregar un item nuevo al `ToppingsPanel` no requiere tocar el layout, solo si se quiere un tercer slot |
-| 24 | **Paneles encima de clientes.** Los dos `SlidingPanel` se despliegan sobre la fila de clientes y comparten z con ellos. Cualquier objeto nuevo con collider en esa zona tiene que gatearse igual que `CustomerView.ApplyPickingState` (`SlidingPanel.IsAreaCoveredByOpenPanel`) o va a robar clicks a las celdas del panel. Y al revés: un pick que no use `OnMouseXXX` tiene que preguntar `IsPointOverPanel` antes de aceptar el click (`PlateDeliveryDraggable` lo hace) |
+| 24 | **Paneles encima de clientes.** Los dos `SlidingPanel` se despliegan sobre la fila de clientes y comparten z con ellos. Cualquier objeto nuevo con collider en esa zona tiene que gatearse igual que `CustomerView.ApplyPickingState` (`SlidingPanel.IsAreaCoveredByOpenPanel`) o va a robar clicks a las celdas del panel. Y al revés: un pick que no use `OnWorldPointerXXX` tiene que preguntar `IsPointOverPanel` antes de aceptar el click (`PlateDeliveryDraggable` lo hace) |
 | 25 | **La bandeja no tiene tope** (decisión del refactor): apila sin límite en `trayWorldDirection × trayWorldSpacing`. Si se llena, es un problema visual, no lógico |
 | 28 | **La derrota total se decide en `Awake`, no en `Start`** (`RunDefeatScreen`): así apaga `ShopCanvas` y `StrikeEndPopupCanvas` antes de que corran sus `Start`, y `StrikeEndPopup` no llega a consumir su flag. Un componente nuevo de `EndScene` que asuma que la tienda está encendida tiene que contemplar este caso |
 | 29 | **`SceneManagementUtils.RestartRun` usa `DestroyImmediate`, no `Destroy`**, sobre los cuatro DDOL. Carga `GameScene` en el mismo frame y `GameScene` trae sus propias copias: con destrucción diferida los viejos siguen vivos durante el `Awake` de los nuevos, los nuevos se autodestruyen por el guard de singleton y recién después mueren los viejos → las cuatro `Instance` quedan en `null`. `ReturnToMainMenu` no tiene el problema porque `MainMenuScene` no trae copias |
@@ -1784,4 +1847,5 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 32 | **El fondo de `GameScene` es `FondoCicloDia` y usa los `sortingOrder` -60 a -4** (capas en -60/-55/-50/-45/-40/-30/-20, paisaje en -5; el fundido de sprites de `DayCycleLayer` dibuja en `order + 1`, así que el del paisaje cae en -4). Algo nuevo que vaya detrás de la carne pero delante del fondo va en -3 o más. El tinte del ciclo de día es **solo para esas capas**: parrilla, carne, clientes y HUD no se tiñen, porque leer el punto de cocción depende de sus colores. Ver 3.9 |
 | 33 | **El collider de un visual de carne NO se mide con `sprite.bounds`.** Los visuales salen todos del prefab genérico `StockPrefab` — que es **solo `Transform` + `SpriteRenderer` vacío, sin collider** (el 2026-09-23 se le sacó la `BoxCollider2D` de `0.0001 × 0.0001` que arrastraba) — y el sprite del corte se les asigna después; además **todos los cortes se dibujan sobre un lienzo de 100x100 px**, así que `sprite.bounds` devuelve `1x1` para el chorizo (ocupa 84x53 px), el vacío (92x59) y el paty (82x87) por igual. Medir por ahí daba el mismo cuadrado para todos y, en el plato, con el `* 1.2f` de margen que llevaba el agarre, la caja del corte se comía los clicks del plato de alrededor: al querer levantar el plato se levantaba la carne. Se mide con **`SpriteColliderFitter.Fit`** (`Build/SpriteColliderFitter.cs`), que calca el **physics shape** del sprite en un `PolygonCollider2D` (los PNG de cortes se importan con `spriteGenerateFallbackPhysicsShape`, así que Unity genera el contorno por alfa: verificados los 61 sprites de los 10 `MeatCutSO` y los 28 de los `ProductVariantSO`) y cae a una caja ajustada solo si el sprite no trae shape. **El prefab ya no trae collider**: todos los caminos que lo instancian crean el suyo — plato (`PlateDeliveryDraggable.Awake`) y bandeja (`ToBuildDraggableMeat.Awake`/`Setup`) vía el fitter, y los dos draggables legados (`MeatHolderDraggableMeat`, `CoolerDraggableMeat`) con su `GetComponent ?? AddComponent`. La única pila que queda sin collider es la cola `toGrill`, que son visuales pasivos y hoy no tiene llamadores vivos. Lo usan `PlateDeliveryDraggable.RefreshCollider` y `ToBuildDraggableMeat.RefreshCollider`. Dos detalles que hay que respetar en cualquier variante nueva: el `padding` se empuja desde el centro del **contorno** (no del lienzo) y el **`flipX` del `SpriteRenderer` espeja el dibujo pero no el shape**, así que el fitter lo espeja a mano o la cara B queda con el collider de la cara A |
 | 26 | El feedback de clientes ocupa el slot 4 s (`IsInFeedback`): `MaxSimultaneousCustomers` los cuenta, `SpawnLoop` no spawnea en su lugar hasta que se van, y `OnNightEnded` espera a que termine el último feedback. `IsCustomerActive`, `SetDeliveryDragHover` y `EvaluateDelivery` los excluyen |
+| 35 | **Input: nada de `UnityEngine.Input` ni `OnMouseXXX`.** Todo pasa por `InputManager` (3.1 → *Input*): posición con `InputManager.PointerPosition`, botones con `PrimaryPressed/Held/Released` y `SecondaryPressed`, teclas con `WasPressed(GameAction)`. Un collider del mundo nuevo implementa `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` (mismos contratos que los `OnMouseXXX`); un `OnMouseDown` nuevo **no se dispara con el gamepad** (y con el mouse funcionaría de casualidad, porque *Active Input Handling* está en *Both*). Una acción nueva: agregarla al enum `GameAction` **y** al mapa `Gameplay` del asset con el mismo nombre (si falta, `InputManager` loguea error al arrancar). **Un elemento interactivo nuevo (algo que se agarra, se clickea o donde se suelta) hay que sumarlo a `GamepadNavTargets`** (idle o el `DragKind` que corresponda), o con gamepad no se va a poder seleccionar; los botones de UI entran solos. **Pendientes:** (a) los textos del tutorial (`Prefabs/PanelesTutos/`) nombran teclas (`Q`, `Espacio`, `R`, `C`, click derecho): con gamepad quedan mal; `ActiveScheme`/`ActiveGamepadFamily`/`OnSchemeChanged` están para mostrar el botón que corresponda. (b) Menú principal y tienda ya se recorren con los saltos (sus botones son `Selectable`), pero falta adaptarlos: scroll de la grilla de la tienda hasta lo que no se ve, orden de selección pensado y botón B para volver. (c) Cambiar *Active Input Handling* requiere reiniciar el Editor: sin reinicio el Input System no recibe dispositivos nativos |
 | 34 | **La tienda es un prefab (`Prefabs/UI/ShopCanvas.prefab`) compartido por `EndScene` y `ShopTutorial`.** Editar el prefab, no la instancia: las escenas solo deben pisar la referencia `shop` (más los valores que Unity maneja solo en el `RectTransform` raíz y en el `Handle` del scrollbar). Referencias de escena que apuntan adentro del canvas: `RunDefeatScreen.shopCanvas` (`EndScene`) y `TutorialManager.canvasParent` (`ShopTutorial`). **Chinchulín, Costillita de cerdo, Pechuga de pollo y Matambre no tienen ningún sprite** (ni `meatSprite*` ni `cookingSprites*`) y están desbloqueados: en la tienda salen sin icono (segunda fila de Carnes). Es un tema de datos |

@@ -785,6 +785,9 @@ public class MeatTransferBuffer : MonoBehaviour
     /// medirlo tragaba media parrilla y la carne devuelta terminaba en la bandeja. Si la bandeja
     /// esta desactivada en la escena no reclama ningun punto.
     /// </summary>
+    /// <summary>Raíz de la bandeja (MeatTray). La navegación con gamepad la usa como destino de la carne del plato.</summary>
+    public Transform TrayAnchor => ResolveTrayAnchor();
+
     public bool IsOverMeatTray(Vector3 worldPoint)
     {
         Transform anchor = ResolveTrayAnchor();

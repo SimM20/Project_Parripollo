@@ -22,7 +22,7 @@ public class CoalHolderDraggableCoal : MonoBehaviour
         selfRenderer = GetComponent<SpriteRenderer>();
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         if (coalData == null || transferBuffer == null) return;
 
@@ -42,14 +42,14 @@ public class CoalHolderDraggableCoal : MonoBehaviour
         UpdateHover(transform.position);
     }
 
-    void OnMouseDrag()
+    void OnWorldPointerDrag()
     {
         if (!isDragging) return;
         transform.position = GetMouseWorldPosition() + dragOffset;
         UpdateHover(transform.position);
     }
 
-    void OnMouseUp()
+    void OnWorldPointerUp()
     {
         if (!isDragging) return;
         isDragging = false;
@@ -100,7 +100,7 @@ public class CoalHolderDraggableCoal : MonoBehaviour
     private Vector3 GetMouseWorldPosition()
     {
         Camera cam = Camera.main;
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
         world.z = transform.position.z;

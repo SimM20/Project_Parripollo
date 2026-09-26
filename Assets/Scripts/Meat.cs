@@ -259,7 +259,7 @@ public class Meat : Item
         RefreshState();
     }
 
-    public override void OnMouseUp()
+    public override void OnWorldPointerUp()
     {
         if (!EndHold()) return;
 
@@ -306,7 +306,7 @@ public class Meat : Item
 
     /// <summary>
     /// Tras soltar la pieza, reactiva burbuja y barra si el puntero nunca salió del collider
-    /// (Unity no dispara OnMouseEnter de nuevo en ese caso).
+    /// (WorldPointerDispatcher no dispara OnWorldPointerEnter de nuevo en ese caso).
     /// </summary>
     private void RestoreHoverIfPointerOver()
     {
@@ -342,7 +342,7 @@ public class Meat : Item
 
     protected override void HandleHeldInput()
     {
-        if (Input.GetKeyDown(KeyCode.R))
+        if (InputManager.WasPressed(GameAction.Rotate))
             ToggleGridRotation();
     }
 
@@ -623,13 +623,13 @@ public class Meat : Item
         spriteRenderer.flipX = !isSideA;
     }
 
-    void OnMouseEnter()
+    void OnWorldPointerEnter()
     {
         if (isHeldByMouse) return;
         ShowHover();
     }
 
-    void OnMouseExit()
+    void OnWorldPointerExit()
     {
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();

@@ -44,7 +44,7 @@ public class Coal : Item
 
     public void SetInitialPosition(Vector3 pos) => startPosition = pos;
 
-    public override void OnMouseUp()
+    public override void OnWorldPointerUp()
     {
         if (!EndHold()) return;
 

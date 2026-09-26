@@ -330,16 +330,35 @@ public class GridSlot : MonoBehaviour
     public static bool TryFindContiguousPlacement(IList<GridSlot> allSlots, Vector2Int requiredSize, Vector3 worldPoint, ItemType incomingType, GameObject incomingItem, out List<GridSlot> placementSlots)
     {
         placementSlots = null;
-        if (allSlots == null || allSlots.Count == 0) return false;
+        List<List<GridSlot>> blocks = new List<List<GridSlot>>();
+        CollectContiguousPlacements(allSlots, requiredSize, incomingType, incomingItem, blocks);
+
+        float bestDist = float.MaxValue;
+        List<GridSlot> bestBlock = null;
+        foreach (List<GridSlot> cand in blocks)
+        {
+            float d = (new Vector2(GetCenter(cand).x, GetCenter(cand).y) - new Vector2(worldPoint.x, worldPoint.y)).sqrMagnitude;
+            if (d < bestDist) { bestDist = d; bestBlock = cand; }
+        }
+        if (bestBlock == null) return false;
+        placementSlots = bestBlock; return true;
+    }
+
+    /// <summary>
+    /// Todos los bloques de <paramref name="requiredSize"/> slots contiguos donde entra la pieza
+    /// (mismas reglas que <see cref="TryFindContiguousPlacement"/>, que elige el más cercano de
+    /// estos). La navegación con gamepad los recorre como destinos de la carne.
+    /// </summary>
+    public static void CollectContiguousPlacements(IList<GridSlot> allSlots, Vector2Int requiredSize, ItemType incomingType, GameObject incomingItem, List<List<GridSlot>> into)
+    {
+        if (allSlots == null || allSlots.Count == 0) return;
         int width = Mathf.Max(1, requiredSize.x);
         int height = Mathf.Max(1, requiredSize.y);
         List<GridSlot> validSlots = new List<GridSlot>();
         foreach (var s in allSlots) { if (s != null && s.acceptsType == incomingType) validSlots.Add(s); }
-        if (validSlots.Count == 0) return false;
+        if (validSlots.Count == 0) return;
         List<List<GridSlot>> rows = BuildLogicalRows(validSlots);
-        if (rows.Count < height) return false;
-        float bestDist = float.MaxValue;
-        List<GridSlot> bestBlock = null;
+        if (rows.Count < height) return;
         for (int r = 0; r + height <= rows.Count; r++)
         {
             int usableColumns = int.MaxValue;
@@ -358,16 +377,13 @@ public class GridSlot : MonoBehaviour
                         cand.Add(s);
                     }
                 }
-                if (ok)
-                {
-                    float d = (new Vector2(GetCenter(cand).x, GetCenter(cand).y) - new Vector2(worldPoint.x, worldPoint.y)).sqrMagnitude;
-                    if (d < bestDist) { bestDist = d; bestBlock = cand; }
-                }
+                if (ok) into.Add(cand);
             }
         }
-        if (bestBlock == null) return false;
-        placementSlots = bestBlock; return true;
     }
+
+    /// <summary>Centro de un bloque de slots: donde queda la pieza al colocarla.</summary>
+    public static Vector3 GetBlockCenter(List<GridSlot> slots) => GetCenter(slots);
 
     private static Vector3 GetCenter(List<GridSlot> slots)
     {

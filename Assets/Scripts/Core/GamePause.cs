@@ -9,7 +9,8 @@ using UnityEngine;
 ///
 /// Con timeScale = 0 se congela todo lo que dependa de Time.deltaTime / Time.time /
 /// WaitForSeconds (cocción, carbón, paciencia, spawn, feedback). eventMask = 0 apaga los
-/// OnMouseXXX de los colliders del mundo, así que solo responde la UI del canvas de pausa.
+/// OnWorldPointerXXX de los colliders del mundo (WorldPointerDispatcher la respeta, igual que
+/// hacían los OnMouseXXX de Unity), así que solo responde la UI del canvas de pausa.
 /// Los arrastres en curso se cancelan vía <see cref="OnPaused"/>: cada draggable se
 /// suscribe al empezar a arrastrar y se desuscribe al soltar o cancelar.
 ///

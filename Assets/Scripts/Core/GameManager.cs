@@ -17,11 +17,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private PlayerWallet wallet;
     [SerializeField] private GrillLayerToggle grillLayerToggle;
 
-    [Header("Input")]
-    [SerializeField] private KeyCode stockPanelToggleKey = KeyCode.Q;
-    [SerializeField] private KeyCode toppingsPanelToggleKey = KeyCode.T;
-    [SerializeField] private KeyCode clearPlateKey = KeyCode.C;
-
     [Header("Delivery Preview Tints")]
     [Tooltip("Tinte de cada corte del plato mientras se arrastra sobre un cliente, según su desfase con el punto pedido.")]
     [SerializeField] private Color previewExactTint = new Color(0.65f, 1f, 0.7f);
@@ -71,10 +66,14 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Traduce las acciones de <see cref="InputManager"/> a comandos de la partida. Acá no hay
+    /// teclas ni botones: los bindings (teclado y gamepad) viven en GameControls.inputactions.
+    /// </summary>
     private void Update()
     {
-        // El diálogo de oferta del tutorial tiene su propia pausa: mientras está abierto, ESC no abre el menú.
-        if (Input.GetKeyDown(KeyCode.Escape) && !GamePause.IsDialogPaused)
+        // El diálogo de oferta del tutorial tiene su propia pausa: mientras está abierto, la pausa no abre el menú.
+        if (InputManager.WasPressed(GameAction.Pause) && !GamePause.IsDialogPaused)
         {
             if (UIManager.Instance != null)
             {
@@ -89,24 +88,24 @@ public class GameManager : MonoBehaviour
             return;
 
         // ── Paneles laterales ──
-        if (Input.GetKeyDown(stockPanelToggleKey) && StockPanelController.Instance != null)
+        if (InputManager.WasPressed(GameAction.ToggleStockPanel) && StockPanelController.Instance != null)
         {
             if (StockPanelController.Instance.IsOpen || TutorialManager.CheckStockPanelOpenAllowed())
                 StockPanelController.Instance.Toggle();
         }
 
-        if (Input.GetKeyDown(toppingsPanelToggleKey) && ToppingsPanelController.Instance != null)
+        if (InputManager.WasPressed(GameAction.ToggleToppingsPanel) && ToppingsPanelController.Instance != null)
             ToppingsPanelController.Instance.Toggle();
 
         // ── Parrilla ──
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (InputManager.WasPressed(GameAction.ToggleGrillLayer))
             TryToggleGrillLayer();
 
-        if (Input.GetKeyDown(KeyCode.R) && TutorialManager.CheckCleanAshesAllowed())
+        if (InputManager.WasPressed(GameAction.CleanAshes) && TutorialManager.CheckCleanAshesAllowed())
             CleanAshes();
 
         // ── Armado y entrega (todo dentro de la vista Parrilla) ──
-        if (Input.GetKeyDown(clearPlateKey) && TutorialManager.CheckClearBuildPlateAllowed())
+        if (InputManager.WasPressed(GameAction.ClearPlate) && TutorialManager.CheckClearBuildPlateAllowed())
         {
             ClearBuildAssembly();
             meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
@@ -115,7 +114,7 @@ public class GameManager : MonoBehaviour
             Debug.Log("[Plato] Plato limpiado.");
         }
 
-        if (Input.GetKeyDown(KeyCode.M))
+        if (InputManager.WasPressed(GameAction.MissingCut))
         {
             Customer targetCustomer = customerSystem?.SelectedCustomer ?? customerSystem?.currentCustomer;
             Order order = targetCustomer?.order;
@@ -159,7 +158,7 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Cambia la capa de la parrilla (carne ↔ carbón) por teclado.
+    /// Cambia la capa de la parrilla (carne ↔ carbón) por teclado o gamepad.
     /// Espejo exacto del botón de la escena: delega en el mismo GrillLayerToggle.Toggle(),
     /// así que sprite del botón y TutorialManager.NotifyGrillLayerChanged se mantienen sincronizados.
     /// Nunca mientras se arrastra un item: cambiar de capa a mitad de un drag invalidaría
@@ -167,11 +166,11 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void TryToggleGrillLayer()
     {
-        if (Input.GetMouseButton(0)) return;
+        if (InputManager.PrimaryHeld) return;
 
         if (grillLayerToggle == null)
         {
-            Debug.LogWarning("[GameManager] No hay GrillLayerToggle asignado: no se puede cambiar de capa con la barra espaciadora.");
+            Debug.LogWarning("[GameManager] No hay GrillLayerToggle asignado: no se puede cambiar de capa con la acción ToggleGrillLayer.");
             return;
         }
 

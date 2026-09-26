@@ -27,7 +27,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
         EnsureFoodItemCollider();
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         isDragging = true;
         GamePause.OnPaused += CancelDrag;
@@ -41,13 +41,13 @@ public class BuildDraggableFoodItem : MonoBehaviour
         }
     }
 
-    void OnMouseDrag()
+    void OnWorldPointerDrag()
     {
         if (!isDragging) return;
         transform.position = GetFoodItemMouseWorldPos();
     }
 
-    void OnMouseUp()
+    void OnWorldPointerUp()
     {
         if (!isDragging) return;
         isDragging = false;
@@ -89,7 +89,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
         if (cam == null)
             return transform.position;
 
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
         world.z = transform.position.z;

@@ -37,20 +37,20 @@ public class ShopButton2D : MonoBehaviour
         ApplyVisual();
     }
 
-    void OnMouseEnter()
+    void OnWorldPointerEnter()
     {
         if (!Interactable) return;
         isHovered = true;
         ApplyVisual();
     }
 
-    void OnMouseExit()
+    void OnWorldPointerExit()
     {
         isHovered = false;
         ApplyVisual();
     }
 
-    void OnMouseUpAsButton()
+    void OnWorldPointerClick()
     {
         if (Interactable) OnClicked?.Invoke();
     }

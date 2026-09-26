@@ -48,7 +48,7 @@ public class CoolerDraggableMeat : MonoBehaviour
         EnsureCollider2D();
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         if (cut == null || coolerSystem == null || meatTransferBuffer == null)
             return;
@@ -66,7 +66,7 @@ public class CoolerDraggableMeat : MonoBehaviour
         dragOffset = transform.position - mouseWorld;
     }
 
-    void OnMouseDrag()
+    void OnWorldPointerDrag()
     {
         if (cut == null || coolerSystem == null || meatTransferBuffer == null)
             return;
@@ -74,7 +74,7 @@ public class CoolerDraggableMeat : MonoBehaviour
         transform.position = GetMouseWorldPosition() + dragOffset;
     }
 
-    void OnMouseUp()
+    void OnWorldPointerUp()
     {
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
@@ -165,7 +165,7 @@ public class CoolerDraggableMeat : MonoBehaviour
         if (cam == null)
             return transform.position;
 
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
         world.z = transform.position.z;

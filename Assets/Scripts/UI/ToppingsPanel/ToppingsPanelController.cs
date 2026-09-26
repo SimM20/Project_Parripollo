@@ -57,7 +57,7 @@ public class ToppingsPanelController : SlidingPanel
 
     /// <summary>
     /// Al cerrarse, devuelve a su sitio cualquier item que se haya quedado a medio arrastrar.
-    /// Los draggables sueltan solos en OnMouseUp, así que esto cubre el cierre por cambio de
+    /// Los draggables sueltan solos en OnWorldPointerUp, así que esto cubre el cierre por cambio de
     /// vista o por desactivación del panel mientras el botón sigue apretado.
     /// </summary>
     protected override void OnPanelClosing()
@@ -65,8 +65,8 @@ public class ToppingsPanelController : SlidingPanel
         if (itemsParent == null)
             return;
 
-        // ToppingDraggable y BuildDraggableFoodItem restauran su transform en OnMouseUp;
-        // forzar la desactivación del objeto dispara su propio OnDisable/OnMouseUp pendiente.
+        // ToppingDraggable y BuildDraggableFoodItem restauran su transform en OnWorldPointerUp;
+        // forzar la desactivación del objeto dispara su propio OnDisable/OnWorldPointerUp pendiente.
         for (int i = 0; i < itemsParent.childCount; i++)
         {
             Transform child = itemsParent.GetChild(i);

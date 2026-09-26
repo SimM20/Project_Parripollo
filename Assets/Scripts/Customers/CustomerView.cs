@@ -66,6 +66,9 @@ public class CustomerView : MonoBehaviour
 
     public Customer Customer => customer;
 
+    /// <summary>Collider de hover/entrega. Apagado mientras un panel lo tapa o el cliente está en feedback.</summary>
+    public Collider2D PickCollider => pickCollider;
+
     /// <summary>Sistema dueño de este cliente. Lo usa la burbuja para llegar al catálogo.</summary>
     public CustomerSystem System => system;
 
@@ -239,7 +242,7 @@ public class CustomerView : MonoBehaviour
     /// <summary>
     /// Los paneles deslizantes se abren justo encima de los slots de clientes y sus
     /// colliders comparten el mismo z, asi que un cliente tapado por el panel le roba el
-    /// OnMouseDown a las celdas (bloqueaba, por ejemplo, agarrar el carbon). Solo se apaga
+    /// OnWorldPointerDown a las celdas (bloqueaba, por ejemplo, agarrar el carbon). Solo se apaga
     /// el pick de los clientes que quedan debajo de un panel desplegado: los que no se
     /// superponen siguen respondiendo al hover y muestran su burbuja de pedido.
     /// </summary>
@@ -330,7 +333,7 @@ public class CustomerView : MonoBehaviour
         hasPickBounds = true;
     }
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         if (customer != null && customer.IsInFeedback) return;
 
@@ -338,7 +341,7 @@ public class CustomerView : MonoBehaviour
             system.SelectCustomer(customer);
     }
 
-    void OnMouseEnter()
+    void OnWorldPointerEnter()
     {
         if (customer != null && customer.IsInFeedback) return;
 
@@ -479,7 +482,7 @@ public class CustomerView : MonoBehaviour
         MeatCutSO cut = order.PrimaryCut;
         return cut != null ? cut.GetSpriteForState(requestedState, true) : null;
     }
-    void OnMouseExit()
+    void OnWorldPointerExit()
     {
         isHovered = false;
         RestoreBubbleAfterHover();

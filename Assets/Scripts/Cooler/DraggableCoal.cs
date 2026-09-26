@@ -31,7 +31,7 @@ public class DraggableCoal : MonoBehaviour
 
     public void SetToGrillDropArea(SpriteRenderer setupToGrillDropArea) => toGrillDropArea = setupToGrillDropArea;
 
-    void OnMouseDown()
+    void OnWorldPointerDown()
     {
         if (coal == null || coolerSystem == null)
             return;
@@ -49,7 +49,7 @@ public class DraggableCoal : MonoBehaviour
         dragOffset = transform.position - mouseWorld;
     }
 
-    void OnMouseDrag()
+    void OnWorldPointerDrag()
     {
         if (coal == null || coolerSystem == null)
             return;
@@ -57,7 +57,7 @@ public class DraggableCoal : MonoBehaviour
         transform.position = GetMouseWorldPosition() + dragOffset;
     }
 
-void OnMouseUp()
+void OnWorldPointerUp()
 {
     bool wasConsumed = false;
 
@@ -113,7 +113,7 @@ void OnMouseUp()
         if (cam == null)
             return transform.position;
 
-        Vector3 pos = Input.mousePosition;
+        Vector3 pos = InputManager.PointerPosition;
         pos.z = Mathf.Abs(transform.position.z - cam.transform.position.z);
         Vector3 world = cam.ScreenToWorldPoint(pos);
         world.z = transform.position.z;

@@ -2,8 +2,6 @@ using UnityEngine;
 
 public class MeatClickable : MonoBehaviour
 {
-    private const int RightMouseButton = 1;
-
     private Meat meat;
 
     void Awake()
@@ -11,10 +9,10 @@ public class MeatClickable : MonoBehaviour
         meat = GetComponent<Meat>();
     }
 
-    void OnMouseOver()
+    void OnWorldPointerOver()
     {
         if (meat == null) return;
-        if (!Input.GetMouseButtonDown(RightMouseButton)) return;
+        if (!InputManager.SecondaryPressed) return;
         if (!meat.IsOnGrill) return;
         if (meat.IsFlipping) return;
         if (!TutorialManager.CheckMeatFlipAllowed()) return;
