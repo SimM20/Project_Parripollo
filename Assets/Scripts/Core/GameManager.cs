@@ -73,7 +73,8 @@ public class GameManager : MonoBehaviour
     private void Update()
     {
         // El diálogo de oferta del tutorial tiene su propia pausa: mientras está abierto, la pausa no abre el menú.
-        if (InputManager.WasPressed(GameAction.Pause) && !GamePause.IsDialogPaused)
+        // Con Opciones abierto (dentro de la pausa), Esc es Back: cierra las opciones y no despausa.
+        if (InputManager.WasPressed(GameAction.Pause) && !GamePause.IsDialogPaused && !OptionsMenuPanel.AnyOpen)
         {
             if (UIManager.Instance != null)
             {

@@ -56,7 +56,11 @@ public class UIManager : MonoBehaviour
     public void UnPauseGame()
     {
         if (pauseCanvasInstance)
+        {
+            // Sin cerrarlas, la próxima pausa abriría directo en Opciones con los botones ocultos.
+            pauseCanvasInstance.GetComponent<PauseMenuHandler>()?.CloseOptions();
             pauseCanvasInstance.SetActive(false);
+        }
 
         GamePause.SetMenuPaused(false);
     }

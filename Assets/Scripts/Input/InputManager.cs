@@ -68,6 +68,24 @@ public class InputManager : MonoBehaviour
     public static GamepadFamily ActiveGamepadFamily => Instance != null ? Instance.gamepadFamily : GamepadFamily.None;
     public static bool UsingGamepad => ActiveScheme == InputScheme.Gamepad;
 
+    /// <summary>Tipo de control elegido en Opciones (lo aplica <see cref="GameSettings"/>).</summary>
+    public static InputMode Mode => Instance != null ? Instance.inputMode : InputMode.Auto;
+
+    /// <summary>
+    /// Restringe el input a un esquema: <see cref="InputMode.KeyboardMouse"/> apaga los gamepads y
+    /// <see cref="InputMode.Gamepad"/> apaga el mouse real (el teclado sigue andando en los dos, como
+    /// en Auto). Se hace deshabilitando dispositivos, así también la UI deja de verlos. Solo gamepad
+    /// sin ninguno conectado deja el mouse prendido hasta que se conecte uno.
+    /// </summary>
+    public static void SetInputMode(InputMode mode)
+    {
+        // Sin instancia no hay nada que aplicar: Awake lo lee de GameSettings.
+        if (Instance == null) return;
+
+        Instance.inputMode = mode;
+        Instance.ApplyInputMode();
+    }
+
     /// <summary>Hay un elemento seleccionado con la navegación del gamepad.</summary>
     public static bool HasNavFocus => Instance != null && Instance.scheme == InputScheme.Gamepad && Instance.navigator.HasFocus;
     /// <summary>Elemento seleccionado (recuadro en pantalla, y si es un destino para soltar). Válido si <see cref="HasNavFocus"/>.</summary>
@@ -111,6 +129,7 @@ public class InputManager : MonoBehaviour
 
     private InputScheme scheme = InputScheme.KeyboardMouse;
     private GamepadFamily gamepadFamily = GamepadFamily.None;
+    private InputMode inputMode = InputMode.Auto;
 
     private Mouse realMouse;
     private Mouse virtualMouse;
@@ -181,6 +200,9 @@ public class InputManager : MonoBehaviour
 
         InputSystem.onDeviceChange += HandleDeviceChange;
         anyButtonListener = InputSystem.onAnyButtonPress.Call(HandleAnyButtonPress);
+
+        inputMode = GameSettings.Current.inputMode;
+        ApplyInputMode();
     }
 
     private void OnDestroy()
@@ -188,6 +210,8 @@ public class InputManager : MonoBehaviour
         if (Instance != this) return;
 
         InputSystem.onDeviceChange -= HandleDeviceChange;
+        // Los dispositivos apagados por el tipo de control quedarían apagados en el Editor al salir de Play.
+        SetExclusiveDevicesEnabled(padsOn: true, mouseOn: true);
         anyButtonListener?.Dispose();
         actions?.FindActionMap(GameplayMapName)?.Disable();
 
@@ -264,6 +288,8 @@ public class InputManager : MonoBehaviour
 
     private void SetScheme(InputScheme next, InputDevice device)
     {
+        if (!IsSchemeAllowed(next)) return;
+
         if (next == InputScheme.Gamepad && device != null)
             gamepadFamily = GetFamily(device);
 
@@ -280,6 +306,62 @@ public class InputManager : MonoBehaviour
         scheme = next;
         Cursor.visible = next == InputScheme.KeyboardMouse;
         OnSchemeChanged?.Invoke(next);
+    }
+
+    private bool IsSchemeAllowed(InputScheme next)
+    {
+        switch (inputMode)
+        {
+            case InputMode.KeyboardMouse: return next == InputScheme.KeyboardMouse;
+            case InputMode.Gamepad: return next == InputScheme.Gamepad || !AnyPadConnected();
+            default: return true;
+        }
+    }
+
+    // ── Tipo de control ──
+
+    private void ApplyInputMode()
+    {
+        bool anyPad = AnyPadConnected();
+        bool padsOn = inputMode != InputMode.KeyboardMouse;
+        bool mouseOn = inputMode != InputMode.Gamepad || !anyPad;
+
+        SetExclusiveDevicesEnabled(padsOn, mouseOn);
+
+        if (!padsOn)
+            SetScheme(InputScheme.KeyboardMouse, realMouse);
+        else if (!mouseOn)
+            SetScheme(InputScheme.Gamepad, FirstPad());
+    }
+
+    /// <summary>Prende o apaga los gamepads/joysticks y los mouse reales. El mouse virtual y el teclado no se tocan.</summary>
+    private void SetExclusiveDevicesEnabled(bool padsOn, bool mouseOn)
+    {
+        foreach (InputDevice device in InputSystem.devices.ToArray())
+        {
+            if (IsPad(device))
+                SetDeviceEnabled(device, padsOn);
+            else if (device is Mouse && device != virtualMouse)
+                SetDeviceEnabled(device, mouseOn);
+        }
+    }
+
+    private static void SetDeviceEnabled(InputDevice device, bool enabled)
+    {
+        if (device.enabled == enabled) return;
+
+        if (enabled) InputSystem.EnableDevice(device);
+        else InputSystem.DisableDevice(device);
+    }
+
+    private static bool IsPad(InputDevice device) => device is Gamepad || device is Joystick;
+
+    private static bool AnyPadConnected() => Gamepad.all.Count > 0 || Joystick.all.Count > 0;
+
+    private static InputDevice FirstPad()
+    {
+        if (Gamepad.all.Count > 0) return Gamepad.all[0];
+        return Joystick.all.Count > 0 ? Joystick.all[0] : null;
     }
 
     private static GamepadFamily GetFamily(InputDevice device)
@@ -406,6 +488,13 @@ public class InputManager : MonoBehaviour
     {
         if (device is Mouse && device != virtualMouse)
             realMouse = FindRealMouse();
+
+        // Un dispositivo nuevo respeta el tipo de control; en "solo gamepad", conectar o sacar el
+        // último gamepad apaga o devuelve el mouse.
+        bool plugged = change == InputDeviceChange.Added || change == InputDeviceChange.Reconnected
+                       || change == InputDeviceChange.Removed || change == InputDeviceChange.Disconnected;
+        if (plugged && inputMode != InputMode.Auto && (IsPad(device) || device is Mouse) && device != virtualMouse)
+            ApplyInputMode();
 
         // Se desconectó el gamepad con el que se jugaba: el mouse recupera el puntero.
         if (change == InputDeviceChange.Removed && scheme == InputScheme.Gamepad

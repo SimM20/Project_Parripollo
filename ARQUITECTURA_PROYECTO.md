@@ -11,6 +11,11 @@
 > con gamepad la **selección salta entre elementos** (stick izquierdo / cruceta, `GamepadNavigator`) y el stick derecho mueve
 > un cursor libre. Los `OnMouseXXX` se reemplazaron por `OnWorldPointerXXX` (`WorldPointerDispatcher`) y el `GameManager`
 > ya no lee teclas. Secciones 3.1 → *Input*, 4.3, 4.4 y nota 35.
+> Última actualización parcial: **2026-09-26** (rama `feature/options-menu`) — **menú de opciones** en el menú principal y en la pausa
+> (resolución, modo de pantalla, VSync, FPS máximos, tipo de control, idioma *TODO*). La config del jugador pasó a
+> `Settings/GameSettings.cs` (sigue en `init.cfg`, claves nuevas); `Init` solo la aplica. `InputManager.SetInputMode`
+> restringe el input a teclado+mouse o a joystick. Acción nueva `GameAction.Back` (Esc · B/○). Secciones 0, 1, 3.1 →
+> *Input*, 3.10, 4.1, 4.4 y nota 36.
 
 ---
 
@@ -21,11 +26,11 @@
 | Motor | Unity **2022.3.62f3**, URP (2D), **Input System 1.19** (Active Input Handling = *Both*) detrás de `InputManager` — ver 3.1 → *Input* |
 | Cámara | **Perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). No es ortográfica — ver nota 22 |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`). `Scripts/Editor/` va a `Assembly-CSharp-Editor` |
-| Código propio | `Assets/Scripts/` — **147 archivos, ~24.8k líneas** |
+| Código propio | `Assets/Scripts/` — **152 archivos, ~25k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina **contrarreloj**: cocinar cortes, armar platos/sándwiches y entregar a los clientes que entran durante la jornada |
 | Jornada | **06:30 → 21:00 en 5 minutos reales** (`DayClock`). A las 21:00 cierra y deja de entrar gente; el día termina **cuando se va el último cliente**, no al cerrar |
-| Persistencia | Solo `init.cfg` (resolución/FPS). **No hay savegame**: el progreso vive en objetos `DontDestroyOnLoad` |
+| Persistencia | Solo `init.cfg` (opciones del jugador: pantalla, FPS, VSync, tipo de control, idioma — `GameSettings`, ver 3.10). **No hay savegame**: el progreso vive en objetos `DontDestroyOnLoad` |
 | Idioma del dominio | Español (`Crudo`, `Jugoso`, `Hecho`, `Muy_Hecho`, `Pasado`, `Quemado`) |
 
 **Escenas (build order)**: `0 MainMenuScene` → `1 GameScene` → `2 TutorialScene` → `3 ShopTutorial` → `4 EndScene`.
@@ -53,7 +58,9 @@ Assets/Scripts/
 ├── Strikes/        Strikes por clientes perdidos: contador, HUD de X, aviso de gameplay, popup de cierre
 ├── Background/     Fondo por capas que sigue la hora del DayClock (amanecer → noche) + nubes con parallax
 ├── Input/          InputManager (Input System nuevo, teclado/mouse + gamepad), navegación por saltos, cursor, eventos de puntero del mundo
+├── Settings/       GameSettings: opciones del jugador (init.cfg) — cargar, guardar, aplicar
 ├── UI/             ViewManager, Tutorial, SlidingPanel (base de paneles), notificaciones, HUD SO, feedback
+│   ├── Options/        Menú de opciones: panel + fila selectora "< valor >"
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
 │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
 └── Editor/         Solo editor: reseteo de mejoras al salir de Play
@@ -76,6 +83,8 @@ Assets/Scripts/
 | **Background/** | Fondo de `GameScene` en capas (cielo, estrellas, luna, sol, nubes, paisaje). `DayCycleBackground` lee la hora del `DayClock` y se la pasa a las capas; cada `DayCycleLayer` mezcla su color (y opcionalmente su sprite) entre claves horarias; `DayCycleArc` mueve sol y luna; `ParallaxLayer` desliza las nubes. Solo visual: no escribe la hora ni toca el gameplay | `DayCycleBackground.cs`, `DayCycleLayer.cs`, `DayCycleArc.cs`, `ParallaxLayer.cs` |
 | **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI. Bindings en `Assets/Input/GameControls.inputactions` | `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
 | **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú y de la tienda; no reacciona si el `Selectable` está deshabilitado) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
+| **Settings/** | `GameSettings` (estática): struct `SettingsData`, lectura perezosa de `init.cfg`, `ApplyAndSave`, aplicación (pantalla, VSync/FPS, `InputManager.SetInputMode`). Enum `GameLanguage` | `GameSettings.cs` |
+| **UI/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
 | **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO` | `UpgradeStateResetter.cs` |
@@ -373,7 +382,8 @@ int  GetActualDay(), GetActualMoney(), GetTotalCustomersPerDay(), GetActualCusto
 ```
 Instancia `pauseCanvasPrefab` on-demand y delega el estado a `GamePause.SetMenuPaused`.
 `IsPaused` refleja `GamePause.IsMenuPaused`, no el canvas. Delega el render a `HudManager` → `HudContainer`.
-`PauseMenuHandler` es el script de los botones del `PauseCanvas`.
+`PauseMenuHandler` es el script de los botones del `PauseCanvas` (incluye **OPCIONES**, ver 3.10). `UnPauseGame` cierra
+las opciones antes de apagar el canvas, así la próxima pausa abre en el menú y no en Opciones.
 
 #### `HudManager` / `MoneyPopup` — plata con juice
 `HudManager` es singleton de escena (`Instance`). Al cobrar, `GameManager.TryDeliverToCustomer` hace
@@ -422,6 +432,8 @@ static InputScheme ActiveScheme;           // KeyboardMouse | Gamepad
 static GamepadFamily ActiveGamepadFamily;  // Xbox | PlayStation | Generic → para íconos de botones
 static bool HasNavFocus; static NavTarget NavFocus;   // elemento seleccionado por la navegación (recuadro)
 static bool FreeCursorActive;              // se está moviendo el cursor libre (stick derecho)
+static InputMode Mode;                     // Auto | KeyboardMouse | Gamepad  (tipo de control de Opciones)
+static void SetInputMode(InputMode);       // lo llama GameSettings al aplicar; ver 3.10
 static event Action<InputScheme> OnSchemeChanged;
 void ConfigureUIModule(InputSystemUIInputModule)
 ```
@@ -431,6 +443,7 @@ void ConfigureUIModule(InputSystemUIInputModule)
 | `Assets/Input/GameControls.inputactions` | Mapa **`Gameplay`**: una acción por cada `GameAction` (mismo nombre) + `Navigate` (stick izq. + cruceta), `CursorMove` (stick der.), `PointerPrimary`, `PointerSecondary` (solo gamepad: los botones del mouse se leen directo del mouse real). Mapa **`UI`**: `Point/Click/RightClick/MiddleClick/ScrollWheel` desde cualquier `<Mouse>`, `Navigate` (flechas), `Submit` (Enter), `Cancel` (Esc). Control schemes `KeyboardMouse` y `Gamepad` |
 | `Resources/InputManager.prefab` | `InputManager` + `GamepadCursorView`. `InputManager.Bootstrap` (`BeforeSceneLoad`) lo instancia antes de la primera escena, así existe en todas sin setup. Ahí se ajustan velocidad y curva del cursor y los umbrales de cambio de esquema |
 | **Esquema activo** | Pasa a `Gamepad` al mover el stick o apretar un botón del gamepad; vuelve a `KeyboardMouse` al mover el mouse (≥ 3 px), scrollear o clickear. **El teclado no cambia el esquema** (se puede apretar una tecla con el cursor del gamepad). Si se desconecta el último gamepad, vuelve al mouse |
+| **Tipo de control** (`InputMode`) | `Auto` = lo de arriba. `KeyboardMouse` **deshabilita** (`InputSystem.DisableDevice`) todos los `Gamepad`/`Joystick`; `Gamepad` deshabilita los mouse reales (no el virtual) y fija el esquema en `Gamepad`. El teclado queda siempre prendido. Deshabilitar el dispositivo (y no solo ignorarlo) hace que la UI tampoco lo vea. **Solo joystick sin ningún joystick conectado deja el mouse andando** (se reevalúa al conectar/desconectar, `HandleDeviceChange`), para no dejar el juego sin control. `SetScheme` además rechaza el esquema no permitido. `OnDestroy` vuelve a prender todo: si no, el Editor quedaría con el mouse o el joystick apagados al salir de Play |
 | **Navegación por saltos** (`GamepadNavigator`) | Con gamepad el puntero es virtual y **se apoya sobre el elemento seleccionado**: el stick izquierdo / la cruceta saltan al elemento más cercano en esa dirección (en pantalla: avance + desvío lateral × 2.5, cono de ~65°; repite a los 0.32 s y cada 0.12 s manteniendo). Agarrar, soltar y clickear siguen pasando por el mismo puntero, así que no hay lógica de juego duplicada. Al apretar A la selección se suelta y el puntero queda quieto (lo agarrado lo sigue); **arrastrando, los saltos recorren solo destinos**; al soltar se re-selecciona lo que quedó bajo el puntero (radio 8 % de la pantalla). Al abrirse un panel lateral se selecciona su primer elemento (arriba a la izquierda). Si lo seleccionado deja de valer (panel cerrado, cliente que se va), busca lo más cercano |
 | **Qué se puede seleccionar** (`GamepadNavTargets`) | **Sin nada agarrado:** botones de UI (`Selectable` interactuable, visible y que sea lo primero que toca el raycast de UI en su centro: descarta los tapados por un popup o recortados por máscara) y, en el mundo, celdas del stock con unidades (panel abierto), panes/guarniciones/frascos (panel de toppings abierto), pestañas de los paneles, botón de capa, carne y carbón de la capa activa, carne de la bandeja, carne del plato, **el plato** (punto del plato fuera de la carne, preferentemente el borde de abajo: ahí el agarre lleva el plato entero) y clientes (hover = ver el pedido). **Arrastrando** (`DragKind` según lo que recibió el Down): carne del stock/bandeja → bloques de la parrilla y plato; carne de la parrilla → bloques, plato, tacho; carbón → huecos de carbón (`CanPlaceItem`), tacho; carne del plato → bandeja, bloques, plato; plato entero → clientes; pan/guarnición → plato; frasco → su zona de vertido. Nada tapado por un panel abierto (salvo lo del propio panel). Con el juego en pausa, solo UI |
 | **Bloques de carne** | La carne no recorre huecos sueltos: sus destinos en la parrilla son **todos los bloques libres del tamaño real del corte** (`GrillSpace`, rotado si corresponde), enumerados con `GridSlot.CollectContiguousPlacements` — la misma búsqueda que usa `TryFindContiguousPlacement` para decidir dónde cae, así que el bloque seleccionado es exactamente donde queda. Cada salto corre el bloque un slot; el recuadro cubre el bloque entero. El footprint sale de `GamepadNavTargets.TryGetMeatFootprint` (stock: `StockPanelSlot.IsDragRotated`; parrilla: `Meat.IsGridRotated`; bandeja: `ToBuildDraggableMeat.IsGridRotated`; plato: `PlateDeliveryDraggable.TryGetDraggedCut`). Al empezar a arrastrar carne de la parrilla se selecciona su propio bloque; al rotar (B) el bloque deja de valer y se elige el más cercano con el footprint nuevo. `InputManager.TryGetGridSnap` da el centro del bloque: la bandeja y la carne del plato, que se arrastran con agarre desplazado, lo usan para dibujar el corte justo sobre los slots (la carne de la parrilla y el fantasma del stock ya siguen al puntero, que está en ese centro). Con `visualOffset` distinto de cero habría que sumarlo ahí |
@@ -1682,17 +1695,57 @@ se ve al instante (`OnValidate` reaplica), pero como todo cambio en Play **se pi
 
 ---
 
+### 3.10 Opciones del jugador
+
+#### `GameSettings` — `Settings/GameSettings.cs` · estática
+```csharp
+struct SettingsData { resolutionWidth, resolutionHeight, FullScreenMode displayMode, int targetFps /* <= 0 = sin límite */,
+                      bool vSync, InputMode inputMode, GameLanguage language; static Defaults; bool Equals(SettingsData) }
+static SettingsData Current;               // carga perezosa de init.cfg en el primer acceso
+static void ApplyCurrent();                // Init.Awake
+static void ApplyAndSave(SettingsData);    // botón Aplicar del menú de opciones
+static event Action<SettingsData> OnApplied;
+```
+`init.cfg` (`persistentDataPath`) sigue siendo `Clave=Valor`: `ResolutionX`, `ResolutionY`, `DisplayMode`
+(`ExclusiveFullScreen`/`FullScreenWindow`/`Windowed`), `TargetFPS`, `VSync`, `InputMode`, `Language`. El `Fullscreen=true/false`
+viejo se sigue leyendo si falta `DisplayMode`. Claves desconocidas se conservan al reescribir. Sin archivo, se crea con
+los defaults: **resolución nativa del monitor**, sin bordes, VSync **sí** (lo mismo que ya tenía el Quality `Ultra`),
+120 FPS, control `Auto`, español.
+
+Aplicar: `Screen.SetResolution` **solo si cambió** algo (Init corre cada vez que se vuelve al menú y reaplicar parpadea la
+ventana) · `QualitySettings.vSyncCount` y `Application.targetFrameRate` (con VSync va `-1`: Unity ignora el tope) ·
+`InputManager.SetInputMode` · idioma: **TODO**, solo se guarda.
+
+#### Menú de opciones — `UI/Options/` · prefab `Prefabs/UI/OptionsPanel.prefab`
+Dos instancias, las dos arrancan apagadas:
+- **`MainMenuScene`**: hijo del `Canvas`, hermano de `MainMenuPanel`. El botón **OPCIONES** llama
+  `MainMenuPanel.OpenOptions`, que oculta `hideWhileOptionsOpen` (subtítulo y botones; el título queda) y abre el panel;
+  al cerrarse (`OnClosed`) los vuelve a mostrar.
+- **`PauseCanvas.prefab`** (prefab anidado, ventana centrada): el botón **OPCIONES** (entre *Terminar jornada* y *Salir
+  del juego*, sin ícono) lo abre desde `PauseMenuHandler`, que oculta `VerticalContainer` (sliders + botones) mientras
+  está abierto. Sirve en `GameScene` y `TutorialScene`. Para que entraran cuatro botones, `ButtonContainer.spacing`
+  bajó a 12 y `VerticalContainer` subió 45 px.
+
+**Esc con Opciones abierto en la pausa.** En teclado `Back` y `Pause` son la misma tecla. `OptionsMenuPanel.AnyOpen`
+(hay un panel abierto **o se cerró este frame**) lo consulta `GameManager` antes de alternar la pausa: Esc cierra las
+opciones y el juego sigue pausado, corra primero el `Update` que corra. Con gamepad, Start también se ignora mientras
+Opciones está abierto (se sale con B).
+
+| Pieza | Qué hace |
+|---|---|
+| `OptionsMenuPanel` | Al abrir copia `GameSettings.Current` a un `pending` y llena las filas. Las flechas editan `pending`; **APLICAR** (habilitado solo si `pending` difiere de lo guardado) llama `ApplyAndSave`; **VOLVER** o `GameAction.Back` (Esc · B/○) cierra y **descarta** lo no aplicado. Resoluciones = `Screen.resolutions` sin repetir por frecuencia (+ la guardada si no está). FPS: 30/60/120/144/240/sin límite; con VSync la fila se apaga y muestra "VSYNC". Pantalla: completa (exclusiva, solo Windows) / sin bordes / ventana. Controles: automático / teclado y mouse / joystick. Idioma: fila deshabilitada con nota "PRÓXIMAMENTE" (**TODO**) |
+| `OptionSelectorUI` | Fila "ETIQUETA  < valor >". `SetOptions`, `SetIndex`, `SetInteractable` (apaga flechas + `CanvasGroup.alpha`), `SetDisplayOverride`, `SetNote`, `event OnValueChanged(int)`. Las flechas son `Button` comunes: entran solas en la navegación del gamepad (nota 35) |
+
 ## 4. Puntos de entrada e inicialización
 
 ### 4.1 Arranque de la aplicación
 
 ```
 MainMenuScene (build index 0)
-  ├── Init.Awake()                        ← ÚNICO punto de config de plataforma
+  ├── Init.Awake() → GameSettings.ApplyCurrent()   ← aplica las opciones del jugador (ver 3.10)
   │     lee %USERPROFILE%/AppData/.../init.cfg  (Application.persistentDataPath)
-  │     claves: TargetFPS=120, ResolutionX=1920, ResolutionY=1080, Fullscreen=true
-  │     aplica Application.targetFrameRate + Screen.SetResolution
-  └── MainMenuPanel: fade-in (CanvasGroup) + versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Salir → Quit (en Editor, sale de Play)
+  │     aplica Screen.SetResolution (si cambió) + vSyncCount/targetFrameRate + InputManager.SetInputMode
+  └── MainMenuPanel: fade-in (CanvasGroup) + versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Opciones → OptionsPanel · Salir → Quit (en Editor, sale de Play)
         botones con MenuButtonHover (escala al hover/click, unscaled) sobre sprites Boton Comenzar / Boton Continuar
         └── TutorialOfferController: diálogo pausado → "sí" carga TutorialScene → (paso 18) ShopTutorial → GameScene
 
@@ -1754,6 +1807,7 @@ asset, no código. Gamepad en notación Xbox / PlayStation.
 | `Rotate` | `R` | B / ○ | mientras se arrastra carne | Rotar footprint del corte (parrilla, StockPanel, bandeja, plato) |
 | `ClearPlate` | `C` | LT / L2 | Parrilla | Limpiar el plato entero: armado + visuales de carne + sides/toppings + salpicaduras |
 | `MissingCut` | `M` | View / Share | Parrilla | Informar corte faltante → sustituye el pedido por un corte con stock (`TriggerMissingCutChange`, propina anulada) |
+| `Back` | `Esc` | B / ○ | Menús | Volver / cerrar. Hoy lo usa solo el menú de opciones (menú principal y pausa). Comparte tecla con `Pause` (Esc: `GameManager` no alterna la pausa si `OptionsMenuPanel.AnyOpen`) y botón con `Rotate` (B: con el juego en pausa no se rota nada) |
 | Arrastrar carne a `ToBuild` | | | Parrilla | Monta el corte en el plato (uno solo) |
 | Arrastrar el plato | | | Parrilla | Entrega por **drag & drop**: soltar sobre un cliente entrega; rechazo → vuelve al plato; soltar sobre la bandeja / un hueco de la grilla → la carne se va ahí |
 | Botón RollBack | | | Parrilla | `BuildUndoHistory.UndoLast()` (pan / side / topping / **carne → bandeja**) |
@@ -1848,4 +1902,5 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 33 | **El collider de un visual de carne NO se mide con `sprite.bounds`.** Los visuales salen todos del prefab genérico `StockPrefab` — que es **solo `Transform` + `SpriteRenderer` vacío, sin collider** (el 2026-09-23 se le sacó la `BoxCollider2D` de `0.0001 × 0.0001` que arrastraba) — y el sprite del corte se les asigna después; además **todos los cortes se dibujan sobre un lienzo de 100x100 px**, así que `sprite.bounds` devuelve `1x1` para el chorizo (ocupa 84x53 px), el vacío (92x59) y el paty (82x87) por igual. Medir por ahí daba el mismo cuadrado para todos y, en el plato, con el `* 1.2f` de margen que llevaba el agarre, la caja del corte se comía los clicks del plato de alrededor: al querer levantar el plato se levantaba la carne. Se mide con **`SpriteColliderFitter.Fit`** (`Build/SpriteColliderFitter.cs`), que calca el **physics shape** del sprite en un `PolygonCollider2D` (los PNG de cortes se importan con `spriteGenerateFallbackPhysicsShape`, así que Unity genera el contorno por alfa: verificados los 61 sprites de los 10 `MeatCutSO` y los 28 de los `ProductVariantSO`) y cae a una caja ajustada solo si el sprite no trae shape. **El prefab ya no trae collider**: todos los caminos que lo instancian crean el suyo — plato (`PlateDeliveryDraggable.Awake`) y bandeja (`ToBuildDraggableMeat.Awake`/`Setup`) vía el fitter, y los dos draggables legados (`MeatHolderDraggableMeat`, `CoolerDraggableMeat`) con su `GetComponent ?? AddComponent`. La única pila que queda sin collider es la cola `toGrill`, que son visuales pasivos y hoy no tiene llamadores vivos. Lo usan `PlateDeliveryDraggable.RefreshCollider` y `ToBuildDraggableMeat.RefreshCollider`. Dos detalles que hay que respetar en cualquier variante nueva: el `padding` se empuja desde el centro del **contorno** (no del lienzo) y el **`flipX` del `SpriteRenderer` espeja el dibujo pero no el shape**, así que el fitter lo espeja a mano o la cara B queda con el collider de la cara A |
 | 26 | El feedback de clientes ocupa el slot 4 s (`IsInFeedback`): `MaxSimultaneousCustomers` los cuenta, `SpawnLoop` no spawnea en su lugar hasta que se van, y `OnNightEnded` espera a que termine el último feedback. `IsCustomerActive`, `SetDeliveryDragHover` y `EvaluateDelivery` los excluyen |
 | 35 | **Input: nada de `UnityEngine.Input` ni `OnMouseXXX`.** Todo pasa por `InputManager` (3.1 → *Input*): posición con `InputManager.PointerPosition`, botones con `PrimaryPressed/Held/Released` y `SecondaryPressed`, teclas con `WasPressed(GameAction)`. Un collider del mundo nuevo implementa `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` (mismos contratos que los `OnMouseXXX`); un `OnMouseDown` nuevo **no se dispara con el gamepad** (y con el mouse funcionaría de casualidad, porque *Active Input Handling* está en *Both*). Una acción nueva: agregarla al enum `GameAction` **y** al mapa `Gameplay` del asset con el mismo nombre (si falta, `InputManager` loguea error al arrancar). **Un elemento interactivo nuevo (algo que se agarra, se clickea o donde se suelta) hay que sumarlo a `GamepadNavTargets`** (idle o el `DragKind` que corresponda), o con gamepad no se va a poder seleccionar; los botones de UI entran solos. **Pendientes:** (a) los textos del tutorial (`Prefabs/PanelesTutos/`) nombran teclas (`Q`, `Espacio`, `R`, `C`, click derecho): con gamepad quedan mal; `ActiveScheme`/`ActiveGamepadFamily`/`OnSchemeChanged` están para mostrar el botón que corresponda. (b) Menú principal y tienda ya se recorren con los saltos (sus botones son `Selectable`), pero falta adaptarlos: scroll de la grilla de la tienda hasta lo que no se ve, orden de selección pensado y botón B para volver. (c) Cambiar *Active Input Handling* requiere reiniciar el Editor: sin reinicio el Input System no recibe dispositivos nativos |
+| 36 | **Opciones del jugador: todo pasa por `GameSettings`** (3.10). Nadie más escribe `init.cfg`, `Screen.SetResolution`, `QualitySettings.vSyncCount` ni `Application.targetFrameRate`. Una opción nueva: campo en `SettingsData` (+ `Equals` y `Defaults`), clave en `EnsureLoaded`/`Save`/`IsKnownKey`, efecto en `Apply`, y fila en el prefab `OptionsPanel` + su `OptionSelectorUI` en `OptionsMenuPanel`. **Idioma pendiente (TODO)**: la fila está deshabilitada y el valor se guarda sin efecto; al implementar la localización, aplicar `language` en `GameSettings.Apply` y habilitar la fila en `OptionsMenuPanel.Populate`. El prefab `OptionsPanel` está en `MainMenuScene` y anidado en `PauseCanvas`: los cambios de layout se hacen en el prefab. Una pantalla nueva que lo use y escuche Esc/Pause tiene que respetar `OptionsMenuPanel.AnyOpen` como hace `GameManager` |
 | 34 | **La tienda es un prefab (`Prefabs/UI/ShopCanvas.prefab`) compartido por `EndScene` y `ShopTutorial`.** Editar el prefab, no la instancia: las escenas solo deben pisar la referencia `shop` (más los valores que Unity maneja solo en el `RectTransform` raíz y en el `Handle` del scrollbar). Referencias de escena que apuntan adentro del canvas: `RunDefeatScreen.shopCanvas` (`EndScene`) y `TutorialManager.canvasParent` (`ShopTutorial`). **Chinchulín, Costillita de cerdo, Pechuga de pollo y Matambre no tienen ningún sprite** (ni `meatSprite*` ni `cookingSprites*`) y están desbloqueados: en la tienda salen sin icono (segunda fila de Carnes). Es un tema de datos |

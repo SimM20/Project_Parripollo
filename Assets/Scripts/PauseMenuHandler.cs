@@ -9,6 +9,12 @@ public class PauseMenuHandler : MonoBehaviour
     [SerializeField] private Button backToMenuButtton;
     [SerializeField] private Button restartButtton;
 
+    [Header("Opciones")]
+    [SerializeField] private Button optionsButton;
+    [SerializeField] private OptionsMenuPanel optionsPanel;
+    [Tooltip("Lo que se oculta mientras el panel de opciones está abierto (sliders y botones).")]
+    [SerializeField] private GameObject[] hideWhileOptionsOpen;
+
     private void Awake()
     {
         // Slider bindings
@@ -19,6 +25,40 @@ public class PauseMenuHandler : MonoBehaviour
         endGameButtton?.onClick.AddListener(EndGame);
         backToMenuButtton?.onClick.AddListener(BackToMenu);
         restartButtton?.onClick.AddListener(RestartDay);
+        optionsButton?.onClick.AddListener(OpenOptions);
+
+        if (optionsPanel != null)
+            optionsPanel.OnClosed += HandleOptionsClosed;
+    }
+
+    private void OnDestroy()
+    {
+        if (optionsPanel != null)
+            optionsPanel.OnClosed -= HandleOptionsClosed;
+    }
+
+    /// <summary>Cierra el panel de opciones si está abierto (UIManager lo llama al despausar).</summary>
+    public void CloseOptions()
+    {
+        if (optionsPanel != null)
+            optionsPanel.Close();
+    }
+
+    private void OpenOptions()
+    {
+        if (optionsPanel == null) return;
+
+        SetMenuVisible(false);
+        optionsPanel.Open();
+    }
+
+    private void HandleOptionsClosed() => SetMenuVisible(true);
+
+    private void SetMenuVisible(bool visible)
+    {
+        if (hideWhileOptionsOpen == null) return;
+        foreach (GameObject go in hideWhileOptionsOpen)
+            if (go != null) go.SetActive(visible);
     }
 
     private void ChangeSFXValue(float value)

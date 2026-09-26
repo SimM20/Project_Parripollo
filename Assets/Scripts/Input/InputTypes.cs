@@ -14,6 +14,20 @@ public enum GameAction
     CleanAshes,
     ClearPlate,
     MissingCut,
+    /// <summary>Volver / cerrar en menús (Esc · B / ○).</summary>
+    Back,
+}
+
+/// <summary>
+/// Tipo de control elegido en Opciones. Auto cambia solo entre mouse y gamepad; los otros dos
+/// apagan los dispositivos del otro esquema (ver <see cref="InputManager.SetInputMode"/>).
+/// </summary>
+public enum InputMode
+{
+    Auto,
+    KeyboardMouse,
+    /// <summary>Solo gamepad. Sin ningún gamepad conectado el mouse sigue andando, para no dejar el juego sin control.</summary>
+    Gamepad,
 }
 
 /// <summary>Con qué está jugando la persona ahora: define de dónde sale el puntero.</summary>
