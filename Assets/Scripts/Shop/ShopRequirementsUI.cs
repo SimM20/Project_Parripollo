@@ -33,6 +33,7 @@ public class ShopRequirementsUI : MonoBehaviour
 
     void OnEnable()
     {
+        Loc.OnTextsChanged += Refresh;
         if (shop != null)
         {
             if (shop.Wallet != null) shop.Wallet.OnMoneyChanged += OnMoneyChanged;
@@ -49,6 +50,7 @@ public class ShopRequirementsUI : MonoBehaviour
 
     void OnDisable()
     {
+        Loc.OnTextsChanged -= Refresh;
         if (shop != null)
         {
             if (shop.Wallet != null) shop.Wallet.OnMoneyChanged -= OnMoneyChanged;

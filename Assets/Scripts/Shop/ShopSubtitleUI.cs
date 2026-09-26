@@ -13,6 +13,7 @@ public class ShopSubtitleUI : MonoBehaviour
 
     void OnEnable()
     {
+        Loc.OnTextsChanged += Refresh;
         if (shop != null)
         {
             shop.OnTabChanged += Refresh;
@@ -29,6 +30,7 @@ public class ShopSubtitleUI : MonoBehaviour
 
     void OnDisable()
     {
+        Loc.OnTextsChanged -= Refresh;
         if (shop != null)
         {
             shop.OnTabChanged -= Refresh;

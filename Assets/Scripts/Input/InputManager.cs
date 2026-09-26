@@ -55,6 +55,9 @@ public class InputManager : MonoBehaviour
     /// <summary>Cambió el esquema activo (mouse ↔ gamepad).</summary>
     public static event Action<InputScheme> OnSchemeChanged;
 
+    /// <summary>Cambió la familia del gamepad en uso (Xbox ↔ PlayStation ↔ genérico): cambian los nombres de los botones.</summary>
+    public static event Action<GamepadFamily> OnGamepadFamilyChanged;
+
     // ── API estática: los consumidores no necesitan chequear Instance ──
 
     /// <summary>Posición del puntero en píxeles de pantalla (origen abajo a la izquierda, z = 0). Reemplaza a Input.mousePosition.</summary>
@@ -67,6 +70,29 @@ public class InputManager : MonoBehaviour
     public static InputScheme ActiveScheme => Instance != null ? Instance.scheme : InputScheme.KeyboardMouse;
     public static GamepadFamily ActiveGamepadFamily => Instance != null ? Instance.gamepadFamily : GamepadFamily.None;
     public static bool UsingGamepad => ActiveScheme == InputScheme.Gamepad;
+
+    /// <summary>
+    /// Ruta del control ligado a la acción del mapa Gameplay en ese esquema ("&lt;Keyboard&gt;/q",
+    /// "&lt;Gamepad&gt;/leftShoulder"). La primera que aparezca; null si no hay o si todavía no existe
+    /// el InputManager. La usa <see cref="InputPrompts"/> para nombrar teclas y botones en los textos.
+    /// </summary>
+    public static string GetBindingPath(string actionName, InputScheme scheme)
+    {
+        if (Instance == null || Instance.actions == null) return null;
+
+        InputAction action = Instance.actions.FindActionMap(GameplayMapName)?.FindAction(actionName);
+        if (action == null) return null;
+
+        string group = scheme == InputScheme.Gamepad ? "Gamepad" : "KeyboardMouse";
+        foreach (InputBinding binding in action.bindings)
+        {
+            if (binding.isComposite || binding.isPartOfComposite) continue;
+            if (binding.groups == null || Array.IndexOf(binding.groups.Split(InputBinding.Separator), group) < 0) continue;
+            if (binding.effectivePath.StartsWith("<Joystick>")) continue;
+            return binding.effectivePath;
+        }
+        return null;
+    }
 
     /// <summary>Tipo de control elegido en Opciones (lo aplica <see cref="GameSettings"/>).</summary>
     public static InputMode Mode => Instance != null ? Instance.inputMode : InputMode.Auto;
@@ -151,6 +177,7 @@ public class InputManager : MonoBehaviour
     {
         Instance = null;
         OnSchemeChanged = null;
+        OnGamepadFamilyChanged = null;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -291,7 +318,14 @@ public class InputManager : MonoBehaviour
         if (!IsSchemeAllowed(next)) return;
 
         if (next == InputScheme.Gamepad && device != null)
-            gamepadFamily = GetFamily(device);
+        {
+            GamepadFamily family = GetFamily(device);
+            if (family != gamepadFamily)
+            {
+                gamepadFamily = family;
+                OnGamepadFamilyChanged?.Invoke(family);
+            }
+        }
 
         if (next == scheme) return;
 

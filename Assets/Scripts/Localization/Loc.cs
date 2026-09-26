@@ -15,11 +15,13 @@ using UnityEngine;
 /// <item>El separador se detecta del encabezado (<c>,</c> <c>;</c> o tab): Excel en español guarda con <c>;</c>.</item>
 /// <item>Celdas entre comillas (con <c>""</c> para una comilla). <c>\n</c> dentro de una celda es un salto de línea.</item>
 /// <item>Filas vacías o que empiezan con <c>#</c> se ignoran.</item>
+/// <item><c>[[Accion]]</c> dentro de un texto es un token: se reemplaza por la tecla o el botón de esa
+/// acción del control en uso (<see cref="InputPrompts"/>).</item>
 /// <item>Celda vacía = sin traducir: se usa el idioma fuente (<see cref="SourceLanguage"/>) y, si tampoco está, la clave.</item>
 /// </list>
 ///
 /// Carga perezosa: el primer acceso lee las tablas y toma el idioma de <see cref="GameSettings"/>.
-/// Los textos que quedan en pantalla escuchan <see cref="OnLanguageChanged"/> (ver <see cref="LocalizedText"/>).
+/// Los textos que quedan en pantalla escuchan <see cref="OnTextsChanged"/> (ver <see cref="LocalizedText"/>).
 /// </summary>
 public static class Loc
 {
@@ -32,8 +34,20 @@ public static class Loc
     /// <summary>Clave cuyo valor es el nombre del idioma en su propio idioma ("Español", "English").</summary>
     public const string LanguageNameKey = "language.name";
 
-    /// <summary>Cambió el idioma activo. Los textos visibles tienen que volver a pedir su clave.</summary>
-    public static event Action OnLanguageChanged;
+    /// <summary>
+    /// Cambió algo de lo que muestran los textos: el idioma activo o el valor de un token (p. ej.
+    /// se pasó del teclado al joystick). Los textos visibles tienen que volver a pedir su clave.
+    /// </summary>
+    public static event Action OnTextsChanged;
+
+    /// <summary>
+    /// Resuelve los tokens <c>[[Nombre]]</c> que aparecen en los textos de las tablas (hoy: teclas
+    /// y botones, ver <see cref="InputPrompts"/>). Null o un token sin resolver deja el nombre tal cual.
+    /// </summary>
+    public static Func<string, string> TokenResolver;
+
+    private const string TokenOpen = "[[";
+    private const string TokenClose = "]]";
 
     private static readonly List<string> languages = new List<string>();
     private static readonly Dictionary<string, string[]> table = new Dictionary<string, string[]>();
@@ -67,7 +81,7 @@ public static class Loc
     private static void ResetStatics()
     {
         loaded = false;
-        OnLanguageChanged = null;
+        OnTextsChanged = null;
         warnedKeys.Clear();
     }
 
@@ -107,7 +121,33 @@ public static class Loc
 
         value = Cell(row, currentIndex);
         if (string.IsNullOrEmpty(value)) value = Cell(row, sourceIndex);
+        if (value != null && value.Contains(TokenOpen)) value = ExpandTokens(value);
         return value != null;
+    }
+
+    /// <summary>Avisa a los textos visibles que vuelvan a pedir su clave (cambió el valor de un token).</summary>
+    public static void RefreshTexts() => OnTextsChanged?.Invoke();
+
+    private static string ExpandTokens(string text)
+    {
+        var sb = new StringBuilder(text.Length + 16);
+        int index = 0;
+        while (index < text.Length)
+        {
+            int open = text.IndexOf(TokenOpen, index, StringComparison.Ordinal);
+            int close = open < 0 ? -1 : text.IndexOf(TokenClose, open + TokenOpen.Length, StringComparison.Ordinal);
+            if (open < 0 || close < 0)
+            {
+                sb.Append(text, index, text.Length - index);
+                break;
+            }
+
+            sb.Append(text, index, open - index);
+            string token = text.Substring(open + TokenOpen.Length, close - open - TokenOpen.Length);
+            sb.Append(TokenResolver?.Invoke(token) ?? token);
+            index = close + TokenClose.Length;
+        }
+        return sb.ToString();
     }
 
     /// <summary>Texto de la clave, o <paramref name="fallback"/> si la clave está vacía o no existe.</summary>
@@ -160,7 +200,7 @@ public static class Loc
 
         current = resolved;
         currentIndex = languages.IndexOf(current);
-        OnLanguageChanged?.Invoke();
+        OnTextsChanged?.Invoke();
     }
 
     /// <summary>
@@ -224,7 +264,7 @@ public static class Loc
         loaded = false;
         warnedKeys.Clear();
         EnsureLoaded();
-        OnLanguageChanged?.Invoke();
+        OnTextsChanged?.Invoke();
     }
 
     private static void EnsureLoaded()

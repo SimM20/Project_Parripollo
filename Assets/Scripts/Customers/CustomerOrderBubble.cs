@@ -87,8 +87,8 @@ public class CustomerOrderBubble : MonoBehaviour
     }
 
     // El idioma se puede cambiar desde la pausa con clientes esperando.
-    private void OnEnable() => Loc.OnLanguageChanged += Refresh;
-    private void OnDisable() => Loc.OnLanguageChanged -= Refresh;
+    private void OnEnable() => Loc.OnTextsChanged += Refresh;
+    private void OnDisable() => Loc.OnTextsChanged -= Refresh;
 
     /// <summary>Engancha la burbuja al pedido del cliente y la deja en estado base.</summary>
     public void Bind(Customer boundCustomer, CustomerView boundView)

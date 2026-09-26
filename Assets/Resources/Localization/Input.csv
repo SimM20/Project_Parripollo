@@ -1,0 +1,32 @@
+﻿key,es,en
+# Nombres de teclas y botones para los tokens [[Accion]] (InputPrompts). Se busca por el control del binding
+"# Teclado: solo las teclas con nombre; el resto se muestra en mayúsculas (Q, R, E)"
+input.key.space,Espacio,Space
+input.key.escape,Esc,Esc
+input.key.enter,Enter,Enter
+input.key.tab,Tab,Tab
+input.key.leftShift,Shift,Shift
+input.mouse.left,click,click
+input.mouse.right,click derecho,right-click
+# Gamepad de Xbox (también los genéricos)
+input.xbox.buttonSouth,A,A
+input.xbox.buttonEast,B,B
+input.xbox.buttonWest,X,X
+input.xbox.buttonNorth,Y,Y
+input.xbox.leftShoulder,LB,LB
+input.xbox.rightShoulder,RB,RB
+input.xbox.leftTrigger,LT,LT
+input.xbox.rightTrigger,RT,RT
+input.xbox.start,Menu,Menu
+input.xbox.select,View,View
+# Gamepad de PlayStation (DualShock 4 / DualSense). Los símbolos no están en las fuentes: van por nombre
+input.ps.buttonSouth,Cruz,Cross
+input.ps.buttonEast,Círculo,Circle
+input.ps.buttonWest,Cuadrado,Square
+input.ps.buttonNorth,Triángulo,Triangle
+input.ps.leftShoulder,L1,L1
+input.ps.rightShoulder,R1,R1
+input.ps.leftTrigger,L2,L2
+input.ps.rightTrigger,R2,R2
+input.ps.start,Options,Options
+input.ps.select,Share,Share

@@ -42,7 +42,7 @@ public class StrikeLimitNotice : MonoBehaviour
 
     private void OnEnable()
     {
-        Loc.OnLanguageChanged += ApplyTexts;
+        Loc.OnTextsChanged += ApplyTexts;
         TrySubscribe();
     }
 
@@ -50,7 +50,7 @@ public class StrikeLimitNotice : MonoBehaviour
 
     private void OnDisable()
     {
-        Loc.OnLanguageChanged -= ApplyTexts;
+        Loc.OnTextsChanged -= ApplyTexts;
         Unsubscribe();
         routine = null;
     }

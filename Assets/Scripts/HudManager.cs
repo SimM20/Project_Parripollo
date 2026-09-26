@@ -45,7 +45,7 @@ public class HudManager : MonoBehaviour
 
     private void OnEnable()
     {
-        Loc.OnLanguageChanged += RefreshDayText;
+        Loc.OnTextsChanged += RefreshDayText;
         AutoUpdateTexts();
     }
 
@@ -253,7 +253,7 @@ public class HudManager : MonoBehaviour
 
     private void OnDisable()
     {
-        Loc.OnLanguageChanged -= RefreshDayText;
+        Loc.OnTextsChanged -= RefreshDayText;
 
         if (pauseButton != null)
             pauseButton.onClick.RemoveAllListeners();

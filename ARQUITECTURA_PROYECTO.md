@@ -17,12 +17,12 @@
 > restringe el input a teclado+mouse o a joystick. Acción nueva `GameAction.Back` (Esc · B/○). Secciones 0, 1, 3.1 →
 > *Input*, 3.10, 4.1, 4.4 y nota 36.
 
-> Última actualización parcial: **2026-09-26** (rama `feature/localization`) — **localización (español / inglés)**. Sistema propio
-> `Localization/Loc.cs` (estática) + tablas CSV en `Resources/Localization/*.csv` (`key,es,en`; sumar un idioma = sumar una
-> columna). `LocalizedText` (componente) traduce los textos fijos de escenas/prefabs; el código usa `Loc.Get/Format`.
-> `SettingsData.language` pasó de enum a código ("es"/"en", lee el valor viejo "Spanish"/"English"); default = idioma del
-> sistema. SO con `nameKey`/`descriptionKey` (vacío en cortes y toppings: no se traducen). Frases de clientes = pools
-> `feedback.phrase.<estado>.N`. Herramientas: `Tools/Localización/` (validar, recargar, siguiente idioma en Play). Nota 37.
+> Última actualización parcial: **2026-09-26** (rama `feature/localization`) — **localización español / inglés**, modular
+> para sumar idiomas. Sistema propio `Localization/Loc.cs` + tablas CSV en `Resources/Localization/*.csv` (una columna por
+> idioma: sumar uno = sumar una columna). `LocalizedText` traduce los textos fijos de escenas y prefabs; el código usa
+> `Loc.Get/Format`. Idioma en Opciones (`SettingsData.language` pasó de enum a código "es"/"en"; default = idioma del
+> sistema). Cortes y toppings **no** se traducen. Las teclas y botones del tutorial son tokens `[[Accion]]` que muestran el
+> control en uso (`Input/InputPrompts.cs`). Herramientas en `Tools/Localización/`. Sección 3.11 y nota 37.
 
 ---
 
@@ -33,12 +33,13 @@
 | Motor | Unity **2022.3.62f3**, URP (2D), **Input System 1.19** (Active Input Handling = *Both*) detrás de `InputManager` — ver 3.1 → *Input* |
 | Cámara | **Perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). No es ortográfica — ver nota 22 |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`). `Scripts/Editor/` va a `Assembly-CSharp-Editor` |
-| Código propio | `Assets/Scripts/` — **152 archivos, ~25k líneas** |
+| Código propio | `Assets/Scripts/` — **156 archivos, ~27k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina **contrarreloj**: cocinar cortes, armar platos/sándwiches y entregar a los clientes que entran durante la jornada |
 | Jornada | **06:30 → 21:00 en 5 minutos reales** (`DayClock`). A las 21:00 cierra y deja de entrar gente; el día termina **cuando se va el último cliente**, no al cerrar |
 | Persistencia | Solo `init.cfg` (opciones del jugador: pantalla, FPS, VSync, tipo de control, idioma — `GameSettings`, ver 3.10). **No hay savegame**: el progreso vive en objetos `DontDestroyOnLoad` |
-| Idioma del dominio | Español (`Crudo`, `Jugoso`, `Hecho`, `Muy_Hecho`, `Pasado`, `Quemado`) |
+| Idioma del dominio | Español (`Crudo`, `Jugoso`, `Hecho`, `Muy_Hecho`, `Pasado`, `Quemado`): nombres de enums, assets y campos |
+| Idiomas del juego | **Español** (fuente) e **inglés**, por tablas CSV — ver 3.11. Cortes de carne y toppings quedan en español en todos los idiomas |
 
 **Escenas (build order)**: `0 MainMenuScene` → `1 GameScene` → `2 TutorialScene` → `3 ShopTutorial` → `4 EndScene`.
 `GameOverScene` está en la lista pero **deshabilitada**. `SampleScene.unity` existe pero **no está en build** (legacy).
@@ -66,6 +67,7 @@ Assets/Scripts/
 ├── Background/     Fondo por capas que sigue la hora del DayClock (amanecer → noche) + nubes con parallax
 ├── Input/          InputManager (Input System nuevo, teclado/mouse + gamepad), navegación por saltos, cursor, eventos de puntero del mundo
 ├── Settings/       GameSettings: opciones del jugador (init.cfg) — cargar, guardar, aplicar
+├── Localization/   Loc (tablas CSV por idioma) y LocalizedText (textos fijos de escena/prefab)
 ├── UI/             ViewManager, Tutorial, SlidingPanel (base de paneles), notificaciones, HUD SO, feedback
 │   ├── Options/        Menú de opciones: panel + fila selectora "< valor >"
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
@@ -88,9 +90,10 @@ Assets/Scripts/
 | **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene` y `ShopTutorial`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
 | **Strikes/** | Penalización de jornada por clientes que se van con paciencia 0 (`StrikeSystem`, singleton de escena), HUD de X (`StrikeHudView`), aviso “¡Te clavaron el cartel!” (`StrikeLimitNotice`) y popup modal de cierre anticipado en `EndScene` (`StrikeEndPopup`) | `StrikeSystem.cs`, `StrikeHudView.cs`, `StrikeLimitNotice.cs`, `StrikeEndPopup.cs` |
 | **Background/** | Fondo de `GameScene` en capas (cielo, estrellas, luna, sol, nubes, paisaje). `DayCycleBackground` lee la hora del `DayClock` y se la pasa a las capas; cada `DayCycleLayer` mezcla su color (y opcionalmente su sprite) entre claves horarias; `DayCycleArc` mueve sol y luna; `ParallaxLayer` desliza las nubes. Solo visual: no escribe la hora ni toca el gameplay | `DayCycleBackground.cs`, `DayCycleLayer.cs`, `DayCycleArc.cs`, `ParallaxLayer.cs` |
-| **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI. Bindings en `Assets/Input/GameControls.inputactions` | `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
+| **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI y **nombres de teclas/botones para los textos** (`InputPrompts`, tokens `[[Accion]]`). Bindings en `Assets/Input/GameControls.inputactions` | `InputPrompts.cs`, `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
 | **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú y de la tienda; no reacciona si el `Selectable` está deshabilitado) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
-| **Settings/** | `GameSettings` (estática): struct `SettingsData`, lectura perezosa de `init.cfg`, `ApplyAndSave`, aplicación (pantalla, VSync/FPS, `InputManager.SetInputMode`). Enum `GameLanguage` | `GameSettings.cs` |
+| **Settings/** | `GameSettings` (estática): struct `SettingsData`, lectura perezosa de `init.cfg`, `ApplyAndSave`, aplicación (pantalla, VSync/FPS, `InputManager.SetInputMode`, `Loc.SetLanguage`) | `GameSettings.cs` |
+| **Localization/** | `Loc` (estática): carga las tablas `Resources/Localization/*.csv`, idioma activo, `Get`/`Format`/`GetPool`, tokens `[[...]]`, evento `OnTextsChanged`. `LocalizedText`: componente para los textos fijos de escenas y prefabs. Herramientas de editor en `Editor/LocalizationTools.cs` | `Loc.cs`, `LocalizedText.cs` |
 | **UI/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
@@ -108,10 +111,21 @@ Assets/ScriptableObjects/
 ├── Tutorial/        TutorialStepSO ×31 (secuencia ordenada 1..31)
 ├── Upgrades/        UpgradeSO   — CoalBurnTimeUpgrade, CustomerCapacityUpgrade, TipUpgrade, RadioUpgrade
 ├── FoodCatalog.asset / FoodCatalogTutorial.asset
-├── CustomerFeedbackSO.asset     (CustomerFeedbackConfigSO: tiempos, colores, frases del feedback)
+├── CustomerFeedbackSO.asset     (CustomerFeedbackConfigSO: tiempos, colores y sprites del feedback; las frases están en las tablas)
 ├── ShopConfig.asset / CoalData.asset
 ├── Chorizo.asset, ChorizoTutorial.asset
 └── TEST.asset                   (scratch, sin uso conocido)
+```
+
+```
+Assets/Resources/Localization/   Tablas de textos (key,es,en). Se cargan todas: el reparto es solo por orden
+├── Menus.csv       idioma, menú principal, opciones, pausa, oferta de tutorial
+├── Gameplay.csv    HUD, entrega (rechazos, preview), armado del plato, aviso de strikes
+├── Customers.csv   puntos de cocción, pedido, burbuja de reacción, frases de clientes
+├── Shop.csv        tienda, requisitos, popup de strikes, derrota, EndScreen
+├── Items.csv       carbón, panes, guarniciones, mejoras (nameKey / descriptionKey de los SO)
+├── Tutorial.csv    paneles del tutorial
+└── Input.csv       nombres de teclas y botones para los tokens [[Accion]]
 ```
 
 Prefabs relevantes: `Prefabs/GrillView.prefab` (contiene `StockPanel`, `MeatTray`, `ToBuild`), `Prefabs/[SYSTEMS].prefab`
@@ -230,6 +244,8 @@ graph TD
 | `ShopSystem` | `OnTabChanged` | `ShopGridUI` (rebuild), `ShopBreadcrumbUI`, `ShopSubtitleUI`, `ShopNextButtonUI`, (2D: `ShopTabBar2D`, `ShopGrid2D`) |
 | `ShopSystem` | `OnCartChanged`, `OnPurchaseResult(bool,string)` | Solo la capa 2D. **La UI activa compra directo y no usa carrito** |
 | `GamePause` | `static OnPaused` | Todos los draggables con un arrastre en curso (cancelan y vuelven al origen) |
+| `Loc` | `static OnTextsChanged` | Cambió el idioma o un token (se pasó de teclado a joystick): `LocalizedText`, `HudManager` (día), `CustomerOrderBubble`, `StrikeLimitNotice`, `Shop*UI` |
+| `InputManager` | `static OnSchemeChanged`, `static OnGamepadFamilyChanged` | `InputPrompts` (→ `Loc.RefreshTexts`), resto de la navegación del gamepad |
 | `SceneManagementUtils` | `OnSceneLoaded` (static) | (disponible; suscrito vía `RuntimeInitializeOnLoadMethod`) |
 | `ShopButton2D` / `ShopTabButton2D` | `OnClicked`, `OnTabClicked(ShopTabType)` | Celdas, barras de tabs |
 | `CoalStock` | `OnChanged(int)` | (clase legacy, sin uso activo) |
@@ -442,6 +458,8 @@ static bool FreeCursorActive;              // se está moviendo el cursor libre 
 static InputMode Mode;                     // Auto | KeyboardMouse | Gamepad  (tipo de control de Opciones)
 static void SetInputMode(InputMode);       // lo llama GameSettings al aplicar; ver 3.10
 static event Action<InputScheme> OnSchemeChanged;
+static event Action<GamepadFamily> OnGamepadFamilyChanged;   // Xbox ↔ PlayStation: cambian los nombres de los botones
+static string GetBindingPath(string action, InputScheme);     // "<Keyboard>/q", "<Gamepad>/leftShoulder" (para InputPrompts)
 void ConfigureUIModule(InputSystemUIInputModule)
 ```
 
@@ -477,7 +495,7 @@ float OpeningHour, ClosingHour, DayDurationSeconds;
 float CurrentHour;                        // horas decimales: 6.5 = 06:30
 float Normalized01;                       // 0 apertura → 1 cierre; entrada de la curva de afluencia
 float RemainingRealSeconds;
-string TimeLabel, HudLabel;               // "06:30" · HudLabel pasa a closedLabel ("CERRADO") al cerrar
+string TimeLabel, HudLabel;               // "06:30" · HudLabel pasa a Loc(closedLabelKey) ("CERRADO"/"CLOSED") al cerrar
 void StartDay(), StopDay();
 void CloseEarly(string reason);          // salta al cierre y dispara OnClosingTime (lo usa el 3er strike)
 static string FormatHour(float hour, int minuteStep = 1);
@@ -488,7 +506,7 @@ static string FormatHour(float hour, int minuteStep = 1);
 | `openingHour` / `closingHour` | `6.5` / `21` | Horas decimales |
 | `dayDurationSeconds` | `300` | Partida de 5 minutos |
 | `displayMinuteStep` | `5` | El HUD salta de 5 en 5 minutos de juego: a esta velocidad, mostrar cada minuto es ilegible |
-| `closedLabel` | `CERRADO` | Reemplaza la hora en el HUD desde el cierre |
+| `closedLabelKey` | `hud.closed` | Clave del texto que reemplaza la hora en el HUD desde el cierre |
 
 Corre con `Time.deltaTime`, así que **`GamePause` lo congela solo** (`timeScale = 0`) — no hay
 que pausarlo a mano. Empuja el texto al HUD (`UIManager.SetDayTime`) **solo cuando cambia**, no por frame.
@@ -1188,9 +1206,10 @@ entra solo). Durante el feedback el slot **sigue ocupado**
 `WaitForSeconds` → se congela con la pausa. Jerarquía visual autogenerada si el prefab no la trae
 (`EnsureVisualHierarchy`). Config única en `ScriptableObjects/CustomerFeedbackSO.asset`
 (`CustomerFeedbackConfigSO.Instance` con fallback a `Resources`): tiempos, colores por categoría, sprites por estado
-(opcionales), pools de frases.
+(opcionales). **Las frases viven en `Customers.csv`** como pools numerados `feedback.phrase.<estado>.1..N`
+(`GetPhrasePoolKey` da el prefijo, `Loc.GetPool` los junta): cada idioma puede tener su propia cantidad.
 
-`EntregaCrudaOQuemada` es el único estado con **dos pools**: `entregaCrudaPhrases` y `entregaQuemadaPhrases`. Los
+`EntregaCrudaOQuemada` es el único estado con **dos pools**: `feedback.phrase.raw` y `feedback.phrase.burnt`. Los
 elige el flag `burnedVariant` que viaja `GameManager` → `TriggerBadCookingLeaveFeedback` → `CustomerView.ShowFeedback`
 → `CustomerFeedbackBubble.Show` → `GetRandomPhrase(state, burnedVariant)`, porque quejarse de carne cruda no es lo
 mismo que quejarse de un carbón. `GameManager` lo saca de `validation.burnedCount > 0` (quemado tiene prioridad).
@@ -1370,7 +1389,9 @@ Layout (referencia 1920×1080, fondo `PauseMenubg` con la puerta a la derecha):
   `ShopItemCellUI.SetInteractable` además apaga el texto del botón deshabilitado (alfa `0.45`), así no se confunde
   con un hover.
 - **Clientes del día:** `Header/CustomersPlate`, una chapa oscura chica que se ajusta al ancho del texto
-  (`HorizontalLayoutGroup` + `ContentSizeFitter`). Singular con 1 cliente (`oneCustomerFormat`).
+  (`HorizontalLayoutGroup` + `ContentSizeFitter`). Singular con 1 cliente (`shop.header.customers.one`).
+- **Textos:** todos salen de `Shop.csv` (`shop.*`); los componentes escuchan `Loc.OnTextsChanged`. `shopName` ("Parrilla 40")
+  sigue serializado: es la marca y no se traduce.
 
 Todos los componentes cuelgan de un `ShopSystem` asignado por inspector y usan el mismo patrón
 `OnEnable` (suscribir) / `Start` (`started = true` + `Refresh`) / `OnDisable` (desuscribir);
@@ -1380,10 +1401,10 @@ el flag `started` evita refrescar antes del primer `Start`.
 |---|---|
 | `ShopBreadcrumbUI` | Puente entre los 4 `ShopTabButtonUI` y el `ShopSystem`. Se suscribe a `OnTabClicked` de cada botón → `shop.SetTab(tab)`; con `OnTabChanged` repinta cuál está activo (`SetActiveState`) |
 | `ShopTabButtonUI` | `[RequireComponent(Button)]`. Expone `ShopTabType Tab` y `Action<ShopTabType> OnTabClicked`. `SetActiveState(bool)` cambia el `label` de color y la chapa de `background`: si tiene `activeSprite`/`inactiveSprite` cambia de sprite (chapa dorada/oscura), si no, tiñe con los colores de fondo |
-| `ShopHeaderUI` | Header: nombre de la tienda (`shopName`), plata (`$N0`) y clientes de la jornada (`customersFormat`, `"Hoy vinieron {0} clientes"`, desde `DayStats`). `totalCoalText` quedó **sin asignar** en el rediseño (el carbón ya se ve en requisitos y en la tarjeta), pero el campo sigue vivo. Se suscribe a `Wallet.OnMoneyChanged` **y** `Cooler.OnInventoryChanged` |
+| `ShopHeaderUI` | Header: nombre de la tienda (`shopName`), plata (`$N0`) y clientes de la jornada (`shop.header.customers`, `"Hoy vinieron {0} clientes"`, desde `DayStats`). `totalCoalText` quedó **sin asignar** en el rediseño (el carbón ya se ve en requisitos y en la tarjeta), pero el campo sigue vivo. Se suscribe a `Wallet.OnMoneyChanged` **y** `Cooler.OnInventoryChanged` |
 | `ShopGridUI` | Reconstruye la grilla al cambiar de tab. `AdjustCellCount` instancia/destruye celdas (`ShopItemCell 1.prefab`) bajo el `Content` del ScrollView y las bindea. Ante cambios de stock/plata solo llama `RefreshVisuals()` de cada celda (no reconstruye) |
-| `ShopItemCellUI` | Celda: icono, nombre, descripción, precio, **stock actual** (`stockText`, hijo `ItemStock` bajo el precio: `"TENÉS: N"` desde `Cooler.GetCount` / `ToppingStock.GetCount`, `"TENÉS: N U."` en carbón, `"NIVEL X/Y"` en mejoras), `pendingQty`, subtotal. El carbón agrega el tamaño de bolsa al nombre (`"Coal x10"`) y a la descripción (`"Bolsa de 10 unidades"`) cuando `unitsPerBag > 1`. La descripción (`ItemDesc`) va en **Nunito** con auto-size 11–16, en una caja de 224×50 sin márgenes (no se sale de la tarjeta ni pisa el precio): antes era Bungee Hairline 12 y sus trazos, más finos que un píxel a ese tamaño, se dibujaban cortados. Todos los textos son campos `*Format` serializados. Sin `stockText`, el nivel de la mejora vuelve a la descripción. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. **Oculta el −/+ (`stepperRoot`) si el item se compra de a uno** (mejoras) y muestra el total (`subtotalFormat`, `"Total: $N"`) **solo con cantidad > 1**. `lockedOverlay` es un velo oscuro sobre toda la tarjeta (`LockedOverlay`, sin `raycastTarget`) + icono atenuado para lo no comprable (bloqueado o mejora al máximo). Si el item no tiene sprite, el icono se apaga (un `Image` sin sprite dibuja un cuadrado blanco). Tarjeta de 280×480 |
-| `ShopSubtitleUI` | Una línea de ayuda por tab (`detailText`, Nunito). `titleText` es **opcional** y en el prefab está sin asignar: la tab activa ya dice en qué sección estás. En `Coal` el detalle es dinámico: `coalDetailFormat` (`"Venís usando {0} unidades de carbón por jornada."`) o `coalFirstNightDetail` si `DaysPlayed == 0` |
+| `ShopItemCellUI` | Celda: icono, nombre, descripción, precio, **stock actual** (`stockText`, hijo `ItemStock` bajo el precio: `"TENÉS: N"` desde `Cooler.GetCount` / `ToppingStock.GetCount`, `"TENÉS: N U."` en carbón, `"NIVEL X/Y"` en mejoras), `pendingQty`, subtotal. El carbón agrega el tamaño de bolsa al nombre (`"Carbón x10"` / `"Charcoal x10"`) y a la descripción (`"Bolsa de 10 unidades"`) cuando `unitsPerBag > 1`. La descripción (`ItemDesc`) va en **Nunito** con auto-size 11–16, en una caja de 224×50 sin márgenes (no se sale de la tarjeta ni pisa el precio): antes era Bungee Hairline 12 y sus trazos, más finos que un píxel a ese tamaño, se dibujaban cortados. Los textos salen de las claves `shop.cell.*`; el nombre de cada item es `DisplayName` (y `DisplayDescription` en mejoras). Sin `stockText`, el nivel de la mejora vuelve a la descripción. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. **Oculta el −/+ (`stepperRoot`) si el item se compra de a uno** (mejoras) y muestra el total (`shop.cell.subtotal`, `"Total: $N"`) **solo con cantidad > 1**. `lockedOverlay` es un velo oscuro sobre toda la tarjeta (`LockedOverlay`, sin `raycastTarget`) + icono atenuado para lo no comprable (bloqueado o mejora al máximo). Si el item no tiene sprite, el icono se apaga (un `Image` sin sprite dibuja un cuadrado blanco). Tarjeta de 280×480 |
+| `ShopSubtitleUI` | Una línea de ayuda por tab (`detailText`, Nunito). `titleText` es **opcional** y en el prefab está sin asignar: la tab activa ya dice en qué sección estás. En `Coal` el detalle es dinámico: `shop.help.coal` (`"Venís usando {0} unidades de carbón por jornada."`) o `shop.help.coal.first_night` si `DaysPlayed == 0` |
 | `ShopNextButtonUI` | Avanza `Coal → Meat → Upgrades → Toppings` cambiando el label (`"Siguiente: Carnes"`…`"Arrancar el día"`); en `Toppings` el botón carga `GameScene` |
 
 Navegación por tabs: **dos entradas** — el breadcrumb (salto directo a cualquier tab) y el botón
@@ -1707,7 +1728,7 @@ se ve al instante (`OnValidate` reaplica), pero como todo cambio en Play **se pi
 #### `GameSettings` — `Settings/GameSettings.cs` · estática
 ```csharp
 struct SettingsData { resolutionWidth, resolutionHeight, FullScreenMode displayMode, int targetFps /* <= 0 = sin límite */,
-                      bool vSync, InputMode inputMode, GameLanguage language; static Defaults; bool Equals(SettingsData) }
+                      bool vSync, InputMode inputMode, string language /* "es", "en" */; static Defaults; bool Equals(SettingsData) }
 static SettingsData Current;               // carga perezosa de init.cfg en el primer acceso
 static void ApplyCurrent();                // Init.Awake
 static void ApplyAndSave(SettingsData);    // botón Aplicar del menú de opciones
@@ -1717,7 +1738,8 @@ static event Action<SettingsData> OnApplied;
 (`ExclusiveFullScreen`/`FullScreenWindow`/`Windowed`), `TargetFPS`, `VSync`, `InputMode`, `Language`. El `Fullscreen=true/false`
 viejo se sigue leyendo si falta `DisplayMode`. Claves desconocidas se conservan al reescribir. Sin archivo, se crea con
 los defaults: **resolución nativa del monitor**, sin bordes, VSync **sí** (lo mismo que ya tenía el Quality `Ultra`),
-120 FPS, control `Auto`, español.
+120 FPS, control `Auto` e **idioma del sistema** (`Loc.DetectSystemLanguage`: el del SO si hay columna para él, si no inglés).
+`Language` guarda el código (`es`, `en`); un `init.cfg` viejo con `Spanish`/`English` se sigue leyendo (`Loc.Resolve`).
 
 Aplicar: `Screen.SetResolution` **solo si cambió** algo (Init corre cada vez que se vuelve al menú y reaplicar parpadea la
 ventana) · `QualitySettings.vSyncCount` y `Application.targetFrameRate` (con VSync va `-1`: Unity ignora el tope) ·
@@ -1744,6 +1766,46 @@ cosas y con gamepad el botón de pausa es otro — si solo escuchara `Back`, Sta
 | `OptionsMenuPanel` | Al abrir copia `GameSettings.Current` a un `pending` y llena las filas. Las flechas editan `pending`; **APLICAR** (habilitado solo si `pending` difiere de lo guardado) llama `ApplyAndSave`; **VOLVER**, `GameAction.Back` (Esc · B/○) o `GameAction.Pause` (Start/Options) cierra y **descarta** lo no aplicado. Resoluciones = `Screen.resolutions` sin repetir por frecuencia (+ la guardada si no está). FPS: 30/60/120/144/240/sin límite; con VSync la fila se apaga y muestra "VSYNC". Pantalla: completa (exclusiva, solo Windows) / sin bordes / ventana. Controles: automático / teclado y mouse / joystick. Idioma: una opción por columna de las tablas (`Loc.Languages`), con el nombre de cada idioma en su idioma (`language.name`) |
 | `OptionSelectorUI` | Fila "ETIQUETA  < valor >". `SetOptions`, `SetIndex`, `SetInteractable` (apaga flechas + `CanvasGroup.alpha`), `SetDisplayOverride`, `SetNote`, `event OnValueChanged(int)`. Las flechas son `Button` comunes: entran solas en la navegación del gamepad (nota 35) |
 
+### 3.11 Localización — `Localization/` · `Resources/Localization/*.csv`
+
+Sistema propio, sin paquetes (se descartó `com.unity.localization` por el setup que pide). **Español es el idioma
+fuente**: cualquier celda vacía cae al español y, si tampoco está, se muestra la clave (con un warning, una vez).
+
+#### `Loc` — `Localization/Loc.cs` · estática
+```csharp
+const string SourceLanguage = "es";
+static event Action OnTextsChanged;            // cambió el idioma o un token: los textos visibles se reescriben
+static Func<string,string> TokenResolver;      // resuelve [[Accion]] (lo instala InputPrompts)
+static string Current;                         // "es" / "en"
+static IReadOnlyList<string> Languages;        // columnas de las tablas, en orden
+static string Get(key), Format(key, params args), GetOrDefault(key, fallback)
+static bool TryGet(key, out value), Has(key)
+static List<string> GetPool(prefix)            // prefix.1, prefix.2... (frases de clientes)
+static string GetLanguageName(code)            // fila language.name: "Español", "English"
+static void SetLanguage(code), RefreshTexts(), Reload()
+static string Resolve(code), DetectSystemLanguage()
+```
+Carga perezosa: el primer acceso lee **todas** las tablas de la carpeta (`Resources.LoadAll<TextAsset>`) y toma el idioma de
+`GameSettings`. `GameSettings.Apply` llama `SetLanguage` (menú de opciones), que dispara `OnTextsChanged`. En modo edición
+(fuera de Play) siempre responde en español.
+
+**Formato de las tablas.** Primera fila `key,es,en,...` (el encabezado es el código ISO del idioma); una fila por clave.
+Separador autodetectado (`,` `;` o tab: Excel en español guarda con `;`), comillas RFC 4180, `\n` dentro de una celda =
+salto de línea, filas vacías o que empiezan con `#` = comentarios. Se editan en Excel/Sheets (UTF-8).
+`{0}` son argumentos de `Loc.Format`. `[[Accion]]` es un token: ver `InputPrompts`.
+
+**Sumar un idioma:** agregar la columna (p. ej. `pt`) en cada CSV y su fila `language.name`. El menú de opciones lo lista
+solo. `DetectSystemLanguage` ya mapea los idiomas comunes de `SystemLanguage` a su código. Revisar que las fuentes tengan
+sus caracteres (nota 30).
+
+| Pieza | Qué hace |
+|---|---|
+| `LocalizedText` | Componente sobre un `TMP_Text` con un texto **fijo** (botón, título, panel del tutorial): `key` serializada; escribe `Loc.Get(key)` en `OnEnable` y en cada `OnTextsChanged`. En el Editor el TMP conserva el texto en español. Está en 129 textos: menú principal, opciones, pausa, oferta de tutorial, tienda, popups de `EndScene`, `EndScreen` y los 27 paneles de tutorial en uso |
+| Textos armados por código | `Loc.Get`/`Loc.Format` en el script que escribe el texto (HUD, burbujas, tienda, derrota, strikes, mensajes de entrega). Los que pueden quedar en pantalla al cambiar el idioma escuchan `OnTextsChanged` |
+| Nombres de ítems | `ItemDataSO.nameKey` → `DisplayName`, `UpgradeSO.descriptionKey` → `DisplayDescription`, y lo mismo en `BreadSO` / `SideSO`. Clave vacía = se muestra el nombre serializado tal cual: es lo que pasa con **cortes y toppings, que no se traducen**. Los puntos de cocción: `MeatHoverText.GetStateDisplayName` (`cooking.*`: Raw, Rare, Medium, Well Done, Overcooked, Burnt) |
+| `InputPrompts` — `Input/InputPrompts.cs` | Resuelve `[[Accion]]` (nombres de `GameAction` + `PointerPrimary`/`PointerSecondary`) con la tecla o botón **del binding real** en el control activo: teclado (`input.key.<control>`, o la tecla en mayúsculas), Xbox/genérico (`input.xbox.<control>`) o PlayStation (`input.ps.<control>`). Devuelve en negrita. Al cambiar de esquema o de familia de gamepad llama `Loc.RefreshTexts`, así el tutorial pasa de "Q" a "LB"/"L1" en vivo |
+| `LocalizationTools` — `Editor/` | Menú `Tools/Localización/`: **Validar tablas** (celdas vacías, `{n}` o `[[tokens]]` que no coinciden con el español, tokens inexistentes, claves usadas en código o assets que no están), **Recargar tablas**, **Siguiente idioma (Play)** (solo la sesión) y abrir la carpeta. Inspector de `LocalizedText` con el texto de cada idioma |
+
 ## 4. Puntos de entrada e inicialización
 
 ### 4.1 Arranque de la aplicación
@@ -1752,7 +1814,7 @@ cosas y con gamepad el botón de pausa es otro — si solo escuchara `Back`, Sta
 MainMenuScene (build index 0)
   ├── Init.Awake() → GameSettings.ApplyCurrent()   ← aplica las opciones del jugador (ver 3.10)
   │     lee %USERPROFILE%/AppData/.../init.cfg  (Application.persistentDataPath)
-  │     aplica Screen.SetResolution (si cambió) + vSyncCount/targetFrameRate + InputManager.SetInputMode
+  │     aplica Screen.SetResolution (si cambió) + vSyncCount/targetFrameRate + InputManager.SetInputMode + Loc.SetLanguage
   └── MainMenuPanel: fade-in (CanvasGroup) + versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Opciones → OptionsPanel · Salir → Quit (en Editor, sale de Play)
         botones con MenuButtonHover (escala al hover/click, unscaled) sobre sprites Boton Comenzar / Boton Continuar
         └── TutorialOfferController: diálogo pausado → "sí" carga TutorialScene → (paso 18) ShopTutorial → GameScene
@@ -1762,6 +1824,8 @@ MainMenuScene (build index 0)
   InputManager.Bootstrap()                   BeforeSceneLoad        → instancia Resources/InputManager.prefab (DDOL)
   SceneManagementUtils.Initialize()          BeforeSceneLoad        → engancha SceneManager.sceneLoaded
   SlidingPanel.ResetStaticState()            SubsystemRegistration  → limpia OpenPanels / OnAnyPanelOpenChanged
+  Loc.ResetStatics() / GameSettings          SubsystemRegistration  → tablas e idioma se releen en el primer acceso
+  InputPrompts.Install()                     BeforeSceneLoad        → Loc.TokenResolver + refresco al cambiar de control
   GrillNotificationManager.AutoInitialize()  AfterSceneLoad         → crea el manager si no existe
   CustomerFeedbackSelfCheck                  AfterSceneLoad         → asserts de la tabla de propinas
 ```
@@ -1909,8 +1973,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 32 | **El fondo de `GameScene` es `FondoCicloDia` y usa los `sortingOrder` -60 a -4** (capas en -60/-55/-50/-45/-40/-30/-20, paisaje en -5; el fundido de sprites de `DayCycleLayer` dibuja en `order + 1`, así que el del paisaje cae en -4). Algo nuevo que vaya detrás de la carne pero delante del fondo va en -3 o más. El tinte del ciclo de día es **solo para esas capas**: parrilla, carne, clientes y HUD no se tiñen, porque leer el punto de cocción depende de sus colores. Ver 3.9 |
 | 33 | **El collider de un visual de carne NO se mide con `sprite.bounds`.** Los visuales salen todos del prefab genérico `StockPrefab` — que es **solo `Transform` + `SpriteRenderer` vacío, sin collider** (el 2026-09-23 se le sacó la `BoxCollider2D` de `0.0001 × 0.0001` que arrastraba) — y el sprite del corte se les asigna después; además **todos los cortes se dibujan sobre un lienzo de 100x100 px**, así que `sprite.bounds` devuelve `1x1` para el chorizo (ocupa 84x53 px), el vacío (92x59) y el paty (82x87) por igual. Medir por ahí daba el mismo cuadrado para todos y, en el plato, con el `* 1.2f` de margen que llevaba el agarre, la caja del corte se comía los clicks del plato de alrededor: al querer levantar el plato se levantaba la carne. Se mide con **`SpriteColliderFitter.Fit`** (`Build/SpriteColliderFitter.cs`), que calca el **physics shape** del sprite en un `PolygonCollider2D` (los PNG de cortes se importan con `spriteGenerateFallbackPhysicsShape`, así que Unity genera el contorno por alfa: verificados los 61 sprites de los 10 `MeatCutSO` y los 28 de los `ProductVariantSO`) y cae a una caja ajustada solo si el sprite no trae shape. **El prefab ya no trae collider**: todos los caminos que lo instancian crean el suyo — plato (`PlateDeliveryDraggable.Awake`) y bandeja (`ToBuildDraggableMeat.Awake`/`Setup`) vía el fitter, y los dos draggables legados (`MeatHolderDraggableMeat`, `CoolerDraggableMeat`) con su `GetComponent ?? AddComponent`. La única pila que queda sin collider es la cola `toGrill`, que son visuales pasivos y hoy no tiene llamadores vivos. Lo usan `PlateDeliveryDraggable.RefreshCollider` y `ToBuildDraggableMeat.RefreshCollider`. Dos detalles que hay que respetar en cualquier variante nueva: el `padding` se empuja desde el centro del **contorno** (no del lienzo) y el **`flipX` del `SpriteRenderer` espeja el dibujo pero no el shape**, así que el fitter lo espeja a mano o la cara B queda con el collider de la cara A |
 | 26 | El feedback de clientes ocupa el slot 4 s (`IsInFeedback`): `MaxSimultaneousCustomers` los cuenta, `SpawnLoop` no spawnea en su lugar hasta que se van, y `OnNightEnded` espera a que termine el último feedback. `IsCustomerActive`, `SetDeliveryDragHover` y `EvaluateDelivery` los excluyen |
-| 35 | **Input: nada de `UnityEngine.Input` ni `OnMouseXXX`.** Todo pasa por `InputManager` (3.1 → *Input*): posición con `InputManager.PointerPosition`, botones con `PrimaryPressed/Held/Released` y `SecondaryPressed`, teclas con `WasPressed(GameAction)`. Un collider del mundo nuevo implementa `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` (mismos contratos que los `OnMouseXXX`); un `OnMouseDown` nuevo **no se dispara con el gamepad** (y con el mouse funcionaría de casualidad, porque *Active Input Handling* está en *Both*). Una acción nueva: agregarla al enum `GameAction` **y** al mapa `Gameplay` del asset con el mismo nombre (si falta, `InputManager` loguea error al arrancar). **Un elemento interactivo nuevo (algo que se agarra, se clickea o donde se suelta) hay que sumarlo a `GamepadNavTargets`** (idle o el `DragKind` que corresponda), o con gamepad no se va a poder seleccionar; los botones de UI entran solos. **Pendientes:** (a) los textos del tutorial (`Prefabs/PanelesTutos/`) nombran teclas (`Q`, `Espacio`, `R`, `C`, click derecho): con gamepad quedan mal; `ActiveScheme`/`ActiveGamepadFamily`/`OnSchemeChanged` están para mostrar el botón que corresponda. (b) Menú principal y tienda ya se recorren con los saltos (sus botones son `Selectable`), pero falta adaptarlos: scroll de la grilla de la tienda hasta lo que no se ve, orden de selección pensado y botón B para volver. (c) Cambiar *Active Input Handling* requiere reiniciar el Editor: sin reinicio el Input System no recibe dispositivos nativos |
-| 36 | **Opciones del jugador: todo pasa por `GameSettings`** (3.10). Nadie más escribe `init.cfg`, `Screen.SetResolution`, `QualitySettings.vSyncCount` ni `Application.targetFrameRate`. Una opción nueva: campo en `SettingsData` (+ `Equals` y `Defaults`), clave en `EnsureLoaded`/`Save`/`IsKnownKey`, efecto en `Apply`, y fila en el prefab `OptionsPanel` + su `OptionSelectorUI` en `OptionsMenuPanel`. **Idioma pendiente (TODO)**: la fila está deshabilitada y el valor se guarda sin efecto; al implementar la localización, aplicar `language` en `GameSettings.Apply` y habilitar la fila en `OptionsMenuPanel.Populate`. El prefab `OptionsPanel` está en `MainMenuScene` y anidado en `PauseCanvas`: los cambios de layout se hacen en el prefab. Una pantalla nueva que lo use y escuche Esc/Pause tiene que respetar `OptionsMenuPanel.AnyOpen` como hace `GameManager` |
+| 35 | **Input: nada de `UnityEngine.Input` ni `OnMouseXXX`.** Todo pasa por `InputManager` (3.1 → *Input*): posición con `InputManager.PointerPosition`, botones con `PrimaryPressed/Held/Released` y `SecondaryPressed`, teclas con `WasPressed(GameAction)`. Un collider del mundo nuevo implementa `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` (mismos contratos que los `OnMouseXXX`); un `OnMouseDown` nuevo **no se dispara con el gamepad** (y con el mouse funcionaría de casualidad, porque *Active Input Handling* está en *Both*). Una acción nueva: agregarla al enum `GameAction` **y** al mapa `Gameplay` del asset con el mismo nombre (si falta, `InputManager` loguea error al arrancar). **Un elemento interactivo nuevo (algo que se agarra, se clickea o donde se suelta) hay que sumarlo a `GamepadNavTargets`** (idle o el `DragKind` que corresponda), o con gamepad no se va a poder seleccionar; los botones de UI entran solos. **Pendientes:** (a) ~~los textos del tutorial nombran teclas~~ resuelto con los tokens `[[Accion]]` (3.11 → `InputPrompts`); quedan los **íconos dibujados** de teclas en algunos paneles (la "Q" de `AbrirInventario2`), que son sprites. (b) Menú principal y tienda ya se recorren con los saltos (sus botones son `Selectable`), pero falta adaptarlos: scroll de la grilla de la tienda hasta lo que no se ve, orden de selección pensado y botón B para volver. (c) Cambiar *Active Input Handling* requiere reiniciar el Editor: sin reinicio el Input System no recibe dispositivos nativos |
+| 36 | **Opciones del jugador: todo pasa por `GameSettings`** (3.10). Nadie más escribe `init.cfg`, `Screen.SetResolution`, `QualitySettings.vSyncCount` ni `Application.targetFrameRate`. Una opción nueva: campo en `SettingsData` (+ `Equals` y `Defaults`), clave en `EnsureLoaded`/`Save`/`IsKnownKey`, efecto en `Apply`, y fila en el prefab `OptionsPanel` + su `OptionSelectorUI` en `OptionsMenuPanel`. El idioma se aplica con `Loc.SetLanguage` desde `GameSettings.Apply`; la fila lista los idiomas de las tablas (3.11). El prefab `OptionsPanel` está en `MainMenuScene` y anidado en `PauseCanvas`: los cambios de layout se hacen en el prefab. Una pantalla nueva que lo use y escuche Esc/Pause tiene que respetar `OptionsMenuPanel.AnyOpen` como hace `GameManager` |
 | 34 | **La tienda es un prefab (`Prefabs/UI/ShopCanvas.prefab`) compartido por `EndScene` y `ShopTutorial`.** Editar el prefab, no la instancia: las escenas solo deben pisar la referencia `shop` (más los valores que Unity maneja solo en el `RectTransform` raíz y en el `Handle` del scrollbar). Referencias de escena que apuntan adentro del canvas: `RunDefeatScreen.shopCanvas` (`EndScene`) y `TutorialManager.canvasParent` (`ShopTutorial`). **Chinchulín, Costillita de cerdo, Pechuga de pollo y Matambre no tienen ningún sprite** (ni `meatSprite*` ni `cookingSprites*`) y están desbloqueados: en la tienda salen sin icono (segunda fila de Carnes). Es un tema de datos |
-| 37 | **Localización: ningún texto visible en literales.** Código: `Loc.Get("clave")` / `Loc.Format("clave", args)`; texto fijo de escena/prefab: componente `LocalizedText` con la clave. Las claves viven en `Resources/Localization/*.csv` (Excel/Sheets; separador `,` `;` o tab; `
-` = salto de línea; celda vacía cae al español). Un texto que queda en pantalla mientras se puede cambiar el idioma (pausa) escucha `Loc.OnLanguageChanged`. Nombres de ítems: `DisplayName`/`DisplayDescription` de los SO, nunca `itemName`/`breadName`/`sideName`. **Cortes y toppings no se traducen** (sin `nameKey`). Validar con *Tools/Localización/Validar tablas* (claves inexistentes, celdas vacías, `{n}` que no coinciden). Pendientes: los textos del tutorial nombran teclas de teclado; `EndScreen`/`ShopRoot` (capas deshabilitadas) no están traducidas; revisar largos de texto en inglés en pantalla |
+| 37 | **Localización: ningún texto visible en literales** (3.11). En código, `Loc.Get("clave")` / `Loc.Format("clave", args)`; en un texto fijo de escena o prefab, el componente `LocalizedText`. La clave nueva va en la tabla que corresponda de `Resources/Localization/` **con todas las columnas llenas**, y después *Tools/Localización/Validar tablas*. Un texto que puede quedar en pantalla mientras cambia el idioma (la pausa tiene Opciones) o el control escucha `Loc.OnTextsChanged`. Para mostrar un ítem: `DisplayName` / `DisplayDescription` del SO, **nunca** `itemName` / `breadName` / `sideName` / `description`. **Cortes y toppings no se traducen**: no llevan `nameKey`. Para nombrar una tecla o botón: token `[[GameAction]]`, nunca la letra escrita. Cambiar un binding en `GameControls.inputactions` actualiza los textos solo; un control físico nuevo necesita su fila `input.*`. `ShopRoot` (tienda 2D deshabilitada, nota 8) y los 6 paneles de tutorial sin uso (`CanvaPanelCoolerInfo`, `DragCarbon`, `DragCarne`, `Panel`, `Pasar a Cooler`, `Volver al Grill`) **no** están traducidos |

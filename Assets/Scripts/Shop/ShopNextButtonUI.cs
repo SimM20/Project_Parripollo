@@ -28,6 +28,7 @@ public class ShopNextButtonUI : MonoBehaviour
 
     void OnEnable()
     {
+        Loc.OnTextsChanged += Refresh;
         if (shop != null)
         {
             shop.OnTabChanged += Refresh;
@@ -48,6 +49,7 @@ public class ShopNextButtonUI : MonoBehaviour
 
     void OnDisable()
     {
+        Loc.OnTextsChanged -= Refresh;
         if (shop != null)
         {
             shop.OnTabChanged -= Refresh;

@@ -29,7 +29,7 @@ menu.quit,SALIR,QUIT
 pause.sfx,SONIDO (SFX),SOUND (SFX)
 pause.music,MÚSICA,MUSIC
 pause.resume,VOLVER A JUGAR,RESUME
-pause.end_day,TERMINAR JORNADA,END THE DAY
+pause.end_day,TERMINAR JORNADA,END DAY
 pause.options,OPCIONES,OPTIONS
 pause.quit,SALIR DEL JUEGO,QUIT GAME
 "# Diálogo de oferta del tutorial (GameScene, TutorialOfferController)"

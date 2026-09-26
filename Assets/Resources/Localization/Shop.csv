@@ -67,3 +67,9 @@ defeat.deficit,Te faltaban ${0:N0} para llegar al mínimo,You were ${0:N0} short
 defeat.unreachable,El mínimo del próximo día ya no se puede alcanzar,The next day's minimum can no longer be reached
 defeat.main_menu,Menú principal,Main menu
 defeat.retry,Reintentar,Try again
+"# Pantalla de cierre vieja (EndScreen: canvas deshabilitado en EndScene y ShopTutorial, se entra directo a la tienda)"
+endscreen.day,DÍA,DAY
+endscreen.money,PLATA,MONEY
+endscreen.customers,CLIENTES,CUSTOMERS
+endscreen.shop,TIENDA,SHOP
+endscreen.main_menu,MENÚ PRINCIPAL,MAIN MENU

@@ -16,6 +16,7 @@ public class ShopHeaderUI : MonoBehaviour
 
     void OnEnable()
     {
+        Loc.OnTextsChanged += Refresh;
         if (shop != null)
         {
             if (shop.Wallet != null) shop.Wallet.OnMoneyChanged += OnMoneyChanged;
@@ -32,6 +33,7 @@ public class ShopHeaderUI : MonoBehaviour
 
     void OnDisable()
     {
+        Loc.OnTextsChanged -= Refresh;
         if (shop != null)
         {
             if (shop.Wallet != null) shop.Wallet.OnMoneyChanged -= OnMoneyChanged;

@@ -15,6 +15,7 @@ public class ShopGridUI : MonoBehaviour
 
     void OnEnable()
     {
+        Loc.OnTextsChanged += RefreshAllCells;
         if (shop != null)
         {
             shop.OnTabChanged += RebuildAll;
@@ -33,6 +34,7 @@ public class ShopGridUI : MonoBehaviour
 
     void OnDisable()
     {
+        Loc.OnTextsChanged -= RefreshAllCells;
         if (shop != null)
         {
             shop.OnTabChanged -= RebuildAll;

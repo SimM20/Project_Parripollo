@@ -35,13 +35,13 @@ public class LocalizedText : MonoBehaviour
 
     private void OnEnable()
     {
-        Loc.OnLanguageChanged += Refresh;
+        Loc.OnTextsChanged += Refresh;
         Refresh();
     }
 
     private void OnDisable()
     {
-        Loc.OnLanguageChanged -= Refresh;
+        Loc.OnTextsChanged -= Refresh;
     }
 
     public void Refresh()

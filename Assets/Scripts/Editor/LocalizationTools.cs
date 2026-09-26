@@ -49,6 +49,18 @@ public static class LocalizationTools
                     report.AppendLine($"  [placeholders] {pair.Key} ({language}): \"{value}\"");
                     problems++;
                 }
+                else if (!Tokens(source).SetEquals(Tokens(value)))
+                {
+                    report.AppendLine($"  [tokens distintos al {Loc.SourceLanguage}] {pair.Key} ({language}): \"{value}\"");
+                    problems++;
+                }
+
+                foreach (string token in Tokens(value))
+                {
+                    if (ValidTokens.Contains(token)) continue;
+                    report.AppendLine($"  [token inexistente] [[{token}]] en {pair.Key} ({language})");
+                    problems++;
+                }
             }
         }
 
@@ -61,7 +73,9 @@ public static class LocalizationTools
         {
             string text = File.ReadAllText(file);
             if (!text.Contains("Loc.")) continue;
-            foreach (Match m in CodeKey.Matches(text)) used[m.Groups[1].Value] = file;
+            // Un literal que termina en "." es un prefijo que se completa en runtime ("input.key." + control).
+            foreach (Match m in CodeKey.Matches(text))
+                if (!m.Groups[1].Value.EndsWith(".")) used[m.Groups[1].Value] = file;
             foreach (Match m in CodePool.Matches(text)) used[m.Groups[1].Value + ".1"] = file;
             foreach (Match m in KeyLiteral.Matches(text))
             {
@@ -150,6 +164,20 @@ public static class LocalizationTools
             }
         }
         return tables;
+    }
+
+    private static readonly Regex Token = new Regex(@"\[\[([^\]]+)\]\]");
+
+    /// <summary>Tokens que resuelve <see cref="InputPrompts"/>: las GameAction y los dos botones del puntero.</summary>
+    private static readonly HashSet<string> ValidTokens = new HashSet<string>(
+        System.Enum.GetNames(typeof(GameAction)).Concat(new[] { "PointerPrimary", "PointerSecondary" }));
+
+    private static HashSet<string> Tokens(string text)
+    {
+        var set = new HashSet<string>();
+        if (string.IsNullOrEmpty(text)) return set;
+        foreach (Match m in Token.Matches(text)) set.Add(m.Groups[1].Value);
+        return set;
     }
 
     private static HashSet<string> Placeholders(string text)
