@@ -6,7 +6,8 @@ using UnityEngine.UI;
 /// <summary>
 /// Menú de opciones: resolución, modo de pantalla, VSync, tope de FPS, tipo de control e idioma.
 /// Los cambios quedan pendientes hasta "APLICAR" (que los aplica y guarda en init.cfg vía
-/// <see cref="GameSettings"/>); "VOLVER" o Back (Esc · B / ○) cierra y descarta lo no aplicado.
+/// <see cref="GameSettings"/>); "VOLVER", Back (Esc · B / ○) o Pause (Start / Options) cierra y
+/// descarta lo no aplicado.
 /// </summary>
 public class OptionsMenuPanel : MonoBehaviour
 {
@@ -86,7 +87,10 @@ public class OptionsMenuPanel : MonoBehaviour
 
     private void Update()
     {
-        if (InputManager.WasPressed(GameAction.Back))
+        // Pause también cierra: en teclado Esc ya es Back, pero con gamepad el botón de pausa
+        // (Start / Options) es otro, y si no cerrara acá quedaría sin efecto (GameManager lo ignora
+        // mientras AnyOpen).
+        if (InputManager.WasPressed(GameAction.Back) || InputManager.WasPressed(GameAction.Pause))
             Close();
     }
 

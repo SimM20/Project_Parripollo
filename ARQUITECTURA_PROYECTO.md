@@ -1728,12 +1728,13 @@ Dos instancias, las dos arrancan apagadas:
 
 **Esc con Opciones abierto en la pausa.** En teclado `Back` y `Pause` son la misma tecla. `OptionsMenuPanel.AnyOpen`
 (hay un panel abierto **o se cerró este frame**) lo consulta `GameManager` antes de alternar la pausa: Esc cierra las
-opciones y el juego sigue pausado, corra primero el `Update` que corra. Con gamepad, Start también se ignora mientras
-Opciones está abierto (se sale con B).
+opciones y el juego sigue pausado, corra primero el `Update` que corra. Con gamepad el panel se cierra con B (`Back`)
+**o con Start/Options (`Pause`)**: `OptionsMenuPanel.Update` escucha las dos acciones, porque en teclado Esc es las dos
+cosas y con gamepad el botón de pausa es otro — si solo escuchara `Back`, Start no haría nada (GameManager lo ignora).
 
 | Pieza | Qué hace |
 |---|---|
-| `OptionsMenuPanel` | Al abrir copia `GameSettings.Current` a un `pending` y llena las filas. Las flechas editan `pending`; **APLICAR** (habilitado solo si `pending` difiere de lo guardado) llama `ApplyAndSave`; **VOLVER** o `GameAction.Back` (Esc · B/○) cierra y **descarta** lo no aplicado. Resoluciones = `Screen.resolutions` sin repetir por frecuencia (+ la guardada si no está). FPS: 30/60/120/144/240/sin límite; con VSync la fila se apaga y muestra "VSYNC". Pantalla: completa (exclusiva, solo Windows) / sin bordes / ventana. Controles: automático / teclado y mouse / joystick. Idioma: fila deshabilitada con nota "PRÓXIMAMENTE" (**TODO**) |
+| `OptionsMenuPanel` | Al abrir copia `GameSettings.Current` a un `pending` y llena las filas. Las flechas editan `pending`; **APLICAR** (habilitado solo si `pending` difiere de lo guardado) llama `ApplyAndSave`; **VOLVER**, `GameAction.Back` (Esc · B/○) o `GameAction.Pause` (Start/Options) cierra y **descarta** lo no aplicado. Resoluciones = `Screen.resolutions` sin repetir por frecuencia (+ la guardada si no está). FPS: 30/60/120/144/240/sin límite; con VSync la fila se apaga y muestra "VSYNC". Pantalla: completa (exclusiva, solo Windows) / sin bordes / ventana. Controles: automático / teclado y mouse / joystick. Idioma: fila deshabilitada con nota "PRÓXIMAMENTE" (**TODO**) |
 | `OptionSelectorUI` | Fila "ETIQUETA  < valor >". `SetOptions`, `SetIndex`, `SetInteractable` (apaga flechas + `CanvasGroup.alpha`), `SetDisplayOverride`, `SetNote`, `event OnValueChanged(int)`. Las flechas son `Button` comunes: entran solas en la navegación del gamepad (nota 35) |
 
 ## 4. Puntos de entrada e inicialización
