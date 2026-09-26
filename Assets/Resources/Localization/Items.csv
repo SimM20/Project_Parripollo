@@ -10,7 +10,7 @@ item.side.potato_egg_salad,Ensalada de papa y huevo,Potato & egg salad
 upgrade.coal_burn_time.name,Carbón de Quebracho,Quebracho Charcoal
 upgrade.coal_burn_time.desc,Carbón más denso: cada brasa dura más del doble antes de volverse ceniza.,Denser charcoal: each ember lasts more than twice as long before turning to ash.
 upgrade.customer_capacity.name,Mesa extra,Extra Table
-upgrade.customer_capacity.desc,Una mesa más en el patio: sumás un cliente simultáneo por cada nivel comprado.,One more table on the patio: serve one more customer at a time per level.
+upgrade.customer_capacity.desc,Una mesa más en el patio: sumás un cliente simultáneo por cada nivel comprado.,One more table on the yard: serve one more customer at a time per level.
 upgrade.radio.name,Radio,Radio
 upgrade.radio.desc,Una radio en el mostrador: la espera se hace más corta y los clientes te aguantan un 15% más.,A radio on the counter: waiting feels shorter and customers stay 15% longer.
 upgrade.tip.name,Frasco de propinas,Tip Jar
