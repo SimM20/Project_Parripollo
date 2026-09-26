@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: CoalData
   m_EditorClassIdentifier: 
   itemName: Coal
+  nameKey: item.coal
   basePrice: 170
   category: 1
   _coalPrefab: {fileID: 2370080711425213798, guid: 396b785bdd8c93b4e96d7f0861c952c6, type: 3}

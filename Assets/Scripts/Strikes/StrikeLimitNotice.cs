@@ -17,12 +17,7 @@ public class StrikeLimitNotice : MonoBehaviour
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text bodyText;
 
-    [Header("Textos (spec v0.1)")]
-    [SerializeField] private string title = "¡Te clavaron el cartel!";
-    [TextArea(2, 4)]
-    [SerializeField] private string body =
-        "Se te fueron tres clientes con una calentura bárbara y corrieron la voz.\n" +
-        "Por hoy no para nadie más. Cerrá la parrilla y mañana será otro día.";
+    // Textos (spec v0.1): claves strike.notice.* de las tablas de Loc.
 
     [Header("Animación")]
     [SerializeField] private float fadeInSeconds = 0.2f;
@@ -35,18 +30,27 @@ public class StrikeLimitNotice : MonoBehaviour
     {
         if (group == null) group = GetComponent<CanvasGroup>();
 
-        if (titleText != null) titleText.text = title;
-        if (bodyText != null) bodyText.text = body;
-
+        ApplyTexts();
         HideImmediate();
     }
 
-    private void OnEnable() => TrySubscribe();
+    private void ApplyTexts()
+    {
+        if (titleText != null) titleText.text = Loc.Get("strike.notice.title");
+        if (bodyText != null) bodyText.text = Loc.Get("strike.notice.body");
+    }
+
+    private void OnEnable()
+    {
+        Loc.OnLanguageChanged += ApplyTexts;
+        TrySubscribe();
+    }
 
     private void Start() => TrySubscribe();
 
     private void OnDisable()
     {
+        Loc.OnLanguageChanged -= ApplyTexts;
         Unsubscribe();
         routine = null;
     }

@@ -398,15 +398,6 @@ MonoBehaviour:
   shop: {fileID: 0}
   titleText: {fileID: 0}
   detailText: {fileID: 1354109333452316382}
-  coalTitle: 'CONSUMO PROMEDIO:'
-  coalDetailFormat: "Ven\xEDs usando {0} unidades de carb\xF3n por jornada."
-  coalFirstNightDetail: "Primera jornada: todav\xEDa no hay datos de consumo."
-  meatTitle: CORTES DE CARNE
-  meatDetail: "Eleg\xED los cortes para la noche."
-  upgradesTitle: MEJORAS PARA LA PARRILLA
-  upgradesDetail: "Invert\xED en mejoras permanentes."
-  toppingsTitle: TOPPINGS Y SALSAS
-  toppingsDetail: "Compr\xE1 condimentos para tus platos."
 --- !u!1 &912679517864600673
 GameObject:
   m_ObjectHideFlags: 0
@@ -672,6 +663,7 @@ GameObject:
   - component: {fileID: 7795797863313091052}
   - component: {fileID: 4395355544753263843}
   - component: {fileID: 9166228787711959879}
+  - component: {fileID: 9150558413647501517}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -795,6 +787,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &9150558413647501517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1575356975522694405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: shop.tab.coal
 --- !u!1 &1919442469264392418
 GameObject:
   m_ObjectHideFlags: 0
@@ -806,6 +811,7 @@ GameObject:
   - component: {fileID: 4609500279031266226}
   - component: {fileID: 6975689027160335965}
   - component: {fileID: 6997997036391687104}
+  - component: {fileID: 1423082671771308332}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -929,6 +935,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1423082671771308332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1919442469264392418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: shop.tab.toppings
 --- !u!1 &2057917060862252632
 GameObject:
   m_ObjectHideFlags: 0
@@ -1074,6 +1093,7 @@ GameObject:
   - component: {fileID: 99987095810986117}
   - component: {fileID: 6305047104792948299}
   - component: {fileID: 3891027305777410426}
+  - component: {fileID: 475875090775438989}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -1197,6 +1217,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &475875090775438989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2230058882607085957}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: shop.tab.upgrades
 --- !u!1 &2252850395169305517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1981,8 +2014,6 @@ MonoBehaviour:
   totalCoalText: {fileID: 0}
   customersTodayText: {fileID: 3198374330543725355}
   shopName: Parrilla 40
-  customersFormat: Hoy vinieron {0} clientes
-  oneCustomerFormat: Hoy vino {0} cliente
 --- !u!1 &3290794442628392514
 GameObject:
   m_ObjectHideFlags: 0
@@ -2364,6 +2395,7 @@ GameObject:
   - component: {fileID: 933925846769317638}
   - component: {fileID: 8471851314267650226}
   - component: {fileID: 6038024375413004245}
+  - component: {fileID: 9160664185163864273}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -2487,6 +2519,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &9160664185163864273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4644993964430106581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: shop.tab.meat
 --- !u!1 &4733976178949755102
 GameObject:
   m_ObjectHideFlags: 0
@@ -2776,11 +2821,6 @@ MonoBehaviour:
   coalText: {fileID: 4438170298153861479}
   deficitText: {fileID: 956222021479460581}
   strikeStreakText: {fileID: 1419887646736333046}
-  meatFormat: CARNE {0} / {1}
-  coalFormat: "CARB\xD3N {0} / {1}"
-  deficitFormat: 'FALTA: {0}'
-  requirementsMetText: LISTO PARA ARRANCAR
-  strikeStreakFormat: 'NOCHES SEGUIDAS CON STRIKES: {0} / {1}'
   metColor: {r: 0.45, g: 0.85, b: 0.4, a: 1}
   unmetColor: {r: 0.9, g: 0.35, b: 0.3, a: 1}
 --- !u!1 &4947368968224098687
@@ -3153,11 +3193,6 @@ MonoBehaviour:
   shop: {fileID: 0}
   button: {fileID: 8827147279517751813}
   label: {fileID: 9080446842294552123}
-  fromCoalText: 'Siguiente: Carnes'
-  fromMeatText: 'Siguiente: Mejoras'
-  fromUpgradesText: 'Siguiente: Toppings'
-  fromToppingsText: "Arrancar el d\xEDa"
-  blockedByMinimumsText: Faltan recursos
   gameSceneName: GameScene
 --- !u!114 &7442145213496383628
 MonoBehaviour:
@@ -3792,6 +3827,7 @@ GameObject:
   - component: {fileID: 4962453405829217440}
   - component: {fileID: 1697982923522035307}
   - component: {fileID: 5347718982854138446}
+  - component: {fileID: 4756737654203159276}
   m_Layer: 5
   m_Name: Caption
   m_TagString: Untagged
@@ -3915,6 +3951,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4756737654203159276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7263452891544908674}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: shop.req.title
 --- !u!1 &7573229751099162107
 GameObject:
   m_ObjectHideFlags: 0

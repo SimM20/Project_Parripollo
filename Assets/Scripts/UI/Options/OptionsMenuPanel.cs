@@ -50,10 +50,9 @@ public class OptionsMenuPanel : MonoBehaviour
     };
 
     private static readonly InputMode[] InputModes = { InputMode.Auto, InputMode.KeyboardMouse, InputMode.Gamepad };
-    private static readonly GameLanguage[] Languages = { GameLanguage.Spanish, GameLanguage.English };
-
     private readonly List<Vector2Int> resolutions = new List<Vector2Int>();
     private readonly List<int> fpsOptions = new List<int>();
+    private readonly List<string> languages = new List<string>();
     private SettingsData saved;
     private SettingsData pending;
 
@@ -64,7 +63,7 @@ public class OptionsMenuPanel : MonoBehaviour
         if (vSyncRow != null) vSyncRow.OnValueChanged += i => { pending.vSync = i == 0; RefreshState(); };
         if (fpsRow != null) fpsRow.OnValueChanged += i => { pending.targetFps = fpsOptions[i]; RefreshState(); };
         if (inputModeRow != null) inputModeRow.OnValueChanged += i => { pending.inputMode = InputModes[i]; RefreshState(); };
-        if (languageRow != null) languageRow.OnValueChanged += i => { pending.language = Languages[i]; RefreshState(); };
+        if (languageRow != null) languageRow.OnValueChanged += i => { pending.language = languages[i]; RefreshState(); };
 
         if (applyButton != null) applyButton.onClick.AddListener(Apply);
         if (backButton != null) backButton.onClick.AddListener(Close);
@@ -116,6 +115,8 @@ public class OptionsMenuPanel : MonoBehaviour
     {
         GameSettings.ApplyAndSave(pending);
         saved = pending;
+        // Si cambió el idioma, los valores de las filas los arma este script: se vuelven a escribir.
+        Populate();
         RefreshState();
     }
 
@@ -143,7 +144,7 @@ public class OptionsMenuPanel : MonoBehaviour
             displayLabels.Add(DisplayModeLabel(mode));
         displayModeRow?.SetOptions(displayLabels, Mathf.Max(0, Array.IndexOf(DisplayModes, pending.displayMode)));
 
-        vSyncRow?.SetOptions(new[] { "SÍ", "NO" }, pending.vSync ? 0 : 1);
+        vSyncRow?.SetOptions(new[] { Loc.Get("options.yes"), Loc.Get("options.no") }, pending.vSync ? 0 : 1);
 
         fpsOptions.Clear();
         fpsOptions.AddRange(DefaultFpsOptions);
@@ -151,16 +152,21 @@ public class OptionsMenuPanel : MonoBehaviour
         if (!fpsOptions.Contains(fps)) fpsOptions.Insert(fpsOptions.Count - 1, fps);
         var fpsLabels = new List<string>(fpsOptions.Count);
         foreach (int value in fpsOptions)
-            fpsLabels.Add(value <= 0 ? "SIN LÍMITE" : value.ToString());
+            fpsLabels.Add(value <= 0 ? Loc.Get("options.fps.unlimited") : value.ToString());
         fpsRow?.SetOptions(fpsLabels, fpsOptions.IndexOf(fps));
 
-        inputModeRow?.SetOptions(new[] { "AUTOMÁTICO", "TECLADO Y MOUSE", "JOYSTICK" },
+        inputModeRow?.SetOptions(new[] { Loc.Get("options.input.auto"), Loc.Get("options.input.keyboard"), Loc.Get("options.input.gamepad") },
                                  Mathf.Max(0, Array.IndexOf(InputModes, pending.inputMode)));
 
-        languageRow?.SetOptions(new[] { "ESPAÑOL", "ENGLISH" }, Mathf.Max(0, Array.IndexOf(Languages, pending.language)));
-        // TODO(idioma): habilitar la fila cuando exista la localización de textos.
-        languageRow?.SetInteractable(false);
-        languageRow?.SetNote("PRÓXIMAMENTE");
+        // Idiomas: uno por columna de las tablas de Loc, cada uno con su nombre en su propio idioma.
+        languages.Clear();
+        languages.AddRange(Loc.Languages);
+        var languageLabels = new List<string>(languages.Count);
+        foreach (string code in languages)
+            languageLabels.Add(Loc.GetLanguageName(code).ToUpperInvariant());
+        languageRow?.SetOptions(languageLabels, Mathf.Max(0, languages.IndexOf(Loc.Resolve(pending.language))));
+        languageRow?.SetInteractable(languages.Count > 1);
+        languageRow?.SetNote(null);
     }
 
     private void RefreshState()
@@ -169,7 +175,7 @@ public class OptionsMenuPanel : MonoBehaviour
         if (fpsRow != null)
         {
             fpsRow.SetInteractable(!pending.vSync);
-            fpsRow.SetDisplayOverride(pending.vSync ? "VSYNC" : null);
+            fpsRow.SetDisplayOverride(pending.vSync ? Loc.Get("options.vsync") : null);
         }
 
         if (applyButton != null)
@@ -180,9 +186,9 @@ public class OptionsMenuPanel : MonoBehaviour
     {
         switch (mode)
         {
-            case FullScreenMode.ExclusiveFullScreen: return "COMPLETA";
-            case FullScreenMode.FullScreenWindow: return "SIN BORDES";
-            case FullScreenMode.Windowed: return "VENTANA";
+            case FullScreenMode.ExclusiveFullScreen: return Loc.Get("options.display.exclusive");
+            case FullScreenMode.FullScreenWindow: return Loc.Get("options.display.borderless");
+            case FullScreenMode.Windowed: return Loc.Get("options.display.windowed");
             default: return mode.ToString().ToUpperInvariant();
         }
     }

@@ -24,7 +24,7 @@ public static class DishValidator
         // Rule: no delivery without at least one cooked cut
         if (!dish.HasAnyCut)
         {
-            outReason = "No hay corte en el plato. No se puede entregar un plato sin corte.";
+            outReason = Loc.Get("dish.plate.no_cut");
             return false;
         }
 
@@ -34,14 +34,14 @@ public static class DishValidator
             MeatCutSO cut = dish.cuts[i];
             if (cut == null)
             {
-                outReason = "El plato contiene una referencia de corte nula.";
+                outReason = Loc.Get("dish.plate.null_cut");
                 return false;
             }
 
             // Rule: sandwich-only cuts cannot be served plated
             if (cut.servingMode == ServingMode.SandwichOnly)
             {
-                outReason = cut.cutName + " no existe al plato. Solo puede servirse en pan.";
+                outReason = Loc.Format("dish.plate.sandwich_only", cut.cutName);
                 return false;
             }
         }
@@ -69,29 +69,29 @@ public static class DishValidator
         // Rule: no delivery without a cut
         if (sandwich.cut == null)
         {
-            outReason = "No hay corte en el sandwich. No se puede entregar sin corte.";
+            outReason = Loc.Get("dish.sandwich.no_cut");
             return false;
         }
 
         // Rule: no delivery without bread
         if (sandwich.bread == null)
         {
-            outReason = "No hay pan en el sandwich.";
+            outReason = Loc.Get("dish.sandwich.no_bread");
             return false;
         }
 
         // Rule: plated-only cuts cannot be served in a sandwich
         if (sandwich.cut.servingMode == ServingMode.PlatedOnly)
         {
-            outReason = sandwich.cut.cutName + " es solo al plato. No puede ir en pan.";
+            outReason = Loc.Format("dish.sandwich.plated_only", sandwich.cut.cutName);
             return false;
         }
 
         // Rule: the bread must match the cut's required bread
         if (sandwich.cut.requiredBread != null && sandwich.cut.requiredBread != sandwich.bread)
         {
-            outReason = sandwich.cut.cutName + " requiere " + sandwich.cut.requiredBread.breadName
-                        + " pero se uso " + sandwich.bread.breadName + ".";
+            outReason = Loc.Format("dish.sandwich.wrong_bread", sandwich.cut.cutName,
+                                   sandwich.cut.requiredBread.DisplayName, sandwich.bread.DisplayName);
             return false;
         }
 

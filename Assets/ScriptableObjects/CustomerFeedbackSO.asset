@@ -25,39 +25,4 @@ MonoBehaviour:
   sinPropinaSprite: {fileID: 0}
   cambioPorFaltanteSprite: {fileID: 0}
   noPagaSeVaSprite: {fileID: 0}
-  turistaFelizPhrases:
-  - "\xA1Una maravilla!"
-  - "\xA1Esto est\xE1 de lujo!"
-  - "\xA1Qu\xE9 joyita, maestro!"
-  - "\xA1Me alegraste el viaje!"
-  - "\xA1Espectacular, che!"
-  entregaExcelentePhrases:
-  - "\xA1As\xED da gusto!"
-  - "\xA1De primera!"
-  - "\xA1Una joya!"
-  - "\xA1Terrible laburo!"
-  - "\xA1Me atendiste de diez!"
-  entregaAceptablePhrases:
-  - "Bien ah\xED."
-  - Zafa bastante.
-  - "Ta\u2019 bien."
-  - Cumple.
-  - "Saf\xF3 lindo."
-  sinPropinaPhrases:
-  - "Mmm\u2026 hasta ah\xED."
-  - "No me convenci\xF3."
-  - Flojito.
-  - Estuvo medio pelo.
-  - No era lo que esperaba.
-  cambioPorFaltantePhrases:
-  - "Bueno\u2026 mandame eso nom\xE1s."
-  - Y bueno, traeme otro.
-  - "No era lo que quer\xEDa, pero va."
-  - Dale, lo cambio.
-  - Bueno, zafamos con eso.
-  noPagaSeVaPhrases:
-  - "Nah, dej\xE1."
-  - "As\xED no te pago."
-  - Me voy re caliente.
-  - Cualquiera esto.
-  - Un desastre, che.
+  entregaCrudaOQuemadaSprite: {fileID: 0}

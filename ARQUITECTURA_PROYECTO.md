@@ -17,6 +17,13 @@
 > restringe el input a teclado+mouse o a joystick. Acción nueva `GameAction.Back` (Esc · B/○). Secciones 0, 1, 3.1 →
 > *Input*, 3.10, 4.1, 4.4 y nota 36.
 
+> Última actualización parcial: **2026-09-26** (rama `feature/localization`) — **localización (español / inglés)**. Sistema propio
+> `Localization/Loc.cs` (estática) + tablas CSV en `Resources/Localization/*.csv` (`key,es,en`; sumar un idioma = sumar una
+> columna). `LocalizedText` (componente) traduce los textos fijos de escenas/prefabs; el código usa `Loc.Get/Format`.
+> `SettingsData.language` pasó de enum a código ("es"/"en", lee el valor viejo "Spanish"/"English"); default = idioma del
+> sistema. SO con `nameKey`/`descriptionKey` (vacío en cortes y toppings: no se traducen). Frases de clientes = pools
+> `feedback.phrase.<estado>.N`. Herramientas: `Tools/Localización/` (validar, recargar, siguiente idioma en Play). Nota 37.
+
 ---
 
 ## 0. Ficha técnica
@@ -1714,7 +1721,7 @@ los defaults: **resolución nativa del monitor**, sin bordes, VSync **sí** (lo 
 
 Aplicar: `Screen.SetResolution` **solo si cambió** algo (Init corre cada vez que se vuelve al menú y reaplicar parpadea la
 ventana) · `QualitySettings.vSyncCount` y `Application.targetFrameRate` (con VSync va `-1`: Unity ignora el tope) ·
-`InputManager.SetInputMode` · idioma: **TODO**, solo se guarda.
+`InputManager.SetInputMode` · `Loc.SetLanguage(language)`.
 
 #### Menú de opciones — `UI/Options/` · prefab `Prefabs/UI/OptionsPanel.prefab`
 Dos instancias, las dos arrancan apagadas:
@@ -1734,7 +1741,7 @@ cosas y con gamepad el botón de pausa es otro — si solo escuchara `Back`, Sta
 
 | Pieza | Qué hace |
 |---|---|
-| `OptionsMenuPanel` | Al abrir copia `GameSettings.Current` a un `pending` y llena las filas. Las flechas editan `pending`; **APLICAR** (habilitado solo si `pending` difiere de lo guardado) llama `ApplyAndSave`; **VOLVER**, `GameAction.Back` (Esc · B/○) o `GameAction.Pause` (Start/Options) cierra y **descarta** lo no aplicado. Resoluciones = `Screen.resolutions` sin repetir por frecuencia (+ la guardada si no está). FPS: 30/60/120/144/240/sin límite; con VSync la fila se apaga y muestra "VSYNC". Pantalla: completa (exclusiva, solo Windows) / sin bordes / ventana. Controles: automático / teclado y mouse / joystick. Idioma: fila deshabilitada con nota "PRÓXIMAMENTE" (**TODO**) |
+| `OptionsMenuPanel` | Al abrir copia `GameSettings.Current` a un `pending` y llena las filas. Las flechas editan `pending`; **APLICAR** (habilitado solo si `pending` difiere de lo guardado) llama `ApplyAndSave`; **VOLVER**, `GameAction.Back` (Esc · B/○) o `GameAction.Pause` (Start/Options) cierra y **descarta** lo no aplicado. Resoluciones = `Screen.resolutions` sin repetir por frecuencia (+ la guardada si no está). FPS: 30/60/120/144/240/sin límite; con VSync la fila se apaga y muestra "VSYNC". Pantalla: completa (exclusiva, solo Windows) / sin bordes / ventana. Controles: automático / teclado y mouse / joystick. Idioma: una opción por columna de las tablas (`Loc.Languages`), con el nombre de cada idioma en su idioma (`language.name`) |
 | `OptionSelectorUI` | Fila "ETIQUETA  < valor >". `SetOptions`, `SetIndex`, `SetInteractable` (apaga flechas + `CanvasGroup.alpha`), `SetDisplayOverride`, `SetNote`, `event OnValueChanged(int)`. Las flechas son `Button` comunes: entran solas en la navegación del gamepad (nota 35) |
 
 ## 4. Puntos de entrada e inicialización
@@ -1905,3 +1912,5 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 35 | **Input: nada de `UnityEngine.Input` ni `OnMouseXXX`.** Todo pasa por `InputManager` (3.1 → *Input*): posición con `InputManager.PointerPosition`, botones con `PrimaryPressed/Held/Released` y `SecondaryPressed`, teclas con `WasPressed(GameAction)`. Un collider del mundo nuevo implementa `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` (mismos contratos que los `OnMouseXXX`); un `OnMouseDown` nuevo **no se dispara con el gamepad** (y con el mouse funcionaría de casualidad, porque *Active Input Handling* está en *Both*). Una acción nueva: agregarla al enum `GameAction` **y** al mapa `Gameplay` del asset con el mismo nombre (si falta, `InputManager` loguea error al arrancar). **Un elemento interactivo nuevo (algo que se agarra, se clickea o donde se suelta) hay que sumarlo a `GamepadNavTargets`** (idle o el `DragKind` que corresponda), o con gamepad no se va a poder seleccionar; los botones de UI entran solos. **Pendientes:** (a) los textos del tutorial (`Prefabs/PanelesTutos/`) nombran teclas (`Q`, `Espacio`, `R`, `C`, click derecho): con gamepad quedan mal; `ActiveScheme`/`ActiveGamepadFamily`/`OnSchemeChanged` están para mostrar el botón que corresponda. (b) Menú principal y tienda ya se recorren con los saltos (sus botones son `Selectable`), pero falta adaptarlos: scroll de la grilla de la tienda hasta lo que no se ve, orden de selección pensado y botón B para volver. (c) Cambiar *Active Input Handling* requiere reiniciar el Editor: sin reinicio el Input System no recibe dispositivos nativos |
 | 36 | **Opciones del jugador: todo pasa por `GameSettings`** (3.10). Nadie más escribe `init.cfg`, `Screen.SetResolution`, `QualitySettings.vSyncCount` ni `Application.targetFrameRate`. Una opción nueva: campo en `SettingsData` (+ `Equals` y `Defaults`), clave en `EnsureLoaded`/`Save`/`IsKnownKey`, efecto en `Apply`, y fila en el prefab `OptionsPanel` + su `OptionSelectorUI` en `OptionsMenuPanel`. **Idioma pendiente (TODO)**: la fila está deshabilitada y el valor se guarda sin efecto; al implementar la localización, aplicar `language` en `GameSettings.Apply` y habilitar la fila en `OptionsMenuPanel.Populate`. El prefab `OptionsPanel` está en `MainMenuScene` y anidado en `PauseCanvas`: los cambios de layout se hacen en el prefab. Una pantalla nueva que lo use y escuche Esc/Pause tiene que respetar `OptionsMenuPanel.AnyOpen` como hace `GameManager` |
 | 34 | **La tienda es un prefab (`Prefabs/UI/ShopCanvas.prefab`) compartido por `EndScene` y `ShopTutorial`.** Editar el prefab, no la instancia: las escenas solo deben pisar la referencia `shop` (más los valores que Unity maneja solo en el `RectTransform` raíz y en el `Handle` del scrollbar). Referencias de escena que apuntan adentro del canvas: `RunDefeatScreen.shopCanvas` (`EndScene`) y `TutorialManager.canvasParent` (`ShopTutorial`). **Chinchulín, Costillita de cerdo, Pechuga de pollo y Matambre no tienen ningún sprite** (ni `meatSprite*` ni `cookingSprites*`) y están desbloqueados: en la tienda salen sin icono (segunda fila de Carnes). Es un tema de datos |
+| 37 | **Localización: ningún texto visible en literales.** Código: `Loc.Get("clave")` / `Loc.Format("clave", args)`; texto fijo de escena/prefab: componente `LocalizedText` con la clave. Las claves viven en `Resources/Localization/*.csv` (Excel/Sheets; separador `,` `;` o tab; `
+` = salto de línea; celda vacía cae al español). Un texto que queda en pantalla mientras se puede cambiar el idioma (pausa) escucha `Loc.OnLanguageChanged`. Nombres de ítems: `DisplayName`/`DisplayDescription` de los SO, nunca `itemName`/`breadName`/`sideName`. **Cortes y toppings no se traducen** (sin `nameKey`). Validar con *Tools/Localización/Validar tablas* (claves inexistentes, celdas vacías, `{n}` que no coinciden). Pendientes: los textos del tutorial nombran teclas de teclado; `EndScreen`/`ShopRoot` (capas deshabilitadas) no están traducidas; revisar largos de texto en inglés en pantalla |

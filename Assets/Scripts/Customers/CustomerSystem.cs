@@ -857,17 +857,17 @@ public class CustomerSystem : MonoBehaviour
 
         // Se entrega igual, pero con crudo/quemado el cliente se va sin pagar y cuesta un strike.
         if (eval.causesStrike)
-            return "<color=#EF4444>" + eval.strikeShort + " - se va sin pagar (+1 strike)</color>";
+            return "<color=#EF4444>" + Loc.Format("delivery.preview.strike", eval.strikeShort) + "</color>";
 
         string payment = "$" + (int)eval.payment;
         string line;
 
         if (eval.tip > 0f)
-            line = "<color=#4ADE80>" + payment + " + $" + (int)eval.tip + " propina</color>";
+            line = "<color=#4ADE80>" + Loc.Format("delivery.preview.tip", payment, "$" + (int)eval.tip) + "</color>";
         else if (eval.worstOffset >= 2)
-            line = "<color=#F59E0B>" + payment + " (mitad) - sin propina</color>";
+            line = "<color=#F59E0B>" + Loc.Format("delivery.preview.half", payment) + "</color>";
         else
-            line = "<color=#FACC15>" + payment + " - sin propina</color>";
+            line = "<color=#FACC15>" + Loc.Format("delivery.preview.no_tip", payment) + "</color>";
 
         // Toppings/pan mal entregados: se acepta igual, pero se avisa qué falló.
         if (!string.IsNullOrEmpty(eval.extrasNote))

@@ -16,6 +16,12 @@ public class UpgradeSO : ItemDataSO
     public Sprite icon;
     [TextArea(2, 4)] public string description;
 
+    [Tooltip("Clave de Loc para la descripción. Vacía = description tal cual.")]
+    public string descriptionKey;
+
+    /// <summary>Descripción para la UI, en el idioma activo.</summary>
+    public string DisplayDescription => Loc.GetOrDefault(descriptionKey, description);
+
     [Header("Estado")]
     [Tooltip("Si está bloqueada, aparece oscurecida")]
     public bool isUnlocked = true;

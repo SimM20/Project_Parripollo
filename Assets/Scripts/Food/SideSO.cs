@@ -9,6 +9,12 @@ public class SideSO : ScriptableObject
     [Header("Display")]
     public string sideName;
 
+    [Tooltip("Clave de Loc para el nombre. Vacía = sideName tal cual.")]
+    public string nameKey;
+
+    /// <summary>Nombre para la UI, en el idioma activo.</summary>
+    public string DisplayName => Loc.GetOrDefault(nameKey, sideName);
+
     [Header("Visual")]
     public Sprite sideSprite;
 

@@ -148,11 +148,11 @@ public class GameManager : MonoBehaviour
                 if (substituteCut != null)
                 {
                     customerSystem.TriggerMissingCutChange(targetCustomer, substituteCut);
-                    DeliveryFeedbackText.Instance?.Show($"El cliente aceptó cambiar a {substituteCut.cutName}. Propina anulada.");
+                    DeliveryFeedbackText.Instance?.Show(Loc.Format("delivery.missing_cut.changed", substituteCut.cutName));
                 }
                 else
                 {
-                    DeliveryFeedbackText.Instance?.Show("No hay otros cortes disponibles en stock para sustituir.");
+                    DeliveryFeedbackText.Instance?.Show(Loc.Get("delivery.missing_cut.none"));
                 }
             }
         }
@@ -266,15 +266,15 @@ public class GameManager : MonoBehaviour
 
         if (customer == null || customer.IsInFeedback)
         {
-            result.rejectReason = "No hay un cliente válido seleccionado.";
-            result.rejectShort = "Cliente no disponible";
+            result.rejectReason = Loc.Get("delivery.reject.no_customer");
+            result.rejectShort = Loc.Get("delivery.reject.no_customer.short");
             return result;
         }
 
         if (buildStationSystem == null || !buildStationSystem.HasAnyCut)
         {
-            result.rejectReason = "No hay nada preparado para entregar.";
-            result.rejectShort = "Plato vacío";
+            result.rejectReason = Loc.Get("delivery.reject.empty");
+            result.rejectShort = Loc.Get("delivery.reject.empty.short");
             return result;
         }
 
@@ -282,9 +282,9 @@ public class GameManager : MonoBehaviour
 
         if (assembled != customer.order.PrimaryCut)
         {
-            result.rejectReason = "Corte incorrecto. El cliente pidió: "
-                + (customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : "otro corte") + ".";
-            result.rejectShort = "Corte incorrecto";
+            result.rejectReason = Loc.Format("delivery.reject.wrong_cut",
+                customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : Loc.Get("delivery.reject.other_cut"));
+            result.rejectShort = Loc.Get("delivery.reject.wrong_cut.short");
 
             // Todos los cortes en rojo: ninguno le sirve a este cliente.
             result.cutOffsets = new int[buildStationSystem.AssembledCuts.Count];
@@ -371,8 +371,8 @@ public class GameManager : MonoBehaviour
             result.causesStrike = true;
             result.strikeReason = BuildBadCookingMessageWithCuts(result.validation, cuts);
             result.strikeShort = result.validation.burnedCount > 0
-                ? (result.validation.rawCount > 0 ? "Crudo y quemado" : "Quemado")
-                : "Crudo";
+                ? Loc.Get(result.validation.rawCount > 0 ? "delivery.strike.raw_and_burnt" : "cooking.burnt")
+                : Loc.Get("cooking.raw");
             result.payment = 0f;
             result.tip = 0f;
             result.worstOffset = 0;

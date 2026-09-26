@@ -275,14 +275,14 @@ public class ShopSystem : MonoBehaviour
     {
         if (config == null || Wallet == null || Cooler == null)
         {
-            message = "Tienda no configurada correctamente.";
+            message = Loc.Get("shop.buy.not_configured");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         if (cart.Count == 0 && toppingCart.Count == 0)
         {
-            message = "El carrito está vacío.";
+            message = Loc.Get("shop.buy.empty_cart");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
@@ -290,14 +290,14 @@ public class ShopSystem : MonoBehaviour
         float total = CartTotal();
         if (!Wallet.CanAfford(total))
         {
-            message = "Plata insuficiente. Total: $" + total.ToString("F0");
+            message = Loc.Format("shop.buy.not_enough_money", total.ToString("F0"));
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         if (!Wallet.TrySpend(total))
         {
-            message = "No se pudo procesar el pago.";
+            message = Loc.Get("shop.buy.payment_failed");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
@@ -331,7 +331,7 @@ public class ShopSystem : MonoBehaviour
         toppingCart.Clear();
         OnCartChanged?.Invoke();
 
-        message = "Compra realizada por $" + total.ToString("F0");
+        message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);
         return true;
     }
@@ -340,14 +340,14 @@ public class ShopSystem : MonoBehaviour
     {
         if (config == null || Wallet == null || Cooler == null)
         {
-            message = "Tienda no configurada correctamente.";
+            message = Loc.Get("shop.buy.not_configured");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         if (!IsPurchasable(item))
         {
-            message = "Ese item no se puede comprar.";
+            message = Loc.Get("shop.buy.item_unavailable");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
@@ -357,21 +357,21 @@ public class ShopSystem : MonoBehaviour
         float total = item.basePrice * qty;
         if (!Wallet.CanAfford(total))
         {
-            message = "Plata insuficiente. Total: $" + total.ToString("F0");
+            message = Loc.Format("shop.buy.not_enough_money", total.ToString("F0"));
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         if (!IsPurchaseAllowedByRunMinimums(item, qty))
         {
-            message = "Esa compra te deja sin plata para el mínimo del próximo día.";
+            message = Loc.Get("shop.buy.below_minimum");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         if (!Wallet.TrySpend(total))
         {
-            message = "No se pudo procesar el pago.";
+            message = Loc.Get("shop.buy.payment_failed");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
@@ -383,7 +383,7 @@ public class ShopSystem : MonoBehaviour
         else
             Cooler.Add(item, qty);
 
-        message = "Compra realizada por $" + total.ToString("F0");
+        message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);
         return true;
     }
@@ -408,14 +408,14 @@ public class ShopSystem : MonoBehaviour
     {
         if (Wallet == null || Toppings == null)
         {
-            message = "Tienda no configurada correctamente.";
+            message = Loc.Get("shop.buy.not_configured");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         if (!IsToppingPurchasable(topping))
         {
-            message = "Ese topping no se puede comprar.";
+            message = Loc.Get("shop.buy.topping_unavailable");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
@@ -424,27 +424,27 @@ public class ShopSystem : MonoBehaviour
         float total = topping.purchasePrice * qty;
         if (!Wallet.CanAfford(total))
         {
-            message = "Plata insuficiente. Total: $" + total.ToString("F0");
+            message = Loc.Format("shop.buy.not_enough_money", total.ToString("F0"));
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         if (!IsPurchaseAllowedByRunMinimums(topping, qty))
         {
-            message = "Esa compra te deja sin plata para el mínimo del próximo día.";
+            message = Loc.Get("shop.buy.below_minimum");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         if (!Wallet.TrySpend(total))
         {
-            message = "No se pudo procesar el pago.";
+            message = Loc.Get("shop.buy.payment_failed");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
 
         Toppings.Add(topping, qty);
-        message = "Compra realizada por $" + total.ToString("F0");
+        message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);
         return true;
     }

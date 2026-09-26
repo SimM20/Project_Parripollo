@@ -13707,9 +13707,6 @@ MonoBehaviour:
   group: {fileID: 1736296840}
   titleText: {fileID: 547654491}
   bodyText: {fileID: 1652302171}
-  title: "\xA1Te clavaron el cartel!"
-  body: "Se te fueron tres clientes con una calentura b\xE1rbara y corrieron la voz.\nPor
-    hoy no para nadie m\xE1s. Cerr\xE1 la parrilla y ma\xF1ana ser\xE1 otro d\xEDa."
   fadeInSeconds: 0.2
   fadeOutSeconds: 0.4
 --- !u!225 &1736296840

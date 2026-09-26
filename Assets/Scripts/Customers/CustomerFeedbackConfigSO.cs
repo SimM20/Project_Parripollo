@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Configuración del Sistema de Feedback de Entrega y Reacción del Cliente.
-/// Contiene duraciones, colores, sprites por estado y pools de frases argentinas.
+/// Contiene duraciones, colores y sprites por estado. Las frases están en las tablas de <see cref="Loc"/>.
 /// </summary>
 [CreateAssetMenu(fileName = "CustomerFeedbackConfig", menuName = "Parripollo/Customer Feedback Config")]
 public class CustomerFeedbackConfigSO : ScriptableObject
@@ -63,88 +63,8 @@ public class CustomerFeedbackConfigSO : ScriptableObject
     [SerializeField] private Sprite noPagaSeVaSprite;
     [SerializeField] private Sprite entregaCrudaOQuemadaSprite;
 
-    [Header("Phrase Pools (Spec Doc)")]
-    [SerializeField]
-    private List<string> turistaFelizPhrases = new List<string>
-    {
-        "¡Una maravilla!",
-        "¡Esto está de lujo!",
-        "¡Qué joyita, maestro!",
-        "¡Me alegraste el viaje!",
-        "¡Espectacular, che!"
-    };
-
-    [SerializeField]
-    private List<string> entregaExcelentePhrases = new List<string>
-    {
-        "¡Así da gusto!",
-        "¡De primera!",
-        "¡Una joya!",
-        "¡Terrible laburo!",
-        "¡Me atendiste de diez!"
-    };
-
-    [SerializeField]
-    private List<string> entregaAceptablePhrases = new List<string>
-    {
-        "Bien ahí.",
-        "Zafa bastante.",
-        "Ta’ bien.",
-        "Cumple.",
-        "Safó lindo."
-    };
-
-    [SerializeField]
-    private List<string> sinPropinaPhrases = new List<string>
-    {
-        "Mmm… hasta ahí.",
-        "No me convenció.",
-        "Flojito.",
-        "Estuvo medio pelo.",
-        "No era lo que esperaba."
-    };
-
-    [SerializeField]
-    private List<string> cambioPorFaltantePhrases = new List<string>
-    {
-        "Bueno… mandame eso nomás.",
-        "Y bueno, traeme otro.",
-        "No era lo que quería, pero va.",
-        "Dale, lo cambio.",
-        "Bueno, zafamos con eso."
-    };
-
-    [SerializeField]
-    private List<string> noPagaSeVaPhrases = new List<string>
-    {
-        "Nah, dejá.",
-        "Así no te pago.",
-        "Me voy re caliente.",
-        "Cualquiera esto.",
-        "Un desastre, che."
-    };
-
-    [Tooltip("Entrega con una cara CRUDA. Se elige por el flag burnedVariant de GetRandomPhrase.")]
-    [SerializeField]
-    private List<string> entregaCrudaPhrases = new List<string>
-    {
-        "¡Esto está crudo, un asco!",
-        "¡Ni lo cocinaste, che!",
-        "Está crudo, no lo pienso comer.",
-        "¿Me querés matar? Está crudo.",
-        "Crudo, hermano. Qué asco."
-    };
-
-    [Tooltip("Entrega con una cara QUEMADA. Se elige por el flag burnedVariant de GetRandomPhrase.")]
-    [SerializeField]
-    private List<string> entregaQuemadaPhrases = new List<string>
-    {
-        "¡Esto está quemado, un asco!",
-        "Esto es carbón, no carne.",
-        "Lo quemaste todo, che.",
-        "Un asco, está hecho carbón.",
-        "¿Carbón me traés? Ni en pedo."
-    };
+    // Las frases viven en la tabla de localización (Resources/Localization/Customers.csv) como
+    // pools numerados: feedback.phrase.<estado>.1, .2, ... Cada idioma puede tener su propia cantidad.
 
     public float FeedbackDuration => feedbackDuration;
     public float EconomicFeedbackDelay => economicFeedbackDelay;
@@ -204,39 +124,27 @@ public class CustomerFeedbackConfigSO : ScriptableObject
     /// </summary>
     public string GetRandomPhrase(CustomerFeedbackState state, bool burnedVariant = false)
     {
-        List<string> pool = null;
+        string pool = GetPhrasePoolKey(state, burnedVariant);
+        if (pool == null) return string.Empty;
 
+        List<string> phrases = Loc.GetPool(pool);
+        return phrases.Count > 0 ? phrases[Random.Range(0, phrases.Count)] : string.Empty;
+    }
+
+    /// <summary>Prefijo del pool de frases del estado en las tablas de <see cref="Loc"/>.</summary>
+    public static string GetPhrasePoolKey(CustomerFeedbackState state, bool burnedVariant = false)
+    {
         switch (state)
         {
-            case CustomerFeedbackState.TuristaFeliz:
-                pool = turistaFelizPhrases;
-                break;
-            case CustomerFeedbackState.EntregaExcelente:
-                pool = entregaExcelentePhrases;
-                break;
-            case CustomerFeedbackState.EntregaAceptable:
-                pool = entregaAceptablePhrases;
-                break;
-            case CustomerFeedbackState.SinPropina:
-                pool = sinPropinaPhrases;
-                break;
-            case CustomerFeedbackState.CambioPorFaltante:
-                pool = cambioPorFaltantePhrases;
-                break;
-            case CustomerFeedbackState.NoPagaSeVa:
-                pool = noPagaSeVaPhrases;
-                break;
+            case CustomerFeedbackState.TuristaFeliz: return "feedback.phrase.tourist_happy";
+            case CustomerFeedbackState.EntregaExcelente: return "feedback.phrase.excellent";
+            case CustomerFeedbackState.EntregaAceptable: return "feedback.phrase.acceptable";
+            case CustomerFeedbackState.SinPropina: return "feedback.phrase.no_tip";
+            case CustomerFeedbackState.CambioPorFaltante: return "feedback.phrase.missing_cut";
+            case CustomerFeedbackState.NoPagaSeVa: return "feedback.phrase.leaves_angry";
             case CustomerFeedbackState.EntregaCrudaOQuemada:
-                pool = burnedVariant ? entregaQuemadaPhrases : entregaCrudaPhrases;
-                break;
+                return burnedVariant ? "feedback.phrase.burnt" : "feedback.phrase.raw";
+            default: return null;
         }
-
-        if (pool != null && pool.Count > 0)
-        {
-            int index = Random.Range(0, pool.Count);
-            return pool[index];
-        }
-
-        return string.Empty;
     }
 }

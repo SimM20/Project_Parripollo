@@ -86,6 +86,10 @@ public class CustomerOrderBubble : MonoBehaviour
         Build();
     }
 
+    // El idioma se puede cambiar desde la pausa con clientes esperando.
+    private void OnEnable() => Loc.OnLanguageChanged += Refresh;
+    private void OnDisable() => Loc.OnLanguageChanged -= Refresh;
+
     /// <summary>Engancha la burbuja al pedido del cliente y la deja en estado base.</summary>
     public void Bind(Customer boundCustomer, CustomerView boundView)
     {
@@ -242,7 +246,7 @@ public class CustomerOrderBubble : MonoBehaviour
                 if (side == null) continue;
 
                 extraSprites.Add(side.sideSprite);
-                extraNames.Add(side.sideName);
+                extraNames.Add(side.DisplayName);
             }
         }
 
@@ -261,7 +265,7 @@ public class CustomerOrderBubble : MonoBehaviour
 
     private string BuildTitle(Order order)
     {
-        if (order == null || order.PrimaryCut == null) return "Pedido";
+        if (order == null || order.PrimaryCut == null) return Loc.Get("order.title");
 
         return order.PrimaryCut.cutName;
     }
@@ -278,17 +282,15 @@ public class CustomerOrderBubble : MonoBehaviour
 
         if (order.PrimaryCut != null)
         {
-            textBuilder.Append("Punto: <color=#");
-            textBuilder.Append(ColorUtility.ToHtmlStringRGB(pointColor));
-            textBuilder.Append("><b>");
-            textBuilder.Append(MeatHoverText.GetStateDisplayName(order.GetRequestedState(0)));
-            textBuilder.Append("</b></color>");
+            string state = "<color=#" + ColorUtility.ToHtmlStringRGB(pointColor) + "><b>"
+                           + MeatHoverText.GetStateDisplayName(order.GetRequestedState(0)) + "</b></color>";
+            textBuilder.Append(Loc.Format("order.doneness", state));
         }
 
         textBuilder.Append("\n");
         textBuilder.Append(order.IsSandwich
-            ? "En " + (order.bread != null ? order.bread.breadName.ToLowerInvariant() : "pan")
-            : "Al plato");
+            ? Loc.Format("order.in_bread", order.bread != null ? order.bread.DisplayName : Loc.Get("order.bread"))
+            : Loc.Get("order.plated"));
 
         if (extraNames.Count > 0)
         {

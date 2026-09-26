@@ -13,11 +13,13 @@ MonoBehaviour:
   m_Name: TipUpgrade
   m_EditorClassIdentifier: 
   itemName: Frasco de propinas
+  nameKey: upgrade.tip.name
   basePrice: 250
   category: 0
   icon: {fileID: 21300000, guid: 5078a530ba6290346a92120239d467ca, type: 3}
   description: 'Un frasco bien a la vista en el mostrador: cada nivel sube un 50%
     lo que te dejan de propina.'
+  descriptionKey: upgrade.tip.desc
   isUnlocked: 1
   maxLevel: 3
   currentLevel: 0

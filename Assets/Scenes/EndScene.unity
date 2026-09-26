@@ -197,6 +197,7 @@ GameObject:
   - component: {fileID: 35088257}
   - component: {fileID: 35088259}
   - component: {fileID: 35088258}
+  - component: {fileID: 35088260}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -320,6 +321,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 35088256}
   m_CullTransparentMesh: 1
+--- !u!114 &35088260
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 35088256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: strike.popup.button
 --- !u!1 &59775384
 GameObject:
   m_ObjectHideFlags: 0
@@ -1579,6 +1593,7 @@ GameObject:
   - component: {fileID: 744977670}
   - component: {fileID: 744977672}
   - component: {fileID: 744977671}
+  - component: {fileID: 744977673}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -1702,6 +1717,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 744977669}
   m_CullTransparentMesh: 1
+--- !u!114 &744977673
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 744977669}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: defeat.main_menu
 --- !u!1 &807130122
 GameObject:
   m_ObjectHideFlags: 0
@@ -2010,11 +2038,6 @@ MonoBehaviour:
   bodyText: {fileID: 1492641632}
   continueButton: {fileID: 415840386}
   illustration: {fileID: 1404659454}
-  title: "Se termin\xF3 el d\xEDa antes de tiempo"
-  body: "Llegaste al l\xEDmite de clientes perdidos de la jornada.\n\nCuando tres
-    clientes se van por falta de paciencia, corren la voz y dejan de llegar nuevos
-    clientes.\n\nAtendiste a los que quedaban, pero por hoy no pasa nadie m\xE1s.
-    Ma\xF1ana arranc\xE1s de nuevo."
 --- !u!114 &938402330
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4012,6 +4035,7 @@ GameObject:
   - component: {fileID: 1909868789}
   - component: {fileID: 1909868791}
   - component: {fileID: 1909868790}
+  - component: {fileID: 1909868792}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -4135,6 +4159,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1909868788}
   m_CullTransparentMesh: 1
+--- !u!114 &1909868792
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1909868788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: defeat.retry
 --- !u!1 &1913242511
 GameObject:
   m_ObjectHideFlags: 0
@@ -4594,17 +4631,6 @@ MonoBehaviour:
   deficitText: {fileID: 1293517116}
   mainMenuButton: {fileID: 146049407}
   retryButton: {fileID: 1607544362}
-  title: "SE TE APAG\xD3 LA PARRILLA"
-  insufficientResourcesReason: "No te alcanza para comprar los recursos m\xEDnimos
-    del pr\xF3ximo d\xEDa. Sin carne y sin carb\xF3n no hay parrilla que abrir."
-  strikeStreakReason: "Te clavaron el cartel {0} noches seguidas. El boca a boca
-    te fundi\xF3 el negocio."
-  dayFormat: "Llegaste al d\xEDa {0}"
-  moneyFormat: 'Plata final: ${0:N0}'
-  meatFormat: 'Carne: {0} / {1} (faltan {2})'
-  coalFormat: "Carb\xF3n: {0} / {1} (faltan {2})"
-  deficitFormat: "Te faltaban ${0:N0} para llegar al m\xEDnimo"
-  unreachableText: "El m\xEDnimo del pr\xF3ximo d\xEDa ya no se puede alcanzar"
 --- !u!114 &2033088326
 MonoBehaviour:
   m_ObjectHideFlags: 0

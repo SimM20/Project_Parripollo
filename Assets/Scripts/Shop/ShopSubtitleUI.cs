@@ -7,16 +7,7 @@ public class ShopSubtitleUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI titleText;
     [SerializeField] private TextMeshProUGUI detailText;
 
-    [Header("Textos por tab")]
-    [SerializeField] private string coalTitle = "CONSUMO PROMEDIO:";
-    [SerializeField] private string coalDetailFormat = "Venís usando {0} unidades de carbón por jornada.";
-    [SerializeField] private string coalFirstNightDetail = "Primera jornada: todavía no hay datos de consumo.";
-    [SerializeField] private string meatTitle = "CORTES DE CARNE";
-    [SerializeField] private string meatDetail = "Elegí los cortes para la noche.";
-    [SerializeField] private string upgradesTitle = "MEJORAS PARA LA PARRILLA";
-    [SerializeField] private string upgradesDetail = "Invertí en mejoras permanentes.";
-    [SerializeField] private string toppingsTitle = "TOPPINGS Y SALSAS";
-    [SerializeField] private string toppingsDetail = "Comprá condimentos para tus platos.";
+    // Textos por tab: claves shop.help.* de las tablas de Loc.
 
     private bool started;
 
@@ -53,16 +44,16 @@ public class ShopSubtitleUI : MonoBehaviour
         switch (shop.CurrentTab)
         {
             case ShopTabType.Coal:
-                SetTexts(coalTitle, BuildCoalDetail());
+                SetTexts(Loc.Get("shop.help.coal.title"), BuildCoalDetail());
                 break;
             case ShopTabType.Meat:
-                SetTexts(meatTitle, meatDetail);
+                SetTexts(Loc.Get("shop.help.meat.title"), Loc.Get("shop.help.meat"));
                 break;
             case ShopTabType.Upgrades:
-                SetTexts(upgradesTitle, upgradesDetail);
+                SetTexts(Loc.Get("shop.help.upgrades.title"), Loc.Get("shop.help.upgrades"));
                 break;
             case ShopTabType.Toppings:
-                SetTexts(toppingsTitle, toppingsDetail);
+                SetTexts(Loc.Get("shop.help.toppings.title"), Loc.Get("shop.help.toppings"));
                 break;
         }
     }
@@ -77,9 +68,9 @@ public class ShopSubtitleUI : MonoBehaviour
     {
         var tracker = CoalConsumptionTracker.Instance;
         if (tracker == null || tracker.DaysPlayed == 0)
-            return coalFirstNightDetail;
+            return Loc.Get("shop.help.coal.first_night");
 
         int avg = Mathf.RoundToInt(tracker.AverageCoalPerDay);
-        return string.Format(coalDetailFormat, avg);
+        return Loc.Format("shop.help.coal", avg);
     }
 }

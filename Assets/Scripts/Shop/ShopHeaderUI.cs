@@ -9,9 +9,8 @@ public class ShopHeaderUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI totalCoalText;   // ← NUEVO
     [Tooltip("Cartel con los clientes que pasaron por el local en la jornada que acaba de terminar.")]
     [SerializeField] private TextMeshProUGUI customersTodayText;
+    [Tooltip("Nombre del local: es la marca, no se traduce.")]
     [SerializeField] private string shopName = "LA PARRILLA DE DON COCO";
-    [SerializeField] private string customersFormat = "Hoy vinieron {0} clientes";
-    [SerializeField] private string oneCustomerFormat = "Hoy vino {0} cliente";
 
     private bool started;
 
@@ -50,13 +49,13 @@ public class ShopHeaderUI : MonoBehaviour
             moneyText.text = $"${shop.Wallet.Money:N0}";
 
         if (totalCoalText != null && shop != null)
-            totalCoalText.text = $"Carbon: {shop.GetTotalCoalUnits()} u.";
+            totalCoalText.text = Loc.Format("shop.header.coal", shop.GetTotalCoalUnits());
 
         // Clientes de la jornada que acaba de terminar (lo dejó CustomerSystem en DayStats).
         if (customersTodayText != null)
         {
             int customers = DayStats.CustomersToday;
-            customersTodayText.text = string.Format(customers == 1 ? oneCustomerFormat : customersFormat, customers);
+            customersTodayText.text = Loc.Format(customers == 1 ? "shop.header.customers.one" : "shop.header.customers", customers);
         }
     }
 }

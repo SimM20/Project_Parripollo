@@ -333,6 +333,7 @@ GameObject:
   - component: {fileID: 40099050}
   - component: {fileID: 40099052}
   - component: {fileID: 40099051}
+  - component: {fileID: 40099053}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -456,6 +457,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 40099049}
   m_CullTransparentMesh: 1
+--- !u!114 &40099053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 40099049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: tutorial_offer.skip
 --- !u!1 &52085494
 GameObject:
   m_ObjectHideFlags: 0
@@ -512,6 +526,7 @@ GameObject:
   - component: {fileID: 69426676}
   - component: {fileID: 69426678}
   - component: {fileID: 69426677}
+  - component: {fileID: 69426679}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -635,6 +650,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 69426675}
   m_CullTransparentMesh: 1
+--- !u!114 &69426679
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 69426675}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: tutorial_offer.start
 --- !u!1 &80101348
 GameObject:
   m_ObjectHideFlags: 0
@@ -10702,6 +10730,7 @@ GameObject:
   - component: {fileID: 982101393}
   - component: {fileID: 982101395}
   - component: {fileID: 982101394}
+  - component: {fileID: 982101396}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -10825,6 +10854,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 982101392}
   m_CullTransparentMesh: 1
+--- !u!114 &982101396
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 982101392}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: tutorial_offer.title
 --- !u!1 &1010544198
 GameObject:
   m_ObjectHideFlags: 0
@@ -12642,7 +12684,7 @@ MonoBehaviour:
   closingHour: 21
   dayDurationSeconds: 300
   displayMinuteStep: 5
-  closedLabel: CERRADO
+  closedLabelKey: hud.closed
 --- !u!4 &1429605290
 Transform:
   m_ObjectHideFlags: 0
@@ -14498,9 +14540,6 @@ MonoBehaviour:
   group: {fileID: 1736296840}
   titleText: {fileID: 547654491}
   bodyText: {fileID: 1652302171}
-  title: "\xA1Te clavaron el cartel!"
-  body: "Se te fueron tres clientes con una calentura b\xE1rbara y corrieron la voz.\nPor
-    hoy no para nadie m\xE1s. Cerr\xE1 la parrilla y ma\xF1ana ser\xE1 otro d\xEDa."
   fadeInSeconds: 0.2
   fadeOutSeconds: 0.4
 --- !u!225 &1736296840
@@ -15591,6 +15630,7 @@ GameObject:
   - component: {fileID: 2030510370}
   - component: {fileID: 2030510372}
   - component: {fileID: 2030510371}
+  - component: {fileID: 2030510373}
   m_Layer: 5
   m_Name: Text (TMP) (1)
   m_TagString: Untagged
@@ -15714,6 +15754,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2030510369}
   m_CullTransparentMesh: 1
+--- !u!114 &2030510373
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2030510369}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: tutorial_offer.body
 --- !u!1 &2033482463
 GameObject:
   m_ObjectHideFlags: 0

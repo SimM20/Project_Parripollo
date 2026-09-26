@@ -1,0 +1,52 @@
+﻿key,es,en
+"# Paneles del tutorial (Prefabs/PanelesTutos). Un paso por panel, en el orden de TutorialStepSO"
+tutorial.next,Avanzar,Next
+tutorial.header.intro,Tutorial,Tutorial
+tutorial.header.station,Tutorial 1: Tu puesto,Tutorial 1: Your Station
+tutorial.header.cooking,Tutorial 2: Cocina,Tutorial 2: Cooking
+tutorial.header.delivery,Tutorial 3: Entrega,Tutorial 3: Serving
+tutorial.header.shop,Shopping,Shopping
+tutorial.header.ashes,Tutorial 4: Cenizas,Tutorial 4: Ashes
+tutorial.header.sides,Tutorial 5: Acompañamientos,Tutorial 5: Sides
+tutorial.header.toppings,Tutorial 6: Toppings,Tutorial 6: Toppings
+tutorial.header.shortcuts,Tutorial 7: Atajos,Tutorial 7: Shortcuts
+tutorial.header.finish,Finalizar tutorial,Finish tutorial
+# 1-3
+tutorial.intro,¡Bienvenido a Ruta 40!,Welcome to Ruta 40!
+tutorial.station,"Todo pasa en esta pantalla: cocinás en la parrilla y armás los pedidos en el plato de la derecha. Arriba tenés el día, tu plata, los clientes, la hora y los strikes.","Everything happens on this screen: you cook on the grill and put orders together on the plate to the right. Up top you've got the day, your money, customers, the time and your strikes."
+tutorial.day,"La jornada va de 06:30 a 21:00. A la hora de cierre ya no entra nadie más, pero tenés que atender a los que quedaron. En el tutorial el reloj está frenado.","The day runs from 06:30 to 21:00. At closing time nobody else comes in, but you still have to serve whoever's left. The clock is stopped during the tutorial."
+# 4-6
+tutorial.customer_intro,Ahora veamos cómo atender a un cliente.,Now let's see how to serve a customer.
+tutorial.customer_arrived,¡Llegó un cliente! Pasá el cursor por encima para ver qué pidió: el corte y el punto de cocción.,A customer's here! Hover over them to see their order: the cut and how they want it cooked.
+tutorial.patience,"Ojo con la barra de paciencia: si se vacía, el cliente se va enojado y te clavan un strike. Con 3 strikes te cierran el local antes de hora.","Watch the patience bar: if it runs out, the customer storms off and you get a strike. Three strikes and you close up early."
+# 7-11
+tutorial.open_stock,"Abrí el panel de stock con Q o con un click en su pestaña, a la izquierda: ahí están tus cortes y el carbón. Con Q también lo cerrás.",Open the stock panel with Q or by clicking its tab on the left: your cuts and charcoal are in there. Press Q again to close it.
+tutorial.open_stock.label,Stock,Stock
+tutorial.drag_meat,"Arrastrá el chorizo del panel a la parrilla. Mientras lo arrastrás, con R lo girás.",Drag the chorizo from the panel onto the grill. Press R while dragging to rotate it.
+tutorial.layer_to_coal,La parrilla tiene dos capas: carne y carbón. Pasá a la del carbón con Espacio o con el botón de abajo de la parrilla.,The grill has two layers: meat and charcoal. Switch to the charcoal layer with Space or the button below the grill.
+tutorial.layer.label,Cambiar capa,Switch layer
+tutorial.drag_coal,"Arrastrá un carbón del panel a la parrilla, debajo del chorizo o al lado: el calor llega a los lugares vecinos.","Drag a piece of charcoal from the panel onto the grill, under the chorizo or next to it: heat spreads to the nearby spots."
+tutorial.layer_to_meat,Volvé a la capa de la carne con Espacio o con el botón de abajo de la parrilla.,Go back to the meat layer with Space or the button below the grill.
+# 12-15
+tutorial.doneness_info,"Cada cara de la carne pasa por distintos puntos: Crudo, Jugoso, Hecho, Muy hecho, Pasado y Quemado. Pasá el cursor por encima de la carne para ver cómo va cada una.","Each side of the meat goes through different stages: Raw, Rare, Medium, Well Done, Overcooked and Burnt. Hover over the meat to see how each side is doing."
+tutorial.flip,Las dos caras se cocinan por separado. Dale click derecho a la carne para darla vuelta y tratá de que queden parejas.,Each side cooks on its own. Right-click the meat to flip it and try to cook both sides evenly.
+tutorial.cook_to_order,"Cociná las dos caras hasta el punto que pidió el cliente. Para ver su pedido, cerrá el stock con Q y pasá el cursor sobre él. ¡Ojo que se quema!","Cook both sides to the doneness the customer asked for. To check their order, close the stock panel with Q and hover over them. Careful, it can burn!"
+tutorial.to_plate,¡Está a punto! Arrastrá el chorizo de la parrilla al plato de la derecha.,It's ready! Drag the chorizo from the grill to the plate on the right.
+# 16-17
+tutorial.deliver,"Arrastrá el plato hasta el cliente y soltalo encima. Si el panel de stock te lo tapa, cerralo con Q.","Drag the plate over to the customer and drop it on them. If the stock panel is in the way, close it with Q."
+tutorial.deliver.label,Entregar comida,Serve food
+tutorial.delivered,"¡Bien hecho! El cliente pagó el plato. Si está en su punto y no lo hacés esperar, además te deja propina. Al terminar la jornada vas a la tienda a reponer lo que usaste.","Well done! The customer paid for the dish. If it's cooked just right and you don't keep them waiting, they'll tip you too. At the end of the day you'll head to the shop to restock what you used."
+# 19-23 (ShopTutorial)
+tutorial.shop.coal,"En la tienda reponés lo que usaste. En esta pestaña comprás carbón, y arriba te dice cuánto venís usando por jornada.","The shop is where you restock what you used. On this tab you buy charcoal, and up top it tells you how much you've been using per day."
+tutorial.shop.meat,Acá comprás cortes de carne para reponer tu stock. Con los días se desbloquean cortes nuevos.,Here you buy meat cuts to restock. New cuts unlock as the days go by.
+tutorial.shop.upgrades,"Las mejoras te ayudan en las próximas jornadas: el carbón dura más, entran más clientes a la vez, dejan más propina o, con la radio, tienen más paciencia.","Upgrades help you in the days ahead: charcoal lasts longer, more customers fit at once, they tip more or, with the radio, they're more patient."
+tutorial.shop.toppings,"Acá comprás salsas, como chimichurri y criolla, para tus platos.","Here you buy sauces, like chimichurri and criolla, for your dishes."
+tutorial.shop.requirements,"Para abrir la próxima jornada necesitás un mínimo de carne y de carbón. Si no te alcanza la plata para reponerlo, o si 3 jornadas seguidas terminan antes de hora, perdés la partida.","To open the next day you need a minimum of meat and charcoal. If you can't afford to restock it, or if 3 days in a row end early, you lose the run."
+# 24-28
+tutorial.ashes,Cuando el carbón se consume queda ceniza: ocupa lugar en la parrilla y ya no da calor. Limpiala con R.,Burnt-out charcoal turns to ash: it takes up space on the grill and gives no heat. Clear it with R.
+tutorial.ashes.label,Limpiar cenizas,Clear ashes
+tutorial.sides,"Algunos pedidos llevan pan o guarnición. Los encontrás en el panel de la derecha, que se abre con E: arrastralos hasta el plato.","Some orders come with bread or a side. You'll find them in the panel on the right, which opens with E: drag them onto the plate."
+tutorial.toppings,"Si el pedido lleva salsa, arrastrá el frasco del panel de la derecha hasta el plato para servirla. Los frascos tienen salsa limitada, y si en el plato falta o sobra algo cobrás menos.","If the order comes with sauce, drag the jar from the right panel over the plate to pour it. Jars have limited sauce, and if something's missing or extra on the plate you get paid less."
+tutorial.shortcuts,"Si te equivocás armando, la flecha junto al plato deshace el último paso y C vacía el plato. Si no tenés el corte que te pidieron, con M el cliente acepta otro, pero sin propina.","If you make a mistake, the arrow next to the plate undoes the last step and C clears the plate. If you don't have the cut they ordered, press M and the customer will take another one, but without a tip."
+tutorial.finish,Esos son los controles básicos. Ahora todo queda en tus manos: salí y cocinate el mundo.,Those are the basic controls. Now it's all in your hands: go out there and grill up the world.
+tutorial.start_game,Comenzar Juego,Start Game

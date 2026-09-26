@@ -43,24 +43,7 @@ public class RunDefeatScreen : MonoBehaviour
     [SerializeField] private Button mainMenuButton;
     [SerializeField] private Button retryButton;
 
-    [Header("Copy")]
-    [SerializeField] private string title = "SE TE APAGÓ LA PARRILLA";
-
-    [TextArea(2, 5)]
-    [SerializeField] private string insufficientResourcesReason =
-        "No te alcanza para comprar los recursos mínimos del próximo día. Sin carne y sin carbón no hay parrilla que abrir.";
-
-    [TextArea(2, 5)]
-    [SerializeField] private string strikeStreakReason =
-        "Te clavaron el cartel {0} noches seguidas. El boca a boca te fundió el negocio.";
-
-    [Header("Formatos")]
-    [SerializeField] private string dayFormat = "Llegaste al día {0}";
-    [SerializeField] private string moneyFormat = "Plata final: ${0:N0}";
-    [SerializeField] private string meatFormat = "Carne: {0} / {1} (faltan {2})";
-    [SerializeField] private string coalFormat = "Carbón: {0} / {1} (faltan {2})";
-    [SerializeField] private string deficitFormat = "Te faltaban ${0:N0} para llegar al mínimo";
-    [SerializeField] private string unreachableText = "El mínimo del próximo día ya no se puede alcanzar";
+    // Textos: claves defeat.* de las tablas de Loc.
 
     /// <summary>Motivo resuelto en Awake. <c>None</c> = la run sigue y esta pantalla no se mostró.</summary>
     public RunDefeatReason Reason { get; private set; }
@@ -133,13 +116,13 @@ public class RunDefeatScreen : MonoBehaviour
 
     private void Paint(RunEconomyStatus status)
     {
-        if (titleText != null) titleText.text = title;
+        if (titleText != null) titleText.text = Loc.Get("defeat.title");
 
         if (reasonText != null)
         {
             reasonText.text = Reason == RunDefeatReason.StrikeStreak
-                ? string.Format(strikeStreakReason, StrikeSystem.ConsecutiveStrikeNights)
-                : insufficientResourcesReason;
+                ? Loc.Format("defeat.reason.strike_streak", StrikeSystem.ConsecutiveStrikeNights)
+                : Loc.Get("defeat.reason.resources");
         }
 
         // Día alcanzado = jornadas completadas. CurrentNight ya apunta a la que no se va a jugar.
@@ -147,16 +130,16 @@ public class RunDefeatScreen : MonoBehaviour
             ? CoalConsumptionTracker.Instance.DaysPlayed
             : 0;
 
-        if (dayText != null) dayText.text = string.Format(dayFormat, daysPlayed);
+        if (dayText != null) dayText.text = Loc.Format("defeat.day", daysPlayed);
 
         float money = shop != null && shop.Wallet != null ? shop.Wallet.Money : status.money;
-        if (moneyText != null) moneyText.text = string.Format(moneyFormat, money);
+        if (moneyText != null) moneyText.text = Loc.Format("defeat.money", money);
 
         if (meatLineText != null)
-            meatLineText.text = string.Format(meatFormat, status.meatStock, status.meatRequired, status.meatDeficit);
+            meatLineText.text = Loc.Format("defeat.meat", status.meatStock, status.meatRequired, status.meatDeficit);
 
         if (coalLineText != null)
-            coalLineText.text = string.Format(coalFormat, status.coalStock, status.coalRequired, status.coalDeficit);
+            coalLineText.text = Loc.Format("defeat.coal", status.coalStock, status.coalRequired, status.coalDeficit);
 
         if (deficitText != null)
         {
@@ -169,8 +152,8 @@ public class RunDefeatScreen : MonoBehaviour
             if (!economyIsFine)
             {
                 deficitText.text = status.HasBlockingGap
-                    ? unreachableText
-                    : string.Format(deficitFormat, Mathf.Max(0f, status.totalCost - status.money));
+                    ? Loc.Get("defeat.unreachable")
+                    : Loc.Format("defeat.deficit", Mathf.Max(0f, status.totalCost - status.money));
             }
         }
     }

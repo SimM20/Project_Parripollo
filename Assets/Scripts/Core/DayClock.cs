@@ -41,8 +41,8 @@ public class DayClock : MonoBehaviour
     [Range(1, 30)]
     [SerializeField] private int displayMinuteStep = 5;
 
-    [Tooltip("Texto del HUD una vez cerrado el local, mientras se atiende a los últimos clientes.")]
-    [SerializeField] private string closedLabel = "CERRADO";
+    [Tooltip("Clave de Loc del texto del HUD una vez cerrado el local, mientras se atiende a los últimos clientes.")]
+    [SerializeField] private string closedLabelKey = "hud.closed";
 
     /// <summary>Se dispara una sola vez, al llegar a la hora de cierre.</summary>
     public event Action OnClosingTime;
@@ -78,7 +78,7 @@ public class DayClock : MonoBehaviour
     public string TimeLabel => FormatHour(CurrentHour, displayMinuteStep);
 
     /// <summary>Lo que va al HUD: la hora mientras está abierto, el cartel de cerrado después.</summary>
-    public string HudLabel => HasClosed ? closedLabel : TimeLabel;
+    public string HudLabel => HasClosed ? Loc.Get(closedLabelKey) : TimeLabel;
 
     private float elapsedSeconds;
     private string lastPushedLabel;

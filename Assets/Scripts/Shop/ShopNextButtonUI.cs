@@ -9,14 +9,7 @@ public class ShopNextButtonUI : MonoBehaviour
     [SerializeField] private Button button;
     [SerializeField] private TextMeshProUGUI label;
 
-    [Header("Textos por tab actual")]
-    [SerializeField] private string fromCoalText = "Siguiente: Carnes";
-    [SerializeField] private string fromMeatText = "Siguiente: Mejoras";
-    [SerializeField] private string fromUpgradesText = "Siguiente: Toppings";
-    [SerializeField] private string fromToppingsText = "Arrancar el día";
-
-    [Tooltip("Reemplaza al texto del último tab mientras falten los recursos mínimos.")]
-    [SerializeField] private string blockedByMinimumsText = "Faltan recursos";
+    // Textos por tab actual: claves shop.next.* de las tablas de Loc.
 
     [Header("Scene")]
     [SerializeField] private string gameSceneName = "GameScene";
@@ -117,10 +110,10 @@ public class ShopNextButtonUI : MonoBehaviour
 
         switch (shop.CurrentTab)
         {
-            case ShopTabType.Coal:     label.text = fromCoalText; break;
-            case ShopTabType.Meat:     label.text = fromMeatText; break;
-            case ShopTabType.Upgrades: label.text = fromUpgradesText; break;
-            case ShopTabType.Toppings: label.text = blocked ? blockedByMinimumsText : fromToppingsText; break;
+            case ShopTabType.Coal:     label.text = Loc.Get("shop.next.meat"); break;
+            case ShopTabType.Meat:     label.text = Loc.Get("shop.next.upgrades"); break;
+            case ShopTabType.Upgrades: label.text = Loc.Get("shop.next.toppings"); break;
+            case ShopTabType.Toppings: label.text = Loc.Get(blocked ? "shop.next.blocked" : "shop.next.start_day"); break;
         }
     }
 }

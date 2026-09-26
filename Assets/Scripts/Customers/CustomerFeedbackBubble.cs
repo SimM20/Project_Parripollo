@@ -300,6 +300,9 @@ public class CustomerFeedbackBubble : MonoBehaviour
         onComplete?.Invoke();
     }
 
+    private static string OrderLabel => Loc.Get("feedback.order");
+    private static string TipLabel => Loc.Get("feedback.tip");
+
     private void FormatEconomicTexts(
         CustomerFeedbackState state,
         float payment,
@@ -310,35 +313,35 @@ public class CustomerFeedbackBubble : MonoBehaviour
         if (state == CustomerFeedbackState.CambioPorFaltante || isMissingReplacement)
         {
             if (paymentText != null)
-                paymentText.text = "<color=#E0E0E0>Pedido:</color> <color=#FACC15>pendiente</color>";
+                paymentText.text = $"<color=#E0E0E0>{OrderLabel}</color> <color=#FACC15>{Loc.Get("feedback.pending")}</color>";
 
             if (tipText != null)
-                tipText.text = "<color=#E0E0E0>Propina:</color> <color=#EF4444>anulada</color>";
+                tipText.text = $"<color=#E0E0E0>{TipLabel}</color> <color=#EF4444>{Loc.Get("feedback.voided")}</color>";
         }
         else if (state.GetCategory() == CustomerFeedbackCategory.NegativeSevere)
         {
             // Se fue sin pagar (paciencia 0 o entrega cruda/quemada): $0 en rojo, no en verde.
             if (paymentText != null)
-                paymentText.text = "<color=#E0E0E0>Pedido:</color> <color=#EF4444><b>$0</b></color>";
+                paymentText.text = $"<color=#E0E0E0>{OrderLabel}</color> <color=#EF4444><b>$0</b></color>";
 
             if (tipText != null)
-                tipText.text = "<color=#E0E0E0>Propina:</color> <color=#EF4444><b>$0</b></color>";
+                tipText.text = $"<color=#E0E0E0>{TipLabel}</color> <color=#EF4444><b>$0</b></color>";
         }
         else
         {
             if (paymentText != null)
-                paymentText.text = $"<color=#E0E0E0>Pedido:</color> <color=#4ADE80>${(int)payment}</color>";
+                paymentText.text = $"<color=#E0E0E0>{OrderLabel}</color> <color=#4ADE80>${(int)payment}</color>";
 
             if (tipText != null)
             {
                 if (tip > 0)
                 {
-                    tipText.text = $"<color=#E0E0E0>Propina:</color> <color=#4ADE80>+${(int)tip}</color>";
+                    tipText.text = $"<color=#E0E0E0>{TipLabel}</color> <color=#4ADE80>+${(int)tip}</color>";
                 }
                 else
                 {
                     // "El valor: Propina: $0 debe tener una lectura visual negativa fuerte."
-                    tipText.text = "<color=#E0E0E0>Propina:</color> <color=#EF4444><b>$0</b></color>";
+                    tipText.text = $"<color=#E0E0E0>{TipLabel}</color> <color=#EF4444><b>$0</b></color>";
                 }
             }
         }

@@ -23,13 +23,7 @@ public class ShopRequirementsUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI deficitText;
     [SerializeField] private TextMeshProUGUI strikeStreakText;
 
-    [Header("Formatos")]
-    // En mayúsculas: la tienda usa Bungee, que es una tipografía de titulares.
-    [SerializeField] private string meatFormat = "CARNE   {0} / {1}";
-    [SerializeField] private string coalFormat = "CARBÓN  {0} / {1}";
-    [SerializeField] private string deficitFormat = "FALTA: {0}";
-    [SerializeField] private string requirementsMetText = "LISTO PARA ARRANCAR";
-    [SerializeField] private string strikeStreakFormat = "NOCHES SEGUIDAS CON STRIKES: {0} / {1}";
+    // Textos: claves shop.req.* de las tablas de Loc (en mayúsculas: la tienda usa Bungee).
 
     [Header("Colors")]
     [SerializeField] private Color metColor = new Color(0.45f, 0.85f, 0.4f);
@@ -81,13 +75,13 @@ public class ShopRequirementsUI : MonoBehaviour
 
         if (meatText != null)
         {
-            meatText.text = string.Format(meatFormat, status.meatStock, status.meatRequired);
+            meatText.text = Loc.Format("shop.req.meat", status.meatStock, status.meatRequired);
             meatText.color = status.meatDeficit <= 0 ? metColor : unmetColor;
         }
 
         if (coalText != null)
         {
-            coalText.text = string.Format(coalFormat, status.coalStock, status.coalRequired);
+            coalText.text = Loc.Format("shop.req.coal", status.coalStock, status.coalRequired);
             coalText.color = status.coalDeficit <= 0 ? metColor : unmetColor;
         }
 
@@ -95,12 +89,12 @@ public class ShopRequirementsUI : MonoBehaviour
         {
             if (status.MeetsMinimums)
             {
-                deficitText.text = requirementsMetText;
+                deficitText.text = Loc.Get("shop.req.ready");
                 deficitText.color = metColor;
             }
             else
             {
-                deficitText.text = string.Format(deficitFormat, BuildDeficitText(status));
+                deficitText.text = Loc.Format("shop.req.deficit", BuildDeficitText(status));
                 deficitText.color = unmetColor;
             }
         }
@@ -112,15 +106,15 @@ public class ShopRequirementsUI : MonoBehaviour
 
             // Sin racha no hay nada que avisar: la línea aparece recién con la primera noche de strikes.
             strikeStreakText.gameObject.SetActive(streak > 0);
-            strikeStreakText.text = string.Format(strikeStreakFormat, streak, max);
+            strikeStreakText.text = Loc.Format("shop.req.streak", streak, max);
             strikeStreakText.color = unmetColor;
         }
     }
 
     private static string BuildDeficitText(RunEconomyStatus status)
     {
-        string meat = status.meatDeficit + (status.meatDeficit == 1 ? " CORTE" : " CORTES");
-        string coal = status.coalDeficit + (status.coalDeficit == 1 ? " CARBÓN" : " CARBONES");
+        string meat = Loc.Format(status.meatDeficit == 1 ? "shop.req.cuts.one" : "shop.req.cuts", status.meatDeficit);
+        string coal = Loc.Format(status.coalDeficit == 1 ? "shop.req.coal_units.one" : "shop.req.coal_units", status.coalDeficit);
 
         if (status.meatDeficit > 0 && status.coalDeficit > 0) return meat + ", " + coal;
         if (status.meatDeficit > 0) return meat;

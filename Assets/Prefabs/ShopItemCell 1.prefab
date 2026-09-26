@@ -931,12 +931,6 @@ MonoBehaviour:
   qtyText: {fileID: 8974054295179160331}
   subtotalText: {fileID: 8071920295454969331}
   stockText: {fileID: 3584148856430906101}
-  stockFormat: "TEN\xC9S: {0}"
-  coalStockFormat: "TEN\xC9S: {0} U."
-  coalNameFormat: '{0} x{1}'
-  coalBagFormat: Bolsa de {0} unidades
-  upgradeLevelFormat: NIVEL {0}/{1}
-  subtotalFormat: 'Total: ${0:N0}'
   stepperRoot: {fileID: 8191260091242145573}
   minusButton: {fileID: 2119622172362855974}
   plusButton: {fileID: 3195002155524040478}
@@ -1853,6 +1847,7 @@ GameObject:
   - component: {fileID: 903869906935823868}
   - component: {fileID: 7142009206834312038}
   - component: {fileID: 5671365567092065304}
+  - component: {fileID: 2745111066048329098}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -1976,3 +1971,16 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2745111066048329098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8900744355194203177}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: shop.cell.buy

@@ -3,13 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-/// <summary>Idioma del juego. TODO: todavía no hay localización; el valor solo se guarda.</summary>
-public enum GameLanguage
-{
-    Spanish,
-    English,
-}
-
 /// <summary>Valores de configuración del jugador. Es un struct: el menú edita una copia y la aplica entera.</summary>
 [Serializable]
 public struct SettingsData
@@ -21,7 +14,8 @@ public struct SettingsData
     public int targetFps;
     public bool vSync;
     public InputMode inputMode;
-    public GameLanguage language;
+    /// <summary>Código de idioma de las tablas de <see cref="Loc"/> ("es", "en").</summary>
+    public string language;
 
     public static SettingsData Defaults
     {
@@ -36,7 +30,7 @@ public struct SettingsData
                 targetFps = 120,
                 vSync = true,
                 inputMode = InputMode.Auto,
-                language = GameLanguage.Spanish,
+                language = Loc.DetectSystemLanguage(),
             };
         }
     }
@@ -122,7 +116,7 @@ public static class GameSettings
 
         InputManager.SetInputMode(data.inputMode);
 
-        // TODO(idioma): aplicar data.language cuando exista la localización de textos.
+        Loc.SetLanguage(data.language);
 
         OnApplied?.Invoke(data);
     }
@@ -134,6 +128,15 @@ public static class GameSettings
         if (loaded) return;
         loaded = true;
 
+        LoadFromDisk();
+
+        // Si GameSettings se leyó antes que las tablas, Loc tomó el idioma a mitad de la carga
+        // (los defaults le preguntan el idioma del sistema): se lo confirma con el valor final.
+        Loc.SetLanguage(current.language);
+    }
+
+    private static void LoadFromDisk()
+    {
         current = SettingsData.Defaults;
         extraKeys.Clear();
 
@@ -179,8 +182,9 @@ public static class GameSettings
             current.vSync = vSync;
         if (values.TryGetValue(KeyInputMode, out string inputText) && Enum.TryParse(inputText, out InputMode inputMode))
             current.inputMode = inputMode;
-        if (values.TryGetValue(KeyLanguage, out string languageText) && Enum.TryParse(languageText, out GameLanguage language))
-            current.language = language;
+        // Loc.Resolve también entiende los valores viejos del enum ("Spanish", "English").
+        if (values.TryGetValue(KeyLanguage, out string languageText) && !string.IsNullOrWhiteSpace(languageText))
+            current.language = Loc.Resolve(languageText);
 
         foreach (var pair in values)
         {

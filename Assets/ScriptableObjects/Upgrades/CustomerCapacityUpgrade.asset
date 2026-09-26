@@ -13,11 +13,13 @@ MonoBehaviour:
   m_Name: CustomerCapacityUpgrade
   m_EditorClassIdentifier: 
   itemName: Mesa extra
+  nameKey: upgrade.customer_capacity.name
   basePrice: 300
   category: 0
   icon: {fileID: 21300000, guid: 2eba78db35522b841bcd8592a5170807, type: 3}
   description: 'Una mesa mas en el patio: sumas un cliente simultaneo por cada nivel
     comprado.'
+  descriptionKey: upgrade.customer_capacity.desc
   isUnlocked: 1
   maxLevel: 3
   currentLevel: 0

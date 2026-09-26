@@ -1,0 +1,38 @@
+﻿key,es,en
+# Entrega: preview en la burbuja mientras se arrastra el plato (CustomerSystem.BuildDeliveryPreviewLine)
+delivery.preview.strike,{0} - se va sin pagar (+1 strike),{0} - leaves without paying (+1 strike)
+delivery.preview.tip,{0} + {1} propina,{0} + {1} tip
+delivery.preview.half,{0} (mitad) - sin propina,{0} (half) - no tip
+delivery.preview.no_tip,{0} - sin propina,{0} - no tip
+delivery.strike.raw_and_burnt,Crudo y quemado,Raw and burnt
+"# Entrega: rechazos (GameManager.EvaluateDelivery) — el .short va en la burbuja, el largo en pantalla"
+delivery.reject.no_customer,No hay un cliente válido seleccionado.,No valid customer selected.
+delivery.reject.no_customer.short,Cliente no disponible,Customer unavailable
+delivery.reject.empty,No hay nada preparado para entregar.,There's nothing ready to serve.
+delivery.reject.empty.short,Plato vacío,Empty plate
+delivery.reject.wrong_cut,Corte incorrecto. El cliente pidió: {0}.,Wrong cut. The customer ordered: {0}.
+delivery.reject.wrong_cut.short,Corte incorrecto,Wrong cut
+delivery.reject.other_cut,otro corte,another cut
+# Entrega: corte faltante (tecla M)
+delivery.missing_cut.changed,El cliente aceptó cambiar a {0}. Propina anulada.,The customer agreed to switch to {0}. Tip voided.
+delivery.missing_cut.none,No hay otros cortes disponibles en stock para sustituir.,No other cuts in stock to offer instead.
+# Entrega: extras mal servidos (CookingDeliveryEvaluator.BuildExtrasMessage)
+delivery.extras.missing,Falta {0},Missing {0}
+delivery.extras.extra,Sobra {0},Extra {0}
+delivery.extras.extra_bread,Sobra el pan,Bread not needed
+"# Armado del plato (DishValidator, BuildStationSystem)"
+dish.no_cuts,No hay cortes en el armado.,There's no cut on the plate.
+dish.no_bread,No hay pan en el armado.,There's no bread on the plate.
+dish.plate.no_cut,No hay corte en el plato. No se puede entregar un plato sin corte.,There's no cut on the plate. You can't serve a plate without one.
+dish.plate.null_cut,El plato contiene una referencia de corte nula.,The plate has an invalid cut.
+dish.plate.sandwich_only,{0} no existe al plato. Solo puede servirse en pan.,{0} can't be served plated. It only goes in bread.
+dish.sandwich.no_cut,No hay corte en el sandwich. No se puede entregar sin corte.,There's no cut in the sandwich. You can't serve it without one.
+dish.sandwich.no_bread,No hay pan en el sandwich.,The sandwich has no bread.
+dish.sandwich.plated_only,{0} es solo al plato. No puede ir en pan.,{0} is plated only. It can't go in bread.
+dish.sandwich.wrong_bread,{0} requiere {1} pero se usó {2}.,{0} needs a {1} but you used a {2}.
+# HUD de la partida
+hud.day,DÍA {0},DAY {0}
+hud.closed,CERRADO,CLOSED
+# Aviso de strikes en gameplay (StrikeLimitNotice)
+strike.notice.title,¡Te clavaron el cartel!,They left you hanging!
+strike.notice.body,Se te fueron tres clientes con una calentura bárbara y corrieron la voz.\nPor hoy no para nadie más. Cerrá la parrilla y mañana será otro día.,"Three customers stormed off furious and spread the word.\nNobody else is stopping by today. Close up the grill, tomorrow's another day."

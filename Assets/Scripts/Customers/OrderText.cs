@@ -8,31 +8,31 @@ public static class OrderText
 {
     public static string ToHoverString(this Order order)
     {
-        if (order == null) return "Pedido: -";
+        if (order == null) return Loc.Get("order.none");
 
         var sb = new StringBuilder();
 
-        var cutName = order.PrimaryCut != null ? order.PrimaryCut.cutName : "Sin corte";
+        var cutName = order.PrimaryCut != null ? order.PrimaryCut.cutName : Loc.Get("order.no_cut");
         sb.Append(cutName);
 
         if (order.PrimaryCut != null)
-            sb.Append("\nPunto: " + MeatHoverText.GetStateDisplayName(order.GetRequestedState(0)));
+            sb.Append('\n').Append(Loc.Format("order.doneness", MeatHoverText.GetStateDisplayName(order.GetRequestedState(0))));
 
         if (order.IsSandwich)
         {
-            var bread = order.bread != null ? order.bread.breadName : "Pan";
-            sb.Append("\nS�ndwich (" + bread + ")");
+            var bread = order.bread != null ? order.bread.DisplayName : Loc.Get("order.bread");
+            sb.Append('\n').Append(Loc.Format("order.sandwich", bread));
         }
         else
         {
-            sb.Append("\nAl plato");
+            sb.Append('\n').Append(Loc.Get("order.plated"));
         }
 
         if (order.sides != null && order.sides.Count > 0)
-            sb.Append("\nAcomp: " + string.Join(", ", order.sides.Select(s => s.sideName)));
+            sb.Append('\n').Append(Loc.Format("order.sides", string.Join(", ", order.sides.Select(s => s.DisplayName))));
 
         if (order.toppings != null && order.toppings.Count > 0)
-            sb.Append("\nToppings: " + string.Join(", ", order.toppings.Select(t => t.toppingName)));
+            sb.Append('\n').Append(Loc.Format("order.toppings", string.Join(", ", order.toppings.Select(t => t.toppingName))));
 
         return sb.ToString();
     }

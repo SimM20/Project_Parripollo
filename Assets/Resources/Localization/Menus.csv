@@ -1,0 +1,39 @@
+﻿key,es,en
+# Idioma: nombre de cada idioma en su propio idioma (lo muestra el menú de opciones)
+language.name,Español,English
+# Opciones
+options.title,OPCIONES,OPTIONS
+options.resolution,RESOLUCIÓN,RESOLUTION
+options.display,PANTALLA,DISPLAY
+options.vsync,VSYNC,VSYNC
+options.fps,FPS MÁXIMOS,MAX FPS
+options.input,CONTROLES,CONTROLS
+options.language,IDIOMA,LANGUAGE
+options.apply,APLICAR,APPLY
+options.back,VOLVER,BACK
+options.yes,SÍ,ON
+options.no,NO,OFF
+options.fps.unlimited,SIN LÍMITE,UNLIMITED
+options.input.auto,AUTOMÁTICO,AUTOMATIC
+options.input.keyboard,TECLADO Y MOUSE,KEYBOARD & MOUSE
+options.input.gamepad,JOYSTICK,GAMEPAD
+options.display.exclusive,COMPLETA,FULLSCREEN
+options.display.borderless,SIN BORDES,BORDERLESS
+options.display.windowed,VENTANA,WINDOWED
+"# Menú principal (MainMenuScene). ""PARRILLA 40"" es la marca: no se traduce"
+menu.subtitle,P A R R I L L A   R U T E R A,R O A D S I D E   G R I L L
+menu.play,JUGAR,PLAY
+menu.options,OPCIONES,OPTIONS
+menu.quit,SALIR,QUIT
+# Menú de pausa (PauseCanvas)
+pause.sfx,SONIDO (SFX),SOUND (SFX)
+pause.music,MÚSICA,MUSIC
+pause.resume,VOLVER A JUGAR,RESUME
+pause.end_day,TERMINAR JORNADA,END THE DAY
+pause.options,OPCIONES,OPTIONS
+pause.quit,SALIR DEL JUEGO,QUIT GAME
+"# Diálogo de oferta del tutorial (GameScene, TutorialOfferController)"
+tutorial_offer.title,Tutorial,Tutorial
+tutorial_offer.body,Tal vez sea conveniente ver los controles si es tu primera vez jugando,"If it's your first time playing, it might be worth checking out the controls"
+tutorial_offer.start,Comenzar tutorial,Start tutorial
+tutorial_offer.skip,Saltar tutorial,Skip tutorial

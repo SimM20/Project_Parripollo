@@ -9,6 +9,12 @@ public class BreadSO : ScriptableObject
     [Header("Display")]
     public string breadName;
 
+    [Tooltip("Clave de Loc para el nombre. Vacía = breadName tal cual.")]
+    public string nameKey;
+
+    /// <summary>Nombre para la UI, en el idioma activo.</summary>
+    public string DisplayName => Loc.GetOrDefault(nameKey, breadName);
+
     [Header("Visual")]
     public Sprite breadSprite;
 

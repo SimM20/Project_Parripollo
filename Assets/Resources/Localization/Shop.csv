@@ -1,0 +1,69 @@
+﻿key,es,en
+# Tarjeta de la tienda (ShopItemCellUI). Stock y nivel en mayúsculas: se dibujan en Bungee
+shop.cell.stock,TENÉS: {0},YOU HAVE: {0}
+shop.cell.coal_stock,TENÉS: {0} U.,YOU HAVE: {0} U.
+shop.cell.coal_name,{0} x{1},{0} x{1}
+shop.cell.coal_bag,Bolsa de {0} unidades,Bag of {0} units
+shop.cell.level,NIVEL {0}/{1},LEVEL {0}/{1}
+shop.cell.subtotal,Total: ${0:N0},Total: ${0:N0}
+shop.cell.buy,Comprar,Buy
+# Header de la tienda (ShopHeaderUI)
+shop.header.customers,Hoy vinieron {0} clientes,{0} customers came by today
+shop.header.customers.one,Hoy vino {0} cliente,{0} customer came by today
+shop.header.coal,Carbón: {0} u.,Charcoal: {0} u.
+# Tabs y línea de ayuda por tab (ShopSubtitleUI)
+shop.tab.coal,1. Carbón,1. Charcoal
+shop.tab.meat,2. Carnes,2. Meats
+shop.tab.upgrades,3. Mejoras,3. Upgrades
+shop.tab.toppings,4. Toppings,4. Toppings
+shop.help.coal.title,CONSUMO PROMEDIO:,AVERAGE USE:
+shop.help.coal,Venís usando {0} unidades de carbón por jornada.,You've been using {0} charcoal units per day.
+shop.help.coal.first_night,Primera jornada: todavía no hay datos de consumo.,First day: no usage data yet.
+shop.help.meat.title,CORTES DE CARNE,MEAT CUTS
+shop.help.meat,Elegí los cortes para la noche.,Pick the cuts for tonight.
+shop.help.upgrades.title,MEJORAS PARA LA PARRILLA,GRILL UPGRADES
+shop.help.upgrades,Invertí en mejoras permanentes.,Invest in permanent upgrades.
+shop.help.toppings.title,TOPPINGS Y SALSAS,TOPPINGS & SAUCES
+shop.help.toppings,Comprá condimentos para tus platos.,Buy condiments for your dishes.
+# Botón Siguiente (ShopNextButtonUI)
+shop.next.meat,Siguiente: Carnes,Next: Meats
+shop.next.upgrades,Siguiente: Mejoras,Next: Upgrades
+shop.next.toppings,Siguiente: Toppings,Next: Toppings
+shop.next.start_day,Arrancar el día,Start the day
+shop.next.blocked,Faltan recursos,Not enough supplies
+"# Requisitos para el próximo día (ShopRequirementsUI), en mayúsculas"
+shop.req.title,PARA ARRANCAR MAÑANA,TO OPEN TOMORROW
+shop.req.meat,CARNE   {0} / {1},MEAT   {0} / {1}
+shop.req.coal,CARBÓN  {0} / {1},CHARCOAL  {0} / {1}
+shop.req.deficit,FALTA: {0},MISSING: {0}
+shop.req.ready,LISTO PARA ARRANCAR,READY TO OPEN
+shop.req.streak,NOCHES SEGUIDAS CON STRIKES: {0} / {1},NIGHTS IN A ROW WITH STRIKES: {0} / {1}
+shop.req.cuts,{0} CORTES,{0} CUTS
+shop.req.cuts.one,{0} CORTE,{0} CUT
+shop.req.coal_units,{0} CARBONES,{0} CHARCOAL
+shop.req.coal_units.one,{0} CARBÓN,{0} CHARCOAL
+# Resultado de compra (ShopSystem; hoy solo lo muestra la capa 2D)
+shop.buy.not_configured,Tienda no configurada correctamente.,The shop isn't set up correctly.
+shop.buy.empty_cart,El carrito está vacío.,The cart is empty.
+shop.buy.not_enough_money,Plata insuficiente. Total: ${0},Not enough money. Total: ${0}
+shop.buy.payment_failed,No se pudo procesar el pago.,The payment couldn't be processed.
+shop.buy.done,Compra realizada por ${0},Purchase complete: ${0}
+shop.buy.item_unavailable,Ese item no se puede comprar.,That item can't be bought.
+shop.buy.topping_unavailable,Ese topping no se puede comprar.,That topping can't be bought.
+shop.buy.below_minimum,Esa compra te deja sin plata para el mínimo del próximo día.,That purchase leaves you short for tomorrow's minimum.
+"# Popup de cierre por strikes (StrikeEndPopup, EndScene)"
+strike.popup.title,Se terminó el día antes de tiempo,The day ended early
+strike.popup.body,"Llegaste al límite de clientes perdidos de la jornada.\n\nCuando tres clientes se van por falta de paciencia, corren la voz y dejan de llegar nuevos clientes.\n\nAtendiste a los que quedaban, pero por hoy no pasa nadie más. Mañana arrancás de nuevo.","You hit today's limit of lost customers.\n\nWhen three customers walk out of patience, word gets around and new customers stop showing up.\n\nYou served the ones still waiting, but nobody else is coming today. Tomorrow's a fresh start."
+strike.popup.button,Ir a la tienda,Go to the shop
+"# Derrota total de la run (RunDefeatScreen, EndScene)"
+defeat.title,SE TE APAGÓ LA PARRILLA,YOUR GRILL WENT OUT
+defeat.reason.resources,No te alcanza para comprar los recursos mínimos del próximo día. Sin carne y sin carbón no hay parrilla que abrir.,You can't afford the minimum supplies for the next day. No meat and no charcoal means no grill to open.
+defeat.reason.strike_streak,Te clavaron el cartel {0} noches seguidas. El boca a boca te fundió el negocio.,Customers bailed on you {0} nights in a row. Bad word of mouth sank the business.
+defeat.day,Llegaste al día {0},You made it to day {0}
+defeat.money,Plata final: ${0:N0},Final money: ${0:N0}
+defeat.meat,Carne: {0} / {1} (faltan {2}),Meat: {0} / {1} ({2} short)
+defeat.coal,Carbón: {0} / {1} (faltan {2}),Charcoal: {0} / {1} ({2} short)
+defeat.deficit,Te faltaban ${0:N0} para llegar al mínimo,You were ${0:N0} short of the minimum
+defeat.unreachable,El mínimo del próximo día ya no se puede alcanzar,The next day's minimum can no longer be reached
+defeat.main_menu,Menú principal,Main menu
+defeat.retry,Reintentar,Try again

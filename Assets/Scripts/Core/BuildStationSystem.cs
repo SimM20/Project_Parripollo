@@ -178,7 +178,7 @@ public class BuildStationSystem : MonoBehaviour
     {
         if (assembledCuts.Count == 0)
         {
-            reason = "No hay cortes en el armado.";
+            reason = Loc.Get("dish.no_cuts");
             return null;
         }
 
@@ -197,13 +197,13 @@ public class BuildStationSystem : MonoBehaviour
     {
         if (assembledCuts.Count == 0)
         {
-            reason = "No hay cortes en el armado.";
+            reason = Loc.Get("dish.no_cuts");
             return null;
         }
 
         if (assembledBread == null)
         {
-            reason = "No hay pan en el armado.";
+            reason = Loc.Get("dish.no_bread");
             return null;
         }
 

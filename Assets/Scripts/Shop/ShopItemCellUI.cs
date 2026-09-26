@@ -18,16 +18,8 @@ public class ShopItemCellUI : MonoBehaviour
     [Tooltip("Cuánto tiene ya el jugador de este item (o el nivel, si es una mejora).")]
     [SerializeField] private TextMeshProUGUI stockText;
 
-    [Header("Formatos")]
-    // En mayúsculas: la tienda usa Bungee, que es una tipografía de titulares.
-    [SerializeField] private string stockFormat = "TENÉS: {0}";
-    [SerializeField] private string coalStockFormat = "TENÉS: {0} U.";
-    [SerializeField] private string coalNameFormat = "{0} x{1}";
-    // La descripción va en Nunito (texto de cuerpo), no en Bungee: minúsculas normales.
-    [SerializeField] private string coalBagFormat = "Bolsa de {0} unidades";
-    [SerializeField] private string upgradeLevelFormat = "NIVEL {0}/{1}";
-    [Tooltip("Solo se muestra comprando más de una unidad: con una, el total es el precio.")]
-    [SerializeField] private string subtotalFormat = "Total: ${0:N0}";
+    // Textos: claves shop.cell.* de las tablas de Loc. Stock y nivel van en mayúsculas porque
+    // la tienda los dibuja en Bungee (titulares); la bolsa de carbón va en Nunito (cuerpo).
 
     [Header("Buttons")]
     [Tooltip("Contenedor de −/cantidad/+. Se oculta en los items que se compran de a uno (mejoras).")]
@@ -98,7 +90,7 @@ public class ShopItemCellUI : MonoBehaviour
             icon = toppingItem.toppingSprite;
             name = toppingItem.toppingName;
             price = toppingItem.purchasePrice;
-            stock = string.Format(stockFormat, shop.Toppings != null ? shop.Toppings.GetCount(toppingItem) : 0);
+            stock = Loc.Format("shop.cell.stock", shop.Toppings != null ? shop.Toppings.GetCount(toppingItem) : 0);
         }
         else if (item != null)
         {
@@ -124,7 +116,7 @@ public class ShopItemCellUI : MonoBehaviour
         if (stockText != null) stockText.text = stock;
         if (priceText != null) priceText.text = $"${price:N0}";
         if (qtyText != null) qtyText.text = pendingQty.ToString();
-        if (subtotalText != null) subtotalText.text = pendingQty > 1 ? string.Format(subtotalFormat, price * pendingQty) : "";
+        if (subtotalText != null) subtotalText.text = pendingQty > 1 ? Loc.Format("shop.cell.subtotal", price * pendingQty) : "";
         if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1);
 
         bool canAfford = shop.Wallet != null && shop.Wallet.CanAfford(price * pendingQty);
@@ -189,19 +181,19 @@ public class ShopItemCellUI : MonoBehaviour
         if (item == null) return "";
         if (item is MeatCutSO cut) return cut.cutName;
         if (item is CoalSO coal && coal.unitsPerBag > 1)
-            return string.Format(coalNameFormat, coal.itemName, coal.unitsPerBag);
-        return item.itemName;
+            return Loc.Format("shop.cell.coal_name", coal.DisplayName, coal.unitsPerBag);
+        return item.DisplayName;
     }
 
     private string ResolveDescription(ItemDataSO item)
     {
         // Una compra de carbón suma unitsPerBag unidades al cooler, no una.
         if (item is CoalSO coal)
-            return coal.unitsPerBag > 1 ? string.Format(coalBagFormat, coal.unitsPerBag) : "";
+            return coal.unitsPerBag > 1 ? Loc.Format("shop.cell.coal_bag", coal.unitsPerBag) : "";
 
         if (item is UpgradeSO up)
         {
-            string text = up.description ?? "";
+            string text = up.DisplayDescription ?? "";
 
             // Las mejoras de varios niveles muestran en que nivel van. Si la celda tiene
             // línea de stock, el nivel va ahí (ResolveStock) y no se repite acá.
@@ -222,9 +214,9 @@ public class ShopItemCellUI : MonoBehaviour
         if (item is UpgradeSO up) return FormatUpgradeLevel(up);
 
         int count = shop.Cooler != null ? shop.Cooler.GetCount(item) : 0;
-        return string.Format(item is CoalSO ? coalStockFormat : stockFormat, count);
+        return Loc.Format(item is CoalSO ? "shop.cell.coal_stock" : "shop.cell.stock", count);
     }
 
     private string FormatUpgradeLevel(UpgradeSO up)
-        => string.Format(upgradeLevelFormat, up.CurrentLevel, up.MaxLevel);
+        => Loc.Format("shop.cell.level", up.CurrentLevel, up.MaxLevel);
 }

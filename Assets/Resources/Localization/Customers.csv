@@ -1,0 +1,67 @@
+﻿key,es,en
+# Puntos de cocción (MeatHoverText.GetStateDisplayName)
+cooking.raw,Crudo,Raw
+cooking.rare,Jugoso,Rare
+cooking.medium,Hecho,Medium
+cooking.well_done,Bien Hecho,Well Done
+cooking.overcooked,Pasado,Overcooked
+cooking.burnt,Quemado,Burnt
+meat.generic,Carne,Meat
+meat.state,Estado: {0},State: {0}
+"# Pedido del cliente (CustomerOrderBubble, OrderText)"
+order.title,Pedido,Order
+order.none,Pedido: -,Order: -
+order.no_cut,Sin corte,No cut
+order.doneness,Punto: {0},Doneness: {0}
+order.plated,Al plato,Plated
+order.in_bread,En {0},In a {0}
+order.bread,pan,bread
+order.sandwich,Sándwich ({0}),Sandwich ({0})
+order.sides,Acomp: {0},Sides: {0}
+order.toppings,Toppings: {0},Toppings: {0}
+# Burbuja de reacción (CustomerFeedbackBubble)
+feedback.order,Pedido:,Order:
+feedback.tip,Propina:,Tip:
+feedback.pending,pendiente,pending
+feedback.voided,anulada,voided
+# Frases de los clientes: pools numerados por estado (CustomerFeedbackConfigSO.GetPhrasePoolKey). Cada idioma puede tener otra cantidad.
+feedback.phrase.tourist_happy.1,¡Una maravilla!,Absolutely wonderful!
+feedback.phrase.tourist_happy.2,¡Esto está de lujo!,This is top notch!
+feedback.phrase.tourist_happy.3,"¡Qué joyita, maestro!","What a gem, chef!"
+feedback.phrase.tourist_happy.4,¡Me alegraste el viaje!,You made my trip!
+feedback.phrase.tourist_happy.5,"¡Espectacular, che!","Spectacular, mate!"
+feedback.phrase.excellent.1,¡Así da gusto!,Now that's how it's done!
+feedback.phrase.excellent.2,¡De primera!,First class!
+feedback.phrase.excellent.3,¡Una joya!,A real gem!
+feedback.phrase.excellent.4,¡Terrible laburo!,Amazing work!
+feedback.phrase.excellent.5,¡Me atendiste de diez!,Perfect ten service!
+feedback.phrase.acceptable.1,Bien ahí.,Nice one.
+feedback.phrase.acceptable.2,Zafa bastante.,Not bad at all.
+feedback.phrase.acceptable.3,Ta’ bien.,S'alright.
+feedback.phrase.acceptable.4,Cumple.,Does the job.
+feedback.phrase.acceptable.5,Safó lindo.,Pulled it off.
+feedback.phrase.no_tip.1,Mmm… hasta ahí.,Hmm… so-so.
+feedback.phrase.no_tip.2,No me convenció.,Didn't win me over.
+feedback.phrase.no_tip.3,Flojito.,Kinda weak.
+feedback.phrase.no_tip.4,Estuvo medio pelo.,That was meh.
+feedback.phrase.no_tip.5,No era lo que esperaba.,Not what I expected.
+feedback.phrase.missing_cut.1,Bueno… mandame eso nomás.,Fine… just bring me that.
+feedback.phrase.missing_cut.2,"Y bueno, traeme otro.","Oh well, bring me something else."
+feedback.phrase.missing_cut.3,"No era lo que quería, pero va.","Not what I wanted, but OK."
+feedback.phrase.missing_cut.4,"Dale, lo cambio.","Sure, I'll switch."
+feedback.phrase.missing_cut.5,"Bueno, zafamos con eso.","Alright, that'll do."
+feedback.phrase.leaves_angry.1,"Nah, dejá.","Nah, forget it."
+feedback.phrase.leaves_angry.2,Así no te pago.,I'm not paying for this.
+feedback.phrase.leaves_angry.3,Me voy re caliente.,"I'm out, and I'm furious."
+feedback.phrase.leaves_angry.4,Cualquiera esto.,This is ridiculous.
+feedback.phrase.leaves_angry.5,"Un desastre, che.",What a mess.
+feedback.phrase.raw.1,"¡Esto está crudo, un asco!","This is raw, disgusting!"
+feedback.phrase.raw.2,"¡Ni lo cocinaste, che!",You didn't even cook it!
+feedback.phrase.raw.3,"Está crudo, no lo pienso comer.","It's raw, I'm not eating that."
+feedback.phrase.raw.4,¿Me querés matar? Está crudo.,Trying to kill me? It's raw.
+feedback.phrase.raw.5,"Crudo, hermano. Qué asco.","Raw, pal. Gross."
+feedback.phrase.burnt.1,"¡Esto está quemado, un asco!","This is burnt, disgusting!"
+feedback.phrase.burnt.2,"Esto es carbón, no carne.","That's charcoal, not meat."
+feedback.phrase.burnt.3,"Lo quemaste todo, che.",You burnt it to a crisp.
+feedback.phrase.burnt.4,"Un asco, está hecho carbón.","Gross, it's pure charcoal."
+feedback.phrase.burnt.5,¿Carbón me traés? Ni en pedo.,You're serving me charcoal? No way.

@@ -42,7 +42,17 @@ public class HudManager : MonoBehaviour
     }
 
     private void Start() => AutoUpdateTexts();
-    private void OnEnable() => AutoUpdateTexts();
+
+    private void OnEnable()
+    {
+        Loc.OnLanguageChanged += RefreshDayText;
+        AutoUpdateTexts();
+    }
+
+    private void RefreshDayText()
+    {
+        if (UIManager.Instance != null) UpdateDayText(UIManager.Instance.GetActualDay());
+    }
 
     private void OnDestroy()
     {
@@ -59,8 +69,7 @@ public class HudManager : MonoBehaviour
                 switch (container.GetContainerType())
                 {
                     case HudContainers.Day:
-                        newText = UIManager.Instance?.GetActualDay().ToString();
-                        container.UpdateText(newText);
+                        container.UpdateText(FormatDay(UIManager.Instance != null ? UIManager.Instance.GetActualDay() : 1));
                         break;
                     case HudContainers.Money:
                         int money = UIManager.Instance != null ? UIManager.Instance.GetActualMoney() : 0;
@@ -89,7 +98,7 @@ public class HudManager : MonoBehaviour
         foreach (var container in containers)
         {
             if (container != null && container.GetContainerType() == HudContainers.Day)
-                container.UpdateText("DIA " + value.ToString());
+                container.UpdateText(FormatDay(value));
         }
     }
 
@@ -210,6 +219,8 @@ public class HudManager : MonoBehaviour
         }
     }
 
+    private static string FormatDay(int value) => Loc.Format("hud.day", value);
+
     private static string FormatMoney(int value) => value.ToString() + " $";
 
     private HudContainer GetContainer(HudContainers type)
@@ -242,6 +253,8 @@ public class HudManager : MonoBehaviour
 
     private void OnDisable()
     {
+        Loc.OnLanguageChanged -= RefreshDayText;
+
         if (pauseButton != null)
             pauseButton.onClick.RemoveAllListeners();
     }

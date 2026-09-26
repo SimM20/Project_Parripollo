@@ -221,17 +221,17 @@ public static class CookingDeliveryEvaluator
         if (extras.missingToppings != null)
         {
             for (int i = 0; i < extras.missingToppings.Count; i++)
-                parts.Add("Falta " + extras.missingToppings[i].toppingName);
+                parts.Add(Loc.Format("delivery.extras.missing", extras.missingToppings[i].toppingName));
         }
 
         if (extras.extraToppings != null)
         {
             for (int i = 0; i < extras.extraToppings.Count; i++)
-                parts.Add("Sobra " + extras.extraToppings[i].toppingName);
+                parts.Add(Loc.Format("delivery.extras.extra", extras.extraToppings[i].toppingName));
         }
 
         if (extras.extraBread)
-            parts.Add("Sobra el pan");
+            parts.Add(Loc.Get("delivery.extras.extra_bread"));
 
         return string.Join(" · ", parts);
     }
