@@ -451,6 +451,7 @@ public class CustomerView : MonoBehaviour
 
         // La burbuja no se crea ni se mueve: la que ya está sobre el pecho se agranda.
         SetOrderBubbleExpanded(true);
+        TutorialSignals.Raise(TutorialSignal.CustomerHovered, target: transform);
     }
 
     /// <summary>

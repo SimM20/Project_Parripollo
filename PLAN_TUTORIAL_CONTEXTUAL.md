@@ -1,21 +1,32 @@
 # Plan técnico — Tutorial con carteles contextuales
 
-> ## ESTADO: fases 1 y 2 IMPLEMENTADAS (2026-09-27, rama `tutorialREV`) — fases 0 y 3 a 7 pendientes
+> ## ESTADO: fases 1, 2 y 3 IMPLEMENTADAS (2026-09-27, rama `tutorialREV`) — fases 0 y 4 a 7 pendientes
 >
 > - **Fase 1 (señales):** hecha y probada. Los ~20 `TutorialManager.Notify*` pasaron a `TutorialSignals.Raise`. El
 >   `TutorialManager` viejo se suscribe a las señales; se probó en Play que `TutorialScene` avanza igual del paso 7 al 17
 >   (stock, carne, capas, carbón, vuelta, punto de cocción, plato y entrega).
 > - **Fase 2 (cartel):** hecha y probada en `GameScene` a 1920×1080: ícono + texto, flecha, sin salirse de pantalla,
->   cambio en vivo teclado ↔ joystick e idioma, oculto en pausa, sin raycasts. Se ve desde el QA (`TutorialHintDebug`):
->   todavía no hay director.
+>   cambio en vivo teclado ↔ joystick e idioma, oculto en pausa, sin raycasts.
+> - **Fase 3 (director):** hecha y probada en `GameScene` a 1920×1080, en español: los 11 carteles de la primera noche
+>   aparecen solos, en orden, y se aprenden con la acción real (abrir el stock, soltar carne y carbón, capas, hover,
+>   vuelta, plato, entrega). También probados: reiniciar y saltear lo aprendido, apagar las ayudas y la E cediendo su lugar.
 >
 > Desvíos respecto del plan, todos deliberados:
 > - **Q y E van debajo de su pestaña**, no al costado: al costado, el de la izquierda le tapa la cara al primer cliente.
 > - **Arte provisorio** (`Sprites/UI/Tutorial/* PH.png`) para la fase 0: fondo y flecha del cartel, tecla y botón en blanco,
 >   íconos de mouse. `LetraQ` y `LetraE` se usan tal cual (con mipmaps activados); `LetraR` y `LetraSpace` no, porque vienen
 >   en lienzos de 1536×1024 casi vacíos. Espacio, R y los botones del joystick salen como tecla en blanco con su nombre.
-> - **De las señales nuevas solo se agregó `ToppingsPanelOpened`** (la usa el QA de la E). Las demás se suman en la fase
->   3 o 5, junto con el cartel que las usa, para no dejar avisos que nadie escucha.
+> - **Las señales nuevas se agregan con el cartel que las usa**: `ToppingsPanelOpened` (fase 2) y `CustomerHovered`
+>   (fase 3). El resto, en la fase 5.
+> - **Sin componente `HintAnchor`**: las zonas se resuelven por código a partir de un id (`HintAnchorId`) y cada cartel se
+>   afina con su offset. Así no hubo que tocar `GrillView.prefab` ni la escena. Si algún cartel necesita un punto puesto a
+>   mano, se agrega el componente con un registro estático, como `BuildFoodDropZone`.
+> - **Un cartel más, "Q · Sacá carbón" (4b)**: con la capa de carbón activa y el stock cerrado no había forma de llegar al carbón.
+> - **"Ver pedido" solo sobre un cliente señalable**: con el stock abierto, el panel tapa a los primeros clientes y el
+>   juego les apaga el collider; el cartel apunta al primero que se puede señalar o no aparece.
+> - **`completeOnlyIf` es una lista**: `GrillLayerChanged` también sale al arrancar la escena (capa inicial), y "Volver a la
+>   carne" se aprendía solo. Ahora pide capa de carne **y** carbón en la parrilla.
+> - **Textos cortos de verdad:** "Carne al plato" y "Plato al cliente" (3 palabras) en vez de "Llevá la carne al plato".
 
 > Decisiones tomadas con el desarrollador (2026-09-27):
 > 1. El tutorial pasa a la partida real (`GameScene`), sin escena aparte. **Nada bloquea ni pausa.**
@@ -51,9 +62,10 @@ del control y 2 a 4 palabras, en la zona de la acción:
 | `TutorialHintView` + `Prefabs/UI/TutorialHint.prefab` | Un cartel: ícono + texto + flecha, pegado a un objeto del mundo o de UI | ✅ |
 | `InputGlyphSetSO` + `ScriptableObjects/TutorialHints/InputGlyphs.asset` | Ícono por control físico del binding. Sin dibujo: tecla o botón en blanco con el nombre | ✅ |
 | `TutorialHintDebug` | QA en Play: Q y E, cartel de prueba configurable, ocultar todos | ✅ |
-| `TutorialHintSO` | Un asset por cartel: id, control (`HintPrompt`), clave de texto, ancla + lado + offset, prerrequisitos, contexto, señal que lo completa, prioridad, auto-ocultar | fase 3 |
-| `TutorialHintDirector` | Uno por escena: decide qué carteles se ven (≈5 veces por segundo + en cada señal) y guarda los completados | fase 3 |
-| `HintAnchor` | Marca zonas fijas (`StockTab`, `ToppingsTab`, `LayerButton`, `Grill`, `Plate`, `Undo`, `Trash`, `Clock`, `Strikes`) con registro estático | fase 3 |
+| `TutorialHintSO` + `TutorialHintSetSO` | Un asset por cartel: id, control (`HintPrompt`), clave de texto, zona + lado + offset, prerrequisitos, condiciones, señal (+ condiciones) que lo da por aprendido, prioridad. El set los ordena | ✅ (auto-ocultar: fase 5) |
+| `TutorialHintDirector` + `TutorialHintContext` | Uno por escena: decide qué carteles se ven (≈5 veces por segundo + en cada señal) a partir de una foto de la partida | ✅ en `GameScene` |
+| `TutorialProgress` | Qué se aprendió y si las ayudas están prendidas. En memoria; `init.cfg` en la fase 4 | ✅ |
+| Zonas (`HintAnchorId`) | Resueltas por código: pestañas, botón de capa, parrilla, plato, la carne, el cliente que espera. HUD (reloj, strikes) y tienda: en su fase | ✅ las de la partida |
 
 **Señales que faltan** (se agregan con su cartel): `CustomerSpawned`, `CustomerHovered` (`CustomerView.OnWorldPointerEnter`),
 `CoalBecameAsh` (`Coal.Burn`, solo en la transición), `AshesCleaned`, `PieceRotated`, `PlateCleared`, `UndoUsed`,
@@ -70,12 +82,16 @@ del control y 2 a 4 palabras, en la zona de la acción:
 | 2 | E · Ver panes y toppings | debajo de la pestaña derecha | al arrancar | se abre el panel derecho |
 | 3 | 🖱 Arrastrá a la parrilla | parrilla | panel abierto y parrilla vacía | hay carne en la parrilla |
 | 4 | Espacio · Capa de carbón | botón de capa | hay carne y ningún carbón | hay carbón |
+| 4b | Q · Sacá carbón | debajo de la pestaña izquierda | capa de carbón, sin carbón y con el stock cerrado | hay carbón |
 | 5 | 🖱 Poné carbón abajo | la carne | capa de carbón activa y sin carbón | hay carbón |
 | 6 | Espacio · Volver a la carne | botón de capa | ya hay carbón y sigue la capa de carbón | capa de carne |
 | 7 | 🖱 Ver pedido (pasar el mouse) | el cliente | llega el primer cliente | pasar el mouse sobre el cliente |
 | 8 | Click derecho · Dar vuelta | la carne | la cara de abajo dejó de estar cruda | primera vuelta |
-| 9 | 🖱 Llevá la carne al plato | plato | carne a punto para un pedido (a un punto o menos, como `EvaluateCut`) | carne en el plato |
-| 10 | 🖱 Llevá el plato al cliente | plato | carne en el plato y un cliente esperando | entrega aceptada |
+| 9 | 🖱 Carne al plato | plato | carne a punto para un pedido (a un punto o menos, como `EvaluateCut`) | carne en el plato |
+| 10 | 🖱 Plato al cliente | plato | carne en el plato y un cliente esperando | entrega aceptada |
+
+Implementados como assets en `ScriptableObjects/TutorialHints/Partida/` (set `CartelesPartida`); el detalle de condiciones
+y prioridades está en `ARQUITECTURA_PROYECTO.md`, 3.7 → *Carteles contextuales*.
 
 ### 3.2 La primera vez que pasa (cualquier noche)
 
@@ -126,7 +142,7 @@ Cada fase deja el juego jugable y se puede mergear sola.
 | 0. Arte | Tecla en blanco, botón de joystick en blanco (idealmente uno por botón), íconos de mouse, fondo y flecha del cartel. Reemplazar los `* PH.png` | ⏳ hay provisorios |
 | 1. Señales | `TutorialSignals` + migrar los `Notify*`; el `TutorialManager` viejo escucha las señales | ✅ |
 | 2. Cartel | Vista, canvas, íconos, QA | ✅ |
-| 3. Director | `TutorialHintSO`, contextos, `HintAnchor` en `GrillView.prefab` y el HUD, carteles 1-10 | ⏳ |
+| 3. Director | `TutorialHintSO`, contextos, zonas, director y carteles 1-10 (más el 4b) | ✅ |
 | 4. Primera noche | Opciones, `init.cfg`, sacar el diálogo | ⏳ |
 | 5. Primera vez | Carteles 11-18 y sus señales | ⏳ |
 | 6. Tienda | T1-T4 en `EndScene` | ⏳ |
@@ -149,13 +165,21 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - **Pausa:** ocultos con `GamePause.IsPaused`, animaciones con tiempo sin escalar (nota 18).
 - **Por frame:** nada de `Find*` ni memoria nueva (nota 13); el director va a ~5 Hz + señales.
 - **Textos:** claves `hint.*` en `Tutorial.csv` con todas las columnas (nota 37).
-- **Enums serializados** (`TutorialSignal`, `HintInput`, `HintPlacement`): valores nuevos siempre al final.
+- **Enums serializados** (`TutorialSignal`, `HintInput`, `HintPlacement`, `HintAnchorId`, `HintCondition`): valores
+  nuevos siempre al final.
+- **Señales que también salen al arrancar** (`GrillLayerChanged`): un cartel que se aprenda con ellas necesita una
+  condición que el arranque no cumpla.
 
-## 7. Checklist manual (fases 1 y 2)
+## 7. Checklist manual (fases 1 a 3)
 
 - [ ] `TutorialScene` de punta a punta: cada paso de acción avanza igual que antes.
-- [ ] `GameScene`, en Play: seleccionar `TutorialHints` → ⋮ → *QA/Mostrar Q y E*. Aparecen debajo de cada pestaña.
-- [ ] Apretar Q (o LB, o click en la pestaña): el cartel de la Q se va con un pop. Lo mismo con E.
+- [ ] `GameScene`, jugando de verdad la primera noche: aparecen Q y E; al apretar Q se va la Q y aparece "Arrastrá a la
+      parrilla"; si se cierra el stock sin poner carne, vuelve la Q. Seguir los carteles hasta entregar el primer plato.
+- [ ] Hacer las cosas en otro orden (carbón antes que carne, cerrar el stock a mitad): no aparece nada que ya se hizo y
+      no queda ningún cartel pidiendo algo imposible.
+- [ ] Con el stock abierto, "Ver pedido" no apunta a un cliente tapado por el panel.
+- [ ] Noche 2 sin cerrar el juego: no vuelve a aparecer nada de lo aprendido. Para repetir: `TutorialHints` → ⋮ →
+      *QA/Reiniciar las ayudas*.
 - [ ] Con un joystick real (Xbox y PlayStation): los íconos pasan a LB/RB o L1/R1 sin recargar.
 - [ ] Opciones → idioma: el texto cambia en vivo.
 - [ ] Pausa (Esc): los carteles desaparecen y vuelven al reanudar.

@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 6747579014142073811}
   - component: {fileID: 4039790783123291809}
   - component: {fileID: 4474114525576242278}
+  - component: {fileID: 7696550257704992333}
   m_Layer: 0
   m_Name: TutorialHints
   m_TagString: Untagged
@@ -120,4 +121,18 @@ MonoBehaviour:
   offset: {x: 0, y: 0}
   dismissOnSignal: 1
   dismissSignal: 0
-  showPanelHintsOnStart: 0
+--- !u!114 &7696550257704992333
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6727964211491014112}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cf7686b3f6faf142ae150090ac20909, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  set: {fileID: 11400000, guid: 2a310c0242b21054fae7be6be57c2e72, type: 2}
+  maxVisible: 2
+  evaluateInterval: 0.2

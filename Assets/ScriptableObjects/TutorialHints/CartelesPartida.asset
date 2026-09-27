@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2fc10d4695ba9e45b7079af777243c7, type: 3}
+  m_Name: CartelesPartida
+  m_EditorClassIdentifier: 
+  hints:
+  - {fileID: 11400000, guid: 312076de7dd036644830475046a512f1, type: 2}
+  - {fileID: 11400000, guid: 1a9baa15e6ca44a4eb19149a34f8f4e1, type: 2}
+  - {fileID: 11400000, guid: f3af925d66dd331409514ac8100899f6, type: 2}
+  - {fileID: 11400000, guid: 9779f43d90c88534daf0b4fb03ebc7b4, type: 2}
+  - {fileID: 11400000, guid: c4bb79a7247365a47bddfc18fb06caae, type: 2}
+  - {fileID: 11400000, guid: f06da915ba2221c47aecaefa77beffd3, type: 2}
+  - {fileID: 11400000, guid: d5196cbeeb3f711448be7ba2794467b5, type: 2}
+  - {fileID: 11400000, guid: 94824a48944bc3c44bc69d3e01f450e4, type: 2}
+  - {fileID: 11400000, guid: ab8cabec4bbc15047857b7712745d07c, type: 2}
+  - {fileID: 11400000, guid: 6e46b9fadbed84c42b420ecbd034f283, type: 2}
+  - {fileID: 11400000, guid: 0526471f193e90b49a148c3ab6c9f5a5, type: 2}

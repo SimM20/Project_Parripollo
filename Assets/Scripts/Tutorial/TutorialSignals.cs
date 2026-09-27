@@ -27,6 +27,8 @@ public enum TutorialSignal
     /// <summary>Entrega aceptada y cobrada. Una entrega cruda o quemada no cuenta.</summary>
     ProductDelivered,
     ToppingsPanelOpened,
+    /// <summary>El puntero pasó sobre un cliente y se agrandó su burbuja de pedido (con joystick: se lo seleccionó).</summary>
+    CustomerHovered,
 }
 
 /// <summary>Datos de una señal. Cada una llena solo lo que tiene sentido; el resto queda en null.</summary>

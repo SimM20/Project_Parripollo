@@ -81,6 +81,9 @@ public class CustomerOrderBubble : MonoBehaviour
 
     public bool IsExpanded => expanded;
 
+    /// <summary>Panel de la burbuja (el cartel del tutorial "Ver pedido" apunta ahí). Sigue al tamaño base o expandido.</summary>
+    public Transform Panel => panelRenderer != null ? panelRenderer.transform : transform;
+
     private void Awake()
     {
         Build();

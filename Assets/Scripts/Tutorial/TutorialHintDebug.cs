@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// QA de los carteles del tutorial: muestra cualquier cartel sobre cualquier objeto, sin director.
-/// Menú contextual del componente (⋮), en Play. Un cartel mostrado desde acá puede retirarse solo
-/// cuando llega una señal del juego (<see cref="TutorialSignals"/>), como van a hacer los de verdad.
+/// QA de los carteles del tutorial. Menú contextual del componente (⋮), en Play: reiniciar o saltear
+/// lo aprendido, y mostrar un cartel de prueba sobre cualquier objeto, por fuera del director. El
+/// cartel de prueba puede retirarse solo cuando llega una señal del juego, como los de verdad.
 /// </summary>
 public class TutorialHintDebug : MonoBehaviour
 {
@@ -17,13 +17,9 @@ public class TutorialHintDebug : MonoBehaviour
     [SerializeField] private HintPlacement placement = HintPlacement.Right;
     [Tooltip("Corrimiento extra, en px de la resolución de referencia.")]
     [SerializeField] private Vector2 offset;
-    [Tooltip("Se retira como cumplido cuando llega esta señal. Apagado: queda hasta 'QA/Ocultar todos'.")]
+    [Tooltip("Se retira como cumplido cuando llega esta señal. Apagado: queda hasta 'QA/Ocultar los carteles'.")]
     [SerializeField] private bool dismissOnSignal = true;
     [SerializeField] private TutorialSignal dismissSignal = TutorialSignal.StockPanelOpened;
-
-    [Header("Arranque")]
-    [Tooltip("Muestra Q y E al arrancar la escena, como en la primera noche. Solo para probar el cartel.")]
-    [SerializeField] private bool showPanelHintsOnStart;
 
     private struct Pending
     {
@@ -38,83 +34,45 @@ public class TutorialHintDebug : MonoBehaviour
 
     private void OnDisable() => TutorialSignals.Raised -= HandleSignal;
 
-    private void Start()
+    [ContextMenu("QA/Reiniciar las ayudas (todo sin aprender)")]
+    private void ResetProgress()
     {
-        if (showPanelHintsOnStart)
-            ShowPanelHints();
+        TutorialProgress.Reset();
+        TutorialHintDirector director = GetComponent<TutorialHintDirector>();
+        if (director != null)
+            director.Reevaluate();
     }
 
-    /// <summary>
-    /// Debajo de cada pestaña: al costado, el de la izquierda le tapa la cara al primer cliente.
-    /// </summary>
-    [ContextMenu("QA/Mostrar Q y E (se van al abrir cada panel)")]
-    private void ShowPanelHints()
+    [ContextMenu("QA/Dar todas por aprendidas")]
+    private void LearnAll()
     {
-        ShowOnPanelTab(StockPanelController.Instance, GameAction.ToggleStockPanel, "hint.open_stock",
-                       HintPlacement.Below, TutorialSignal.StockPanelOpened);
-        ShowOnPanelTab(ToppingsPanelController.Instance, GameAction.ToggleToppingsPanel, "hint.open_toppings",
-                       HintPlacement.Below, TutorialSignal.ToppingsPanelOpened);
+        TutorialHintDirector director = GetComponent<TutorialHintDirector>();
+        if (director != null)
+            director.LearnAll();
     }
 
     [ContextMenu("QA/Mostrar el cartel de prueba")]
     private void ShowTestHint()
     {
-        if (target == null)
+        TutorialHintLayer layer = TutorialHintLayer.Instance;
+        if (layer == null || target == null)
         {
-            Debug.LogWarning("[TutorialHintDebug] Falta el objetivo del cartel de prueba.");
+            Debug.LogWarning("[TutorialHintDebug] Falta la capa de carteles o el objetivo del cartel de prueba.");
             return;
         }
 
-        Show(target, prompt, textKey, placement, offset, dismissOnSignal, dismissSignal);
+        TutorialHintView view = layer.Show(prompt, textKey, target, placement, offset);
+        if (view != null && dismissOnSignal)
+            pending.Add(new Pending { view = view, generation = view.Generation, signal = dismissSignal });
     }
 
-    [ContextMenu("QA/Ocultar todos")]
+    /// <summary>Los del director vuelven en la próxima revisión si siguen valiendo.</summary>
+    [ContextMenu("QA/Ocultar los carteles")]
     private void HideAll()
     {
         pending.Clear();
         if (TutorialHintLayer.Instance != null)
             TutorialHintLayer.Instance.HideAll();
-    }
-
-    private void ShowOnPanelTab(SlidingPanel panel, GameAction action, string key,
-                                HintPlacement side, TutorialSignal signal)
-    {
-        if (panel == null || panel.IsOpen)
-            return;
-
-        StockPanelTab tab = FindTab(panel);
-        if (tab == null)
-        {
-            Debug.LogWarning("[TutorialHintDebug] No se encontró la pestaña de " + panel.GetType().Name + ".");
-            return;
-        }
-
-        Show(tab.transform, HintPrompt.For(action), key, side, Vector2.zero, true, signal);
-    }
-
-    private static StockPanelTab FindTab(SlidingPanel panel)
-    {
-        foreach (StockPanelTab tab in FindObjectsByType<StockPanelTab>(FindObjectsSortMode.None))
-        {
-            if (tab.Controller == panel)
-                return tab;
-        }
-        return null;
-    }
-
-    private void Show(Transform hintTarget, HintPrompt hintPrompt, string key, HintPlacement side,
-                      Vector2 hintOffset, bool dismissWithSignal, TutorialSignal signal)
-    {
-        TutorialHintLayer layer = TutorialHintLayer.Instance;
-        if (layer == null)
-        {
-            Debug.LogWarning("[TutorialHintDebug] No hay TutorialHintLayer en la escena.");
-            return;
-        }
-
-        TutorialHintView view = layer.Show(hintPrompt, key, hintTarget, side, hintOffset);
-        if (view != null && dismissWithSignal)
-            pending.Add(new Pending { view = view, generation = view.Generation, signal = signal });
     }
 
     private void HandleSignal(TutorialSignal signal, TutorialSignalArgs args)

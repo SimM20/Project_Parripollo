@@ -39,6 +39,12 @@
 > (ícono por control físico; sin dibujo, tecla en blanco con el nombre). Prefab `Prefabs/UI/TutorialHints.prefab` en
 > `GameScene`, QA en `TutorialHintDebug`. **Todavía no hay director**: ningún cartel aparece solo. Secciones 1, 2.1–2.3, 3.7 y 3.11.
 
+> Última actualización parcial: **2026-09-27** (rama `tutorialREV`) — **tutorial nuevo, fase 3: el director**. Los carteles
+> ya aparecen solos en `GameScene`: `TutorialHintDirector` (en el prefab `TutorialHints`) lee un set de `TutorialHintSO`
+> (`ScriptableObjects/TutorialHints/CartelesPartida.asset`, 11 carteles de la primera noche), evalúa el contexto con
+> `TutorialHintContext` y guarda lo aprendido en `TutorialProgress` (en memoria por ahora; `init.cfg` es la fase 4). Señal
+> nueva `CustomerHovered` (`CustomerView.OnWorldPointerEnter`) y `CustomerOrderBubble.Panel`. Sección 3.7 → *Carteles contextuales*.
+
 ---
 
 ## 0. Ficha técnica
@@ -109,7 +115,7 @@ Assets/Scripts/
 | **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI y **nombres de teclas/botones para los textos** (`InputPrompts`, tokens `[[Accion]]`). Bindings en `Assets/Input/GameControls.inputactions` | `InputPrompts.cs`, `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
 | **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú y de la tienda; no reacciona si el `Selectable` está deshabilitado) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
 | **Settings/** | `GameSettings` (estática): struct `SettingsData`, lectura perezosa de `init.cfg`, `ApplyAndSave`, aplicación (pantalla, VSync/FPS, `InputManager.SetInputMode`, `Loc.SetLanguage`) | `GameSettings.cs` |
-| **Tutorial/** | Tutorial nuevo (ver 3.7 → *Carteles contextuales*). `TutorialSignals`: hub estático por donde el juego avisa lo que hace el jugador (reemplaza a los `TutorialManager.Notify*`). Carteles: `TutorialHintLayer` (canvas y pool), `TutorialHintView` (un cartel), `InputGlyphSetSO` (íconos de controles), `TutorialHintDebug` (QA) | `TutorialSignals.cs`, `TutorialHintView.cs`, `TutorialHintLayer.cs`, `InputGlyphSetSO.cs` |
+| **Tutorial/** | Tutorial nuevo (ver 3.7 → *Carteles contextuales*). `TutorialSignals`: hub estático por donde el juego avisa lo que hace el jugador (reemplaza a los `TutorialManager.Notify*`). Director: `TutorialHintDirector` (qué cartel, cuándo), `TutorialHintContext` (foto de la partida), `TutorialHintSO` / `TutorialHintSetSO` (datos), `TutorialProgress` (lo aprendido). Cartel: `TutorialHintLayer` (canvas y pool), `TutorialHintView`, `InputGlyphSetSO` (íconos de controles). `TutorialHintDebug` (QA) | `TutorialSignals.cs`, `TutorialHintDirector.cs`, `TutorialHintContext.cs`, `TutorialHintView.cs`, `InputGlyphSetSO.cs` |
 | **Localization/** | `Loc` (estática): carga las tablas `Resources/Localization/*.csv`, idioma activo, `Get`/`Format`/`GetPool`, tokens `[[...]]`, evento `OnTextsChanged`. `LocalizedText`: componente para los textos fijos de escenas y prefabs. Herramientas de editor en `Editor/LocalizationTools.cs` | `Loc.cs`, `LocalizedText.cs` |
 | **UI/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
@@ -237,7 +243,7 @@ graph TD
 |---|---|---|
 | **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `HudManager`, `StockPanelController`, `ToppingsPanelController`, `MeatHoverBubble`, `MeatCookHoverBar`, `CustomerSelectionFrame`, `DeliveryFeedbackText`, `CustomerFeedbackConfigSO` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
 | **Observer** (`event Action`) | Ver tabla 2.3 | Suscripción en `OnEnable`/`Start`, desuscripción en `OnDisable`/`OnDestroy` |
-| **Static notification hub + gates** | `TutorialSignals.Raise(...)` y `TutorialManager.Check*Allowed(...)` | 13 señales `TutorialSignal` (evento estático `Raised`, no-op sin suscriptores: el juego no sabe quién escucha) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` no hay `TutorialManager` y ningún gate bloquea |
+| **Static notification hub + gates** | `TutorialSignals.Raise(...)` y `TutorialManager.Check*Allowed(...)` | 14 señales `TutorialSignal` (evento estático `Raised`, no-op sin suscriptores: el juego no sabe quién escucha) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` no hay `TutorialManager` y ningún gate bloquea |
 | **Command** | `IBuildUndoAction` + `BuildUndoHistory` (pila) | `AddSideUndoAction`, `AddToppingUndoAction`, `SetBreadUndoAction`, **`AddMeatUndoAction`** (devuelve el corte a la bandeja) |
 | **Buffer / staging area** | `MeatTransferBuffer`, `CoalTransferBuffer` | `BufferedMeatData`/`BufferedCoalData` (POCO con tiempos de cocción) + visuales. `MeatTransferBuffer` hoy administra **plato + bandeja**; la cola `ToGrill/MeatHolder` es legado |
 | **Duck typing por reflexión / `SendMessage`** | `WorldPointerDispatcher`→ colliders del mundo (`OnWorldPointerXXX`, igual que los `OnMouseXXX` nativos), `GameManager`→`MeatTransferBuffer`, `MeatHolderDraggableMeat`, `CoolerDraggableMeat`, `*StockVisualizer` | `Type.GetType` sobre todos los assemblies + `MethodInfo.Invoke` / `SendMessage(..., DontRequireReceiver)`. Rompe el binding estático a propósito |
@@ -262,7 +268,7 @@ graph TD
 | `ShopSystem` | `OnCartChanged`, `OnPurchaseResult(bool,string)` | Solo la capa 2D. **La UI activa compra directo y no usa carrito** |
 | `GamePause` | `static OnPaused` | Todos los draggables con un arrastre en curso (cancelan y vuelven al origen) |
 | `Loc` | `static OnTextsChanged` | Cambió el idioma o un token (se pasó de teclado a joystick): `LocalizedText`, `HudManager` (día), `CustomerOrderBubble`, `StrikeLimitNotice`, `Shop*UI`, `TutorialHintView` (texto e ícono del control) |
-| `TutorialSignals` | `static Raised(TutorialSignal, TutorialSignalArgs)` | `TutorialManager` (escenas de tutorial), `TutorialHintDebug` (QA). Lo disparan el stock, la parrilla, la carne, el plato y la entrega (ver 3.7) |
+| `TutorialSignals` | `static Raised(TutorialSignal, TutorialSignalArgs)` | `TutorialHintDirector` (carteles de `GameScene`), `TutorialManager` (escenas de tutorial), `TutorialHintDebug` (QA). Lo disparan el stock, la parrilla, la carne, el plato, la entrega y el hover de los clientes (ver 3.7) |
 | `InputManager` | `static OnSchemeChanged`, `static OnGamepadFamilyChanged` | `InputPrompts` (→ `Loc.RefreshTexts`), resto de la navegación del gamepad |
 | `SceneManagementUtils` | `OnSceneLoaded` (static) | (disponible; suscrito vía `RuntimeInitializeOnLoadMethod`) |
 | `ShopButton2D` / `ShopTabButton2D` | `OnClicked`, `OnTabClicked(ShopTabType)` | Celdas, barras de tabs |
@@ -1627,8 +1633,8 @@ Diálogo al entrar a `GameScene` (`GamePause.SetDialogPaused(true)`): "sí" carg
 #### Carteles contextuales (tutorial nuevo) — `Tutorial/`
 Reemplazo en curso del tutorial de arriba: en vez de pasos con paneles que frenan el juego, carteles chicos (ícono del
 control + 2-4 palabras) en la zona de la acción, dentro de la partida real. Nada bloquea ni pausa. Plan y catálogo de
-carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1 y 2** (señales y cartel); falta el director que decide
-qué cartel mostrar y cuándo, así que hoy solo aparecen desde el QA.
+carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1, 2 y 3**: señales, cartel y director con los carteles de la
+primera noche. Lo aprendido todavía vive en memoria (se pierde al cerrar el juego) y el diálogo de oferta sigue: eso es la fase 4.
 
 ```csharp
 // TutorialSignals — estática. Único punto por donde el juego avisa al tutorial.
@@ -1643,7 +1649,24 @@ void HideAll(bool completed = false)
 // TutorialHintView
 void Dismiss(bool completed)          // cumplido: sale con un pop; si no, se desvanece
 int Generation; bool IsShowing, IsInUse; Transform Target
+
+// TutorialHintDirector — uno por escena, en el prefab TutorialHints: set (TutorialHintSetSO), maxVisible (2), evaluateInterval (0.2 s)
+void Reevaluate(), LearnAll()          // QA
+// TutorialProgress — estática. Fase 4: se guarda en init.cfg y HintsEnabled sale de Opciones
+static bool HintsEnabled;              // apagadas: los directores retiran todo y no muestran más
+static bool IsLearned(string id); static void MarkLearned(string id), Reset()
 ```
+
+**Cómo decide el director.** Las señales solo se anotan; se procesan en su `Update`, así un error del tutorial nunca corta
+una acción del juego a mitad de camino. Revisa unas 5 veces por segundo (tiempo sin escalar) y enseguida después de cada
+señal; en pausa, nada. En cada revisión rearma la foto (`TutorialHintContext.Refresh`) y:
+1. **Aprende**: cada señal anotada da por aprendidos los carteles con ese `completeOn` si valen sus `completeOnlyIf`, se
+   estén viendo o no (si el jugador ya lo hizo, el cartel no aparece).
+2. **Elige**: candidatos = sin aprender + `requires` aprendidos + todas sus `showWhile` + zona resuelta. Se ordenan por
+   `priority` (empate: orden del set) y entran los primeros `maxVisible`.
+3. **Retira** los que no entran: cumplido (pop) si dejaron de valer por algo que el jugador acaba de hacer (apretó Q y se
+   abrió el panel); fundido si solo cedieron su lugar. **Muestra** los nuevos, y si la zona cambió de objeto (otro cliente,
+   otra carne) el cartel se va y reaparece en el nuevo.
 
 | Señal (`TutorialSignal`) | La dispara |
 |---|---|
@@ -1654,20 +1677,45 @@ int Generation; bool IsShowing, IsInUse; Transform Target
 | `MeatFlipped` / `MeatStateChanged` | `Meat.Flip` / `Meat.RefreshState` |
 | `MeatDraggedToBuild` + `MeatPlacedOnBuildZone` | `MeatTransferBuffer` (parrilla → plato; bandeja → plato solo la segunda). `Target` = la carne ya en el plato |
 | `DeliverySelectionBegun` / `ProductDelivered` | `PlateDeliveryDraggable` al agarrar el plato / `GameManager.TryDeliverToCustomer` (entrega cobrada, no la cruda/quemada) |
+| `CustomerHovered` | `CustomerView.OnWorldPointerEnter` (se agranda la burbuja; con joystick, al seleccionarlo) |
 
-⚠️ `TutorialSignal`, `HintInput` y `HintPlacement` se van a serializar como `int` en los assets de carteles: **valores
-nuevos siempre al final**.
+⚠️ `TutorialSignal`, `HintInput`, `HintPlacement`, `HintAnchorId` y `HintCondition` se serializan como `int` en los assets de
+carteles: **valores nuevos siempre al final**. ⚠️ `GrillLayerChanged` también sale en el `Start` de `GrillLayerToggle`, con la
+capa inicial: un cartel que se aprenda con esa señal necesita un `completeOnlyIf` que el arranque no cumpla.
 
 | Pieza | Qué hace |
 |---|---|
 | `TutorialHintLayer` + prefab `Prefabs/UI/TutorialHints.prefab` | Canvas **Screen Space Overlay**, orden **15** (arriba de la tienda, 10; abajo de los popups de `EndScene`, 20/30; el cursor del joystick va en 32000), `CanvasScaler` 1920×1080 / 0.5 como la tienda. **Sin `GraphicRaycaster`** y todos los gráficos con `raycastTarget` apagado: no le saca clicks ni hovers a nada. Se apaga el canvas mientras `GamePause.IsPaused` (menú y diálogo). Crea y recicla los carteles. Está en `GameScene` |
 | `TutorialHintView` + prefab `Prefabs/UI/TutorialHint.prefab` | Un cartel. Fondo 9-slice (`Background`, **fuera del layout**: un `Image` Sliced informa como tamaño preferido la suma de sus bordes sin el `pixelsPerUnitMultiplier` y agrandaba el cartel), ícono, texto (`Loc.Get(textKey)`) y flecha. Cada `LateUpdate` mide su objetivo — objeto del mundo: `Renderer` o `Collider2D` del objeto, 8 esquinas proyectadas con la cámara en perspectiva; UI: `RectTransform` con la cámara de su canvas — y se pone del lado pedido (`HintPlacement`), con la punta de la flecha a `gap` px. No se sale de la pantalla: se corre y la flecha compensa sobre su borde. Entra con pop, vaivén hacia el objetivo y sale con pop (cumplido) o fundido; todo en tiempo sin escalar. Si el objetivo se destruye, se va solo. Escucha `Loc.OnTextsChanged`: cambia texto e ícono al cambiar idioma o control |
 | `InputGlyphSetSO` — `ScriptableObjects/TutorialHints/InputGlyphs.asset` | Ícono de cada `HintPrompt` (una `GameAction`, click, click derecho, arrastrar o pasar por encima) para el control en uso. Busca por **control físico del binding** (`InputPrompts.GetControl`), así que cambiar una tecla en `GameControls.inputactions` cambia el ícono solo. Con dibujo (`LetraQ`, `LetraE`, los del mouse) lo usa entero; si no, **tecla o botón de joystick en blanco con el nombre** (`InputPrompts.GetLabel(acción, esquema, familia)`): cualquier binding y cualquier joystick andan sin arte nuevo. Con joystick, arrastrar = mantener A/Cruz y pasar por encima = seleccionar con el stick (`leftStick`, sin dibujo todavía: queda solo el texto) |
-| `TutorialHintDebug` (en el prefab) | QA, menú contextual en Play: *QA/Mostrar Q y E (se van al abrir cada panel)* — debajo de cada pestaña, se retiran con `StockPanelOpened` / `ToppingsPanelOpened` —, *QA/Mostrar el cartel de prueba* (objetivo, control, clave, lado, offset y señal que lo retira, del inspector) y *QA/Ocultar todos*. `showPanelHintsOnStart` los muestra al arrancar |
+| `TutorialHintDirector` (en el prefab, con `CartelesPartida`) | Ver *Cómo decide el director*. No busca nada por frame: la foto la arma `TutorialHintContext` |
+| `TutorialHintContext` | Foto de solo lectura: paneles abiertos (`IsOpen`), capa (`GrillLayerToggle.IsItemTypeAllowed`), carbón (`Coal.ActiveCoals`, la ceniza no cuenta), plato (`BuildFoodDropZone.Zones` → `HasLoadedPlate`), clientes que esperan (`IsCustomerActive`) y carnes en la parrilla (slots de carne del `GrillSystem`, una vez por corte aunque ocupe varios). Resuelve las zonas: pestañas (`StockPanelTab.Controller`), botón de capa, **slot de carne del medio de la fila de arriba** (el sprite de la parrilla tiene mucho margen transparente), `PlateBody`, la carne y **la burbuja (`CustomerOrderBubble.Panel`) del primer cliente que espera y se puede señalar**: con un panel abierto encima, el juego le apaga el collider (`CustomerView.PickCollider`) y no se le puede pasar el puntero, así que ahí "Ver pedido" no aparece. Las piezas fijas se buscan una sola vez |
+| `TutorialHintSO` + `TutorialHintSetSO` | Un cartel: `id` (vacío = nombre del asset; no cambiarlo una vez publicado), `prompt`, `textKey`, `anchor` + `placement` + `offset`, `requires`, `showWhile` (todas), `priority`, `completeOn` + `completeOnlyIf` (todas). El set los ordena; en empate de prioridad gana el primero |
+| `TutorialProgress` | Qué carteles se aprendieron (por `id`) y si las ayudas están prendidas. En memoria: sobrevive a los cambios de escena, no a cerrar el juego |
+| `TutorialHintDebug` (en el prefab) | QA, menú contextual en Play: *QA/Reiniciar las ayudas (todo sin aprender)*, *QA/Dar todas por aprendidas*, *QA/Mostrar el cartel de prueba* (objetivo, control, clave, lado, offset y señal que lo retira, del inspector) y *QA/Ocultar los carteles* (los del director vuelven en la próxima revisión si siguen valiendo) |
 | Arte provisorio — `Sprites/UI/Tutorial/* PH.png` | Fondo y flecha del cartel, tecla y botón de joystick en blanco (9-slice, dibujados a 2x: `pixelsPerUnitMultiplier = 2`) e íconos de mouse. Para reemplazar por arte final. `LetraQ` y `LetraE` pasaron a tener **mipmaps**: en el cartel se ven ~12 veces más chicas. `LetraR` y `LetraSpace` no se usan: vienen en lienzos de 1536×1024 casi vacíos (hay que recortarlas) y `LetraSpace` a ese tamaño no se lee |
 
-Textos: claves `hint.*` en `Tutorial.csv`. Ubicación probada a 1920×1080 con clientes: al costado de la pestaña izquierda el
-cartel le tapa la cara al primer cliente; debajo de cada pestaña no tapa nada.
+**Carteles de la primera noche** (`CartelesPartida`, en `ScriptableObjects/TutorialHints/Partida/`; máximo 2 a la vista):
+
+| Asset (`id`) | Cartel | Zona | Se ve mientras | Se aprende con | Prio |
+|---|---|---|---|---|---|
+| `01.VerCarnes` (`open_stock`) | Q · Ver carnes | pestaña del stock, abajo | stock cerrado | `MeatPlacedOnGrill` | 50 |
+| `02.VerToppings` (`open_toppings`) | E · Ver panes y toppings | pestaña derecha, abajo | panel derecho cerrado | `ToppingsPanelOpened` | 0 |
+| `03.ArrastrarAParrilla` (`drag_to_grill`) | 🖱 Arrastrá a la parrilla | parrilla, arriba | stock abierto + capa carne | `MeatPlacedOnGrill` | 60 |
+| `04.CapaCarbon` (`coal_layer`) | Espacio · Capa de carbón | botón de capa | hay carne, sin carbón, capa carne | `CoalPlacedOnGrill` | 70 |
+| `04b.SacarCarbon` (`get_coal`) | Q · Sacá carbón | pestaña del stock | hay carne, sin carbón, capa carbón, stock cerrado | `CoalPlacedOnGrill` | 70 |
+| `05.CarbonAbajo` (`coal_under`) | 🖱 Poné carbón abajo | la carne | hay carne, sin carbón, capa carbón, stock abierto | `CoalPlacedOnGrill` | 70 |
+| `06.VolverACarne` (`meat_layer`) | Espacio · Volver a la carne | botón de capa | hay carne y carbón, capa carbón | `GrillLayerChanged` si capa carne **y** hay carbón | 80 |
+| `07.VerPedido` (`see_order`) | 🖱 Ver pedido (pasar por encima) | burbuja del cliente, abajo | cliente esperando y señalable | `CustomerHovered` | 40 |
+| `08.DarVuelta` (`flip`) | Click derecho · Dar vuelta | la carne a dar vuelta | cara de abajo ya no cruda, la de arriba sí + capa carne | `MeatFlipped` | 85 |
+| `09.CarneAlPlato` (`to_plate`) | 🖱 Carne al plato | plato | carne a un punto o menos de un pedido (sin crudo ni quemado) + plato vacío + capa carne | `MeatPlacedOnBuildZone` | 90 |
+| `10.PlatoAlCliente` (`deliver`) | 🖱 Plato al cliente | plato | plato con carne + cliente esperando | `ProductDelivered` | 95 |
+
+La E arranca junto a la Q y, con la prioridad más baja, cede su lugar en cuanto hace falta otro cartel. Un hover
+cualquiera sobre un cliente aprende "Ver pedido" (es el gesto que enseña). Textos: claves `hint.*` en `Tutorial.csv`, sin
+signos que no estén en el atlas de las fuentes (un `&` en inglés le agregaba el glifo al atlas dinámico de Nunito).
+Ubicación probada a 1920×1080 con clientes: al costado de la pestaña izquierda el cartel le tapa la cara al primer cliente;
+debajo de cada pestaña no tapa nada.
 
 ---
 

@@ -53,4 +53,13 @@ tutorial.finish,Esos son los controles básicos. Ahora todo queda en tus manos: 
 tutorial.start_game,Comenzar Juego,Start Game
 # Carteles contextuales (TutorialHintView). Texto corto: el ícono del cartel ya muestra la tecla o el botón
 hint.open_stock,Ver carnes,View meats
-hint.open_toppings,Ver panes y toppings,View bread & toppings
+hint.open_toppings,Ver panes y toppings,View bread and toppings
+hint.drag_to_grill,Arrastrá a la parrilla,Drag onto the grill
+hint.coal_layer,Capa de carbón,Charcoal layer
+hint.get_coal,Sacá carbón,Get charcoal
+hint.coal_under,Poné carbón abajo,Put charcoal under it
+hint.meat_layer,Volver a la carne,Back to the meat
+hint.see_order,Ver pedido,See the order
+hint.flip,Dar vuelta,Flip it
+hint.to_plate,Carne al plato,Meat to the plate
+hint.deliver,Plato al cliente,Plate to the customer
