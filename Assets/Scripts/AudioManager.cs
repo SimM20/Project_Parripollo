@@ -22,6 +22,8 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip[] intermediateFeedbackClips;
     [Tooltip("Se elige uno al azar en cada entrega. Vacio = no suena nada.")]
     [SerializeField] private AudioClip[] negativeFeedbackClips;
+    [Tooltip("Suena cuando el cliente rechaza el plato (corte equivocado o plato que no le sirve) y el plato vuelve al mostrador. Vacio = no suena.")]
+    [SerializeField] private AudioClip deliveryRejectedClip;
 
     [Header("Strikes")]
     [Tooltip("Suena al sumar un strike (cliente perdido por paciencia). Debe distinguirse del feedback negativo. TBD por Audio: vacio = no suena.")]
@@ -70,6 +72,12 @@ public class AudioManager : MonoBehaviour
     {
         if (strikeClip != null)
             audioSource?.PlayOneShot(strikeClip);
+    }
+
+    public void PlayDeliveryRejected()
+    {
+        if (deliveryRejectedClip != null)
+            audioSource?.PlayOneShot(deliveryRejectedClip);
     }
 
     public void PlayPositiveFeedback()

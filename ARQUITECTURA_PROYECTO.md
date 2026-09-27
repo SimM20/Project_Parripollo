@@ -24,6 +24,13 @@
 > sistema). Cortes y toppings **no** se traducen. Las teclas y botones del tutorial son tokens `[[Accion]]` que muestran el
 > control en uso (`Input/InputPrompts.cs`). Herramientas en `Tools/Localización/`. Sección 3.11 y nota 37.
 
+> Última actualización parcial: **2026-09-27** (rama `FTD-Sprint17`) — **rechazo de entrega más visible**. `DeliveryFeedbackText`
+> dibuja un cartel semitransparente con bordes redondeados detrás del texto (lo crea solo, sin setup de escena) y entra con
+> pop y sale con fundido; vale para todos los mensajes. Cuando el rechazo lo decide el cliente
+> (`DeliveryEvaluation.rejectedByCustomer`: corte equivocado o plato inválido) el cliente se sacude y se tiñe de rojo
+> (`CustomerView.PlayRejectReaction`) y suena `AudioManager.deliveryRejectedClip`. En todo rechazo con cliente, el plato
+> "rebota" al volver al mostrador (`PlateDeliveryDraggable.StartRejectShake`).
+
 ---
 
 ## 0. Ficha técnica
@@ -867,20 +874,24 @@ la carne (400) y la tapaba. Ahora la zona es dueña de la composición:
 | Campo (header *Plate Layout*) | Valor en `GameScene` | Qué hace |
 |---|---|---|
 | *(la carne no tiene slot)* | — | El corte queda **donde se soltó** dentro del plato (parrilla → plato y bandeja → plato). Es libre |
-| `sideSlotOffsets` | `(0.35, 0.3)`, `(0.9, -0.3)` | Slots de guarniciones, en orden de llegada, a la derecha del plato |
+| `sideRowY` | `0.3` | Altura de la fila de guarniciones (centrada en X) |
 | `sideVisualSize` | `0.9` | Tamaño objetivo de cada guarnición |
-| `toppingSlotOffsets` | `(-0.2, -0.55)`, `(0.35, -0.6)` | Slots de toppings (frascos), al frente, más chicos |
+| `toppingRowY` | `-0.55` | Altura de la fila de toppings (frascos), al frente, más chicos |
 | `toppingVisualSize` | `0.55` | Tamaño objetivo de cada topping |
-| `overflowStep` | `(0.3, -0.15)` | Si entran más visuales que slots, siguen en diagonal desde el último |
+| `itemSpacing` / `minItemSpacing` | `0.85` / `0.45` | Paso entre centros de vecinos (fracción del tamaño) y el mínimo al que se juntan si la fila no entra |
+| `plateEdgeMargin` | `0.1` | Margen hasta el borde del plato (óvalo inscripto en el collider) |
 | `sideTopSortingOrder` | `390` | Base de sides/toppings (+ índice). **Debajo** de `plateMeatSortingBase` (400): nunca tapan al corte |
 
 - Todos los offsets son **unidades de mundo desde el centro de la zona**: el transform de `Plato` está escalado a
   ~0.22, así que los visuales se crean sin padre (como siempre) y los offsets locales serían ilegibles.
-- Cada visual guarda su `PlateVisualKind` (`Side` / `Topping`); el slot se elige contando los vivos de ese tipo, así
-  un undo libera el slot y el siguiente lo reutiliza. `RemoveLastPlateVisual` sigue sacando el último sin mirar el tipo.
+- Cada visual guarda su `PlateVisualKind` (`Side` / `Topping`). Desde 2026-09-27 no hay slots fijos: `LayoutRow` acomoda
+  todos los del tipo **centrados en su fila**, en orden de llegada, y se vuelve a llamar en cada alta y en cada undo
+  (`RemoveLastPlateVisual`, que sigue sacando el último sin mirar el tipo). Si la fila no entra en el ancho del plato a
+  esa altura (`RowWidthAt`), primero se juntan hasta `minItemSpacing` y después se achican. Antes los que sobraban de
+  los slots seguían en diagonal hacia la derecha y se salían del plato.
 - La escala se normaliza con `FitScale`: `targetSize / sqrt(ancho × alto)` del sprite. Se usa la **media geométrica**
   y no el lado mayor porque las papas (sprite apaisado 26×16) quedaban enanas al lado de un bol cuadrado.
-- `OnDrawGizmosSelected` dibuja los slots de sides (amarillo) y de toppings (verde) en la Scene view
+- `OnDrawGizmosSelected` dibuja el ancho utilizable de la fila de sides (amarillo) y de toppings (verde) en la Scene view
   para ajustar sin entrar en Play.
 - `SampleScene` conserva las claves viejas serializadas (`plateVisualWorldSpacing`…); Unity las ignora y toman
   los defaults del script, que coinciden con los valores de `GameScene`.

@@ -10574,6 +10574,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   text: {fileID: 958655819}
   showSeconds: 2
+  backgroundColor: {r: 0.08, g: 0.05, b: 0.04, a: 0.72}
+  backgroundPadding: {x: 0.35, y: 0.18}
+  cornerRadius: 0.18
+  popSeconds: 0.18
+  popStartScale: 0.8
+  fadeSeconds: 0.35
 --- !u!114 &958655819
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15500,6 +15506,7 @@ MonoBehaviour:
   negativeFeedbackClips:
   - {fileID: 8300000, guid: 08754afa560774f4aa4a1dae5f06cbe5, type: 3}
   - {fileID: 8300000, guid: fa5425907cbe29744a414b0fc6c41bf9, type: 3}
+  deliveryRejectedClip: {fileID: 8300000, guid: 50d3a5b870b228c41acfea4bae3aa192, type: 3}
   strikeClip: {fileID: 0}
 --- !u!82 &2004183797
 AudioSource:

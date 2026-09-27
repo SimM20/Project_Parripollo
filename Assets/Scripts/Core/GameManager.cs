@@ -214,6 +214,11 @@ public class GameManager : MonoBehaviour
         public string rejectReason;
         /// <summary>Versión corta de <c>rejectReason</c> para la burbuja de hover.</summary>
         public string rejectShort;
+        /// <summary>
+        /// El rechazo lo decide el cliente (corte equivocado o plato que no le sirve), no el
+        /// estado del mostrador: dispara su reacción (sacudón, tinte y sonido).
+        /// </summary>
+        public bool rejectedByCustomer;
 
         /// <summary>
         /// La entrega tiene cortes Crudos o Quemados: se acepta igual (<c>accepted == true</c>),
@@ -285,6 +290,7 @@ public class GameManager : MonoBehaviour
             result.rejectReason = Loc.Format("delivery.reject.wrong_cut",
                 customer.order.PrimaryCut != null ? customer.order.PrimaryCut.cutName : Loc.Get("delivery.reject.other_cut"));
             result.rejectShort = Loc.Get("delivery.reject.wrong_cut.short");
+            result.rejectedByCustomer = true;
 
             // Todos los cortes en rojo: ninguno le sirve a este cliente.
             result.cutOffsets = new int[buildStationSystem.AssembledCuts.Count];
@@ -303,6 +309,7 @@ public class GameManager : MonoBehaviour
         {
             result.rejectReason = reason;
             result.rejectShort = reason;
+            result.rejectedByCustomer = true;
             return result;
         }
 
@@ -483,6 +490,12 @@ public class GameManager : MonoBehaviour
         {
             DeliveryFeedbackText.Instance?.Show(eval.rejectReason);
             Debug.Log("❌ " + eval.rejectReason.Replace('\n', ' '));
+
+            if (eval.rejectedByCustomer)
+            {
+                customerSystem.GetViewForCustomer(customer)?.PlayRejectReaction();
+                AudioManager.Instance?.PlayDeliveryRejected();
+            }
             return false;
         }
 

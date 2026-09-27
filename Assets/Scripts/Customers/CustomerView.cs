@@ -34,6 +34,16 @@ public class CustomerView : MonoBehaviour
     [Tooltip("Cuanto se aplasta el cuerpo del cliente al entrar en zona urgente.")]
     [SerializeField] private float urgentBodySquash = 0.12f;
 
+    [Header("Reject Reaction")]
+    [Tooltip("Cuanto se corre el cuerpo hacia los costados al rechazar un plato (niega con la cabeza), " +
+             "en unidades locales del cliente.")]
+    [SerializeField] private float rejectShakeAmplitude = 0.08f;
+    [Tooltip("Idas y vueltas del sacudon de rechazo.")]
+    [SerializeField] private float rejectShakeCycles = 3f;
+    [SerializeField] private float rejectShakeSeconds = 0.45f;
+    [Tooltip("Tinte del cuerpo al rechazar. Arranca en este color y vuelve al normal durante el sacudon.")]
+    [SerializeField] private Color rejectTint = new Color(1f, 0.45f, 0.45f, 1f);
+
     [Header("Skin")]
     [Tooltip("Renderer del cuerpo del cliente. Es el que recibe la imagen que le toca al spawnear, " +
              "elegida del pool de CustomerSystem. Si queda vacio se busca solo entre los hijos.")]
@@ -65,6 +75,11 @@ public class CustomerView : MonoBehaviour
     // Sacudon del cuerpo al entrar en zona urgente.
     private Vector3 skinBaseScale;
     private float bodySquash;
+
+    // Reaccion al rechazo de un plato: sacudon lateral + tinte rojo.
+    private Vector3 skinBasePosition;
+    private Color skinBaseColor = Color.white;
+    private Coroutine rejectRoutine;
 
     private static bool deliveryDragActive;
     private static event Action OnDeliveryDragActiveChanged;
@@ -192,7 +207,11 @@ public class CustomerView : MonoBehaviour
             skinRenderer = ResolveSkinRenderer();
 
         if (skinRenderer != null)
+        {
             skinBaseScale = skinRenderer.transform.localScale;
+            skinBasePosition = skinRenderer.transform.localPosition;
+            skinBaseColor = skinRenderer.color;
+        }
 
         if (patienceFill != null && patienceFill.parent != null &&
             patienceFill.GetComponent<SpriteRenderer>() != null)
@@ -243,6 +262,62 @@ public class CustomerView : MonoBehaviour
     {
         SlidingPanel.OnAnyPanelOpenChanged -= HandlePanelOpenChanged;
         OnDeliveryDragActiveChanged -= ApplyPickingState;
+        StopRejectReaction();
+    }
+
+    /// <summary>
+    /// El cliente rechaza el plato que le soltaron: niega con el cuerpo (sacudon lateral que se
+    /// apaga) y se tine de rojo un instante. Solo visual: no toca paciencia ni estado.
+    /// </summary>
+    public void PlayRejectReaction()
+    {
+        if (skinRenderer == null || !isActiveAndEnabled) return;
+
+        StopRejectReaction();
+        rejectRoutine = StartCoroutine(RejectRoutine());
+    }
+
+    private IEnumerator RejectRoutine()
+    {
+        Transform skin = skinRenderer.transform;
+        // Si el cuerpo es la raiz del cliente no se lo corre: pelearia con el posicionado por slot.
+        bool canMove = skin != transform;
+
+        for (float e = 0f; e < rejectShakeSeconds; e += Time.deltaTime)
+        {
+            float t = e / rejectShakeSeconds;
+            float decay = 1f - t;
+
+            if (canMove)
+            {
+                float offset = Mathf.Sin(t * rejectShakeCycles * Mathf.PI * 2f) * rejectShakeAmplitude * decay;
+                skin.localPosition = skinBasePosition + new Vector3(offset, 0f, 0f);
+            }
+
+            skinRenderer.color = Color.Lerp(skinBaseColor, rejectTint * skinBaseColor, decay);
+            yield return null;
+        }
+
+        rejectRoutine = null;
+        ResetRejectVisuals();
+    }
+
+    private void StopRejectReaction()
+    {
+        if (rejectRoutine == null) return;
+
+        StopCoroutine(rejectRoutine);
+        rejectRoutine = null;
+        ResetRejectVisuals();
+    }
+
+    private void ResetRejectVisuals()
+    {
+        if (skinRenderer == null) return;
+
+        if (skinRenderer.transform != transform)
+            skinRenderer.transform.localPosition = skinBasePosition;
+        skinRenderer.color = skinBaseColor;
     }
 
     void Update()

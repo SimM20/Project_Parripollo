@@ -56,6 +56,21 @@ public class PlateDeliveryDraggable : MonoBehaviour
     private static readonly List<Transform> PlateBodies = new List<Transform>();
     private static readonly Collider2D[] OverlapResults = new Collider2D[16];
 
+    // Sacudón del plato cuando el cliente lo rechaza (ver StartRejectShake).
+    private const float RejectShakeSeconds = 0.3f;
+    private const float RejectShakeCycles = 3f;
+    private const float RejectShakeAmplitude = 0.06f;
+
+    private struct ShakeTarget
+    {
+        public Transform target;
+        public Vector3 restPosition;
+    }
+
+    private static readonly List<ShakeTarget> ShakeTargets = new List<ShakeTarget>();
+    private static PlateDeliveryDraggable shakeHost;
+    private static Coroutine shakeRoutine;
+
     /// <summary>Instancia que conduce el arrastre en curso. Hay un solo mouse: nunca hay dos a la vez.</summary>
     private static PlateDeliveryDraggable activeDragger;
     private static DragMode activeMode;
@@ -100,12 +115,18 @@ public class PlateDeliveryDraggable : MonoBehaviour
     {
         if (activeDragger == this)
             CancelDrag();
+
+        if (shakeHost == this)
+            StopRejectShake();
     }
 
     void OnDestroy()
     {
         if (activeDragger == this)
             CancelDrag();
+
+        if (shakeHost == this)
+            StopRejectShake();
 
         Instances.Remove(this);
     }
@@ -303,6 +324,9 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
     private void BeginDrag(DragMode mode)
     {
+        // Si el plato todavía se sacude por un rechazo, se asienta antes de tomar posiciones.
+        StopRejectShake();
+
         if (mode == DragMode.MeatOnly)
         {
             BeginMeatOnlyDrag();
@@ -391,11 +415,12 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
         SetHoveredView(null);
 
-        bool delivered = TutorialManager.CheckDeliveryConfirmAllowed()
+        bool attempted = TutorialManager.CheckDeliveryConfirmAllowed()
             && dropView != null
             && dropView.Customer != null
-            && GameManager.Instance != null
-            && GameManager.Instance.TryDeliverToCustomer(dropView.Customer);
+            && GameManager.Instance != null;
+
+        bool delivered = attempted && GameManager.Instance.TryDeliverToCustomer(dropView.Customer);
 
         // El bloque siempre vuelve al mostrador tal cual estaba: se arrastra el plato servido,
         // así que soltarlo en cualquier lado que no sea un cliente (o que un cliente lo rechace)
@@ -403,6 +428,10 @@ public class PlateDeliveryDraggable : MonoBehaviour
         // destruida (Destroy diferido, los transforms siguen vivos este frame) y lo que vuelve
         // es el plato vacío.
         RestorePositions();
+
+        // Rechazado: el plato "rebota" al volver, para que se lea que se lo devolvieron.
+        if (attempted && !delivered)
+            StartRejectShake();
 
         DraggedVisuals.Clear();
         CustomerView.SetDeliveryDragActive(false);
@@ -486,6 +515,68 @@ public class PlateDeliveryDraggable : MonoBehaviour
             if (renderer != null)
                 renderer.sortingOrder = DraggedVisuals[i].startSortingOrder;
         }
+    }
+
+    /// <summary>
+    /// Sacudón lateral del plato recién devuelto por un rechazo. Toma las posiciones de reposo
+    /// de DraggedVisuals (ya restauradas) y oscila alrededor de ellas; corre en esta instancia.
+    /// </summary>
+    private void StartRejectShake()
+    {
+        StopRejectShake();
+
+        for (int i = 0; i < DraggedVisuals.Count; i++)
+        {
+            if (DraggedVisuals[i].target != null)
+                ShakeTargets.Add(new ShakeTarget { target = DraggedVisuals[i].target, restPosition = DraggedVisuals[i].startPosition });
+        }
+
+        if (ShakeTargets.Count == 0)
+            return;
+
+        shakeHost = this;
+        shakeRoutine = StartCoroutine(RejectShakeRoutine());
+    }
+
+    private static System.Collections.IEnumerator RejectShakeRoutine()
+    {
+        for (float e = 0f; e < RejectShakeSeconds; e += Time.deltaTime)
+        {
+            float t = e / RejectShakeSeconds;
+            float offset = Mathf.Sin(t * RejectShakeCycles * Mathf.PI * 2f) * RejectShakeAmplitude * (1f - t);
+
+            for (int i = 0; i < ShakeTargets.Count; i++)
+            {
+                if (ShakeTargets[i].target != null)
+                    ShakeTargets[i].target.position = ShakeTargets[i].restPosition + new Vector3(offset, 0f, 0f);
+            }
+
+            yield return null;
+        }
+
+        shakeRoutine = null;
+        StopRejectShake();
+    }
+
+    /// <summary>
+    /// Corta el sacudón y deja todo en reposo. Hay que llamarlo antes de empezar un arrastre:
+    /// el arrastre toma como origen la posición actual de cada visual.
+    /// </summary>
+    private static void StopRejectShake()
+    {
+        if (shakeRoutine != null && shakeHost != null)
+            shakeHost.StopCoroutine(shakeRoutine);
+
+        shakeRoutine = null;
+        shakeHost = null;
+
+        for (int i = 0; i < ShakeTargets.Count; i++)
+        {
+            if (ShakeTargets[i].target != null)
+                ShakeTargets[i].target.position = ShakeTargets[i].restPosition;
+        }
+
+        ShakeTargets.Clear();
     }
 
     private static void RestorePositions()
