@@ -12510,15 +12510,13 @@ MonoBehaviour:
   meatTransferBuffer: {fileID: 1918444612}
   zoneCollider: {fileID: 1310823262}
   plateRenderer: {fileID: 1310823259}
-  sideSlotOffsets:
-  - {x: 0.35, y: 0.3}
-  - {x: 0.9, y: -0.3}
+  sideRowY: 0.3
   sideVisualSize: 0.9
-  toppingSlotOffsets:
-  - {x: -0.2, y: -0.55}
-  - {x: 0.35, y: -0.6}
+  toppingRowY: -0.55
   toppingVisualSize: 0.55
-  overflowStep: {x: 0.3, y: -0.15}
+  itemSpacing: 0.85
+  minItemSpacing: 0.45
+  plateEdgeMargin: 0.1
   sideTopSortingOrder: 390
 --- !u!61 &1310823262
 BoxCollider2D:
@@ -15506,7 +15504,7 @@ MonoBehaviour:
   negativeFeedbackClips:
   - {fileID: 8300000, guid: 08754afa560774f4aa4a1dae5f06cbe5, type: 3}
   - {fileID: 8300000, guid: fa5425907cbe29744a414b0fc6c41bf9, type: 3}
-  deliveryRejectedClip: {fileID: 8300000, guid: 50d3a5b870b228c41acfea4bae3aa192, type: 3}
+  deliveryRejectedClip: {fileID: 0}
   strikeClip: {fileID: 0}
 --- !u!82 &2004183797
 AudioSource:

@@ -62,13 +62,17 @@ public class DeliveryFeedbackText : MonoBehaviour
     {
         if (text == null || string.IsNullOrEmpty(message)) return;
 
+        // Con el objeto apagado no hay corutina que lo esconda después ni medidas del texto:
+        // el cartel quedaba prendido como un cuadrado negro al volver a activarse.
+        if (!isActiveAndEnabled) return;
+
         if (showRoutine != null) StopCoroutine(showRoutine);
 
         text.text = message;
         text.ForceMeshUpdate();
-        FitBackgroundToText();
         SetAlpha(1f);
-        SetBackgroundVisible(true);
+        // Solo hay cartel si el texto ocupa lugar de verdad.
+        SetBackgroundVisible(FitBackgroundToText());
 
         showRoutine = StartCoroutine(ShowRoutine());
     }
@@ -82,6 +86,12 @@ public class DeliveryFeedbackText : MonoBehaviour
         }
 
         Clear();
+    }
+
+    void OnEnable()
+    {
+        // Arranca siempre limpio: nunca se vuelve a la vista con un cartel viejo prendido.
+        if (showRoutine == null) Clear();
     }
 
     void OnDisable()
@@ -141,9 +151,17 @@ public class DeliveryFeedbackText : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Se prende/apaga el GameObject y no el renderer: ViewManager.SetVisualVisibility prende
+    /// todos los SpriteRenderer de la vista al mostrarla, y dejaba el cartel vacío a la vista.
+    /// </summary>
     private void SetBackgroundVisible(bool visible)
     {
-        if (background != null) background.enabled = visible;
+        if (background == null) return;
+
+        background.gameObject.SetActive(visible);
+        // Al ocultar la vista, ViewManager también apaga el renderer: se vuelve a prender al mostrar.
+        if (visible) background.enabled = true;
     }
 
     private void CreateBackground()
@@ -165,12 +183,17 @@ public class DeliveryFeedbackText : MonoBehaviour
         }
     }
 
-    /// <summary>Ajusta el cartel al texto actual (textBounds está en el espacio local del texto).</summary>
-    private void FitBackgroundToText()
+    /// <summary>
+    /// Ajusta el cartel al texto actual (textBounds está en el espacio local del texto).
+    /// Devuelve false si el texto no ocupa lugar (sin medidas válidas): ahí no se muestra el cartel.
+    /// </summary>
+    private bool FitBackgroundToText()
     {
-        if (background == null) return;
+        if (background == null) return false;
 
         Bounds b = text.textBounds;
+        if (b.size.x <= 0f || b.size.y <= 0f || float.IsNaN(b.size.x) || float.IsInfinity(b.size.x))
+            return false;
         background.transform.localPosition = new Vector3(b.center.x, b.center.y, 0f);
 
         // El sprite mide TexSize px con esquinas de TexCorner px; se elige la escala para que
@@ -183,6 +206,7 @@ public class DeliveryFeedbackText : MonoBehaviour
         size.x = Mathf.Max(size.x, minSide);
         size.y = Mathf.Max(size.y, minSide);
         background.size = size / cornerScale;
+        return true;
     }
 
     private static Sprite GetRoundedSprite()
