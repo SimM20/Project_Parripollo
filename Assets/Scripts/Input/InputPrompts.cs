@@ -34,23 +34,35 @@ public static class InputPrompts
     }
 
     /// <summary>Igual que <see cref="Resolve"/> pero sin formato. Null si la acción no existe.</summary>
-    public static string GetLabel(string actionName)
+    public static string GetLabel(string actionName) =>
+        GetLabel(actionName, InputManager.ActiveScheme, InputManager.ActiveGamepadFamily);
+
+    /// <summary>Nombre de la tecla o botón de <paramref name="actionName"/> en un control dado, esté en uso o no.</summary>
+    public static string GetLabel(string actionName, InputScheme scheme, GamepadFamily family)
     {
-        bool gamepad = InputManager.ActiveScheme == InputScheme.Gamepad;
+        bool gamepad = scheme == InputScheme.Gamepad;
 
         // El mouse no está en el mapa Gameplay (sus botones se leen directo del dispositivo).
         if (!gamepad && actionName == "PointerPrimary") return Loc.Get("input.mouse.left");
         if (!gamepad && actionName == "PointerSecondary") return Loc.Get("input.mouse.right");
 
-        string path = InputManager.GetBindingPath(actionName, gamepad ? InputScheme.Gamepad : InputScheme.KeyboardMouse);
-        if (string.IsNullOrEmpty(path)) return null;
-
-        string control = path.Substring(path.LastIndexOf('/') + 1);
+        string control = GetControl(actionName, scheme);
+        if (control == null) return null;
 
         if (!gamepad)
             return Loc.GetOrDefault("input.key." + control, control.ToUpperInvariant());
 
-        string family = InputManager.ActiveGamepadFamily == GamepadFamily.PlayStation ? "ps" : "xbox";
-        return Loc.GetOrDefault($"input.{family}.{control}", control);
+        string familyKey = family == GamepadFamily.PlayStation ? "ps" : "xbox";
+        return Loc.GetOrDefault($"input.{familyKey}.{control}", control);
+    }
+
+    /// <summary>
+    /// Control físico ligado a la acción en ese esquema, como lo nombra el binding: "q", "space",
+    /// "leftShoulder", "buttonSouth". Null si no hay (los botones del mouse no están en el mapa).
+    /// </summary>
+    public static string GetControl(string actionName, InputScheme scheme)
+    {
+        string path = InputManager.GetBindingPath(actionName, scheme);
+        return string.IsNullOrEmpty(path) ? null : path.Substring(path.LastIndexOf('/') + 1);
     }
 }

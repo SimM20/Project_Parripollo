@@ -161,7 +161,7 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// Cambia la capa de la parrilla (carne ↔ carbón) por teclado o gamepad.
     /// Espejo exacto del botón de la escena: delega en el mismo GrillLayerToggle.Toggle(),
-    /// así que sprite del botón y TutorialManager.NotifyGrillLayerChanged se mantienen sincronizados.
+    /// así que sprite del botón y la señal GrillLayerChanged del tutorial se mantienen sincronizados.
     /// Nunca mientras se arrastra un item: cambiar de capa a mitad de un drag invalidaría
     /// el drop y devolvería la pieza a su origen.
     /// </summary>
@@ -534,7 +534,7 @@ public class GameManager : MonoBehaviour
         Debug.Log("✔ Pedido entregado. Pago: " + eval.payment + " | Propinas: " + eval.tip
                   + " | Desfase: " + eval.worstOffset + " | Estado: " + eval.feedbackState
                   + (eval.extrasNote != null ? " | Extras: " + eval.extrasNote : ""));
-        TutorialManager.NotifyProductDelivered();
+        TutorialSignals.Raise(TutorialSignal.ProductDelivered);
         return true;
     }
 

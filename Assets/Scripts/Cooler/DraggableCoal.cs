@@ -72,7 +72,7 @@ void OnWorldPointerUp()
                 buffer.EnqueueToGrillAtPoint(coal, dropWorldPoint);
 
             wasConsumed = true;
-            TutorialManager.NotifyCoalDraggedToGrill(coal);
+            TutorialSignals.Raise(TutorialSignal.CoalDraggedToGrill, coal: coal);
         }
     }
 

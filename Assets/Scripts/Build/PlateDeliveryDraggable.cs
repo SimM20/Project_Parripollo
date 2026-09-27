@@ -374,7 +374,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
         CustomerView.SetDeliveryDragActive(true);
 
         // Equivalente por mouse de entrar en modo selección: mantiene vivo el paso del tutorial.
-        TutorialManager.NotifyDeliverySelectionBegun();
+        TutorialSignals.Raise(TutorialSignal.DeliverySelectionBegun);
     }
 
     /// <summary>Arrastre de solo esta carne: reposicionar en el plato, o devolverla a la bandeja / parrilla.</summary>

@@ -196,8 +196,9 @@ public class MeatTransferBuffer : MonoBehaviour
         Debug.Log("[Plato] Corte montado desde la parrilla: " + (cut != null ? cut.cutName : "Sin corte")
                   + " | A: " + entry.SideAState + " | B: " + entry.SideBState);
 
-        TutorialManager.NotifyMeatDraggedToBuild(cut);
-        TutorialManager.NotifyMeatPlacedOnBuildZone(cut);
+        Transform platedMeat = visual != null ? visual.transform : null;
+        TutorialSignals.Raise(TutorialSignal.MeatDraggedToBuild, cut: cut, target: platedMeat);
+        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnBuildZone, cut: cut, target: platedMeat);
         return true;
     }
 
@@ -225,7 +226,7 @@ public class MeatTransferBuffer : MonoBehaviour
         RefreshVisuals();
 
         Debug.Log("[Plato] Corte montado desde la bandeja: " + entry.cut.cutName + " | Estado: " + entry.state);
-        TutorialManager.NotifyMeatPlacedOnBuildZone(entry.cut);
+        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnBuildZone, cut: entry.cut, target: plated != null ? plated.transform : null);
         return true;
     }
 
@@ -251,7 +252,7 @@ public class MeatTransferBuffer : MonoBehaviour
         RefreshVisuals();
 
         Debug.Log("[Bandeja] Corte devuelto a la parrilla: " + entry.cut.cutName + " | Estado: " + entry.state);
-        TutorialManager.NotifyMeatPlacedOnGrill(entry.cut);
+        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: entry.cut, meat: spawnedMeat);
         return true;
     }
 
@@ -310,7 +311,7 @@ public class MeatTransferBuffer : MonoBehaviour
         RefreshVisuals();
 
         Debug.Log("[Plato] Carne devuelta a la parrilla: " + returnedData.cut.cutName + " | Estado: " + returnedData.state);
-        TutorialManager.NotifyMeatPlacedOnGrill(returnedData.cut);
+        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: returnedData.cut, meat: spawnedMeat);
         return true;
     }
 
@@ -629,7 +630,7 @@ public class MeatTransferBuffer : MonoBehaviour
 
         string cutName = entry.cut != null ? entry.cut.cutName : "Sin corte";
         Debug.Log("Mandaste a la parrilla desde MeatHolder: " + cutName + " | Estado: " + entry.state);
-        TutorialManager.NotifyMeatPlacedOnGrill(entry.cut);
+        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: entry.cut, meat: spawnedMeat);
         return true;
     }
 

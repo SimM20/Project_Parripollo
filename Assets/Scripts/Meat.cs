@@ -402,7 +402,7 @@ public class Meat : Item
             isSideA = !isSideA;
             state = ActiveSideState;
             ApplyCutVisual();
-            TutorialManager.NotifyMeatFlipped(cut);
+            TutorialSignals.Raise(TutorialSignal.MeatFlipped, meat: this);
         }
     }
 
@@ -449,7 +449,7 @@ public class Meat : Item
                 isSideA = !isSideA;
                 state = ActiveSideState;
                 ApplyCutVisual();
-                TutorialManager.NotifyMeatFlipped(cut);
+                TutorialSignals.Raise(TutorialSignal.MeatFlipped, meat: this);
             }
 
             yield return null;
@@ -461,7 +461,7 @@ public class Meat : Item
             isSideA = !isSideA;
             state = ActiveSideState;
             ApplyCutVisual();
-            TutorialManager.NotifyMeatFlipped(cut);
+            TutorialSignals.Raise(TutorialSignal.MeatFlipped, meat: this);
         }
 
         transform.position = startPos;
@@ -590,7 +590,7 @@ public class Meat : Item
         {
             state = newState;
             ApplyCutVisual();
-            TutorialManager.NotifyMeatStateChanged(this);
+            TutorialSignals.Raise(TutorialSignal.MeatStateChanged, meat: this);
         }
     }
 

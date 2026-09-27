@@ -51,3 +51,6 @@ tutorial.toppings,"Si el pedido lleva salsa, arrastrá el frasco del panel de la
 tutorial.shortcuts,"Si te equivocás armando, la flecha junto al plato deshace el último paso y [[ClearPlate]] vacía el plato. Si no tenés el corte que te pidieron, con [[MissingCut]] el cliente acepta otro, pero sin propina.","If you make a mistake, the arrow next to the plate undoes the last step and [[ClearPlate]] clears the plate. If you don't have the cut they ordered, press [[MissingCut]] and the customer will take another one, but without a tip."
 tutorial.finish,Esos son los controles básicos. Ahora todo queda en tus manos: salí y cocinate el mundo.,Those are the basic controls. Now it's all in your hands: go out there and grill up the world.
 tutorial.start_game,Comenzar Juego,Start Game
+# Carteles contextuales (TutorialHintView). Texto corto: el ícono del cartel ya muestra la tecla o el botón
+hint.open_stock,Ver carnes,View meats
+hint.open_toppings,Ver panes y toppings,View bread & toppings

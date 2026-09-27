@@ -99,6 +99,7 @@ public class TutorialManager : MonoBehaviour
             return;
         }
         Instance = this;
+        TutorialSignals.Raised += HandleSignal;
     }
 
     void Start()
@@ -119,6 +120,8 @@ public class TutorialManager : MonoBehaviour
 
     void OnDestroy()
     {
+        TutorialSignals.Raised -= HandleSignal;
+
         if (viewManager != null)
         {
             viewManager.OnViewChanged -= OnViewChanged;
@@ -576,10 +579,24 @@ public class TutorialManager : MonoBehaviour
     public static bool CheckClearBuildPlateAllowed() => Instance == null || Instance.IsClearBuildPlateAllowed();
     public static bool CheckPlateMeatDragAllowed() => Instance == null || Instance.IsPlateMeatDragAllowed();
 
-    // ── Static Notifications ───────────────────────────────────────────
-    public static void NotifyStockPanelOpened()
+    // ── Señales del juego (TutorialSignals) ─────────────────────────────
+    private void HandleSignal(TutorialSignal signal, TutorialSignalArgs args)
     {
-        if (Instance != null) Instance.OnStockPanelOpened();
+        switch (signal)
+        {
+            case TutorialSignal.StockPanelOpened:       OnStockPanelOpened(); break;
+            case TutorialSignal.MeatDraggedToGrill:     OnMeatDraggedToGrill(args.Cut); break;
+            case TutorialSignal.MeatPlacedOnGrill:      OnMeatPlacedOnGrill(args.Cut); break;
+            case TutorialSignal.CoalDraggedToGrill:     OnCoalDraggedToGrill(args.Coal); break;
+            case TutorialSignal.CoalPlacedOnGrill:      OnCoalPlacedOnGrill(args.Coal); break;
+            case TutorialSignal.GrillLayerChanged:      OnGrillLayerChanged(args.Layer); break;
+            case TutorialSignal.MeatFlipped:            OnMeatFlipped(args.Cut); break;
+            case TutorialSignal.MeatStateChanged:       OnMeatStateChanged(args.Meat); break;
+            case TutorialSignal.MeatDraggedToBuild:     OnMeatDraggedToBuild(args.Cut); break;
+            case TutorialSignal.MeatPlacedOnBuildZone:  OnMeatPlacedOnBuildZone(args.Cut); break;
+            case TutorialSignal.DeliverySelectionBegun: OnDeliverySelectionBegun(); break;
+            case TutorialSignal.ProductDelivered:       OnProductDelivered(); break;
+        }
     }
 
     private void OnStockPanelOpened()
@@ -593,61 +610,6 @@ public class TutorialManager : MonoBehaviour
             Debug.Log("[TutorialManager] OpenStockPanel condition met.");
             AdvanceStep();
         }
-    }
-
-    public static void NotifyMeatDraggedToGrill(MeatCutSO cut)
-    {
-        if (Instance != null) Instance.OnMeatDraggedToGrill(cut);
-    }
-
-    public static void NotifyMeatDraggedToBuild(MeatCutSO cut)
-    {
-        if (Instance != null) Instance.OnMeatDraggedToBuild(cut);
-    }
-
-    public static void NotifyCoalDraggedToGrill(CoalSO coal)
-    {
-        if (Instance != null) Instance.OnCoalDraggedToGrill(coal);
-    }
-
-    public static void NotifyMeatPlacedOnGrill(MeatCutSO cut)
-    {
-        if (Instance != null) Instance.OnMeatPlacedOnGrill(cut);
-    }
-
-    public static void NotifyGrillLayerChanged(GrillLayerToggle.GrillLayer newLayer)
-    {
-        if (Instance != null) Instance.OnGrillLayerChanged(newLayer);
-    }
-
-    public static void NotifyCoalPlacedOnGrill(CoalSO coal)
-    {
-        if (Instance != null) Instance.OnCoalPlacedOnGrill(coal);
-    }
-
-    public static void NotifyMeatFlipped(MeatCutSO cut)
-    {
-        if (Instance != null) Instance.OnMeatFlipped(cut);
-    }
-
-    public static void NotifyMeatStateChanged(Meat meat)
-    {
-        if (Instance != null) Instance.OnMeatStateChanged(meat);
-    }
-
-    public static void NotifyDeliverySelectionBegun()
-    {
-        if (Instance != null) Instance.OnDeliverySelectionBegun();
-    }
-
-    public static void NotifyProductDelivered()
-    {
-        if (Instance != null) Instance.OnProductDelivered();
-    }
-
-    public static void NotifyMeatPlacedOnBuildZone(MeatCutSO cut)
-    {
-        if (Instance != null) Instance.OnMeatPlacedOnBuildZone(cut);
     }
 
     // ── Notification Handlers ─────────────────────────────────────────

@@ -31,6 +31,14 @@
 > (`CustomerView.PlayRejectReaction`) y suena `AudioManager.deliveryRejectedClip`. En todo rechazo con cliente, el plato
 > "rebota" al volver al mostrador (`PlateDeliveryDraggable.StartRejectShake`).
 
+> Última actualización parcial: **2026-09-27** (rama `tutorialREV`) — **tutorial nuevo con carteles, fases 1 y 2** de
+> `PLAN_TUTORIAL_CONTEXTUAL.md`. Los `TutorialManager.Notify*` pasaron a un hub propio, `Tutorial/TutorialSignals.cs`
+> (`TutorialSignals.Raise(señal, …)` + evento `Raised`): el juego ya no sabe quién escucha, y el `TutorialManager` viejo se
+> suscribe y sigue andando igual. Carteles contextuales: `TutorialHintLayer` (canvas overlay, orden 15, sin raycaster, oculto
+> en pausa) + `TutorialHintView` (ícono del control + texto corto, pegado a un objeto del mundo o de UI) + `InputGlyphSetSO`
+> (ícono por control físico; sin dibujo, tecla en blanco con el nombre). Prefab `Prefabs/UI/TutorialHints.prefab` en
+> `GameScene`, QA en `TutorialHintDebug`. **Todavía no hay director**: ningún cartel aparece solo. Secciones 1, 2.1–2.3, 3.7 y 3.11.
+
 ---
 
 ## 0. Ficha técnica
@@ -75,7 +83,8 @@ Assets/Scripts/
 ├── Input/          InputManager (Input System nuevo, teclado/mouse + gamepad), navegación por saltos, cursor, eventos de puntero del mundo
 ├── Settings/       GameSettings: opciones del jugador (init.cfg) — cargar, guardar, aplicar
 ├── Localization/   Loc (tablas CSV por idioma) y LocalizedText (textos fijos de escena/prefab)
-├── UI/             ViewManager, Tutorial, SlidingPanel (base de paneles), notificaciones, HUD SO, feedback
+├── Tutorial/       Tutorial nuevo: señales del juego (TutorialSignals) y carteles contextuales
+├── UI/             ViewManager, Tutorial viejo, SlidingPanel (base de paneles), notificaciones, HUD SO, feedback
 │   ├── Options/        Menú de opciones: panel + fila selectora "< valor >"
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
 │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
@@ -100,6 +109,7 @@ Assets/Scripts/
 | **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI y **nombres de teclas/botones para los textos** (`InputPrompts`, tokens `[[Accion]]`). Bindings en `Assets/Input/GameControls.inputactions` | `InputPrompts.cs`, `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
 | **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú y de la tienda; no reacciona si el `Selectable` está deshabilitado) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
 | **Settings/** | `GameSettings` (estática): struct `SettingsData`, lectura perezosa de `init.cfg`, `ApplyAndSave`, aplicación (pantalla, VSync/FPS, `InputManager.SetInputMode`, `Loc.SetLanguage`) | `GameSettings.cs` |
+| **Tutorial/** | Tutorial nuevo (ver 3.7 → *Carteles contextuales*). `TutorialSignals`: hub estático por donde el juego avisa lo que hace el jugador (reemplaza a los `TutorialManager.Notify*`). Carteles: `TutorialHintLayer` (canvas y pool), `TutorialHintView` (un cartel), `InputGlyphSetSO` (íconos de controles), `TutorialHintDebug` (QA) | `TutorialSignals.cs`, `TutorialHintView.cs`, `TutorialHintLayer.cs`, `InputGlyphSetSO.cs` |
 | **Localization/** | `Loc` (estática): carga las tablas `Resources/Localization/*.csv`, idioma activo, `Get`/`Format`/`GetPool`, tokens `[[...]]`, evento `OnTextsChanged`. `LocalizedText`: componente para los textos fijos de escenas y prefabs. Herramientas de editor en `Editor/LocalizationTools.cs` | `Loc.cs`, `LocalizedText.cs` |
 | **UI/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
@@ -215,9 +225,9 @@ graph TD
     PW -->|event OnMoneyChanged| UIM & WD[WalletDisplay] & SUI
     UIM --> HUD --> HC[HudContainer]
 
-    MEAT -.->|static Notify* / Check*Allowed| TM
-    COAL -.->|static Notify*| TM
-    SP -.->|Check*Allowed| TM
+    MEAT -.->|TutorialSignals / Check*Allowed| TM
+    COAL -.->|TutorialSignals| TM
+    SP -.->|TutorialSignals / Check*Allowed| TM
     VM -->|event OnViewChanged| TM & SP
 ```
 
@@ -227,7 +237,7 @@ graph TD
 |---|---|---|
 | **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `HudManager`, `StockPanelController`, `ToppingsPanelController`, `MeatHoverBubble`, `MeatCookHoverBar`, `CustomerSelectionFrame`, `DeliveryFeedbackText`, `CustomerFeedbackConfigSO` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
 | **Observer** (`event Action`) | Ver tabla 2.3 | Suscripción en `OnEnable`/`Start`, desuscripción en `OnDisable`/`OnDestroy` |
-| **Static notification hub + gates** | `TutorialManager.Notify*(...)` y `TutorialManager.Check*Allowed(...)` | 12 `Notify*` (no-op si `Instance == null`) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` el tutorial no existe y nada cambia |
+| **Static notification hub + gates** | `TutorialSignals.Raise(...)` y `TutorialManager.Check*Allowed(...)` | 13 señales `TutorialSignal` (evento estático `Raised`, no-op sin suscriptores: el juego no sabe quién escucha) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` no hay `TutorialManager` y ningún gate bloquea |
 | **Command** | `IBuildUndoAction` + `BuildUndoHistory` (pila) | `AddSideUndoAction`, `AddToppingUndoAction`, `SetBreadUndoAction`, **`AddMeatUndoAction`** (devuelve el corte a la bandeja) |
 | **Buffer / staging area** | `MeatTransferBuffer`, `CoalTransferBuffer` | `BufferedMeatData`/`BufferedCoalData` (POCO con tiempos de cocción) + visuales. `MeatTransferBuffer` hoy administra **plato + bandeja**; la cola `ToGrill/MeatHolder` es legado |
 | **Duck typing por reflexión / `SendMessage`** | `WorldPointerDispatcher`→ colliders del mundo (`OnWorldPointerXXX`, igual que los `OnMouseXXX` nativos), `GameManager`→`MeatTransferBuffer`, `MeatHolderDraggableMeat`, `CoolerDraggableMeat`, `*StockVisualizer` | `Type.GetType` sobre todos los assemblies + `MethodInfo.Invoke` / `SendMessage(..., DontRequireReceiver)`. Rompe el binding estático a propósito |
@@ -251,7 +261,8 @@ graph TD
 | `ShopSystem` | `OnTabChanged` | `ShopGridUI` (rebuild), `ShopBreadcrumbUI`, `ShopSubtitleUI`, `ShopNextButtonUI`, (2D: `ShopTabBar2D`, `ShopGrid2D`) |
 | `ShopSystem` | `OnCartChanged`, `OnPurchaseResult(bool,string)` | Solo la capa 2D. **La UI activa compra directo y no usa carrito** |
 | `GamePause` | `static OnPaused` | Todos los draggables con un arrastre en curso (cancelan y vuelven al origen) |
-| `Loc` | `static OnTextsChanged` | Cambió el idioma o un token (se pasó de teclado a joystick): `LocalizedText`, `HudManager` (día), `CustomerOrderBubble`, `StrikeLimitNotice`, `Shop*UI` |
+| `Loc` | `static OnTextsChanged` | Cambió el idioma o un token (se pasó de teclado a joystick): `LocalizedText`, `HudManager` (día), `CustomerOrderBubble`, `StrikeLimitNotice`, `Shop*UI`, `TutorialHintView` (texto e ícono del control) |
+| `TutorialSignals` | `static Raised(TutorialSignal, TutorialSignalArgs)` | `TutorialManager` (escenas de tutorial), `TutorialHintDebug` (QA). Lo disparan el stock, la parrilla, la carne, el plato y la entrega (ver 3.7) |
 | `InputManager` | `static OnSchemeChanged`, `static OnGamepadFamilyChanged` | `InputPrompts` (→ `Loc.RefreshTexts`), resto de la navegación del gamepad |
 | `SceneManagementUtils` | `OnSceneLoaded` (static) | (disponible; suscrito vía `RuntimeInitializeOnLoadMethod`) |
 | `ShopButton2D` / `ShopTabButton2D` | `OnClicked`, `OnTabClicked(ShopTabType)` | Celdas, barras de tabs |
@@ -1540,14 +1551,8 @@ static bool CheckViewChangeAllowed(ViewType), CheckStockPanelOpenAllowed(), Chec
             CheckBuildAssemblyAllowed(), CheckDeliveryStartAllowed(), CheckDeliveryConfirmAllowed(),
             CheckCleanAshesAllowed(), CheckClearBuildPlateAllowed()   // estos dos: siempre false en tutorial
 
-// Hub estático de notificaciones (no-op si Instance == null):
-static void NotifyStockPanelOpened()
-static void NotifyMeatDraggedToGrill/ToBuild(MeatCutSO)
-static void NotifyCoalDraggedToGrill(CoalSO), NotifyCoalPlacedOnGrill(CoalSO)
-static void NotifyMeatPlacedOnGrill(MeatCutSO), NotifyMeatPlacedOnBuildZone(MeatCutSO)
-static void NotifyGrillLayerChanged(GrillLayerToggle.GrillLayer)
-static void NotifyMeatFlipped(MeatCutSO), NotifyMeatStateChanged(Meat)
-static void NotifyDeliverySelectionBegun(), NotifyProductDelivered()
+// Avance por lo que hace el jugador: se suscribe a TutorialSignals.Raised en Awake y HandleSignal
+// manda cada señal a su handler (OnStockPanelOpened, OnMeatPlacedOnGrill...), como antes los Notify*.
 ```
 
 - `StartTutorial()`: asegura un `EventSystem` (con `InputSystemUIInputModule` configurado por `InputManager`), hace backup del stock del `CoolerSystem` y lo sustituye por el del
@@ -1618,6 +1623,51 @@ volver a clonar y reaplicar la tabla).
 
 #### `TutorialOfferController` — `UI/TutorialOfferController.cs`
 Diálogo al entrar a `GameScene` (`GamePause.SetDialogPaused(true)`): "sí" carga `TutorialScene`, "no" reanuda.
+
+#### Carteles contextuales (tutorial nuevo) — `Tutorial/`
+Reemplazo en curso del tutorial de arriba: en vez de pasos con paneles que frenan el juego, carteles chicos (ícono del
+control + 2-4 palabras) en la zona de la acción, dentro de la partida real. Nada bloquea ni pausa. Plan y catálogo de
+carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1 y 2** (señales y cartel); falta el director que decide
+qué cartel mostrar y cuándo, así que hoy solo aparecen desde el QA.
+
+```csharp
+// TutorialSignals — estática. Único punto por donde el juego avisa al tutorial.
+static event Action<TutorialSignal, TutorialSignalArgs> Raised;
+static void Raise(TutorialSignal, MeatCutSO cut = null, CoalSO coal = null, Meat meat = null,
+                  GrillLayer layer = default, Transform target = null)   // con meat, cut y target salen de la carne
+// TutorialSignalArgs: Cut, Coal, Meat, Layer, Target (lo que conviene señalar: la carne, el carbón, la carne ya en el plato)
+
+// TutorialHintLayer — singleton de escena, en el canvas del prefab TutorialHints
+TutorialHintView Show(HintPrompt, string textKey, Transform target, HintPlacement, Vector2 offset = default)
+void HideAll(bool completed = false)
+// TutorialHintView
+void Dismiss(bool completed)          // cumplido: sale con un pop; si no, se desvanece
+int Generation; bool IsShowing, IsInUse; Transform Target
+```
+
+| Señal (`TutorialSignal`) | La dispara |
+|---|---|
+| `StockPanelOpened` / `ToppingsPanelOpened` | `StockPanelController` / `ToppingsPanelController` → `OnPanelOpened` (Q/E, LB/RB o la pestaña) |
+| `MeatDraggedToGrill` + `MeatPlacedOnGrill` | `StockPanelSlot` (con la carne creada); `MeatPlacedOnGrill` también desde la bandeja y el plato (`MeatTransferBuffer`) |
+| `CoalDraggedToGrill` + `CoalPlacedOnGrill` | `StockPanelSlot` (con el carbón creado) |
+| `GrillLayerChanged` | `GrillLayerToggle.ShowLayer` (también en su `Start`) |
+| `MeatFlipped` / `MeatStateChanged` | `Meat.Flip` / `Meat.RefreshState` |
+| `MeatDraggedToBuild` + `MeatPlacedOnBuildZone` | `MeatTransferBuffer` (parrilla → plato; bandeja → plato solo la segunda). `Target` = la carne ya en el plato |
+| `DeliverySelectionBegun` / `ProductDelivered` | `PlateDeliveryDraggable` al agarrar el plato / `GameManager.TryDeliverToCustomer` (entrega cobrada, no la cruda/quemada) |
+
+⚠️ `TutorialSignal`, `HintInput` y `HintPlacement` se van a serializar como `int` en los assets de carteles: **valores
+nuevos siempre al final**.
+
+| Pieza | Qué hace |
+|---|---|
+| `TutorialHintLayer` + prefab `Prefabs/UI/TutorialHints.prefab` | Canvas **Screen Space Overlay**, orden **15** (arriba de la tienda, 10; abajo de los popups de `EndScene`, 20/30; el cursor del joystick va en 32000), `CanvasScaler` 1920×1080 / 0.5 como la tienda. **Sin `GraphicRaycaster`** y todos los gráficos con `raycastTarget` apagado: no le saca clicks ni hovers a nada. Se apaga el canvas mientras `GamePause.IsPaused` (menú y diálogo). Crea y recicla los carteles. Está en `GameScene` |
+| `TutorialHintView` + prefab `Prefabs/UI/TutorialHint.prefab` | Un cartel. Fondo 9-slice (`Background`, **fuera del layout**: un `Image` Sliced informa como tamaño preferido la suma de sus bordes sin el `pixelsPerUnitMultiplier` y agrandaba el cartel), ícono, texto (`Loc.Get(textKey)`) y flecha. Cada `LateUpdate` mide su objetivo — objeto del mundo: `Renderer` o `Collider2D` del objeto, 8 esquinas proyectadas con la cámara en perspectiva; UI: `RectTransform` con la cámara de su canvas — y se pone del lado pedido (`HintPlacement`), con la punta de la flecha a `gap` px. No se sale de la pantalla: se corre y la flecha compensa sobre su borde. Entra con pop, vaivén hacia el objetivo y sale con pop (cumplido) o fundido; todo en tiempo sin escalar. Si el objetivo se destruye, se va solo. Escucha `Loc.OnTextsChanged`: cambia texto e ícono al cambiar idioma o control |
+| `InputGlyphSetSO` — `ScriptableObjects/TutorialHints/InputGlyphs.asset` | Ícono de cada `HintPrompt` (una `GameAction`, click, click derecho, arrastrar o pasar por encima) para el control en uso. Busca por **control físico del binding** (`InputPrompts.GetControl`), así que cambiar una tecla en `GameControls.inputactions` cambia el ícono solo. Con dibujo (`LetraQ`, `LetraE`, los del mouse) lo usa entero; si no, **tecla o botón de joystick en blanco con el nombre** (`InputPrompts.GetLabel(acción, esquema, familia)`): cualquier binding y cualquier joystick andan sin arte nuevo. Con joystick, arrastrar = mantener A/Cruz y pasar por encima = seleccionar con el stick (`leftStick`, sin dibujo todavía: queda solo el texto) |
+| `TutorialHintDebug` (en el prefab) | QA, menú contextual en Play: *QA/Mostrar Q y E (se van al abrir cada panel)* — debajo de cada pestaña, se retiran con `StockPanelOpened` / `ToppingsPanelOpened` —, *QA/Mostrar el cartel de prueba* (objetivo, control, clave, lado, offset y señal que lo retira, del inspector) y *QA/Ocultar todos*. `showPanelHintsOnStart` los muestra al arrancar |
+| Arte provisorio — `Sprites/UI/Tutorial/* PH.png` | Fondo y flecha del cartel, tecla y botón de joystick en blanco (9-slice, dibujados a 2x: `pixelsPerUnitMultiplier = 2`) e íconos de mouse. Para reemplazar por arte final. `LetraQ` y `LetraE` pasaron a tener **mipmaps**: en el cartel se ven ~12 veces más chicas. `LetraR` y `LetraSpace` no se usan: vienen en lienzos de 1536×1024 casi vacíos (hay que recortarlas) y `LetraSpace` a ese tamaño no se lee |
+
+Textos: claves `hint.*` en `Tutorial.csv`. Ubicación probada a 1920×1080 con clientes: al costado de la pestaña izquierda el
+cartel le tapa la cara al primer cliente; debajo de cada pestaña no tapa nada.
 
 ---
 
@@ -1814,7 +1864,7 @@ sus caracteres (nota 30).
 | `LocalizedText` | Componente sobre un `TMP_Text` con un texto **fijo** (botón, título, panel del tutorial): `key` serializada; escribe `Loc.Get(key)` en `OnEnable` y en cada `OnTextsChanged`. En el Editor el TMP conserva el texto en español. Está en 129 textos: menú principal, opciones, pausa, oferta de tutorial, tienda, popups de `EndScene`, `EndScreen` y los 27 paneles de tutorial en uso |
 | Textos armados por código | `Loc.Get`/`Loc.Format` en el script que escribe el texto (HUD, burbujas, tienda, derrota, strikes, mensajes de entrega). Los que pueden quedar en pantalla al cambiar el idioma escuchan `OnTextsChanged` |
 | Nombres de ítems | `ItemDataSO.nameKey` → `DisplayName`, `UpgradeSO.descriptionKey` → `DisplayDescription`, y lo mismo en `BreadSO` / `SideSO`. Clave vacía = se muestra el nombre serializado tal cual: es lo que pasa con **cortes y toppings, que no se traducen**. Los puntos de cocción: `MeatHoverText.GetStateDisplayName` (`cooking.*`: Raw, Rare, Medium, Well Done, Overcooked, Burnt) |
-| `InputPrompts` — `Input/InputPrompts.cs` | Resuelve `[[Accion]]` (nombres de `GameAction` + `PointerPrimary`/`PointerSecondary`) con la tecla o botón **del binding real** en el control activo: teclado (`input.key.<control>`, o la tecla en mayúsculas), Xbox/genérico (`input.xbox.<control>`) o PlayStation (`input.ps.<control>`). Devuelve en negrita. Al cambiar de esquema o de familia de gamepad llama `Loc.RefreshTexts`, así el tutorial pasa de "Q" a "LB"/"L1" en vivo |
+| `InputPrompts` — `Input/InputPrompts.cs` | Resuelve `[[Accion]]` (nombres de `GameAction` + `PointerPrimary`/`PointerSecondary`) con la tecla o botón **del binding real** en el control activo: teclado (`input.key.<control>`, o la tecla en mayúsculas), Xbox/genérico (`input.xbox.<control>`) o PlayStation (`input.ps.<control>`). Devuelve en negrita. Al cambiar de esquema o de familia de gamepad llama `Loc.RefreshTexts`, así el tutorial pasa de "Q" a "LB"/"L1" en vivo. `GetControl(acción, esquema)` da el control físico del binding ("q", "leftShoulder") y `GetLabel(acción, esquema, familia)` el nombre para un control que no es el activo: los usa `InputGlyphSetSO` para los íconos de los carteles |
 | `LocalizationTools` — `Editor/` | Menú `Tools/Localización/`: **Validar tablas** (celdas vacías, `{n}` o `[[tokens]]` que no coinciden con el español, tokens inexistentes, claves usadas en código o assets que no están), **Recargar tablas**, **Siguiente idioma (Play)** (solo la sesión) y abrir la carpeta. Inspector de `LocalizedText` con el texto de cada idioma |
 
 ## 4. Puntos de entrada e inicialización

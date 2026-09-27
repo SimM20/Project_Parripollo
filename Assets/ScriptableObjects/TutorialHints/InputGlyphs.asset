@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d71faf18966b7504f92c1cbaace142d0, type: 3}
+  m_Name: InputGlyphs
+  m_EditorClassIdentifier: 
+  blankKey: {fileID: 21300000, guid: 6fe61c08d66d1614a95aab8754f47fac, type: 3}
+  blankPadButton: {fileID: 21300000, guid: 1ccd9a13f08cc5c47b7ad2d9dbcc300a, type: 3}
+  entries:
+  - device: 0
+    control: q
+    sprite: {fileID: 21300000, guid: b73469caf2c6fef4e9774266f9915ff5, type: 3}
+  - device: 0
+    control: e
+    sprite: {fileID: 21300000, guid: f044450113531c74fba7464fbc68aa62, type: 3}
+  - device: 1
+    control: leftButton
+    sprite: {fileID: 21300000, guid: db7133099e586b3469a34dcab0e7f58d, type: 3}
+  - device: 1
+    control: rightButton
+    sprite: {fileID: 21300000, guid: e461facdc35b855408febb5fd89678ed, type: 3}
+  - device: 1
+    control: drag
+    sprite: {fileID: 21300000, guid: d1be7520278e5c348851701c2467612d, type: 3}
+  - device: 1
+    control: hover
+    sprite: {fileID: 21300000, guid: c592c0ff074ac1640a4e455d43de0784, type: 3}

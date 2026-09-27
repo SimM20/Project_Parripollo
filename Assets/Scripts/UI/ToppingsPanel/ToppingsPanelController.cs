@@ -79,6 +79,8 @@ public class ToppingsPanelController : SlidingPanel
         }
     }
 
+    protected override void OnPanelOpened() => TutorialSignals.Raise(TutorialSignal.ToppingsPanelOpened);
+
     protected override void ValidateReferences()
     {
         base.ValidateReferences();

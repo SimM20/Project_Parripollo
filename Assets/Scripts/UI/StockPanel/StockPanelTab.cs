@@ -9,6 +9,9 @@ public class StockPanelTab : MonoBehaviour
     [Header("References")]
     [SerializeField] private SlidingPanel controller;
 
+    /// <summary>Panel que abre esta pestaña.</summary>
+    public SlidingPanel Controller => controller;
+
     void Awake()
     {
         EnsureCollider2D();

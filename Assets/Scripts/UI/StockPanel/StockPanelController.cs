@@ -103,7 +103,7 @@ public class StockPanelController : SlidingPanel
 
     protected override void OnPanelClosing() => CancelActiveDrag();
 
-    protected override void OnPanelOpened() => TutorialManager.NotifyStockPanelOpened();
+    protected override void OnPanelOpened() => TutorialSignals.Raise(TutorialSignal.StockPanelOpened);
 
     protected override bool CanOpen() => TutorialManager.CheckStockPanelOpenAllowed();
 

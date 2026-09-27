@@ -253,14 +253,14 @@ public class StockPanelSlot : MonoBehaviour
 
         if (droppedItem is MeatCutSO cut)
         {
-            if (!grill.TrySpawnMeatAtPoint(cut, dropWorldPoint, rotateFootprint))
+            if (!grill.TrySpawnMeatAtPoint(cut, dropWorldPoint, out Meat spawnedMeat, rotateFootprint))
             {
                 cooler.Add(droppedItem, 1);
                 return;
             }
 
-            TutorialManager.NotifyMeatDraggedToGrill(cut);
-            TutorialManager.NotifyMeatPlacedOnGrill(cut);
+            TutorialSignals.Raise(TutorialSignal.MeatDraggedToGrill, cut: cut, meat: spawnedMeat);
+            TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: cut, meat: spawnedMeat);
             return;
         }
 
@@ -272,8 +272,8 @@ public class StockPanelSlot : MonoBehaviour
                 return;
             }
 
-            TutorialManager.NotifyCoalDraggedToGrill(coal);
-            TutorialManager.NotifyCoalPlacedOnGrill(coal);
+            TutorialSignals.Raise(TutorialSignal.CoalDraggedToGrill, coal: coal, target: spawnedCoal.transform);
+            TutorialSignals.Raise(TutorialSignal.CoalPlacedOnGrill, coal: coal, target: spawnedCoal.transform);
             return;
         }
 
