@@ -333,6 +333,7 @@ public class ShopSystem : MonoBehaviour
 
         message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);
+        TutorialSignals.Raise(TutorialSignal.ShopPurchased);
         return true;
     }
 
@@ -385,6 +386,7 @@ public class ShopSystem : MonoBehaviour
 
         message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);
+        TutorialSignals.Raise(TutorialSignal.ShopPurchased);
         return true;
     }
     
@@ -446,6 +448,7 @@ public class ShopSystem : MonoBehaviour
         Toppings.Add(topping, qty);
         message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);
+        TutorialSignals.Raise(TutorialSignal.ShopPurchased);
         return true;
     }
 

@@ -75,3 +75,8 @@ hint.undo,Deshacer,Undo
 hint.burning,Se quema,It's burning
 hint.strikes,3 strikes y cerrás,3 strikes and you close
 hint.closed,Cerrado: atendé a los que quedan,Closed: serve who's left
+# Carteles de la tienda (EndScene)
+hint.shop_minimum,Lo mínimo para mañana,What you need for tomorrow
+hint.shop_buy,Comprar,Buy
+hint.shop_blocked,"Primero, lo mínimo",Minimum first
+hint.shop_streak,"Con 3, perdés la partida",3 in a row and you lose

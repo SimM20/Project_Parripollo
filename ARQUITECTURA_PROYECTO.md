@@ -59,6 +59,13 @@
 > verse (`TutorialHintSO.completeAfterSeconds`) y la foto de la partida anota lo que solo se sabe por señal (qué pieza se
 > agarró, si el cliente rechazó el plato). Sección 3.7 → *Carteles contextuales*.
 
+> Última actualización parcial: **2026-09-27** (rama `tutorialREV`) — **tutorial nuevo, fase 6: la tienda**. `EndScene` tiene
+> su instancia del prefab `TutorialHints` con el set `CartelesTienda` (4 carteles: lo mínimo para mañana, Comprar, compra
+> bloqueada por los mínimos y la racha de strikes), que esperan a que se cierre el popup de strikes. Señal nueva
+> `ShopPurchased` (`ShopSystem`, en cada compra) y lecturas nuevas en la tienda: `ShopItemCellUI.CanBuy` /
+> `BlockedByMinimums` / `BuyButton`, `ShopGridUI.Cells` / `Viewport`, `ShopRequirementsUI.Panel` / `StreakLine` y
+> `StrikeEndPopup.IsOpen`. La parte de la tienda de la foto está en `TutorialHintContext.Shop.cs`. Secciones 3.6, 3.7 y 4.
+
 ---
 
 ## 0. Ficha técnica
@@ -1450,6 +1457,11 @@ el flag `started` evita refrescar antes del primer `Start`.
 | `ShopSubtitleUI` | Una línea de ayuda por tab (`detailText`, Nunito). `titleText` es **opcional** y en el prefab está sin asignar: la tab activa ya dice en qué sección estás. En `Coal` el detalle es dinámico: `shop.help.coal` (`"Venís usando {0} unidades de carbón por jornada."`) o `shop.help.coal.first_night` si `DaysPlayed == 0` |
 | `ShopNextButtonUI` | Avanza `Coal → Meat → Upgrades → Toppings` cambiando el label (`"Siguiente: Carnes"`…`"Arrancar el día"`); en `Toppings` el botón carga `GameScene` |
 
+Lecturas para los carteles del tutorial (no cambian nada de la tienda): `ShopItemCellUI.CanBuy` y `BlockedByMinimums`
+(separan el Comprar apagado por plata del apagado por los mínimos) y `BuyButton`; `ShopGridUI.Cells` y `Viewport`;
+`ShopRequirementsUI.Panel` y `StreakLine`. `ShopSystem` dispara `TutorialSignal.ShopPurchased` en cada compra. Ver 3.7 →
+*Carteles de la tienda*.
+
 Navegación por tabs: **dos entradas** — el breadcrumb (salto directo a cualquier tab) y el botón
 "Siguiente" (avance secuencial). Ambas terminan en `ShopSystem.SetTab`, así que el estado visual
 queda sincronizado por el evento `OnTabChanged`. En `ShopTutorial`, además, `TutorialManager` fuerza el tab
@@ -1648,9 +1660,9 @@ en la fase 4 del tutorial nuevo. El script se borra en la fase 7.
 #### Carteles contextuales (tutorial nuevo) — `Tutorial/`
 Reemplazo en curso del tutorial de arriba: en vez de pasos con paneles que frenan el juego, carteles chicos (ícono del
 control + 2-4 palabras) en la zona de la acción, dentro de la partida real. Nada bloquea ni pausa. Plan y catálogo de
-carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1 a 5**: señales, cartel, director, los carteles de la
-primera noche y los de la primera vez que pasa algo, opción *Ayudas* y lo aprendido guardado en `init.cfg`. Faltan el
-arte (fase 0), la tienda (6) y borrar el tutorial viejo (7).
+carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1 a 6**: señales, cartel, director, los carteles de la
+primera noche, los de la primera vez que pasa algo y los de la tienda, opción *Ayudas* y lo aprendido guardado en
+`init.cfg`. Faltan el arte (fase 0) y borrar el tutorial viejo (fase 7).
 
 ```csharp
 // TutorialSignals — estática. Único punto por donde el juego avisa al tutorial.
@@ -1707,6 +1719,7 @@ enseguida después de cada señal; en pausa, nada. En cada revisión rearma la f
 | `CustomerClicked` | `CustomerView.OnWorldPointerDown` (el jugador elige al cliente; el `SelectCustomer` automático no la dispara) |
 | `DeliveryRejected` | `GameManager.TryDeliverToCustomer` cuando rechaza el cliente (`rejectedByCustomer`: corte equivocado o plato que no le sirve) |
 | `PlateCleared` / `UndoUsed` | `GameManager`, acción `ClearPlate` (C) / `BuildUndoHistory.UndoLast` (botón ↶) |
+| `ShopPurchased` | `ShopSystem`, en cada compra que sale bien (`TryBuyNow`, `TryBuyToppingNow`, `TryConfirmPurchase`), junto a `OnPurchaseResult(true, …)` |
 
 ⚠️ `TutorialSignal`, `HintInput`, `HintPlacement`, `HintAnchorId` y `HintCondition` se serializan como `int` en los assets de
 carteles: **valores nuevos siempre al final**. ⚠️ `GrillLayerChanged` también sale en el `Start` de `GrillLayerToggle`, con la
@@ -1714,11 +1727,11 @@ capa inicial: un cartel que se aprenda con esa señal necesita un `completeOnlyI
 
 | Pieza | Qué hace |
 |---|---|
-| `TutorialHintLayer` + prefab `Prefabs/UI/TutorialHints.prefab` | Canvas **Screen Space Overlay**, orden **15** (arriba de la tienda, 10; abajo de los popups de `EndScene`, 20/30; el cursor del joystick va en 32000), `CanvasScaler` 1920×1080 / 0.5 como la tienda. **Sin `GraphicRaycaster`** y todos los gráficos con `raycastTarget` apagado: no le saca clicks ni hovers a nada. Se apaga el canvas mientras `GamePause.IsPaused` (menú y diálogo). Crea y recicla los carteles. Está en `GameScene` |
+| `TutorialHintLayer` + prefab `Prefabs/UI/TutorialHints.prefab` | Canvas **Screen Space Overlay**, orden **15** (arriba de la tienda, 10; abajo de los popups de `EndScene`, 20/30; el cursor del joystick va en 32000), `CanvasScaler` 1920×1080 / 0.5 como la tienda. **Sin `GraphicRaycaster`** y todos los gráficos con `raycastTarget` apagado: no le saca clicks ni hovers a nada. Se apaga el canvas mientras `GamePause.IsPaused` (menú y diálogo). Crea y recicla los carteles. Está en `GameScene` y en `EndScene` (una instancia del prefab en cada una, al final de la raíz) |
 | `TutorialHintView` + prefab `Prefabs/UI/TutorialHint.prefab` | Un cartel. Fondo 9-slice (`Background`, **fuera del layout**: un `Image` Sliced informa como tamaño preferido la suma de sus bordes sin el `pixelsPerUnitMultiplier` y agrandaba el cartel), ícono, texto (`Loc.Get(textKey)`) y flecha. Cada `LateUpdate` mide su objetivo — objeto del mundo: `Renderer` o `Collider2D` del objeto, 8 esquinas proyectadas con la cámara en perspectiva; UI: `RectTransform` con la cámara de su canvas — y se pone del lado pedido (`HintPlacement`), con la punta de la flecha a `gap` px. No se sale de la pantalla: se corre y la flecha compensa sobre su borde. Entra con pop, vaivén hacia el objetivo y sale con pop (cumplido) o fundido; todo en tiempo sin escalar. Si el objetivo se destruye, se va solo. Escucha `Loc.OnTextsChanged`: cambia texto e ícono al cambiar idioma o control |
 | `InputGlyphSetSO` — `ScriptableObjects/TutorialHints/InputGlyphs.asset` | Ícono de cada `HintPrompt` (una `GameAction`, click, click derecho, arrastrar o pasar por encima) para el control en uso. Busca por **control físico del binding** (`InputPrompts.GetControl`), así que cambiar una tecla en `GameControls.inputactions` cambia el ícono solo. Con dibujo (`LetraQ`, `LetraE`, los del mouse) lo usa entero; si no, **tecla o botón de joystick en blanco con el nombre** (`InputPrompts.GetLabel(acción, esquema, familia)`): cualquier binding y cualquier joystick andan sin arte nuevo. Con joystick, arrastrar = mantener A/Cruz y pasar por encima = seleccionar con el stick (`leftStick`, sin dibujo todavía: queda solo el texto) |
-| `TutorialHintDirector` (en el prefab, con `CartelesPartida`) | Ver *Cómo decide el director*. No busca nada por frame: la foto la arma `TutorialHintContext` |
-| `TutorialHintContext` | Foto de solo lectura: paneles abiertos (`IsOpen`), capa (`GrillLayerToggle.IsItemTypeAllowed`), carbón (`Coal.ActiveCoals`, la ceniza no cuenta), plato (`BuildFoodDropZone.Zones` → `HasLoadedPlate`), clientes que esperan (`IsCustomerActive`) y carnes en la parrilla (slots de carne del `GrillSystem`, una vez por corte aunque ocupe varios). Resuelve las zonas: pestañas (`StockPanelTab.Controller`), botón de capa, **slot de carne del medio de la fila de arriba** (el sprite de la parrilla tiene mucho margen transparente), `PlateBody`, la carne y **la burbuja (`CustomerOrderBubble.Panel`) del primer cliente que espera y se puede señalar**: con un panel abierto encima, el juego le apaga el collider (`CustomerView.PickCollider`) y no se le puede pasar el puntero, así que ahí "Ver pedido" no aparece. Las piezas fijas se buscan una sola vez: además de las de arriba, las X de strikes (`StrikeHudView`), la hora (`HudContainer` de tipo `Time`), el botón ↶ (`RollbackButtonUI`) y los panes y frascos del panel derecho (`BuildDraggableFoodItem`, `ToppingDraggable.ToppingData`). **Plato**: su cliente es el primero que espera el corte que hay en el plato; de ahí salen el pan y las salsas que faltan y dónde están en el panel. **Sin stock**: un cliente que pide un corte con stock 0 y sin ninguno en la parrilla ni en el plato (la bandeja no se mira); la M va al elegido (`CustomerSystem.SelectedCustomer`), así que se separa el elegido de los demás. **Lo que anota de las señales**: la pieza agarrada vale mientras exista, esté activa y siga apretado el botón (`InputManager.PrimaryHeld`); el rechazo, hasta que el plato se vacía |
+| `TutorialHintDirector` (en el prefab) | Ver *Cómo decide el director*. No busca nada por frame: la foto la arma `TutorialHintContext`. Set por escena: `CartelesPartida` en `GameScene` (el del prefab) y `CartelesTienda` en `EndScene` (override de la instancia) |
+| `TutorialHintContext` | Foto de solo lectura: paneles abiertos (`IsOpen`), capa (`GrillLayerToggle.IsItemTypeAllowed`), carbón (`Coal.ActiveCoals`, la ceniza no cuenta), plato (`BuildFoodDropZone.Zones` → `HasLoadedPlate`), clientes que esperan (`IsCustomerActive`) y carnes en la parrilla (slots de carne del `GrillSystem`, una vez por corte aunque ocupe varios). Resuelve las zonas: pestañas (`StockPanelTab.Controller`), botón de capa, **slot de carne del medio de la fila de arriba** (el sprite de la parrilla tiene mucho margen transparente), `PlateBody`, la carne y **la burbuja (`CustomerOrderBubble.Panel`) del primer cliente que espera y se puede señalar**: con un panel abierto encima, el juego le apaga el collider (`CustomerView.PickCollider`) y no se le puede pasar el puntero, así que ahí "Ver pedido" no aparece. Las piezas fijas se buscan una sola vez: además de las de arriba, las X de strikes (`StrikeHudView`), la hora (`HudContainer` de tipo `Time`), el botón ↶ (`RollbackButtonUI`) y los panes y frascos del panel derecho (`BuildDraggableFoodItem`, `ToppingDraggable.ToppingData`). **Plato**: su cliente es el primero que espera el corte que hay en el plato; de ahí salen el pan y las salsas que faltan y dónde están en el panel. **Sin stock**: un cliente que pide un corte con stock 0 y sin ninguno en la parrilla ni en el plato (la bandeja no se mira); la M va al elegido (`CustomerSystem.SelectedCustomer`), así que se separa el elegido de los demás. **Lo que anota de las señales**: la pieza agarrada vale mientras exista, esté activa y siga apretado el botón (`InputManager.PrimaryHeld`); el rechazo, hasta que el plato se vacía. **Tienda** (`TutorialHintContext.Shop.cs`, parte de la misma clase): lista si la grilla está activa y el popup de strikes no está abierto (con la derrota total el canvas está apagado); de las tarjetas que se ven dentro del viewport de la grilla, el primer Comprar habilitado y el primero apagado por los mínimos; la línea de la racha si está activa. Sin `ShopGridUI` en la escena (`GameScene` tiene un `ShopSystem` sin UI) esta parte no hace nada |
 | `TutorialHintSO` + `TutorialHintSetSO` | Un cartel: `id` (vacío = nombre del asset; no cambiarlo una vez publicado), `prompt`, `textKey`, `anchor` + `placement` + `offset`, `requires`, `showWhile` (todas), `priority`, `completeOn` (`None` = ninguna) + `completeOnlyIf` (todas) y `completeAfterSeconds` (> 0: se aprende solo después de verse ese tiempo; para avisos, o para no insistir con algo opcional como rotar). El set los ordena; en empate de prioridad gana el primero |
 | `TutorialProgress` | Qué carteles se aprendieron (por `id`) y si las ayudas están prendidas (opción *Ayudas*, `GameSettings.Current.tutorialHints`). Lee la lista de `GameSettings.LearnedHints` la primera vez y la reescribe en `init.cfg` (`SaveLearnedHints`) con cada cartel aprendido: sobrevive a cerrar el juego. `Reset` (volver a prender las ayudas, o *QA/Reiniciar*) la vacía |
 | `TutorialHintDebug` (en el prefab) | QA, menú contextual en Play: *QA/Reiniciar las ayudas (todo sin aprender)*, *QA/Dar todas por aprendidas* (estas dos se guardan en `init.cfg`), *QA/Mostrar el cartel de prueba* (objetivo, control, clave, lado, offset y señal que lo retira, del inspector) y *QA/Ocultar los carteles* (los del director vuelven en la próxima revisión si siguen valiendo) |
@@ -1767,6 +1780,22 @@ Ubicación probada a 1920×1080 con clientes: al costado de la pestaña izquierd
 debajo de cada pestaña no tapa nada. En el panel derecho (grilla de 3 columnas: los dos panes y las fritas arriba, las
 ensaladas y la criolla en el medio, el chimichurri abajo) el pan va abajo y la salsa arriba: así cada cartel tapa solo
 guarniciones, que los pedidos no llevan. Si se reordena el panel, revisar esos dos lados.
+
+**Carteles de la tienda** (`CartelesTienda`, en `ScriptableObjects/TutorialHints/Tienda/`; director en `EndScene`). Todos
+piden `ShopReady`: mientras el popup de cierre por strikes tapa la tienda, esperan.
+
+| Asset (`id`) | Cartel | Zona | Se ve mientras | Se aprende con | Prio |
+|---|---|---|---|---|---|
+| `T1.LoMinimo` (`shop_minimum`) | Lo mínimo para mañana | panel de requisitos, arriba | la tienda está lista (y aplica mínimos) | `ShopPurchased`, o 6 s a la vista | 50 |
+| `T2.Comprar` (`shop_buy`) | 🖱 Comprar | el primer Comprar habilitado, abajo | hay uno a la vista | `ShopPurchased` | 60 |
+| `T3.PrimeroLoMinimo` (`shop_blocked`) | Primero, lo mínimo | un Comprar apagado por los mínimos, abajo | se ve uno: se puede pagar, pero dejaría los mínimos fuera de alcance | 5 s a la vista | 70 |
+| `T4.Racha` (`shop_streak`) | Con 3, perdés la partida | la línea de la racha, a la derecha | racha > 0 | 5 s a la vista | 80 |
+
+Al entrar sin racha se ven T2 + T1; con racha, T4 + T2 y T1 cuando T4 se va. T3 no sale en los Comprar apagados por
+plata (`CanBuy` y `BlockedByMinimums` separan los dos casos): en la práctica aparece en Mejoras o Toppings con la plata
+justa. T4 va a la derecha de su línea porque arriba tapa la del carbón: el rect del texto ocupa el ancho del panel, así
+que el cartel cae en el hueco entre los requisitos y "Siguiente". "Con 3" está escrito en el texto: si cambia
+`MaxConsecutiveStrikeNights`, cambiarlo también.
 
 ---
 
@@ -2099,7 +2128,8 @@ EndScene
    │     Breadcrumb: 4 ShopTabButtonUI → SetTab (salto directo a cualquier tab)
    │     Grid:       celdas con −/+ y botón Comprar → TryBuyNow / TryBuyToppingNow (pago inmediato)
    │     Next:       avance secuencial de tab; en Toppings → SceneManager.LoadScene("GameScene")
-   └─ ShopRoot        prefab de la capa 2D — presente en la escena pero con m_IsActive = 0
+   ├─ ShopRoot        prefab de la capa 2D — presente en la escena pero con m_IsActive = 0
+   └─ TutorialHints   carteles de la tienda (orden 15, set CartelesTienda): esperan a que se cierre el popup de strikes (ver 3.7)
 
 SceneManagementUtils.ReturnToMainMenu()   ← reset total
    destruye PlayerWallet, CoalConsumptionTracker, CoolerSystem, ToppingStock (los 4 DDOL)

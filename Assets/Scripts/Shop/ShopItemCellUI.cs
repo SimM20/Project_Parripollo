@@ -39,6 +39,14 @@ public class ShopItemCellUI : MonoBehaviour
 
     private int MaxQty => (shop != null && item != null) ? shop.GetMaxPurchaseQty(item) : ShopSystem.UnlimitedQty;
 
+    public Button BuyButton => buyButton;
+
+    /// <summary>El Comprar está habilitado: se puede pagar y la compra no rompe los mínimos del próximo día.</summary>
+    public bool CanBuy { get; private set; }
+
+    /// <summary>Se puede pagar, pero la compra dejaría los mínimos del próximo día fuera de alcance.</summary>
+    public bool BlockedByMinimums { get; private set; }
+
     void Awake()
     {
         if (minusButton != null) minusButton.onClick.AddListener(OnMinus);
@@ -127,9 +135,12 @@ public class ShopItemCellUI : MonoBehaviour
             ? shop.IsPurchaseAllowedByRunMinimums(toppingItem, pendingQty)
             : shop.IsPurchaseAllowedByRunMinimums(item, pendingQty);
 
+        CanBuy = purchasable && canAfford && allowedByMinimums;
+        BlockedByMinimums = purchasable && canAfford && !allowedByMinimums;
+
         SetInteractable(minusButton, purchasable && pendingQty > 1);
         SetInteractable(plusButton, purchasable && pendingQty < MaxQty);
-        SetInteractable(buyButton, purchasable && canAfford && allowedByMinimums);
+        SetInteractable(buyButton, CanBuy);
     }
 
     // El ColorTint del Button solo oscurece la chapa: el texto también se apaga, así un botón

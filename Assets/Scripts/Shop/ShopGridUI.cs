@@ -13,6 +13,13 @@ public class ShopGridUI : MonoBehaviour
     
     [SerializeField] private UnityEngine.UI.ScrollRect scrollRect;
 
+    /// <summary>Tarjetas de la tab actual, en orden.</summary>
+    public IReadOnlyList<ShopItemCellUI> Cells => cells;
+
+    /// <summary>Parte visible de la grilla: lo que queda afuera está scrolleado.</summary>
+    public RectTransform Viewport =>
+        scrollRect == null ? null : scrollRect.viewport != null ? scrollRect.viewport : (RectTransform)scrollRect.transform;
+
     void OnEnable()
     {
         Loc.OnTextsChanged += RefreshAllCells;

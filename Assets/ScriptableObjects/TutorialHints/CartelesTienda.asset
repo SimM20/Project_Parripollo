@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2fc10d4695ba9e45b7079af777243c7, type: 3}
+  m_Name: CartelesTienda
+  m_EditorClassIdentifier: 
+  hints:
+  - {fileID: 11400000, guid: ac972cab9786ad44d9573611c3c224df, type: 2}
+  - {fileID: 11400000, guid: e3aeeba5bd930ad40978fb09b76a0b1d, type: 2}
+  - {fileID: 11400000, guid: 3f71a4a78f096d9438daf9a799ab7aa5, type: 2}
+  - {fileID: 11400000, guid: b2e8f78d98a06a2498b32fe62e975bf6, type: 2}

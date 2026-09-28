@@ -51,6 +51,8 @@ public enum TutorialSignal
     DeliveryRejected,
     PlateCleared,
     UndoUsed,
+    /// <summary>Se compró algo en la tienda (compra directa o carrito).</summary>
+    ShopPurchased,
 }
 
 /// <summary>Datos de una señal. Cada una llena solo lo que tiene sentido; el resto queda en null.</summary>

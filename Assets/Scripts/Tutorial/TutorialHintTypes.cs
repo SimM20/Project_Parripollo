@@ -92,6 +92,14 @@ public enum HintAnchorId
     StrikeHud,
     /// <summary>La hora del HUD.</summary>
     ClockHud,
+    /// <summary>Tienda: el panel "PARA ARRANCAR MAÑANA".</summary>
+    ShopRequirements,
+    /// <summary>Tienda: el primer Comprar que se puede apretar, en la parte visible de la grilla.</summary>
+    ShopFirstBuyButton,
+    /// <summary>Tienda: un Comprar apagado por los mínimos del próximo día (<see cref="HintCondition.ShopPurchaseBlocked"/>).</summary>
+    ShopBlockedBuyButton,
+    /// <summary>Tienda: la línea de la racha de noches con strikes.</summary>
+    ShopStreakLine,
 }
 
 /// <summary>
@@ -147,4 +155,12 @@ public enum HintCondition
     StrikeWarning,
     /// <summary>El local cerró a la hora (no por strikes) y quedan clientes esperando.</summary>
     ClosedWithCustomers,
+    /// <summary>La tienda está a la vista y se puede usar: sin el popup de cierre por strikes encima.</summary>
+    ShopReady,
+    /// <summary>Hay un Comprar habilitado a la vista.</summary>
+    ShopCanBuy,
+    /// <summary>Hay un Comprar apagado porque la compra dejaría los mínimos del próximo día fuera de alcance.</summary>
+    ShopPurchaseBlocked,
+    /// <summary>La racha de noches con strikes pasó de 0 (la línea está a la vista).</summary>
+    StrikeStreakActive,
 }

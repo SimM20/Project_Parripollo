@@ -31,6 +31,12 @@ public class ShopRequirementsUI : MonoBehaviour
 
     private bool started;
 
+    /// <summary>El panel entero ("PARA ARRANCAR MAÑANA"). Apagado si esta tienda no aplica mínimos.</summary>
+    public Transform Panel => root != null ? root.transform : transform;
+
+    /// <summary>La línea de la racha de strikes: solo está activa con racha > 0.</summary>
+    public Transform StreakLine => strikeStreakText != null ? strikeStreakText.transform : null;
+
     void OnEnable()
     {
         Loc.OnTextsChanged += Refresh;

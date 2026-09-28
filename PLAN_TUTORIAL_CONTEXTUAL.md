@@ -1,6 +1,6 @@
 # Plan técnico — Tutorial con carteles contextuales
 
-> ## ESTADO: fases 1 a 5 IMPLEMENTADAS (2026-09-27, rama `tutorialREV`) — fases 0, 6 y 7 pendientes
+> ## ESTADO: fases 1 a 6 IMPLEMENTADAS (2026-09-27, rama `tutorialREV`) — fases 0 y 7 pendientes
 >
 > - **Fase 1 (señales):** hecha y probada. Los ~20 `TutorialManager.Notify*` pasaron a `TutorialSignals.Raise`. El
 >   `TutorialManager` viejo se suscribe a las señales; se probó en Play que `TutorialScene` avanza igual del paso 7 al 17
@@ -19,6 +19,11 @@
 >   teclas y el mouse reales inyectados por el Input System: cenizas + R, rotar un corte del stock + R, pan y salsa (con el
 >   panel cerrado y abierto), corte sin stock (elegir al cliente con un click y M), rechazo + C y ↶, carne en Pasado,
 >   primer strike y cierre del local. Los 12 aparecen donde tienen que aparecer y se aprenden con la acción o por tiempo.
+> - **Fase 6 (tienda):** hecha y probada en `EndScene` a 1920×1080, entrando con una noche cerrada por strikes y racha 1:
+>   con el popup abierto no aparece nada; al cerrarlo, racha + Comprar, y lo mínimo cuando se va la racha. Comprar con el
+>   botón real aprende T1 y T2; con el carbón en 0 y la plata justa, "Primero, lo mínimo" sale en la mejora que rompería
+>   el mínimo (no en las que no alcanza la plata) y se va a los 5 s. Con el canvas de la tienda apagado (derrota) no hay
+>   carteles.
 >
 > Desvíos respecto del plan, todos deliberados:
 > - **Q y E van debajo de su pestaña**, no al costado: al costado, el de la izquierda le tapa la cara al primer cliente.
@@ -49,6 +54,12 @@
 >   Rotar (12) también se aprende a los 10 s a la vista: es opcional y no conviene insistir en cada arrastre.
 > - **Nunca dos carteles sobre el mismo objeto** (regla nueva del director): gana el de mayor prioridad.
 > - **Sin `¡ ! ¿ ?`**: no están en el atlas de la fuente del cartel. "Se quema", sin exclamación.
+> - **Tienda sin `HintAnchor` en la tarjeta**: como en la partida, las zonas se resuelven por código (`ShopGridUI.Cells`,
+>   solo las que se ven en el viewport). T3 es un estado, no un evento: aparece cuando se ve un Comprar que se podría
+>   pagar pero rompería los mínimos (`ShopItemCellUI.BlockedByMinimums`), sin aviso nuevo desde `RefreshVisuals`.
+> - **La compra es una señal** (`ShopPurchased`, desde `ShopSystem`) en vez de escuchar `OnPurchaseResult`: el director
+>   aprende solo con señales.
+> - **"Con 3, perdés la partida" va a la derecha de la línea de la racha**: arriba tapaba la línea del carbón.
 
 > Decisiones tomadas con el desarrollador (2026-09-27):
 > 1. El tutorial pasa a la partida real (`GameScene`), sin escena aparte. **Nada bloquea ni pausa.**
@@ -87,7 +98,7 @@ del control y 2 a 4 palabras, en la zona de la acción:
 | `TutorialHintSO` + `TutorialHintSetSO` | Un asset por cartel: id, control (`HintPrompt`), clave de texto, zona + lado + offset, prerrequisitos, condiciones, señal (+ condiciones) que lo da por aprendido, prioridad, segundos a la vista para los avisos (`completeAfterSeconds`). El set los ordena | ✅ |
 | `TutorialHintDirector` + `TutorialHintContext` | Uno por escena: decide qué carteles se ven (≈5 veces por segundo + en cada señal) a partir de una foto de la partida | ✅ en `GameScene` |
 | `TutorialProgress` | Qué se aprendió y si las ayudas están prendidas. Guardado en `init.cfg` a través de `GameSettings` | ✅ |
-| Zonas (`HintAnchorId`) | Resueltas por código: pestañas, botón de capa, parrilla, plato, la carne, el cliente que espera, la ceniza, la pieza que se arrastra, el pan y el frasco del panel, el cliente sin stock, el botón ↶, el HUD (reloj, strikes). Tienda: en su fase | ✅ las de la partida |
+| Zonas (`HintAnchorId`) | Resueltas por código: pestañas, botón de capa, parrilla, plato, la carne, el cliente que espera, la ceniza, la pieza que se arrastra, el pan y el frasco del panel, el cliente sin stock, el botón ↶, el HUD (reloj, strikes). En la tienda: requisitos, el primer Comprar habilitado, uno bloqueado por los mínimos y la línea de la racha | ✅ |
 
 **Señales**: las de la partida ya están todas (fase 5: `AshesCleaned`, `PieceGrabbed`, `PieceRotated`, `BreadAdded`,
 `ToppingAdded`, `MissingCutUsed`, `CustomerClicked`, `DeliveryRejected`, `PlateCleared`, `UndoUsed`). Strikes y cierre no
@@ -149,7 +160,9 @@ MAÑANA"). Los carteles cubren solo lo que no se ve:
 
 - Si la noche cerró por strikes, esperan a que se cierre el popup. Con derrota total no hay tienda ni carteles.
 - El canvas de carteles (orden 15) queda arriba de la tienda (10) y abajo de los popups (20 y 30).
-- Las tarjetas se crean al abrir la tienda: el `HintAnchor` va en el botón Comprar del prefab de tarjeta.
+- Las tarjetas se crean al abrir la tienda: las zonas salen de `ShopGridUI.Cells`, las que se ven en la grilla.
+
+Implementados en `ScriptableObjects/TutorialHints/Tienda/` (set `CartelesTienda`, director de `EndScene`).
 
 ## 4. La primera noche
 
@@ -172,7 +185,7 @@ Cada fase deja el juego jugable y se puede mergear sola.
 | 3. Director | `TutorialHintSO`, contextos, zonas, director y carteles 1-10 (más el 4b) | ✅ |
 | 4. Primera noche | Opciones, `init.cfg`, sacar el diálogo | ✅ |
 | 5. Primera vez | Carteles 11-18 y sus señales | ✅ |
-| 6. Tienda | T1-T4 en `EndScene` | ⏳ |
+| 6. Tienda | T1-T4 en `EndScene` | ✅ |
 | 7. Limpieza | Borrar el tutorial viejo (abajo) y actualizar `ARQUITECTURA_PROYECTO.md` | ⏳ |
 
 **Qué se borra en la fase 7:**
@@ -197,7 +210,7 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - **Señales que también salen al arrancar** (`GrillLayerChanged`): un cartel que se aprenda con ellas necesita una
   condición que el arranque no cumpla.
 
-## 7. Checklist manual (fases 1 a 5)
+## 7. Checklist manual (fases 1 a 6)
 
 - [ ] `TutorialScene` de punta a punta: cada paso de acción avanza igual que antes.
 - [ ] `GameScene`, jugando de verdad la primera noche: aparecen Q y E; al apretar Q se va la Q y aparece "Arrastrá a la
@@ -222,3 +235,10 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - [ ] Corte sin stock con el mouse: si el que lo pide no es el elegido, primero "Elegí al cliente" y después la M.
 - [ ] Con el panel derecho reordenado o con otra cantidad de columnas: "Agregá el pan" y "Serví la salsa" no tapan un
       pan o una salsa que haga falta.
+- [ ] Tienda después de una noche normal: aparecen "Comprar" y "Lo mínimo para mañana"; con la primera compra se van
+      los dos.
+- [ ] Tienda después de una noche cerrada por strikes: nada mientras está el popup; al cerrarlo, "Con 3, perdés la
+      partida" junto a la racha.
+- [ ] Con la plata justa, ir a Mejoras: "Primero, lo mínimo" en la mejora que rompería los mínimos, no en las que no
+      alcanza la plata.
+- [ ] Derrota total: la pantalla de derrota sin carteles encima.

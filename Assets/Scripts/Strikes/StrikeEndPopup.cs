@@ -24,6 +24,9 @@ public class StrikeEndPopup : MonoBehaviour
 
     // Textos (spec v0.1): claves strike.popup.* de las tablas de Loc.
 
+    /// <summary>El popup está a la vista y tapa la tienda.</summary>
+    public bool IsOpen => root != null && root.activeInHierarchy;
+
     private void Awake()
     {
         if (root == null) root = gameObject;

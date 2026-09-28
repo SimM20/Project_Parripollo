@@ -11,8 +11,11 @@ using UnityEngine;
 /// botón de capa, pestañas, HUD, frascos del panel) se buscan una sola vez. Lo que no se puede leer
 /// del juego (qué pieza se agarró, si el cliente rechazó el plato) lo anota de las señales, en
 /// <see cref="Observe"/>.
+///
+/// Sirve para las dos escenas con carteles: en la partida la tienda no existe y en la tienda
+/// (EndScene, ver TutorialHintContext.Shop.cs) no hay parrilla ni clientes, y lo que falta da falso.
 /// </summary>
-public class TutorialHintContext
+public partial class TutorialHintContext
 {
     private bool bound;
     private GrillSystem grill;
@@ -73,6 +76,7 @@ public class TutorialHintContext
         RefreshPlate(customers);
         RefreshMissingCuts(customers);
         RefreshShift();
+        RefreshShop();
 
         if (HeldPiece == null)
             heldPiece = null;
@@ -124,7 +128,7 @@ public class TutorialHintContext
             case HintCondition.MeatAboutToBurn: return meatAboutToBurn != null;
             case HintCondition.StrikeWarning: return strikeWarning;
             case HintCondition.ClosedWithCustomers: return closedWithCustomers;
-            default: return false;
+            default: return EvaluateShop(condition);
         }
     }
 
@@ -151,7 +155,7 @@ public class TutorialHintContext
             case HintAnchorId.MeatAboutToBurn: return meatAboutToBurn != null ? meatAboutToBurn.transform : null;
             case HintAnchorId.StrikeHud: return strikeHud;
             case HintAnchorId.ClockHud: return clockHud;
-            default: return null;
+            default: return ResolveShopAnchor(anchor);
         }
     }
 
@@ -183,6 +187,7 @@ public class TutorialHintContext
         }
 
         grillTopCenter = FindGrillTopCenter(grill);
+        BindShop();
 
         StrikeHudView strikes = Object.FindFirstObjectByType<StrikeHudView>();
         strikeHud = strikes != null ? strikes.transform : null;
