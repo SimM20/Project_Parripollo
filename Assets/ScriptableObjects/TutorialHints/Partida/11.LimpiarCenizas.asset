@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b482e55cae969045bcb26f9303130fe, type: 3}
-  m_Name: 10.PlatoAlCliente
+  m_Name: 11.LimpiarCenizas
   m_EditorClassIdentifier: 
-  id: deliver
+  id: clean_ashes
   prompt:
-    input: 4
-    action: 0
-  textKey: hint.deliver
-  anchor: 4
+    input: 1
+    action: 5
+  textKey: hint.clean_ashes
+  anchor: 8
   placement: 2
   offset: {x: 0, y: 0}
   requires: []
-  showWhile: 14000000
-  priority: 95
-  completeOn: 11
+  showWhile: 0f000000
+  priority: 75
+  completeOn: 14
   completeOnlyIf: 
   completeAfterSeconds: 0

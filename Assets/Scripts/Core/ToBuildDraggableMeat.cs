@@ -119,6 +119,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
             isGridRotated = !isGridRotated;
             ApplyGridRotationPreview();
             buffer.UpdateMeatHolderHover(cut, transform.position, isGridRotated);
+            TutorialSignals.Raise(TutorialSignal.PieceRotated, cut: cut);
         }
     }
 

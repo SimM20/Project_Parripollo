@@ -3,11 +3,16 @@ using UnityEngine;
 
 /// <summary>
 /// Cosas que hizo el jugador (o que pasaron en la partida) y que le importan al tutorial.
-/// ⚠️ Los carteles del tutorial la van a serializar como int: los valores nuevos van siempre al final.
+/// ⚠️ Los carteles del tutorial la serializan como int: los valores nuevos van siempre al final.
 /// </summary>
 public enum TutorialSignal
 {
-    StockPanelOpened,
+    /// <summary>
+    /// Ninguna: para los carteles que no se aprenden con una señal. Nunca se dispara. Vale -1 para
+    /// no correr los valores que ya están guardados en los assets.
+    /// </summary>
+    None = -1,
+    StockPanelOpened = 0,
     /// <summary>Un corte llegó a la parrilla arrastrado desde el stock (o desde la cola legada de la heladera).</summary>
     MeatDraggedToGrill,
     /// <summary>Un corte quedó en la parrilla, venga del stock, de la bandeja o del plato.</summary>
@@ -29,6 +34,23 @@ public enum TutorialSignal
     ToppingsPanelOpened,
     /// <summary>El puntero pasó sobre un cliente y se agrandó su burbuja de pedido (con joystick: se lo seleccionó).</summary>
     CustomerHovered,
+    /// <summary>Se limpió al menos un montón de ceniza de la parrilla.</summary>
+    AshesCleaned,
+    /// <summary>Se agarró un corte para arrastrarlo (del stock o de la parrilla). <c>Target</c> = lo que se arrastra.</summary>
+    PieceGrabbed,
+    /// <summary>Se rotó el corte que se está arrastrando.</summary>
+    PieceRotated,
+    BreadAdded,
+    /// <summary>Un topping quedó en el plato: se vertió una salsa o se soltó uno sólido.</summary>
+    ToppingAdded,
+    /// <summary>Se avisó que falta el corte que pide el cliente (haya o no otro para ofrecerle).</summary>
+    MissingCutUsed,
+    /// <summary>El jugador eligió un cliente con un click (con joystick: seleccionarlo y apretar A).</summary>
+    CustomerClicked,
+    /// <summary>El cliente rechazó el plato: corte equivocado o plato que no le sirve. El plato vuelve al mostrador.</summary>
+    DeliveryRejected,
+    PlateCleared,
+    UndoUsed,
 }
 
 /// <summary>Datos de una señal. Cada una llena solo lo que tiene sentido; el resto queda en null.</summary>
@@ -80,7 +102,7 @@ public static class TutorialSignals
         GrillLayerToggle.GrillLayer layer = default,
         Transform target = null)
     {
-        if (Raised == null)
+        if (Raised == null || signal == TutorialSignal.None)
             return;
 
         if (meat != null)

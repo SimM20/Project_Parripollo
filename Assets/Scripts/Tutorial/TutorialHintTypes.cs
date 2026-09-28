@@ -72,6 +72,26 @@ public enum HintAnchorId
     MeatToFlip,
     /// <summary>Burbuja de pedido del primer cliente que espera y que no está tapado por un panel abierto.</summary>
     WaitingCustomer,
+    /// <summary>El primer montón de ceniza de la parrilla.</summary>
+    Ash,
+    /// <summary>El corte rotable que se está arrastrando (el fantasma del stock o la carne).</summary>
+    DraggedPiece,
+    /// <summary>El pan del panel derecho que pide el cliente del plato.</summary>
+    BreadForOrder,
+    /// <summary>El frasco del panel derecho con la primera salsa que le falta al plato.</summary>
+    SauceForOrder,
+    /// <summary>Burbuja del cliente elegido, si pide un corte sin stock.</summary>
+    MissingCutCustomer,
+    /// <summary>Burbuja de un cliente que pide un corte sin stock y no es el elegido.</summary>
+    CustomerToPick,
+    /// <summary>Botón de deshacer del plato.</summary>
+    UndoButton,
+    /// <summary>La carne que se está por quemar (<see cref="HintCondition.MeatAboutToBurn"/>).</summary>
+    MeatAboutToBurn,
+    /// <summary>Las X de strikes del HUD.</summary>
+    StrikeHud,
+    /// <summary>La hora del HUD.</summary>
+    ClockHud,
 }
 
 /// <summary>
@@ -99,4 +119,32 @@ public enum HintCondition
     MeatReadyForOrder,
     PlateHasMeat,
     PlateEmpty,
+    ToppingsPanelOpen,
+    /// <summary>Hay ceniza en la parrilla.</summary>
+    AshOnGrill,
+    /// <summary>Se está arrastrando un corte que se puede rotar (su footprint no es cuadrado).</summary>
+    DraggingRotatablePiece,
+    /// <summary>El cliente que espera el corte del plato lo pidió en sándwich y el plato no tiene pan.</summary>
+    PlateNeedsBread,
+    /// <summary>El cliente que espera el corte del plato pidió una salsa que el plato no tiene.</summary>
+    PlateNeedsTopping,
+    /// <summary><see cref="PlateNeedsBread"/> o <see cref="PlateNeedsTopping"/>.</summary>
+    PlateNeedsExtras,
+    /// <summary>Un cliente que espera pidió el corte del plato, y el plato tiene el pan y las salsas que pidió.</summary>
+    PlateReadyForCustomer,
+    /// <summary>El cliente elegido (al que va la M) pide un corte sin stock, ni en la parrilla ni en el plato.</summary>
+    SelectedWantsMissingCut,
+    /// <summary>Otro cliente, no el elegido, pide un corte sin stock (y el elegido no).</summary>
+    OtherWantsMissingCut,
+    /// <summary>
+    /// El cliente rechazó el plato y sigue igual: con carne que no espera nadie, o que no se arregla
+    /// agregando pan o salsa. Se olvida al vaciarse el plato.
+    /// </summary>
+    PlateRejected,
+    /// <summary>Una carne de la parrilla tiene la cara de abajo en Pasado: lo próximo es quemarse.</summary>
+    MeatAboutToBurn,
+    /// <summary>Hay al menos un strike y todavía no se llegó al límite.</summary>
+    StrikeWarning,
+    /// <summary>El local cerró a la hora (no por strikes) y quedan clientes esperando.</summary>
+    ClosedWithCustomers,
 }

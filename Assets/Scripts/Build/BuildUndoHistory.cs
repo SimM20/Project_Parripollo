@@ -75,6 +75,7 @@ public class BuildUndoHistory : MonoBehaviour
         action.Undo();
         OnHistoryChanged?.Invoke();
         Debug.Log("[BuildUndo] Acción deshecha. Restantes: " + undoStack.Count);
+        TutorialSignals.Raise(TutorialSignal.UndoUsed);
     }
 
     public void Clear()

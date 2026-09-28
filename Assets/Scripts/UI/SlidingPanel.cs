@@ -338,8 +338,8 @@ public abstract class SlidingPanel : MonoBehaviour
         float startX = slidingRoot.localPosition.x;
         float elapsed = 0f;
 
-        // TutorialOfferController pone Time.timeScale = 0 al entrar a GameScene:
-        // el deslizamiento tiene que correr en tiempo no escalado.
+        // La pausa (GamePause) pone Time.timeScale = 0: el deslizamiento corre en tiempo no
+        // escalado para no quedar a mitad de camino.
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;

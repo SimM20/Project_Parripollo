@@ -159,6 +159,7 @@ public class BuildFoodDropZone : MonoBehaviour
                     zone.buildStationSystem, zone.meatTransferBuffer, previousBread,
                     visualCaptured ? plateMeatVisual : null, previousSprite, previousScale, previousEuler));
                 Debug.Log("[Build] Pan arrastrado: " + item.breadData.breadName);
+                TutorialSignals.Raise(TutorialSignal.BreadAdded, target: item.transform);
             }
             else if (item.sideData != null)
             {
@@ -177,6 +178,7 @@ public class BuildFoodDropZone : MonoBehaviour
                 BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
                     zone.buildStationSystem, zone, item.toppingData, toppingVisualSpawned, null, 0, 0f));
                 Debug.Log("[Build] Topping arrastrado: " + item.toppingData.toppingName);
+                TutorialSignals.Raise(TutorialSignal.ToppingAdded, target: item.transform);
             }
 
             return true;

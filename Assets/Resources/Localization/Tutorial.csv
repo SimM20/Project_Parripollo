@@ -63,3 +63,15 @@ hint.see_order,Ver pedido,See the order
 hint.flip,Dar vuelta,Flip it
 hint.to_plate,Carne al plato,Meat to the plate
 hint.deliver,Plato al cliente,Plate to the customer
+# Carteles de la primera vez que pasa algo (cualquier noche). Sin signos de exclamación ni de pregunta: la fuente del cartel no los tiene
+hint.clean_ashes,Limpiar cenizas,Clear the ashes
+hint.rotate,Rotar,Rotate
+hint.add_bread,Agregá el pan,Add the bread
+hint.add_sauce,Serví la salsa,Add the sauce
+hint.missing_cut,Pedir otro corte,Ask for another cut
+hint.pick_customer,Elegí al cliente,Pick the customer
+hint.clear_plate,Vaciar plato,Clear the plate
+hint.undo,Deshacer,Undo
+hint.burning,Se quema,It's burning
+hint.strikes,3 strikes y cerrás,3 strikes and you close
+hint.closed,Cerrado: atendé a los que quedan,Closed: serve who's left

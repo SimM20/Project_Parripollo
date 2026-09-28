@@ -7,6 +7,8 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("The ToppingSO this container represents (Chimichurri, Salsa Criolla, etc.).")]
     [SerializeField] private ToppingSO toppingData;
 
+    public ToppingSO ToppingData => toppingData;
+
     [Header("Rotation")]
     [Tooltip("Collider2D that defines where the container starts rotating. " +
              "Create a separate GameObject with a BoxCollider2D above the food.")]
@@ -604,6 +606,7 @@ public class ToppingDraggable : MonoBehaviour
                 BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
                     station, null, toppingData, false, this, activeSplatters.Count, currentSauceAmount));
                 Debug.Log("[ToppingDraggable] Topping registrado (fallback): " + toppingData.toppingName);
+                TutorialSignals.Raise(TutorialSignal.ToppingAdded, target: transform);
             }
             else
             {
@@ -618,6 +621,7 @@ public class ToppingDraggable : MonoBehaviour
         BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
             zone.BuildStation, zone, toppingData, visualSpawned, this, activeSplatters.Count, currentSauceAmount));
         Debug.Log("[ToppingDraggable] Topping registrado: " + toppingData.toppingName);
+        TutorialSignals.Raise(TutorialSignal.ToppingAdded, target: transform);
     }
 
     private BuildFoodDropZone FindDropZone()

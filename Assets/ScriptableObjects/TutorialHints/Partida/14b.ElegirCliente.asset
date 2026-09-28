@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9b482e55cae969045bcb26f9303130fe, type: 3}
-  m_Name: 10.PlatoAlCliente
+  m_Name: 14b.ElegirCliente
   m_EditorClassIdentifier: 
-  id: deliver
+  id: pick_customer
   prompt:
-    input: 4
+    input: 2
     action: 0
-  textKey: hint.deliver
-  anchor: 4
-  placement: 2
+  textKey: hint.pick_customer
+  anchor: 13
+  placement: 3
   offset: {x: 0, y: 0}
   requires: []
-  showWhile: 14000000
-  priority: 95
-  completeOn: 11
-  completeOnlyIf: 
+  showWhile: 16000000
+  priority: 88
+  completeOn: 20
+  completeOnlyIf: 15000000
   completeAfterSeconds: 0

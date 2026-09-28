@@ -72,7 +72,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private void Update()
     {
-        // El diálogo de oferta del tutorial tiene su propia pausa: mientras está abierto, la pausa no abre el menú.
+        // Un diálogo con pausa propia (GamePause.SetDialogPaused) manda: mientras está abierto, la pausa no abre el menú.
         // Con Opciones abierto (dentro de la pausa), Esc es Back: cierra las opciones y no despausa.
         if (InputManager.WasPressed(GameAction.Pause) && !GamePause.IsDialogPaused && !OptionsMenuPanel.AnyOpen)
         {
@@ -113,6 +113,7 @@ public class GameManager : MonoBehaviour
             BuildFoodDropZone.ClearActivePlateVisuals();
             ToppingDraggable.ClearAllSplatters();
             Debug.Log("[Plato] Plato limpiado.");
+            TutorialSignals.Raise(TutorialSignal.PlateCleared);
         }
 
         if (InputManager.WasPressed(GameAction.MissingCut))
@@ -154,6 +155,8 @@ public class GameManager : MonoBehaviour
                 {
                     DeliveryFeedbackText.Instance?.Show(Loc.Get("delivery.missing_cut.none"));
                 }
+
+                TutorialSignals.Raise(TutorialSignal.MissingCutUsed, cut: missingCut);
             }
         }
     }
@@ -199,7 +202,10 @@ public class GameManager : MonoBehaviour
         }
 
         if (cleanedCount > 0)
+        {
             Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
+            TutorialSignals.Raise(TutorialSignal.AshesCleaned);
+        }
     }
 
     /// <summary>
@@ -495,6 +501,7 @@ public class GameManager : MonoBehaviour
             {
                 customerSystem.GetViewForCustomer(customer)?.PlayRejectReaction();
                 AudioManager.Instance?.PlayDeliveryRejected();
+                TutorialSignals.Raise(TutorialSignal.DeliveryRejected);
             }
             return false;
         }

@@ -10,8 +10,10 @@ using UnityEngine;
 /// unas 5 veces por segundo (tiempo sin escalar) y enseguida después de cada señal. En pausa, nada.
 ///
 /// Reglas: un cartel aprendido no vuelve (<see cref="TutorialProgress"/>); se ven como mucho
-/// <see cref="maxVisible"/>, los de mayor prioridad; el que deja de valer se retira, y si fue por algo
-/// que acaba de hacer el jugador (apretó Q y se abrió el panel) sale como cumplido.
+/// <see cref="maxVisible"/>, los de mayor prioridad, y nunca dos sobre el mismo objeto; el que deja de
+/// valer se retira, y si fue por algo que acaba de hacer el jugador (apretó Q y se abrió el panel) sale
+/// como cumplido. Los que tienen <see cref="TutorialHintSO.completeAfterSeconds"/> se aprenden solos
+/// después de verse ese tiempo.
 /// </summary>
 public class TutorialHintDirector : MonoBehaviour
 {
@@ -31,23 +33,45 @@ public class TutorialHintDirector : MonoBehaviour
         public bool IsAlive => view != null && view.Generation == generation && view.IsShowing;
     }
 
+    private struct PendingSignal
+    {
+        public TutorialSignal signal;
+        public TutorialSignalArgs args;
+    }
+
     private readonly TutorialHintContext context = new TutorialHintContext();
-    private readonly List<TutorialSignal> pendingSignals = new List<TutorialSignal>();
+    private readonly List<PendingSignal> pendingSignals = new List<PendingSignal>();
     private readonly Dictionary<TutorialHintSO, Shown> shown = new Dictionary<TutorialHintSO, Shown>();
+    private readonly Dictionary<TutorialHintSO, float> seenSeconds = new Dictionary<TutorialHintSO, float>();
     private readonly List<TutorialHintSO> eligible = new List<TutorialHintSO>();
+    private readonly List<TutorialHintSO> visible = new List<TutorialHintSO>();
+    private readonly List<Transform> visibleTargets = new List<Transform>();
     private readonly List<TutorialHintSO> retiring = new List<TutorialHintSO>();
     private float nextEvaluation;
 
-    private void OnEnable() => TutorialSignals.Raised += HandleSignal;
+    private void OnEnable()
+    {
+        TutorialSignals.Raised += HandleSignal;
+        TutorialProgress.OnReset += HandleProgressReset;
+    }
 
     private void OnDisable()
     {
         TutorialSignals.Raised -= HandleSignal;
+        TutorialProgress.OnReset -= HandleProgressReset;
         pendingSignals.Clear();
         HideAll();
     }
 
-    private void HandleSignal(TutorialSignal signal, TutorialSignalArgs args) => pendingSignals.Add(signal);
+    private void HandleSignal(TutorialSignal signal, TutorialSignalArgs args) =>
+        pendingSignals.Add(new PendingSignal { signal = signal, args = args });
+
+    /// <summary>El tutorial arranca de nuevo (Opciones o QA): el tiempo que se vio cada aviso también.</summary>
+    private void HandleProgressReset()
+    {
+        seenSeconds.Clear();
+        Reevaluate();
+    }
 
     private void Update()
     {
@@ -62,6 +86,8 @@ public class TutorialHintDirector : MonoBehaviour
         if (GamePause.IsPaused)
             return;
 
+        AccumulateSeenTime(Time.unscaledDeltaTime);
+
         bool playerActed = pendingSignals.Count > 0;
         if (!playerActed && Time.unscaledTime < nextEvaluation)
             return;
@@ -70,9 +96,13 @@ public class TutorialHintDirector : MonoBehaviour
         context.Refresh();
 
         for (int i = 0; i < pendingSignals.Count; i++)
-            LearnFromSignal(pendingSignals[i]);
+        {
+            context.Observe(pendingSignals[i].signal, pendingSignals[i].args);
+            LearnFromSignal(pendingSignals[i].signal);
+        }
         pendingSignals.Clear();
 
+        LearnFromTime();
         UpdateVisibleHints(playerActed);
     }
 
@@ -103,13 +133,46 @@ public class TutorialHintDirector : MonoBehaviour
         for (int i = 0; i < hints.Count; i++)
         {
             TutorialHintSO hint = hints[i];
-            if (hint == null || hint.completeOn != signal || TutorialProgress.IsLearned(hint.Id))
+            if (hint == null || hint.completeOn == TutorialSignal.None || hint.completeOn != signal
+                || TutorialProgress.IsLearned(hint.Id))
                 continue;
             if (!AllHold(hint.completeOnlyIf))
                 continue;
 
             TutorialProgress.MarkLearned(hint.Id);
             Retire(hint, true);
+        }
+    }
+
+    /// <summary>Suma el tiempo a la vista de los carteles que se aprenden por tiempo.</summary>
+    private void AccumulateSeenTime(float deltaTime)
+    {
+        foreach (KeyValuePair<TutorialHintSO, Shown> entry in shown)
+        {
+            if (entry.Key.completeAfterSeconds <= 0f || !entry.Value.IsAlive)
+                continue;
+
+            seenSeconds.TryGetValue(entry.Key, out float seen);
+            seenSeconds[entry.Key] = seen + deltaTime;
+        }
+    }
+
+    /// <summary>Los que ya se vieron su tiempo se dan por aprendidos y se desvanecen: no pedían nada.</summary>
+    private void LearnFromTime()
+    {
+        retiring.Clear();
+        foreach (KeyValuePair<TutorialHintSO, float> entry in seenSeconds)
+        {
+            if (entry.Value >= entry.Key.completeAfterSeconds)
+                retiring.Add(entry.Key);
+        }
+
+        for (int i = 0; i < retiring.Count; i++)
+        {
+            TutorialHintSO hint = retiring[i];
+            seenSeconds.Remove(hint);
+            TutorialProgress.MarkLearned(hint.Id);
+            Retire(hint, false);
         }
     }
 
@@ -136,12 +199,25 @@ public class TutorialHintDirector : MonoBehaviour
                 InsertByPriority(hint);
         }
 
-        // Se retiran los que dejaron de valer y los que siguen valiendo pero no entran en el cupo.
+        // Entran los de mayor prioridad, uno por objeto: dos carteles sobre la misma pestaña o el
+        // mismo cliente se tapan entre sí.
+        visible.Clear();
+        visibleTargets.Clear();
+        for (int i = 0; i < eligible.Count && visible.Count < maxVisible; i++)
+        {
+            Transform target = context.ResolveAnchor(eligible[i].anchor);
+            if (visibleTargets.Contains(target))
+                continue;
+
+            visible.Add(eligible[i]);
+            visibleTargets.Add(target);
+        }
+
+        // Se retiran los que dejaron de valer y los que siguen valiendo pero no entran.
         retiring.Clear();
         foreach (KeyValuePair<TutorialHintSO, Shown> entry in shown)
         {
-            int rank = eligible.IndexOf(entry.Key);
-            if (!entry.Value.IsAlive || rank < 0 || rank >= maxVisible)
+            if (!entry.Value.IsAlive || !visible.Contains(entry.Key))
                 retiring.Add(entry.Key);
         }
 
@@ -157,11 +233,10 @@ public class TutorialHintDirector : MonoBehaviour
         if (layer == null)
             return;
 
-        int count = Mathf.Min(maxVisible, eligible.Count);
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < visible.Count; i++)
         {
-            TutorialHintSO hint = eligible[i];
-            Transform target = context.ResolveAnchor(hint.anchor);
+            TutorialHintSO hint = visible[i];
+            Transform target = visibleTargets[i];
 
             if (shown.TryGetValue(hint, out Shown current) && current.IsAlive)
             {

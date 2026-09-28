@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -14,12 +15,16 @@ public static class TutorialProgress
     /// <summary>Opción "Ayudas" del menú. Apagadas, los directores retiran todos los carteles y no muestran más.</summary>
     public static bool HintsEnabled => GameSettings.Current.tutorialHints;
 
+    /// <summary>Se olvidó todo lo aprendido (<see cref="Reset"/>).</summary>
+    public static event Action OnReset;
+
     // Con "Enter Play Mode" sin domain reload el estático sobrevive entre sesiones de play.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
         learned.Clear();
         loaded = false;
+        OnReset = null;
     }
 
     public static bool IsLearned(string hintId)
@@ -41,6 +46,7 @@ public static class TutorialProgress
         EnsureLoaded();
         learned.Clear();
         GameSettings.SaveLearnedHints(learned);
+        OnReset?.Invoke();
     }
 
     private static void EnsureLoaded()

@@ -1,6 +1,6 @@
 # Plan técnico — Tutorial con carteles contextuales
 
-> ## ESTADO: fases 1 a 4 IMPLEMENTADAS (2026-09-27, rama `tutorialREV`) — de la 4 falta sacar el diálogo; fases 0 y 5 a 7 pendientes
+> ## ESTADO: fases 1 a 5 IMPLEMENTADAS (2026-09-27, rama `tutorialREV`) — fases 0, 6 y 7 pendientes
 >
 > - **Fase 1 (señales):** hecha y probada. Los ~20 `TutorialManager.Notify*` pasaron a `TutorialSignals.Raise`. El
 >   `TutorialManager` viejo se suscribe a las señales; se probó en Play que `TutorialScene` avanza igual del paso 7 al 17
@@ -13,16 +13,21 @@
 > - **Fase 4 (opción y progreso):** hecha y probada con los botones reales del menú, en el menú principal y en la pausa.
 >   Fila **Ayudas: Sí / No** (`options.hints`). `init.cfg` guarda `TutorialHints` y `TutorialDone`; al reabrir el juego se
 >   leen (ayudas apagadas y lo aprendido siguen igual), con las ayudas apagadas no aparece ningún cartel, y al prenderlas
->   `TutorialDone` queda vacío y vuelven la Q y "Ver pedido". **Falta sacar de `GameScene` el diálogo viejo**
->   (`TutorialOffer` y su `Canvas`, instancias de prefabs que ya no existen); mientras tanto sigue apareciendo al arrancar.
+>   `TutorialDone` queda vacío y vuelven la Q y "Ver pedido". El diálogo viejo (`TutorialOffer` y su `Canvas`, instancias
+>   de prefabs que ya no existían) salió de `GameScene`: la partida arranca directo.
+> - **Fase 5 (la primera vez):** hecha y probada en `GameScene` a 1920×1080, armando cada situación por código y con las
+>   teclas y el mouse reales inyectados por el Input System: cenizas + R, rotar un corte del stock + R, pan y salsa (con el
+>   panel cerrado y abierto), corte sin stock (elegir al cliente con un click y M), rechazo + C y ↶, carne en Pasado,
+>   primer strike y cierre del local. Los 12 aparecen donde tienen que aparecer y se aprenden con la acción o por tiempo.
 >
 > Desvíos respecto del plan, todos deliberados:
 > - **Q y E van debajo de su pestaña**, no al costado: al costado, el de la izquierda le tapa la cara al primer cliente.
 > - **Arte provisorio** (`Sprites/UI/Tutorial/* PH.png`) para la fase 0: fondo y flecha del cartel, tecla y botón en blanco,
 >   íconos de mouse. `LetraQ` y `LetraE` se usan tal cual (con mipmaps activados); `LetraR` y `LetraSpace` no, porque vienen
 >   en lienzos de 1536×1024 casi vacíos. Espacio, R y los botones del joystick salen como tecla en blanco con su nombre.
-> - **Las señales nuevas se agregan con el cartel que las usa**: `ToppingsPanelOpened` (fase 2) y `CustomerHovered`
->   (fase 3). El resto, en la fase 5.
+> - **Las señales nuevas se agregan con el cartel que las usa**: `ToppingsPanelOpened` (fase 2), `CustomerHovered`
+>   (fase 3) y 10 en la fase 5. `CustomerSpawned` y `CoalBecameAsh` no hicieron falta: "llegó el cliente" y "hay ceniza"
+>   se leen del estado, y leer el estado no se pierde nada si el cartel está ocupado cuando pasa.
 > - **Sin componente `HintAnchor`**: las zonas se resuelven por código a partir de un id (`HintAnchorId`) y cada cartel se
 >   afina con su offset. Así no hubo que tocar `GrillView.prefab` ni la escena. Si algún cartel necesita un punto puesto a
 >   mano, se agrega el componente con un registro estático, como `BuildFoodDropZone`.
@@ -34,6 +39,16 @@
 > - **Textos cortos de verdad:** "Carne al plato" y "Plato al cliente" (3 palabras) en vez de "Llevá la carne al plato".
 > - **Opciones con 7 filas en la misma ventana:** en el menú principal la ventana toca el título y no puede crecer; las
 >   filas pasaron a 64 px con 6 de separación (eran 68 + 8).
+> - **El 13 son tres carteles**: "Agregá el pan" y "Serví la salsa" (panel abierto, sobre el pan o el frasco que pide el
+>   pedido) y una E con prioridad alta cuando el plato necesita algo y el panel está cerrado (13c). Y **"Plato al cliente"
+>   (10) espera a que el plato tenga el pan y las salsas**: antes mandaba a entregar un sándwich sin pan.
+> - **Dos carteles más**: "Elegí al cliente" (14b), porque la M va al cliente elegido, que con mouse no se ve; y "↶
+>   Deshacer" (15b) junto a "C · Vaciar plato". El 15 sale solo si ningún otro cliente espera ese corte: si alguno lo
+>   espera, lo que corresponde es "Plato al cliente".
+> - **Avisos que se aprenden solos**: `TutorialHintSO.completeAfterSeconds` (16: 4 s, 17 y 18: 5 s) y `TutorialSignal.None`.
+>   Rotar (12) también se aprende a los 10 s a la vista: es opcional y no conviene insistir en cada arrastre.
+> - **Nunca dos carteles sobre el mismo objeto** (regla nueva del director): gana el de mayor prioridad.
+> - **Sin `¡ ! ¿ ?`**: no están en el atlas de la fuente del cartel. "Se quema", sin exclamación.
 
 > Decisiones tomadas con el desarrollador (2026-09-27):
 > 1. El tutorial pasa a la partida real (`GameScene`), sin escena aparte. **Nada bloquea ni pausa.**
@@ -69,15 +84,15 @@ del control y 2 a 4 palabras, en la zona de la acción:
 | `TutorialHintView` + `Prefabs/UI/TutorialHint.prefab` | Un cartel: ícono + texto + flecha, pegado a un objeto del mundo o de UI | ✅ |
 | `InputGlyphSetSO` + `ScriptableObjects/TutorialHints/InputGlyphs.asset` | Ícono por control físico del binding. Sin dibujo: tecla o botón en blanco con el nombre | ✅ |
 | `TutorialHintDebug` | QA en Play: Q y E, cartel de prueba configurable, ocultar todos | ✅ |
-| `TutorialHintSO` + `TutorialHintSetSO` | Un asset por cartel: id, control (`HintPrompt`), clave de texto, zona + lado + offset, prerrequisitos, condiciones, señal (+ condiciones) que lo da por aprendido, prioridad. El set los ordena | ✅ (auto-ocultar: fase 5) |
+| `TutorialHintSO` + `TutorialHintSetSO` | Un asset por cartel: id, control (`HintPrompt`), clave de texto, zona + lado + offset, prerrequisitos, condiciones, señal (+ condiciones) que lo da por aprendido, prioridad, segundos a la vista para los avisos (`completeAfterSeconds`). El set los ordena | ✅ |
 | `TutorialHintDirector` + `TutorialHintContext` | Uno por escena: decide qué carteles se ven (≈5 veces por segundo + en cada señal) a partir de una foto de la partida | ✅ en `GameScene` |
 | `TutorialProgress` | Qué se aprendió y si las ayudas están prendidas. Guardado en `init.cfg` a través de `GameSettings` | ✅ |
-| Zonas (`HintAnchorId`) | Resueltas por código: pestañas, botón de capa, parrilla, plato, la carne, el cliente que espera. HUD (reloj, strikes) y tienda: en su fase | ✅ las de la partida |
+| Zonas (`HintAnchorId`) | Resueltas por código: pestañas, botón de capa, parrilla, plato, la carne, el cliente que espera, la ceniza, la pieza que se arrastra, el pan y el frasco del panel, el cliente sin stock, el botón ↶, el HUD (reloj, strikes). Tienda: en su fase | ✅ las de la partida |
 
-**Señales que faltan** (se agregan con su cartel): `CustomerSpawned`, `CustomerHovered` (`CustomerView.OnWorldPointerEnter`),
-`CoalBecameAsh` (`Coal.Burn`, solo en la transición), `AshesCleaned`, `PieceRotated`, `PlateCleared`, `UndoUsed`,
-`MissingCutUsed`, `DeliveryRejected`. Strikes, cierre y armado del plato ya tienen evento propio. En la tienda alcanza con
-`ShopSystem.OnPurchaseResult` y `OnTabChanged`; solo T3 necesita un aviso nuevo desde `ShopItemCellUI.RefreshVisuals`.
+**Señales**: las de la partida ya están todas (fase 5: `AshesCleaned`, `PieceGrabbed`, `PieceRotated`, `BreadAdded`,
+`ToppingAdded`, `MissingCutUsed`, `CustomerClicked`, `DeliveryRejected`, `PlateCleared`, `UndoUsed`). Strikes y cierre no
+necesitaron señal: se leen de `StrikeSystem` y `DayClock`. En la tienda alcanza con `ShopSystem.OnPurchaseResult` y
+`OnTabChanged`; solo T3 necesita un aviso nuevo desde `ShopItemCellUI.RefreshVisuals`.
 
 ## 3. Catálogo de carteles
 
@@ -95,25 +110,30 @@ del control y 2 a 4 palabras, en la zona de la acción:
 | 7 | 🖱 Ver pedido (pasar el mouse) | el cliente | llega el primer cliente | pasar el mouse sobre el cliente |
 | 8 | Click derecho · Dar vuelta | la carne | la cara de abajo dejó de estar cruda | primera vuelta |
 | 9 | 🖱 Carne al plato | plato | carne a punto para un pedido (a un punto o menos, como `EvaluateCut`) | carne en el plato |
-| 10 | 🖱 Plato al cliente | plato | carne en el plato y un cliente esperando | entrega aceptada |
+| 10 | 🖱 Plato al cliente | plato | el plato tiene lo que pidió un cliente que espera (corte, pan y salsas) | entrega aceptada |
 
 Implementados como assets en `ScriptableObjects/TutorialHints/Partida/` (set `CartelesPartida`); el detalle de condiciones
 y prioridades está en `ARQUITECTURA_PROYECTO.md`, 3.7 → *Carteles contextuales*.
 
 ### 3.2 La primera vez que pasa (cualquier noche)
 
-| # | Cartel | Cuándo aparece |
-|---|---|---|
-| 11 | R · Limpiar cenizas (sobre la ceniza) | el primer carbón se hace ceniza |
-| 12 | R · Rotar (junto a la pieza) | se arrastra un corte que se puede rotar |
-| 13 | 🖱 Agregá el pan / Serví la salsa | pedido con extras + panel derecho abierto + carne en el plato |
-| 14 | M · Pedir otro corte (sobre el cliente) | el cliente pide un corte sin stock |
-| 15 | C · Vaciar plato (y ↶ Deshacer) | el primer rechazo de una entrega |
-| 16 | ⚠ ¡Se quema! (sobre la carne) | la primera carne llega a Pasado |
-| 17 | 3 strikes y cerrás (5 s, sobre el HUD) | el primer strike |
-| 18 | Cerrado: atendé a los que quedan (5 s) | el primer cierre del local |
+| # | Cartel | Cuándo aparece | Se va |
+|---|---|---|---|
+| 11 | R · Limpiar cenizas (sobre la ceniza) | hay ceniza en la parrilla | se limpia |
+| 12 | R · Rotar (sobre la pieza) | se arrastra un corte que se puede rotar (después del 3) | se rota, o a los 10 s a la vista |
+| 13 | 🖱 Agregá el pan (sobre el pan pedido) | panel derecho abierto + el plato necesita pan | pan en el plato |
+| 13b | 🖱 Serví la salsa (sobre el frasco) | panel derecho abierto + al plato le falta una salsa | salsa en el plato |
+| 13c | E · Ver panes y toppings (pestaña derecha) | panel cerrado + al plato le falta pan o salsa | se abre el panel |
+| 14 | M · Pedir otro corte (sobre el cliente) | el cliente elegido pide un corte sin stock | se usa la M |
+| 14b | 🖱 Elegí al cliente | el que pide el corte sin stock no es el elegido | click en ese cliente |
+| 15 | C · Vaciar plato | el cliente rechazó el plato y nadie más que espera quiere ese corte | se vacía el plato |
+| 15b | 🖱 Deshacer (botón ↶) | lo mismo | se deshace |
+| 16 | Se quema (sobre la carne) | la cara de abajo de una carne llega a Pasado | 4 s a la vista |
+| 17 | 3 strikes y cerrás (sobre las X del HUD) | el primer strike | 5 s a la vista |
+| 18 | Cerrado: atendé a los que quedan (sobre la hora) | el local cierra a la hora con clientes esperando | 5 s a la vista |
 
-Con joystick los íconos cambian solos (LB, RB, Y…): pasar el mouse = seleccionar con el stick; arrastrar = mantener A.
+Implementados en `ScriptableObjects/TutorialHints/Partida/`, en el mismo set. Con joystick los íconos cambian solos (LB,
+RB, Y…): pasar el mouse = seleccionar con el stick; arrastrar = mantener A.
 
 ### 3.3 Tienda (al terminar el día)
 
@@ -150,8 +170,8 @@ Cada fase deja el juego jugable y se puede mergear sola.
 | 1. Señales | `TutorialSignals` + migrar los `Notify*`; el `TutorialManager` viejo escucha las señales | ✅ |
 | 2. Cartel | Vista, canvas, íconos, QA | ✅ |
 | 3. Director | `TutorialHintSO`, contextos, zonas, director y carteles 1-10 (más el 4b) | ✅ |
-| 4. Primera noche | Opciones, `init.cfg`, sacar el diálogo | ✅ opción e `init.cfg` · ⏳ diálogo |
-| 5. Primera vez | Carteles 11-18 y sus señales | ⏳ |
+| 4. Primera noche | Opciones, `init.cfg`, sacar el diálogo | ✅ |
+| 5. Primera vez | Carteles 11-18 y sus señales | ✅ |
 | 6. Tienda | T1-T4 en `EndScene` | ⏳ |
 | 7. Limpieza | Borrar el tutorial viejo (abajo) y actualizar `ARQUITECTURA_PROYECTO.md` | ⏳ |
 
@@ -177,7 +197,7 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - **Señales que también salen al arrancar** (`GrillLayerChanged`): un cartel que se aprenda con ellas necesita una
   condición que el arranque no cumpla.
 
-## 7. Checklist manual (fases 1 a 4)
+## 7. Checklist manual (fases 1 a 5)
 
 - [ ] `TutorialScene` de punta a punta: cada paso de acción avanza igual que antes.
 - [ ] `GameScene`, jugando de verdad la primera noche: aparecen Q y E; al apretar Q se va la Q y aparece "Arrastrá a la
@@ -195,3 +215,10 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - [ ] Opciones → Ayudas: No → Aplicar, en la pausa: al volver al juego no hay carteles. Sí → Aplicar: vuelven desde la Q.
 - [ ] Aprender algunos, cerrar el juego (build) y volver a abrirlo: lo aprendido no vuelve a aparecer.
 - [ ] Opciones con joystick: la fila Ayudas se alcanza con la cruceta y cambia con las flechas como las demás.
+- [ ] Jugando de verdad (fase 5): dejar que un carbón se haga ceniza y limpiarla; arrastrar un chorizo del stock y
+      rotarlo; un pedido en sándwich y uno con salsa, con el panel derecho cerrado y abierto; entregar el plato al cliente
+      equivocado; dejar que se pase una carne; el primer strike; llegar a las 21:00 con gente esperando.
+- [ ] Un pedido con salsa: "Plato al cliente" no aparece hasta servirla (antes mandaba a entregar igual).
+- [ ] Corte sin stock con el mouse: si el que lo pide no es el elegido, primero "Elegí al cliente" y después la M.
+- [ ] Con el panel derecho reordenado o con otra cantidad de columnas: "Agregá el pan" y "Serví la salsa" no tapan un
+      pan o una salsa que haga falta.

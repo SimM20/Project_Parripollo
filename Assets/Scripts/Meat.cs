@@ -359,6 +359,7 @@ public class Meat : Item
 
         ApplyGridRotationPreview();
         UpdateHoverPreview();
+        TutorialSignals.Raise(TutorialSignal.PieceGrabbed, meat: this);
     }
 
     protected override void UpdateHoverPreview()
@@ -543,6 +544,7 @@ public class Meat : Item
 
         SetGridRotation(!isGridRotated);
         if (isHeldByMouse) UpdateHoverPreview();
+        TutorialSignals.Raise(TutorialSignal.PieceRotated, meat: this);
     }
 
     public void SetGridRotation(bool rotated)

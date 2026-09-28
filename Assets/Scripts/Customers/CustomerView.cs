@@ -438,7 +438,10 @@ public class CustomerView : MonoBehaviour
         if (customer != null && customer.IsInFeedback) return;
 
         if (system != null && customer != null)
+        {
             system.SelectCustomer(customer);
+            TutorialSignals.Raise(TutorialSignal.CustomerClicked, target: transform);
+        }
     }
 
     void OnWorldPointerEnter()

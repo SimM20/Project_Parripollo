@@ -211,7 +211,10 @@ public class PlateDeliveryDraggable : MonoBehaviour
         // MeatOnly: R rota el footprint como en la bandeja, y el preview de slots sigue al corte.
         // Los cortes de footprint cuadrado no se rotan: quedarian identicos.
         if (InputManager.WasPressed(GameAction.Rotate) && draggedCut != null && draggedCut.CanRotate)
+        {
             draggedCutRotated = !draggedCutRotated;
+            TutorialSignals.Raise(TutorialSignal.PieceRotated, cut: draggedCut);
+        }
 
         if (transferBuffer != null)
             transferBuffer.UpdateMeatHolderHover(draggedCut, transform.position, draggedCutRotated);

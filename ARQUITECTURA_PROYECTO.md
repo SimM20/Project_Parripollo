@@ -49,8 +49,15 @@
 > Opción nueva **Ayudas: Sí / No** en el menú de opciones (`SettingsData.tutorialHints`, fila `TutorialHintsRow`). `init.cfg`
 > suma `TutorialHints=true|false` y `TutorialDone=id1,id2,…` (lo aprendido, fuera de `SettingsData`): lo aprendido ya no
 > vuelve al cerrar el juego, y volver a prender las ayudas reinicia el tutorial. Para que entren 7 filas sin agrandar la
-> ventana, las filas pasaron a 64 px con 6 de separación. **Pendiente:** sacar de `GameScene` el diálogo de
-> `TutorialOfferController`. Secciones 0, 3.7 y 3.10.
+> ventana, las filas pasaron a 64 px con 6 de separación. Salió de `GameScene` el diálogo de `TutorialOfferController`
+> (`TutorialOffer` y su `Canvas`): la partida arranca directo, con carteles. Secciones 0, 3.7, 3.10 y 4.1.
+
+> Última actualización parcial: **2026-09-27** (rama `tutorialREV`) — **tutorial nuevo, fase 5: la primera vez que pasa**.
+> 12 carteles más en `CartelesPartida` (cenizas, rotar, pan, salsa, corte sin stock, rechazo, se quema, strikes, cierre) y
+> "Plato al cliente" espera a que el plato tenga el pan y las salsas del pedido. 10 señales nuevas en el juego y
+> `TutorialSignal.None`. El director: nunca dos carteles sobre el mismo objeto, avisos que se aprenden solos después de
+> verse (`TutorialHintSO.completeAfterSeconds`) y la foto de la partida anota lo que solo se sabe por señal (qué pieza se
+> agarró, si el cliente rechazó el plato). Sección 3.7 → *Carteles contextuales*.
 
 ---
 
@@ -456,7 +463,8 @@ event Action OnPaused                           // una vez por transición no pa
 void SetMenuPaused(bool), SetDialogPaused(bool), Reset()
 ```
 **Único escritor** de `Time.timeScale`, `Camera.main.eventMask` y `AudioListener.pause`. Dos fuentes
-independientes (menú de `Esc` vía `UIManager`; diálogo de `TutorialOfferController`): el juego queda
+independientes (menú de `Esc` vía `UIManager`; `SetDialogPaused` para un diálogo modal, que hoy no usa ninguna escena:
+el de `TutorialOfferController` salió de `GameScene`): el juego queda
 pausado mientras cualquiera esté activa.
 
 - `timeScale = 0` congela todo lo que usa `deltaTime` / `Time.time` / `WaitForSeconds`: cocción,
@@ -744,7 +752,7 @@ protected virtual void ValidateReferences()       // el hijo llama base.Validate
   inicial no dispara `OnViewChanged`.
 - `Open()` → `CanOpen()` → `SetOpenState(true)` → deslizar → **`AudioManager.PlayTableSlide()`** → `OnPanelOpened()`.
   El sonido va acá y no en `GameManager` porque la pestaña lateral también abre el panel.
-- La corrutina de deslizamiento usa **`Time.unscaledDeltaTime`** (el diálogo de `TutorialOfferController` pone `timeScale = 0`).
+- La corrutina de deslizamiento usa **`Time.unscaledDeltaTime`** (la pausa pone `timeScale = 0`).
 - Los estáticos (`OpenPanels`, `OnAnyPanelOpenChanged`) se limpian con `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]`
   por si el Editor entra a Play sin domain reload.
 - `IsAreaCoveredByOpenPanel` mide el panel **en su posición final abierta** (`GetOffsetToOpenPosition`), así la respuesta
@@ -1624,7 +1632,6 @@ Se rehízo copiando `GameScene` (se conserva el GUID de `TutorialScene`). Difier
 | Qué | Valor en el tutorial |
 |---|---|
 | Sin `DayClock` | Modo "sin reloj" de `CustomerSystem`: con reloj el spawn se reparte por la jornada e ignora `spawnIntervalSeconds` |
-| Sin `TutorialOffer` (y su `Canvas`) | Es el diálogo de `GameScene` |
 | `TutorialManager` + `TutorialCanvas` | Overlay, orden 0, al final de la raíz: sobre la burbuja de pedidos, debajo de la pausa (que se instancia en runtime) |
 | Catálogo | `FoodCatalogTutorial` en `GameManager`, `BuildStation`, `FoodAvailabilityService`, `StockPanel` y `shopSystem` |
 | `CoolerSystem.initialStock` | `ChorizoTutorial 10`, `CoalData 10` (solo cuenta si se prueba la escena suelta) |
@@ -1635,14 +1642,15 @@ Se rehízo copiando `GameScene` (se conserva el GUID de `TutorialScene`). Difier
 volver a clonar y reaplicar la tabla).
 
 #### `TutorialOfferController` — `UI/TutorialOfferController.cs`
-Diálogo al entrar a `GameScene` (`GamePause.SetDialogPaused(true)`): "sí" carga `TutorialScene`, "no" reanuda.
+Era el diálogo al entrar a `GameScene` ("sí" cargaba `TutorialScene`). Ya no está en ninguna escena: salió de `GameScene`
+en la fase 4 del tutorial nuevo. El script se borra en la fase 7.
 
 #### Carteles contextuales (tutorial nuevo) — `Tutorial/`
 Reemplazo en curso del tutorial de arriba: en vez de pasos con paneles que frenan el juego, carteles chicos (ícono del
 control + 2-4 palabras) en la zona de la acción, dentro de la partida real. Nada bloquea ni pausa. Plan y catálogo de
-carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1 a 4**: señales, cartel, director con los carteles de la
-primera noche, opción *Ayudas* y lo aprendido guardado en `init.cfg`. De la fase 4 falta sacar el diálogo de oferta de
-`GameScene` (`TutorialOffer` y su `Canvas`).
+carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1 a 5**: señales, cartel, director, los carteles de la
+primera noche y los de la primera vez que pasa algo, opción *Ayudas* y lo aprendido guardado en `init.cfg`. Faltan el
+arte (fase 0), la tienda (6) y borrar el tutorial viejo (7).
 
 ```csharp
 // TutorialSignals — estática. Único punto por donde el juego avisa al tutorial.
@@ -1650,6 +1658,7 @@ static event Action<TutorialSignal, TutorialSignalArgs> Raised;
 static void Raise(TutorialSignal, MeatCutSO cut = null, CoalSO coal = null, Meat meat = null,
                   GrillLayer layer = default, Transform target = null)   // con meat, cut y target salen de la carne
 // TutorialSignalArgs: Cut, Coal, Meat, Layer, Target (lo que conviene señalar: la carne, el carbón, la carne ya en el plato)
+// TutorialSignal.None (= -1): "ninguna", para los carteles que no se aprenden con una señal. Raise la ignora
 
 // TutorialHintLayer — singleton de escena, en el canvas del prefab TutorialHints
 TutorialHintView Show(HintPrompt, string textKey, Transform target, HintPlacement, Vector2 offset = default)
@@ -1663,16 +1672,21 @@ void Reevaluate(), LearnAll()          // QA
 // TutorialProgress — estática. Lo aprendido va a init.cfg (TutorialDone) a través de GameSettings
 static bool HintsEnabled;              // opción Ayudas (SettingsData.tutorialHints). Apagadas: los directores retiran todo
 static bool IsLearned(string id); static void MarkLearned(string id), Reset()
+static event Action OnReset;           // el director olvida también cuánto se vio cada aviso
 ```
 
-**Cómo decide el director.** Las señales solo se anotan; se procesan en su `Update`, así un error del tutorial nunca corta
-una acción del juego a mitad de camino. Revisa unas 5 veces por segundo (tiempo sin escalar) y enseguida después de cada
-señal; en pausa, nada. En cada revisión rearma la foto (`TutorialHintContext.Refresh`) y:
-1. **Aprende**: cada señal anotada da por aprendidos los carteles con ese `completeOn` si valen sus `completeOnlyIf`, se
-   estén viendo o no (si el jugador ya lo hizo, el cartel no aparece).
-2. **Elige**: candidatos = sin aprender + `requires` aprendidos + todas sus `showWhile` + zona resuelta. Se ordenan por
-   `priority` (empate: orden del set) y entran los primeros `maxVisible`.
-3. **Retira** los que no entran: cumplido (pop) si dejaron de valer por algo que el jugador acaba de hacer (apretó Q y se
+**Cómo decide el director.** Las señales solo se anotan (con sus datos); se procesan en su `Update`, así un error del
+tutorial nunca corta una acción del juego a mitad de camino. Revisa unas 5 veces por segundo (tiempo sin escalar) y
+enseguida después de cada señal; en pausa, nada. En cada revisión rearma la foto (`TutorialHintContext.Refresh`) y:
+1. **Anota** en la foto lo que solo se sabe por una señal (`TutorialHintContext.Observe`): qué corte se agarró
+   (`PieceGrabbed`) y si el cliente rechazó el plato (`DeliveryRejected`).
+2. **Aprende**: cada señal anotada da por aprendidos los carteles con ese `completeOn` si valen sus `completeOnlyIf`, se
+   estén viendo o no (si el jugador ya lo hizo, el cartel no aparece). Además, los que tienen `completeAfterSeconds` se
+   aprenden solos cuando suman ese tiempo a la vista (en la sesión, sumando todas las veces que aparecieron) y se desvanecen.
+3. **Elige**: candidatos = sin aprender + `requires` aprendidos + todas sus `showWhile` + zona resuelta. Se ordenan por
+   `priority` (empate: orden del set) y entran los primeros `maxVisible`, **uno por objeto**: si dos apuntan a lo mismo
+   (la pestaña, el mismo cliente) queda el de mayor prioridad.
+4. **Retira** los que no entran: cumplido (pop) si dejaron de valer por algo que el jugador acaba de hacer (apretó Q y se
    abrió el panel); fundido si solo cedieron su lugar. **Muestra** los nuevos, y si la zona cambió de objeto (otro cliente,
    otra carne) el cartel se va y reaparece en el nuevo.
 
@@ -1686,6 +1700,13 @@ señal; en pausa, nada. En cada revisión rearma la foto (`TutorialHintContext.R
 | `MeatDraggedToBuild` + `MeatPlacedOnBuildZone` | `MeatTransferBuffer` (parrilla → plato; bandeja → plato solo la segunda). `Target` = la carne ya en el plato |
 | `DeliverySelectionBegun` / `ProductDelivered` | `PlateDeliveryDraggable` al agarrar el plato / `GameManager.TryDeliverToCustomer` (entrega cobrada, no la cruda/quemada) |
 | `CustomerHovered` | `CustomerView.OnWorldPointerEnter` (se agranda la burbuja; con joystick, al seleccionarlo) |
+| `AshesCleaned` | `GameManager.CleanAshes` (R), si limpió algo |
+| `PieceGrabbed` / `PieceRotated` | Agarrar un corte: `StockPanelSlot` (`Target` = el fantasma) y `Meat.OnPickedUp`. Rotar (R): las cinco piezas que se arrastran (`StockPanelSlot`, `Meat`, `ToBuildDraggableMeat`, `MeatHolderDraggableMeat`, carne del plato en `PlateDeliveryDraggable`) |
+| `BreadAdded` / `ToppingAdded` | `BuildFoodDropZone.TryAcceptAt` (pan o topping sólido soltado en el plato) / también `ToppingDraggable.RegisterTopping` (salsa vertida) |
+| `MissingCutUsed` | `GameManager`, acción `MissingCut` (M) sobre el cliente elegido, haya o no otro corte para ofrecerle |
+| `CustomerClicked` | `CustomerView.OnWorldPointerDown` (el jugador elige al cliente; el `SelectCustomer` automático no la dispara) |
+| `DeliveryRejected` | `GameManager.TryDeliverToCustomer` cuando rechaza el cliente (`rejectedByCustomer`: corte equivocado o plato que no le sirve) |
+| `PlateCleared` / `UndoUsed` | `GameManager`, acción `ClearPlate` (C) / `BuildUndoHistory.UndoLast` (botón ↶) |
 
 ⚠️ `TutorialSignal`, `HintInput`, `HintPlacement`, `HintAnchorId` y `HintCondition` se serializan como `int` en los assets de
 carteles: **valores nuevos siempre al final**. ⚠️ `GrillLayerChanged` también sale en el `Start` de `GrillLayerToggle`, con la
@@ -1697,8 +1718,8 @@ capa inicial: un cartel que se aprenda con esa señal necesita un `completeOnlyI
 | `TutorialHintView` + prefab `Prefabs/UI/TutorialHint.prefab` | Un cartel. Fondo 9-slice (`Background`, **fuera del layout**: un `Image` Sliced informa como tamaño preferido la suma de sus bordes sin el `pixelsPerUnitMultiplier` y agrandaba el cartel), ícono, texto (`Loc.Get(textKey)`) y flecha. Cada `LateUpdate` mide su objetivo — objeto del mundo: `Renderer` o `Collider2D` del objeto, 8 esquinas proyectadas con la cámara en perspectiva; UI: `RectTransform` con la cámara de su canvas — y se pone del lado pedido (`HintPlacement`), con la punta de la flecha a `gap` px. No se sale de la pantalla: se corre y la flecha compensa sobre su borde. Entra con pop, vaivén hacia el objetivo y sale con pop (cumplido) o fundido; todo en tiempo sin escalar. Si el objetivo se destruye, se va solo. Escucha `Loc.OnTextsChanged`: cambia texto e ícono al cambiar idioma o control |
 | `InputGlyphSetSO` — `ScriptableObjects/TutorialHints/InputGlyphs.asset` | Ícono de cada `HintPrompt` (una `GameAction`, click, click derecho, arrastrar o pasar por encima) para el control en uso. Busca por **control físico del binding** (`InputPrompts.GetControl`), así que cambiar una tecla en `GameControls.inputactions` cambia el ícono solo. Con dibujo (`LetraQ`, `LetraE`, los del mouse) lo usa entero; si no, **tecla o botón de joystick en blanco con el nombre** (`InputPrompts.GetLabel(acción, esquema, familia)`): cualquier binding y cualquier joystick andan sin arte nuevo. Con joystick, arrastrar = mantener A/Cruz y pasar por encima = seleccionar con el stick (`leftStick`, sin dibujo todavía: queda solo el texto) |
 | `TutorialHintDirector` (en el prefab, con `CartelesPartida`) | Ver *Cómo decide el director*. No busca nada por frame: la foto la arma `TutorialHintContext` |
-| `TutorialHintContext` | Foto de solo lectura: paneles abiertos (`IsOpen`), capa (`GrillLayerToggle.IsItemTypeAllowed`), carbón (`Coal.ActiveCoals`, la ceniza no cuenta), plato (`BuildFoodDropZone.Zones` → `HasLoadedPlate`), clientes que esperan (`IsCustomerActive`) y carnes en la parrilla (slots de carne del `GrillSystem`, una vez por corte aunque ocupe varios). Resuelve las zonas: pestañas (`StockPanelTab.Controller`), botón de capa, **slot de carne del medio de la fila de arriba** (el sprite de la parrilla tiene mucho margen transparente), `PlateBody`, la carne y **la burbuja (`CustomerOrderBubble.Panel`) del primer cliente que espera y se puede señalar**: con un panel abierto encima, el juego le apaga el collider (`CustomerView.PickCollider`) y no se le puede pasar el puntero, así que ahí "Ver pedido" no aparece. Las piezas fijas se buscan una sola vez |
-| `TutorialHintSO` + `TutorialHintSetSO` | Un cartel: `id` (vacío = nombre del asset; no cambiarlo una vez publicado), `prompt`, `textKey`, `anchor` + `placement` + `offset`, `requires`, `showWhile` (todas), `priority`, `completeOn` + `completeOnlyIf` (todas). El set los ordena; en empate de prioridad gana el primero |
+| `TutorialHintContext` | Foto de solo lectura: paneles abiertos (`IsOpen`), capa (`GrillLayerToggle.IsItemTypeAllowed`), carbón (`Coal.ActiveCoals`, la ceniza no cuenta), plato (`BuildFoodDropZone.Zones` → `HasLoadedPlate`), clientes que esperan (`IsCustomerActive`) y carnes en la parrilla (slots de carne del `GrillSystem`, una vez por corte aunque ocupe varios). Resuelve las zonas: pestañas (`StockPanelTab.Controller`), botón de capa, **slot de carne del medio de la fila de arriba** (el sprite de la parrilla tiene mucho margen transparente), `PlateBody`, la carne y **la burbuja (`CustomerOrderBubble.Panel`) del primer cliente que espera y se puede señalar**: con un panel abierto encima, el juego le apaga el collider (`CustomerView.PickCollider`) y no se le puede pasar el puntero, así que ahí "Ver pedido" no aparece. Las piezas fijas se buscan una sola vez: además de las de arriba, las X de strikes (`StrikeHudView`), la hora (`HudContainer` de tipo `Time`), el botón ↶ (`RollbackButtonUI`) y los panes y frascos del panel derecho (`BuildDraggableFoodItem`, `ToppingDraggable.ToppingData`). **Plato**: su cliente es el primero que espera el corte que hay en el plato; de ahí salen el pan y las salsas que faltan y dónde están en el panel. **Sin stock**: un cliente que pide un corte con stock 0 y sin ninguno en la parrilla ni en el plato (la bandeja no se mira); la M va al elegido (`CustomerSystem.SelectedCustomer`), así que se separa el elegido de los demás. **Lo que anota de las señales**: la pieza agarrada vale mientras exista, esté activa y siga apretado el botón (`InputManager.PrimaryHeld`); el rechazo, hasta que el plato se vacía |
+| `TutorialHintSO` + `TutorialHintSetSO` | Un cartel: `id` (vacío = nombre del asset; no cambiarlo una vez publicado), `prompt`, `textKey`, `anchor` + `placement` + `offset`, `requires`, `showWhile` (todas), `priority`, `completeOn` (`None` = ninguna) + `completeOnlyIf` (todas) y `completeAfterSeconds` (> 0: se aprende solo después de verse ese tiempo; para avisos, o para no insistir con algo opcional como rotar). El set los ordena; en empate de prioridad gana el primero |
 | `TutorialProgress` | Qué carteles se aprendieron (por `id`) y si las ayudas están prendidas (opción *Ayudas*, `GameSettings.Current.tutorialHints`). Lee la lista de `GameSettings.LearnedHints` la primera vez y la reescribe en `init.cfg` (`SaveLearnedHints`) con cada cartel aprendido: sobrevive a cerrar el juego. `Reset` (volver a prender las ayudas, o *QA/Reiniciar*) la vacía |
 | `TutorialHintDebug` (en el prefab) | QA, menú contextual en Play: *QA/Reiniciar las ayudas (todo sin aprender)*, *QA/Dar todas por aprendidas* (estas dos se guardan en `init.cfg`), *QA/Mostrar el cartel de prueba* (objetivo, control, clave, lado, offset y señal que lo retira, del inspector) y *QA/Ocultar los carteles* (los del director vuelven en la próxima revisión si siguen valiendo) |
 | Arte provisorio — `Sprites/UI/Tutorial/* PH.png` | Fondo y flecha del cartel, tecla y botón de joystick en blanco (9-slice, dibujados a 2x: `pixelsPerUnitMultiplier = 2`) e íconos de mouse. Para reemplazar por arte final. `LetraQ` y `LetraE` pasaron a tener **mipmaps**: en el cartel se ven ~12 veces más chicas. `LetraR` y `LetraSpace` no se usan: vienen en lienzos de 1536×1024 casi vacíos (hay que recortarlas) y `LetraSpace` a ese tamaño no se lee |
@@ -1717,13 +1738,35 @@ capa inicial: un cartel que se aprenda con esa señal necesita un `completeOnlyI
 | `07.VerPedido` (`see_order`) | 🖱 Ver pedido (pasar por encima) | burbuja del cliente, abajo | cliente esperando y señalable | `CustomerHovered` | 40 |
 | `08.DarVuelta` (`flip`) | Click derecho · Dar vuelta | la carne a dar vuelta | cara de abajo ya no cruda, la de arriba sí + capa carne | `MeatFlipped` | 85 |
 | `09.CarneAlPlato` (`to_plate`) | 🖱 Carne al plato | plato | carne a un punto o menos de un pedido (sin crudo ni quemado) + plato vacío + capa carne | `MeatPlacedOnBuildZone` | 90 |
-| `10.PlatoAlCliente` (`deliver`) | 🖱 Plato al cliente | plato | plato con carne + cliente esperando | `ProductDelivered` | 95 |
+| `10.PlatoAlCliente` (`deliver`) | 🖱 Plato al cliente | plato | un cliente que espera pidió el corte del plato, y el plato tiene el pan y las salsas que pidió | `ProductDelivered` | 95 |
+
+**La primera vez que pasa algo** (mismo set y carpeta; cualquier noche):
+
+| Asset (`id`) | Cartel | Zona | Se ve mientras | Se aprende con | Prio |
+|---|---|---|---|---|---|
+| `11.LimpiarCenizas` (`clean_ashes`) | R · Limpiar cenizas | la primera ceniza, arriba | hay ceniza | `AshesCleaned` | 75 |
+| `12.Rotar` (`rotate`) | R · Rotar | la pieza que se arrastra, arriba | se arrastra un corte rotable; requiere el 03 | `PieceRotated`, o 10 s a la vista | 65 |
+| `13.AgregarPan` (`add_bread`) | 🖱 Agregá el pan | el pan pedido en el panel, abajo | panel derecho abierto + el plato necesita pan | `BreadAdded` | 96 |
+| `13b.ServirSalsa` (`add_sauce`) | 🖱 Serví la salsa | el frasco de la primera salsa que falta, arriba | panel derecho abierto + al plato le falta una salsa | `ToppingAdded` | 96 |
+| `13c.AbrirExtras` (`open_extras`) | E · Ver panes y toppings | pestaña derecha, abajo | panel derecho cerrado + al plato le falta pan o salsa | `ToppingsPanelOpened` con eso todavía cierto | 96 |
+| `14.PedirOtroCorte` (`missing_cut`) | M · Pedir otro corte | burbuja del cliente elegido, abajo | el elegido pide un corte sin stock | `MissingCutUsed` | 89 |
+| `14b.ElegirCliente` (`pick_customer`) | 🖱 Elegí al cliente | burbuja de ese cliente, abajo | lo pide otro cliente, no el elegido | `CustomerClicked` si el elegido pasa a ser ese | 88 |
+| `15.VaciarPlato` (`clear_plate`) | C · Vaciar plato | plato, arriba | el cliente rechazó el plato y ningún otro que espera quiere ese corte | `PlateCleared` | 93 |
+| `15b.Deshacer` (`undo`) | 🖱 Deshacer | botón ↶, arriba | lo mismo | `UndoUsed` | 92 |
+| `16.SeQuema` (`burning`) | Se quema | la carne, arriba | la cara de abajo de una carne llegó a Pasado | 4 s a la vista | 99 |
+| `17.Strikes` (`strikes`) | 3 strikes y cerrás | las X del HUD, abajo | hay strikes y todavía no se llegó al límite | 5 s a la vista | 98 |
+| `18.Cerrado` (`closed`) | Cerrado: atendé a los que quedan | la hora del HUD, abajo | cerró a la hora (no por strikes) y quedan clientes | 5 s a la vista | 97 |
 
 La E arranca junto a la Q y, con la prioridad más baja, cede su lugar en cuanto hace falta otro cartel. Un hover
-cualquiera sobre un cliente aprende "Ver pedido" (es el gesto que enseña). Textos: claves `hint.*` en `Tutorial.csv`, sin
-signos que no estén en el atlas de las fuentes (un `&` en inglés le agregaba el glifo al atlas dinámico de Nunito).
+cualquiera sobre un cliente aprende "Ver pedido" (es el gesto que enseña). `13c` es la misma E pero con prioridad alta,
+en el momento en que el plato necesita algo del panel: si 02 y 13c valen a la vez, apuntan a la misma pestaña y queda 13c.
+Textos: claves `hint.*` en `Tutorial.csv`, sin signos que no estén en el atlas de Nunito: un `&` en inglés le agregaba el
+glifo al atlas dinámico, y **tampoco están `¡ ! ¿ ?`** ("Se quema", sin exclamación). "3 strikes" está escrito en el texto:
+si cambia `StrikeSystem.maxStrikes`, cambiarlo también.
 Ubicación probada a 1920×1080 con clientes: al costado de la pestaña izquierda el cartel le tapa la cara al primer cliente;
-debajo de cada pestaña no tapa nada.
+debajo de cada pestaña no tapa nada. En el panel derecho (grilla de 3 columnas: los dos panes y las fritas arriba, las
+ensaladas y la criolla en el medio, el chimichurri abajo) el pan va abajo y la salsa arriba: así cada cartel tapa solo
+guarniciones, que los pedidos no llevan. Si se reordena el panel, revisar esos dos lados.
 
 ---
 
@@ -1948,7 +1991,8 @@ MainMenuScene (build index 0)
   │     aplica Screen.SetResolution (si cambió) + vSyncCount/targetFrameRate + InputManager.SetInputMode + Loc.SetLanguage
   └── MainMenuPanel: fade-in (CanvasGroup) + versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Opciones → OptionsPanel · Salir → Quit (en Editor, sale de Play)
         botones con MenuButtonHover (escala al hover/click, unscaled) sobre sprites Boton Comenzar / Boton Continuar
-        └── TutorialOfferController: diálogo pausado → "sí" carga TutorialScene → (paso 18) ShopTutorial → GameScene
+        └── GameScene arranca directo, sin diálogo: si las ayudas están prendidas, los carteles del tutorial aparecen
+            solos (TutorialHints, ver 3.7). TutorialScene y ShopTutorial ya no se abren desde el juego (se borran en la fase 7)
 
 [RuntimeInitializeOnLoadMethod]
   InputManager.ResetStatics()                SubsystemRegistration  → Instance / OnSchemeChanged a null
@@ -2002,7 +2046,7 @@ asset, no código. Gamepad en notación Xbox / PlayStation.
 | Cursor libre | mouse | stick derecho | Global | Mueve el puntero libre, para apuntar fino |
 | `PointerPrimary` | click izquierdo | A / ✕ | Global | Agarrar / soltar / click (mundo y UI) |
 | `PointerSecondary` | click derecho | X / □ | sobre carne en parrilla | `Meat.Flip()` |
-| `Pause` | `Esc` | Menu / Options | Global | Pausa / reanudar vía `GamePause`: congela tiempo, audio e input del mundo y cancela arrastres. Ignorada mientras el diálogo de oferta del tutorial está abierto |
+| `Pause` | `Esc` | Menu / Options | Global | Pausa / reanudar vía `GamePause`: congela tiempo, audio e input del mundo y cancela arrastres. Ignorada mientras hay un diálogo con pausa propia (`GamePause.SetDialogPaused`; hoy ninguno) |
 | `ToggleStockPanel` | `Q` | LB / L1 | Parrilla | Abre / cierra el **StockPanel**. Abrir pide `TutorialManager.CheckStockPanelOpenAllowed` |
 | `ToggleToppingsPanel` | `E` | RB / R1 | Parrilla | Abre / cierra el **ToppingsPanel** |
 | `ToggleGrillLayer` | `Space` | Y / △ | Parrilla | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; ignorado con `PrimaryHeld`) |

@@ -158,6 +158,9 @@ public class StockPanelSlot : MonoBehaviour
 
         owner.NotifyDragStarted(this);
         UpdateHoverPreview(mouseWorld);
+
+        if (draggingItem is MeatCutSO cut)
+            TutorialSignals.Raise(TutorialSignal.PieceGrabbed, cut: cut, target: ghost.transform);
     }
 
     void OnWorldPointerDrag()
@@ -291,6 +294,7 @@ public class StockPanelSlot : MonoBehaviour
         isGridRotated = !isGridRotated;
         ApplyGhostRotation();
         UpdateHoverPreview(GetMouseWorldPosition());
+        TutorialSignals.Raise(TutorialSignal.PieceRotated, cut: draggingItem as MeatCutSO);
     }
 
     // ── Preview de hover sobre la grilla ────────────────────────────────────
