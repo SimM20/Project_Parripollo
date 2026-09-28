@@ -9,6 +9,7 @@ options.vsync,VSYNC,VSYNC
 options.fps,FPS MÁXIMOS,MAX FPS
 options.input,CONTROLES,CONTROLS
 options.language,IDIOMA,LANGUAGE
+options.hints,AYUDAS,HINTS
 options.apply,APLICAR,APPLY
 options.back,VOLVER,BACK
 options.yes,SÍ,ON

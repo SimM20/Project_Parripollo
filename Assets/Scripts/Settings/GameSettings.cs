@@ -16,6 +16,8 @@ public struct SettingsData
     public InputMode inputMode;
     /// <summary>Código de idioma de las tablas de <see cref="Loc"/> ("es", "en").</summary>
     public string language;
+    /// <summary>Carteles del tutorial en la partida. Volver a prenderlos reinicia lo aprendido.</summary>
+    public bool tutorialHints;
 
     public static SettingsData Defaults
     {
@@ -31,6 +33,7 @@ public struct SettingsData
                 vSync = true,
                 inputMode = InputMode.Auto,
                 language = Loc.DetectSystemLanguage(),
+                tutorialHints = true,
             };
         }
     }
@@ -39,14 +42,14 @@ public struct SettingsData
     {
         return resolutionWidth == other.resolutionWidth && resolutionHeight == other.resolutionHeight
             && displayMode == other.displayMode && targetFps == other.targetFps && vSync == other.vSync
-            && inputMode == other.inputMode && language == other.language;
+            && inputMode == other.inputMode && language == other.language && tutorialHints == other.tutorialHints;
     }
 }
 
 /// <summary>
-/// Configuración del jugador (pantalla, FPS, tipo de control, idioma). Se persiste en
-/// <c>persistentDataPath/init.cfg</c> como líneas <c>Clave=Valor</c>; las claves que no conoce se
-/// conservan al reescribir el archivo. Carga perezosa: el primer acceso a <see cref="Current"/> lee el disco.
+/// Configuración del jugador (pantalla, FPS, tipo de control, idioma, ayudas) y los carteles del tutorial ya
+/// aprendidos. Se persiste en <c>persistentDataPath/init.cfg</c> como líneas <c>Clave=Valor</c>; las claves que no
+/// conoce se conservan al reescribir el archivo. Carga perezosa: el primer acceso a <see cref="Current"/> lee el disco.
 ///
 /// <see cref="Init"/> la aplica al arrancar y el menú de opciones (<see cref="OptionsMenuPanel"/>)
 /// la cambia con <see cref="ApplyAndSave"/>.
@@ -63,6 +66,8 @@ public static class GameSettings
     private const string KeyVSync = "VSync";
     private const string KeyInputMode = "InputMode";
     private const string KeyLanguage = "Language";
+    private const string KeyTutorialHints = "TutorialHints";
+    private const string KeyTutorialDone = "TutorialDone";
 
     /// <summary>Se aplicó una configuración nueva.</summary>
     public static event Action<SettingsData> OnApplied;
@@ -70,6 +75,28 @@ public static class GameSettings
     private static SettingsData current;
     private static bool loaded;
     private static readonly Dictionary<string, string> extraKeys = new Dictionary<string, string>();
+    private static readonly List<string> learnedHints = new List<string>();
+
+    /// <summary>
+    /// Ids de los carteles del tutorial ya aprendidos. Es progreso, no una opción: no pasa por
+    /// <see cref="SettingsData"/> ni por el menú. Lo maneja <see cref="TutorialProgress"/>.
+    /// </summary>
+    public static IReadOnlyList<string> LearnedHints
+    {
+        get
+        {
+            EnsureLoaded();
+            return learnedHints;
+        }
+    }
+
+    public static void SaveLearnedHints(IEnumerable<string> hintIds)
+    {
+        EnsureLoaded();
+        learnedHints.Clear();
+        learnedHints.AddRange(hintIds);
+        Save();
+    }
 
     private static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
 
@@ -87,6 +114,7 @@ public static class GameSettings
     {
         loaded = false;
         extraKeys.Clear();
+        learnedHints.Clear();
         OnApplied = null;
     }
 
@@ -97,8 +125,14 @@ public static class GameSettings
     public static void ApplyAndSave(SettingsData data)
     {
         EnsureLoaded();
+        bool hintsTurnedOn = !current.tutorialHints && data.tutorialHints;
         current = data;
         Apply(current);
+
+        // Volver a prender las ayudas es pedir el tutorial de nuevo.
+        if (hintsTurnedOn)
+            TutorialProgress.Reset();
+
         Save();
     }
 
@@ -139,6 +173,7 @@ public static class GameSettings
     {
         current = SettingsData.Defaults;
         extraKeys.Clear();
+        learnedHints.Clear();
 
         if (!File.Exists(FilePath))
         {
@@ -185,6 +220,17 @@ public static class GameSettings
         // Loc.Resolve también entiende los valores viejos del enum ("Spanish", "English").
         if (values.TryGetValue(KeyLanguage, out string languageText) && !string.IsNullOrWhiteSpace(languageText))
             current.language = Loc.Resolve(languageText);
+        if (values.TryGetValue(KeyTutorialHints, out string hintsText) && bool.TryParse(hintsText, out bool hints))
+            current.tutorialHints = hints;
+        if (values.TryGetValue(KeyTutorialDone, out string doneText))
+        {
+            foreach (string hintId in doneText.Split(','))
+            {
+                string trimmed = hintId.Trim();
+                if (trimmed.Length > 0 && !learnedHints.Contains(trimmed))
+                    learnedHints.Add(trimmed);
+            }
+        }
 
         foreach (var pair in values)
         {
@@ -207,6 +253,8 @@ public static class GameSettings
                 writer.WriteLine($"{KeyVSync}={current.vSync.ToString().ToLowerInvariant()}");
                 writer.WriteLine($"{KeyInputMode}={current.inputMode}");
                 writer.WriteLine($"{KeyLanguage}={current.language}");
+                writer.WriteLine($"{KeyTutorialHints}={current.tutorialHints.ToString().ToLowerInvariant()}");
+                writer.WriteLine($"{KeyTutorialDone}={string.Join(",", learnedHints)}");
 
                 foreach (var pair in extraKeys)
                     writer.WriteLine($"{pair.Key}={pair.Value}");
@@ -221,7 +269,8 @@ public static class GameSettings
     private static bool IsKnownKey(string key)
     {
         return key == KeyTargetFps || key == KeyResolutionX || key == KeyResolutionY || key == KeyLegacyFullscreen
-            || key == KeyDisplayMode || key == KeyVSync || key == KeyInputMode || key == KeyLanguage;
+            || key == KeyDisplayMode || key == KeyVSync || key == KeyInputMode || key == KeyLanguage
+            || key == KeyTutorialHints || key == KeyTutorialDone;
     }
 
     private static bool TryGetInt(Dictionary<string, string> values, string key, out int value)

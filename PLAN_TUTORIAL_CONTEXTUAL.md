@@ -1,6 +1,6 @@
 # Plan técnico — Tutorial con carteles contextuales
 
-> ## ESTADO: fases 1, 2 y 3 IMPLEMENTADAS (2026-09-27, rama `tutorialREV`) — fases 0 y 4 a 7 pendientes
+> ## ESTADO: fases 1 a 4 IMPLEMENTADAS (2026-09-27, rama `tutorialREV`) — de la 4 falta sacar el diálogo; fases 0 y 5 a 7 pendientes
 >
 > - **Fase 1 (señales):** hecha y probada. Los ~20 `TutorialManager.Notify*` pasaron a `TutorialSignals.Raise`. El
 >   `TutorialManager` viejo se suscribe a las señales; se probó en Play que `TutorialScene` avanza igual del paso 7 al 17
@@ -10,6 +10,11 @@
 > - **Fase 3 (director):** hecha y probada en `GameScene` a 1920×1080, en español: los 11 carteles de la primera noche
 >   aparecen solos, en orden, y se aprenden con la acción real (abrir el stock, soltar carne y carbón, capas, hover,
 >   vuelta, plato, entrega). También probados: reiniciar y saltear lo aprendido, apagar las ayudas y la E cediendo su lugar.
+> - **Fase 4 (opción y progreso):** hecha y probada con los botones reales del menú, en el menú principal y en la pausa.
+>   Fila **Ayudas: Sí / No** (`options.hints`). `init.cfg` guarda `TutorialHints` y `TutorialDone`; al reabrir el juego se
+>   leen (ayudas apagadas y lo aprendido siguen igual), con las ayudas apagadas no aparece ningún cartel, y al prenderlas
+>   `TutorialDone` queda vacío y vuelven la Q y "Ver pedido". **Falta sacar de `GameScene` el diálogo viejo**
+>   (`TutorialOffer` y su `Canvas`, instancias de prefabs que ya no existen); mientras tanto sigue apareciendo al arrancar.
 >
 > Desvíos respecto del plan, todos deliberados:
 > - **Q y E van debajo de su pestaña**, no al costado: al costado, el de la izquierda le tapa la cara al primer cliente.
@@ -27,6 +32,8 @@
 > - **`completeOnlyIf` es una lista**: `GrillLayerChanged` también sale al arrancar la escena (capa inicial), y "Volver a la
 >   carne" se aprendía solo. Ahora pide capa de carne **y** carbón en la parrilla.
 > - **Textos cortos de verdad:** "Carne al plato" y "Plato al cliente" (3 palabras) en vez de "Llevá la carne al plato".
+> - **Opciones con 7 filas en la misma ventana:** en el menú principal la ventana toca el título y no puede crecer; las
+>   filas pasaron a 64 px con 6 de separación (eran 68 + 8).
 
 > Decisiones tomadas con el desarrollador (2026-09-27):
 > 1. El tutorial pasa a la partida real (`GameScene`), sin escena aparte. **Nada bloquea ni pausa.**
@@ -64,7 +71,7 @@ del control y 2 a 4 palabras, en la zona de la acción:
 | `TutorialHintDebug` | QA en Play: Q y E, cartel de prueba configurable, ocultar todos | ✅ |
 | `TutorialHintSO` + `TutorialHintSetSO` | Un asset por cartel: id, control (`HintPrompt`), clave de texto, zona + lado + offset, prerrequisitos, condiciones, señal (+ condiciones) que lo da por aprendido, prioridad. El set los ordena | ✅ (auto-ocultar: fase 5) |
 | `TutorialHintDirector` + `TutorialHintContext` | Uno por escena: decide qué carteles se ven (≈5 veces por segundo + en cada señal) a partir de una foto de la partida | ✅ en `GameScene` |
-| `TutorialProgress` | Qué se aprendió y si las ayudas están prendidas. En memoria; `init.cfg` en la fase 4 | ✅ |
+| `TutorialProgress` | Qué se aprendió y si las ayudas están prendidas. Guardado en `init.cfg` a través de `GameSettings` | ✅ |
 | Zonas (`HintAnchorId`) | Resueltas por código: pestañas, botón de capa, parrilla, plato, la carne, el cliente que espera. HUD (reloj, strikes) y tienda: en su fase | ✅ las de la partida |
 
 **Señales que faltan** (se agregan con su cartel): `CustomerSpawned`, `CustomerHovered` (`CustomerView.OnWorldPointerEnter`),
@@ -143,7 +150,7 @@ Cada fase deja el juego jugable y se puede mergear sola.
 | 1. Señales | `TutorialSignals` + migrar los `Notify*`; el `TutorialManager` viejo escucha las señales | ✅ |
 | 2. Cartel | Vista, canvas, íconos, QA | ✅ |
 | 3. Director | `TutorialHintSO`, contextos, zonas, director y carteles 1-10 (más el 4b) | ✅ |
-| 4. Primera noche | Opciones, `init.cfg`, sacar el diálogo | ⏳ |
+| 4. Primera noche | Opciones, `init.cfg`, sacar el diálogo | ✅ opción e `init.cfg` · ⏳ diálogo |
 | 5. Primera vez | Carteles 11-18 y sus señales | ⏳ |
 | 6. Tienda | T1-T4 en `EndScene` | ⏳ |
 | 7. Limpieza | Borrar el tutorial viejo (abajo) y actualizar `ARQUITECTURA_PROYECTO.md` | ⏳ |
@@ -170,7 +177,7 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - **Señales que también salen al arrancar** (`GrillLayerChanged`): un cartel que se aprenda con ellas necesita una
   condición que el arranque no cumpla.
 
-## 7. Checklist manual (fases 1 a 3)
+## 7. Checklist manual (fases 1 a 4)
 
 - [ ] `TutorialScene` de punta a punta: cada paso de acción avanza igual que antes.
 - [ ] `GameScene`, jugando de verdad la primera noche: aparecen Q y E; al apretar Q se va la Q y aparece "Arrastrá a la
@@ -185,3 +192,6 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - [ ] Pausa (Esc): los carteles desaparecen y vuelven al reanudar.
 - [ ] Hacer click, arrastrar o pasar el mouse "a través" de un cartel: el juego responde como si no estuviera.
 - [ ] Probar en 16:10 y en 4:3: los carteles no se salen de la pantalla.
+- [ ] Opciones → Ayudas: No → Aplicar, en la pausa: al volver al juego no hay carteles. Sí → Aplicar: vuelven desde la Q.
+- [ ] Aprender algunos, cerrar el juego (build) y volver a abrirlo: lo aprendido no vuelve a aparecer.
+- [ ] Opciones con joystick: la fila Ayudas se alcanza con la cruceta y cambia con las flechas como las demás.

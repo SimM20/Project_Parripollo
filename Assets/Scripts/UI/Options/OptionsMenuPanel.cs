@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Menú de opciones: resolución, modo de pantalla, VSync, tope de FPS, tipo de control e idioma.
+/// Menú de opciones: resolución, modo de pantalla, VSync, tope de FPS, tipo de control, idioma y ayudas del tutorial.
 /// Los cambios quedan pendientes hasta "APLICAR" (que los aplica y guarda en init.cfg vía
 /// <see cref="GameSettings"/>); "VOLVER", Back (Esc · B / ○) o Pause (Start / Options) cierra y
 /// descarta lo no aplicado.
@@ -18,6 +18,8 @@ public class OptionsMenuPanel : MonoBehaviour
     [SerializeField] private OptionSelectorUI fpsRow;
     [SerializeField] private OptionSelectorUI inputModeRow;
     [SerializeField] private OptionSelectorUI languageRow;
+    [Tooltip("Ayudas del tutorial (carteles). Volver a prenderlas reinicia lo aprendido.")]
+    [SerializeField] private OptionSelectorUI tutorialHintsRow;
 
     [Header("Botones")]
     [SerializeField] private Button applyButton;
@@ -64,6 +66,7 @@ public class OptionsMenuPanel : MonoBehaviour
         if (fpsRow != null) fpsRow.OnValueChanged += i => { pending.targetFps = fpsOptions[i]; RefreshState(); };
         if (inputModeRow != null) inputModeRow.OnValueChanged += i => { pending.inputMode = InputModes[i]; RefreshState(); };
         if (languageRow != null) languageRow.OnValueChanged += i => { pending.language = languages[i]; RefreshState(); };
+        if (tutorialHintsRow != null) tutorialHintsRow.OnValueChanged += i => { pending.tutorialHints = i == 0; RefreshState(); };
 
         if (applyButton != null) applyButton.onClick.AddListener(Apply);
         if (backButton != null) backButton.onClick.AddListener(Close);
@@ -167,6 +170,8 @@ public class OptionsMenuPanel : MonoBehaviour
         languageRow?.SetOptions(languageLabels, Mathf.Max(0, languages.IndexOf(Loc.Resolve(pending.language))));
         languageRow?.SetInteractable(languages.Count > 1);
         languageRow?.SetNote(null);
+
+        tutorialHintsRow?.SetOptions(new[] { Loc.Get("options.yes"), Loc.Get("options.no") }, pending.tutorialHints ? 0 : 1);
     }
 
     private void RefreshState()

@@ -45,6 +45,13 @@
 > `TutorialHintContext` y guarda lo aprendido en `TutorialProgress` (en memoria por ahora; `init.cfg` es la fase 4). Señal
 > nueva `CustomerHovered` (`CustomerView.OnWorldPointerEnter`) y `CustomerOrderBubble.Panel`. Sección 3.7 → *Carteles contextuales*.
 
+> Última actualización parcial: **2026-09-27** (rama `tutorialREV`) — **tutorial nuevo, fase 4: opción y progreso guardado**.
+> Opción nueva **Ayudas: Sí / No** en el menú de opciones (`SettingsData.tutorialHints`, fila `TutorialHintsRow`). `init.cfg`
+> suma `TutorialHints=true|false` y `TutorialDone=id1,id2,…` (lo aprendido, fuera de `SettingsData`): lo aprendido ya no
+> vuelve al cerrar el juego, y volver a prender las ayudas reinicia el tutorial. Para que entren 7 filas sin agrandar la
+> ventana, las filas pasaron a 64 px con 6 de separación. **Pendiente:** sacar de `GameScene` el diálogo de
+> `TutorialOfferController`. Secciones 0, 3.7 y 3.10.
+
 ---
 
 ## 0. Ficha técnica
@@ -58,7 +65,7 @@
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina **contrarreloj**: cocinar cortes, armar platos/sándwiches y entregar a los clientes que entran durante la jornada |
 | Jornada | **06:30 → 21:00 en 5 minutos reales** (`DayClock`). A las 21:00 cierra y deja de entrar gente; el día termina **cuando se va el último cliente**, no al cerrar |
-| Persistencia | Solo `init.cfg` (opciones del jugador: pantalla, FPS, VSync, tipo de control, idioma — `GameSettings`, ver 3.10). **No hay savegame**: el progreso vive en objetos `DontDestroyOnLoad` |
+| Persistencia | Solo `init.cfg` (opciones del jugador: pantalla, FPS, VSync, tipo de control, idioma, ayudas; y qué carteles del tutorial ya se aprendieron — `GameSettings`, ver 3.10). **No hay savegame**: el progreso de la partida vive en objetos `DontDestroyOnLoad` |
 | Idioma del dominio | Español (`Crudo`, `Jugoso`, `Hecho`, `Muy_Hecho`, `Pasado`, `Quemado`): nombres de enums, assets y campos |
 | Idiomas del juego | **Español** (fuente) e **inglés**, por tablas CSV — ver 3.11. Cortes de carne y toppings quedan en español en todos los idiomas |
 
@@ -114,7 +121,7 @@ Assets/Scripts/
 | **Background/** | Fondo de `GameScene` en capas (cielo, estrellas, luna, sol, nubes, paisaje). `DayCycleBackground` lee la hora del `DayClock` y se la pasa a las capas; cada `DayCycleLayer` mezcla su color (y opcionalmente su sprite) entre claves horarias; `DayCycleArc` mueve sol y luna; `ParallaxLayer` desliza las nubes. Solo visual: no escribe la hora ni toca el gameplay | `DayCycleBackground.cs`, `DayCycleLayer.cs`, `DayCycleArc.cs`, `ParallaxLayer.cs` |
 | **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI y **nombres de teclas/botones para los textos** (`InputPrompts`, tokens `[[Accion]]`). Bindings en `Assets/Input/GameControls.inputactions` | `InputPrompts.cs`, `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
 | **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú y de la tienda; no reacciona si el `Selectable` está deshabilitado) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs` |
-| **Settings/** | `GameSettings` (estática): struct `SettingsData`, lectura perezosa de `init.cfg`, `ApplyAndSave`, aplicación (pantalla, VSync/FPS, `InputManager.SetInputMode`, `Loc.SetLanguage`) | `GameSettings.cs` |
+| **Settings/** | `GameSettings` (estática): struct `SettingsData`, lectura perezosa de `init.cfg`, `ApplyAndSave`, aplicación (pantalla, VSync/FPS, `InputManager.SetInputMode`, `Loc.SetLanguage`). También guarda la lista de carteles del tutorial aprendidos (`LearnedHints`) | `GameSettings.cs` |
 | **Tutorial/** | Tutorial nuevo (ver 3.7 → *Carteles contextuales*). `TutorialSignals`: hub estático por donde el juego avisa lo que hace el jugador (reemplaza a los `TutorialManager.Notify*`). Director: `TutorialHintDirector` (qué cartel, cuándo), `TutorialHintContext` (foto de la partida), `TutorialHintSO` / `TutorialHintSetSO` (datos), `TutorialProgress` (lo aprendido). Cartel: `TutorialHintLayer` (canvas y pool), `TutorialHintView`, `InputGlyphSetSO` (íconos de controles). `TutorialHintDebug` (QA) | `TutorialSignals.cs`, `TutorialHintDirector.cs`, `TutorialHintContext.cs`, `TutorialHintView.cs`, `InputGlyphSetSO.cs` |
 | **Localization/** | `Loc` (estática): carga las tablas `Resources/Localization/*.csv`, idioma activo, `Get`/`Format`/`GetPool`, tokens `[[...]]`, evento `OnTextsChanged`. `LocalizedText`: componente para los textos fijos de escenas y prefabs. Herramientas de editor en `Editor/LocalizationTools.cs` | `Loc.cs`, `LocalizedText.cs` |
 | **UI/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
@@ -1633,8 +1640,9 @@ Diálogo al entrar a `GameScene` (`GamePause.SetDialogPaused(true)`): "sí" carg
 #### Carteles contextuales (tutorial nuevo) — `Tutorial/`
 Reemplazo en curso del tutorial de arriba: en vez de pasos con paneles que frenan el juego, carteles chicos (ícono del
 control + 2-4 palabras) en la zona de la acción, dentro de la partida real. Nada bloquea ni pausa. Plan y catálogo de
-carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1, 2 y 3**: señales, cartel y director con los carteles de la
-primera noche. Lo aprendido todavía vive en memoria (se pierde al cerrar el juego) y el diálogo de oferta sigue: eso es la fase 4.
+carteles en `PLAN_TUTORIAL_CONTEXTUAL.md`. **Hechas las fases 1 a 4**: señales, cartel, director con los carteles de la
+primera noche, opción *Ayudas* y lo aprendido guardado en `init.cfg`. De la fase 4 falta sacar el diálogo de oferta de
+`GameScene` (`TutorialOffer` y su `Canvas`).
 
 ```csharp
 // TutorialSignals — estática. Único punto por donde el juego avisa al tutorial.
@@ -1652,8 +1660,8 @@ int Generation; bool IsShowing, IsInUse; Transform Target
 
 // TutorialHintDirector — uno por escena, en el prefab TutorialHints: set (TutorialHintSetSO), maxVisible (2), evaluateInterval (0.2 s)
 void Reevaluate(), LearnAll()          // QA
-// TutorialProgress — estática. Fase 4: se guarda en init.cfg y HintsEnabled sale de Opciones
-static bool HintsEnabled;              // apagadas: los directores retiran todo y no muestran más
+// TutorialProgress — estática. Lo aprendido va a init.cfg (TutorialDone) a través de GameSettings
+static bool HintsEnabled;              // opción Ayudas (SettingsData.tutorialHints). Apagadas: los directores retiran todo
 static bool IsLearned(string id); static void MarkLearned(string id), Reset()
 ```
 
@@ -1691,8 +1699,8 @@ capa inicial: un cartel que se aprenda con esa señal necesita un `completeOnlyI
 | `TutorialHintDirector` (en el prefab, con `CartelesPartida`) | Ver *Cómo decide el director*. No busca nada por frame: la foto la arma `TutorialHintContext` |
 | `TutorialHintContext` | Foto de solo lectura: paneles abiertos (`IsOpen`), capa (`GrillLayerToggle.IsItemTypeAllowed`), carbón (`Coal.ActiveCoals`, la ceniza no cuenta), plato (`BuildFoodDropZone.Zones` → `HasLoadedPlate`), clientes que esperan (`IsCustomerActive`) y carnes en la parrilla (slots de carne del `GrillSystem`, una vez por corte aunque ocupe varios). Resuelve las zonas: pestañas (`StockPanelTab.Controller`), botón de capa, **slot de carne del medio de la fila de arriba** (el sprite de la parrilla tiene mucho margen transparente), `PlateBody`, la carne y **la burbuja (`CustomerOrderBubble.Panel`) del primer cliente que espera y se puede señalar**: con un panel abierto encima, el juego le apaga el collider (`CustomerView.PickCollider`) y no se le puede pasar el puntero, así que ahí "Ver pedido" no aparece. Las piezas fijas se buscan una sola vez |
 | `TutorialHintSO` + `TutorialHintSetSO` | Un cartel: `id` (vacío = nombre del asset; no cambiarlo una vez publicado), `prompt`, `textKey`, `anchor` + `placement` + `offset`, `requires`, `showWhile` (todas), `priority`, `completeOn` + `completeOnlyIf` (todas). El set los ordena; en empate de prioridad gana el primero |
-| `TutorialProgress` | Qué carteles se aprendieron (por `id`) y si las ayudas están prendidas. En memoria: sobrevive a los cambios de escena, no a cerrar el juego |
-| `TutorialHintDebug` (en el prefab) | QA, menú contextual en Play: *QA/Reiniciar las ayudas (todo sin aprender)*, *QA/Dar todas por aprendidas*, *QA/Mostrar el cartel de prueba* (objetivo, control, clave, lado, offset y señal que lo retira, del inspector) y *QA/Ocultar los carteles* (los del director vuelven en la próxima revisión si siguen valiendo) |
+| `TutorialProgress` | Qué carteles se aprendieron (por `id`) y si las ayudas están prendidas (opción *Ayudas*, `GameSettings.Current.tutorialHints`). Lee la lista de `GameSettings.LearnedHints` la primera vez y la reescribe en `init.cfg` (`SaveLearnedHints`) con cada cartel aprendido: sobrevive a cerrar el juego. `Reset` (volver a prender las ayudas, o *QA/Reiniciar*) la vacía |
+| `TutorialHintDebug` (en el prefab) | QA, menú contextual en Play: *QA/Reiniciar las ayudas (todo sin aprender)*, *QA/Dar todas por aprendidas* (estas dos se guardan en `init.cfg`), *QA/Mostrar el cartel de prueba* (objetivo, control, clave, lado, offset y señal que lo retira, del inspector) y *QA/Ocultar los carteles* (los del director vuelven en la próxima revisión si siguen valiendo) |
 | Arte provisorio — `Sprites/UI/Tutorial/* PH.png` | Fondo y flecha del cartel, tecla y botón de joystick en blanco (9-slice, dibujados a 2x: `pixelsPerUnitMultiplier = 2`) e íconos de mouse. Para reemplazar por arte final. `LetraQ` y `LetraE` pasaron a tener **mipmaps**: en el cartel se ven ~12 veces más chicas. `LetraR` y `LetraSpace` no se usan: vienen en lienzos de 1536×1024 casi vacíos (hay que recortarlas) y `LetraSpace` a ese tamaño no se lee |
 
 **Carteles de la primera noche** (`CartelesPartida`, en `ScriptableObjects/TutorialHints/Partida/`; máximo 2 a la vista):
@@ -1837,22 +1845,31 @@ se ve al instante (`OnValidate` reaplica), pero como todo cambio en Play **se pi
 #### `GameSettings` — `Settings/GameSettings.cs` · estática
 ```csharp
 struct SettingsData { resolutionWidth, resolutionHeight, FullScreenMode displayMode, int targetFps /* <= 0 = sin límite */,
-                      bool vSync, InputMode inputMode, string language /* "es", "en" */; static Defaults; bool Equals(SettingsData) }
+                      bool vSync, InputMode inputMode, string language /* "es", "en" */, bool tutorialHints;
+                      static Defaults; bool Equals(SettingsData) }
 static SettingsData Current;               // carga perezosa de init.cfg en el primer acceso
 static void ApplyCurrent();                // Init.Awake
 static void ApplyAndSave(SettingsData);    // botón Aplicar del menú de opciones
 static event Action<SettingsData> OnApplied;
+static IReadOnlyList<string> LearnedHints;                // ids de los carteles del tutorial ya aprendidos
+static void SaveLearnedHints(IEnumerable<string> ids);    // la reemplaza y guarda (la llama TutorialProgress)
 ```
 `init.cfg` (`persistentDataPath`) sigue siendo `Clave=Valor`: `ResolutionX`, `ResolutionY`, `DisplayMode`
-(`ExclusiveFullScreen`/`FullScreenWindow`/`Windowed`), `TargetFPS`, `VSync`, `InputMode`, `Language`. El `Fullscreen=true/false`
+(`ExclusiveFullScreen`/`FullScreenWindow`/`Windowed`), `TargetFPS`, `VSync`, `InputMode`, `Language`, `TutorialHints`
+(`true`/`false`) y `TutorialDone` (ids separados por coma). El `Fullscreen=true/false`
 viejo se sigue leyendo si falta `DisplayMode`. Claves desconocidas se conservan al reescribir. Sin archivo, se crea con
 los defaults: **resolución nativa del monitor**, sin bordes, VSync **sí** (lo mismo que ya tenía el Quality `Ultra`),
-120 FPS, control `Auto` e **idioma del sistema** (`Loc.DetectSystemLanguage`: el del SO si hay columna para él, si no inglés).
-`Language` guarda el código (`es`, `en`); un `init.cfg` viejo con `Spanish`/`English` se sigue leyendo (`Loc.Resolve`).
+120 FPS, control `Auto`, **idioma del sistema** (`Loc.DetectSystemLanguage`: el del SO si hay columna para él, si no inglés)
+y ayudas **sí**. `Language` guarda el código (`es`, `en`); un `init.cfg` viejo con `Spanish`/`English` se sigue leyendo
+(`Loc.Resolve`).
+
+`TutorialDone` es **progreso, no una opción**: no pasa por `SettingsData` ni por el menú (así *Aplicar* y *Volver* no lo
+tocan). Lo maneja `TutorialProgress` (ver 3.7 → *Carteles contextuales*), que reescribe el archivo con cada cartel aprendido.
 
 Aplicar: `Screen.SetResolution` **solo si cambió** algo (Init corre cada vez que se vuelve al menú y reaplicar parpadea la
 ventana) · `QualitySettings.vSyncCount` y `Application.targetFrameRate` (con VSync va `-1`: Unity ignora el tope) ·
-`InputManager.SetInputMode` · `Loc.SetLanguage(language)`.
+`InputManager.SetInputMode` · `Loc.SetLanguage(language)`. Si las ayudas pasan de *No* a *Sí*, `TutorialProgress.Reset()`:
+prenderlas es pedir el tutorial de nuevo. Apagarlas no borra nada.
 
 #### Menú de opciones — `UI/Options/` · prefab `Prefabs/UI/OptionsPanel.prefab`
 Dos instancias, las dos arrancan apagadas:
@@ -1864,6 +1881,11 @@ Dos instancias, las dos arrancan apagadas:
   está abierto. Sirve en `GameScene` y `TutorialScene`. Para que entraran cuatro botones, `ButtonContainer.spacing`
   bajó a 12 y `VerticalContainer` subió 45 px.
 
+**7 filas en la misma ventana.** En el menú principal la ventana (1100×740, 110 px debajo del centro) ya toca el título
+"PARRILLA 40", así que no puede crecer hacia arriba, y abajo le quedan 60 px. Con la fila *Ayudas* se achicó el paso:
+filas de **64 px con 6 de separación** (eran 68 + 8), `Rows` en −118 con 490 de alto y `Header` en −20 (era −30). Una
+fila más no entra así: habría que agrandar la ventana y bajar el título, o pasar a pestañas.
+
 **Esc con Opciones abierto en la pausa.** En teclado `Back` y `Pause` son la misma tecla. `OptionsMenuPanel.AnyOpen`
 (hay un panel abierto **o se cerró este frame**) lo consulta `GameManager` antes de alternar la pausa: Esc cierra las
 opciones y el juego sigue pausado, corra primero el `Update` que corra. Con gamepad el panel se cierra con B (`Back`)
@@ -1872,7 +1894,7 @@ cosas y con gamepad el botón de pausa es otro — si solo escuchara `Back`, Sta
 
 | Pieza | Qué hace |
 |---|---|
-| `OptionsMenuPanel` | Al abrir copia `GameSettings.Current` a un `pending` y llena las filas. Las flechas editan `pending`; **APLICAR** (habilitado solo si `pending` difiere de lo guardado) llama `ApplyAndSave`; **VOLVER**, `GameAction.Back` (Esc · B/○) o `GameAction.Pause` (Start/Options) cierra y **descarta** lo no aplicado. Resoluciones = `Screen.resolutions` sin repetir por frecuencia (+ la guardada si no está). FPS: 30/60/120/144/240/sin límite; con VSync la fila se apaga y muestra "VSYNC". Pantalla: completa (exclusiva, solo Windows) / sin bordes / ventana. Controles: automático / teclado y mouse / joystick. Idioma: una opción por columna de las tablas (`Loc.Languages`), con el nombre de cada idioma en su idioma (`language.name`) |
+| `OptionsMenuPanel` | Al abrir copia `GameSettings.Current` a un `pending` y llena las filas. Las flechas editan `pending`; **APLICAR** (habilitado solo si `pending` difiere de lo guardado) llama `ApplyAndSave`; **VOLVER**, `GameAction.Back` (Esc · B/○) o `GameAction.Pause` (Start/Options) cierra y **descarta** lo no aplicado. Resoluciones = `Screen.resolutions` sin repetir por frecuencia (+ la guardada si no está). FPS: 30/60/120/144/240/sin límite; con VSync la fila se apaga y muestra "VSYNC". Pantalla: completa (exclusiva, solo Windows) / sin bordes / ventana. Controles: automático / teclado y mouse / joystick. Idioma: una opción por columna de las tablas (`Loc.Languages`), con el nombre de cada idioma en su idioma (`language.name`). Ayudas (`TutorialHintsRow`, clave `options.hints`): sí / no |
 | `OptionSelectorUI` | Fila "ETIQUETA  < valor >". `SetOptions`, `SetIndex`, `SetInteractable` (apaga flechas + `CanvasGroup.alpha`), `SetDisplayOverride`, `SetNote`, `event OnValueChanged(int)`. Las flechas son `Button` comunes: entran solas en la navegación del gamepad (nota 35) |
 
 ### 3.11 Localización — `Localization/` · `Resources/Localization/*.csv`
