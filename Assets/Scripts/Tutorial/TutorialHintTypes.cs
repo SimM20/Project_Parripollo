@@ -100,6 +100,10 @@ public enum HintAnchorId
     ShopBlockedBuyButton,
     /// <summary>Tienda: la línea de la racha de noches con strikes.</summary>
     ShopStreakLine,
+    /// <summary>La primera pila de carbón con ceniza debajo de un carbón encendido (<see cref="HintCondition.AshUnderFire"/>).</summary>
+    AshUnderFire,
+    /// <summary>El botón de pausa del HUD.</summary>
+    PauseButton,
 }
 
 /// <summary>
@@ -138,7 +142,10 @@ public enum HintCondition
     PlateNeedsTopping,
     /// <summary><see cref="PlateNeedsBread"/> o <see cref="PlateNeedsTopping"/>.</summary>
     PlateNeedsExtras,
-    /// <summary>Un cliente que espera pidió el corte del plato, y el plato tiene el pan y las salsas que pidió.</summary>
+    /// <summary>
+    /// Un cliente que espera pidió el corte del plato, y el plato tiene el pan y las salsas que pidió, sin carne
+    /// cruda ni quemada (entregarla cuesta un strike).
+    /// </summary>
     PlateReadyForCustomer,
     /// <summary>El cliente elegido (al que va la M) pide un corte sin stock, ni en la parrilla ni en el plato.</summary>
     SelectedWantsMissingCut,
@@ -163,4 +170,11 @@ public enum HintCondition
     ShopPurchaseBlocked,
     /// <summary>La racha de noches con strikes pasó de 0 (la línea está a la vista).</summary>
     StrikeStreakActive,
+    /// <summary>
+    /// En una pila de carbón hay ceniza debajo de un carbón encendido: la ceniza ocupa el lugar que calienta
+    /// entero y los de arriba rinden 30 % y 15 % (<see cref="GridSlot"/>).
+    /// </summary>
+    AshUnderFire,
+    /// <summary>El plato tiene carne que no le sirve a nadie: quemada, o un corte que no pidió ningún cliente que espera.</summary>
+    PlateHasUnusableMeat,
 }

@@ -26,6 +26,7 @@ public partial class TutorialHintContext
     private Transform strikeHud;
     private Transform clockHud;
     private Transform undoButton;
+    private Transform pauseButton;
     private readonly List<BuildDraggableFoodItem> panelItems = new List<BuildDraggableFoodItem>();
     private readonly List<ToppingDraggable> sauceJars = new List<ToppingDraggable>();
 
@@ -37,7 +38,10 @@ public partial class TutorialHintContext
     private bool meatLayer;
     private bool coalOnGrill;
     private Coal firstAsh;
+    private Transform ashUnderFire;
     private bool plateHasMeat;
+    private bool plateHasBurnt;
+    private bool plateHasRaw;
     private Transform plate;
     private Meat firstMeatOnGrill;
     private Meat meatToFlip;
@@ -121,13 +125,17 @@ public partial class TutorialHintContext
             case HintCondition.PlateNeedsBread: return plateNeedsBread;
             case HintCondition.PlateNeedsTopping: return missingTopping != null;
             case HintCondition.PlateNeedsExtras: return plateNeedsBread || missingTopping != null;
-            case HintCondition.PlateReadyForCustomer: return plateCustomer != null && !plateNeedsBread && missingTopping == null;
+            case HintCondition.PlateReadyForCustomer:
+                return plateCustomer != null && !plateNeedsBread && missingTopping == null && !plateHasBurnt && !plateHasRaw;
             case HintCondition.SelectedWantsMissingCut: return selectedMissingCut != null;
             case HintCondition.OtherWantsMissingCut: return otherMissingCut != null;
             case HintCondition.PlateRejected: return plateRejected && plateHasMeat && plateCustomer == null;
             case HintCondition.MeatAboutToBurn: return meatAboutToBurn != null;
             case HintCondition.StrikeWarning: return strikeWarning;
             case HintCondition.ClosedWithCustomers: return closedWithCustomers;
+            case HintCondition.AshUnderFire: return ashUnderFire != null;
+            case HintCondition.PlateHasUnusableMeat:
+                return plateHasMeat && (plateHasBurnt || (waitingCustomer != null && plateCustomer == null));
             default: return EvaluateShop(condition);
         }
     }
@@ -155,6 +163,8 @@ public partial class TutorialHintContext
             case HintAnchorId.MeatAboutToBurn: return meatAboutToBurn != null ? meatAboutToBurn.transform : null;
             case HintAnchorId.StrikeHud: return strikeHud;
             case HintAnchorId.ClockHud: return clockHud;
+            case HintAnchorId.AshUnderFire: return ashUnderFire;
+            case HintAnchorId.PauseButton: return pauseButton != null && pauseButton.gameObject.activeInHierarchy ? pauseButton : null;
             default: return ResolveShopAnchor(anchor);
         }
     }
@@ -200,6 +210,10 @@ public partial class TutorialHintContext
 
         RollbackButtonUI undo = Object.FindFirstObjectByType<RollbackButtonUI>(FindObjectsInactive.Include);
         undoButton = undo != null ? undo.transform : null;
+
+        pauseButton = HudManager.Instance != null && HudManager.Instance.PauseButton != null
+            ? HudManager.Instance.PauseButton.transform
+            : null;
 
         // Los panes y frascos del panel derecho son dispensers: están toda la noche.
         panelItems.AddRange(Object.FindObjectsByType<BuildDraggableFoodItem>(FindObjectsInactive.Include, FindObjectsSortMode.None));
@@ -280,6 +294,42 @@ public partial class TutorialHintContext
                 coalOnGrill = true;
             }
         }
+
+        ashUnderFire = null;
+        if (grill == null || firstAsh == null)
+            return;
+
+        List<GridSlot> slots = grill.slots;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            GridSlot slot = slots[i];
+            if (slot != null && slot.acceptsType == ItemType.Coal && HasAshUnderFire(slot.stackedCoals))
+            {
+                ashUnderFire = slot.transform;
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// La pila tiene ceniza debajo de un carbón encendido. El calor de un slot pesa cada carbón por su
+    /// lugar en la pila (100 %, 30 %, 15 %): la ceniza abajo se queda con el lugar que calienta entero.
+    /// </summary>
+    private static bool HasAshUnderFire(List<Coal> stack)
+    {
+        bool ashBelow = false;
+        for (int i = 0; i < stack.Count; i++)
+        {
+            Coal coal = stack[i];
+            if (coal == null)
+                continue;
+
+            if (coal.state == CoalStates.Ceniza)
+                ashBelow = true;
+            else if (ashBelow)
+                return true;
+        }
+        return false;
     }
 
     // ── Clientes y carne ────────────────────────────────────────────────────
@@ -398,12 +448,15 @@ public partial class TutorialHintContext
 
     /// <summary>
     /// El plato, qué tiene y para quién es: el primer cliente que espera el corte que hay en el plato.
-    /// Si ese cliente pidió pan o salsas que faltan, dónde están en el panel derecho.
+    /// Si ese cliente pidió pan o salsas que faltan, dónde están en el panel derecho. Con carne cruda
+    /// o quemada no se piden extras: primero hay que sacarla (o devolverla a la parrilla, si está cruda).
     /// </summary>
     private void RefreshPlate(CustomerSystem customers)
     {
         plate = null;
         plateHasMeat = false;
+        plateHasBurnt = false;
+        plateHasRaw = false;
         BuildStationSystem station = null;
 
         IReadOnlyList<BuildFoodDropZone> zones = BuildFoodDropZone.Zones;
@@ -443,8 +496,17 @@ public partial class TutorialHintContext
                 cutsOnCounter.Add(plateCuts[i]);
         }
 
+        IReadOnlyList<BuildStationSystem.CutSideStates> sides = station.AssembledCutSideStates;
+        for (int i = 0; i < sides.Count; i++)
+        {
+            if (sides[i].IsBurned)
+                plateHasBurnt = true;
+            else if (sides[i].IsRaw)
+                plateHasRaw = true;
+        }
+
         plateCustomer = FindCustomerFor(plateCuts[0], customers);
-        if (plateCustomer == null)
+        if (plateCustomer == null || plateHasBurnt || plateHasRaw)
             return;
 
         Order order = plateCustomer.order;

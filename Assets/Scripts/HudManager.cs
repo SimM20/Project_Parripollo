@@ -20,6 +20,9 @@ public class HudManager : MonoBehaviour
 
     public MoneyPopupStyle PopupStyle => moneyPopupStyle;
 
+    /// <summary>Botón de pausa del HUD (arriba a la izquierda).</summary>
+    public Button PauseButton => pauseButton;
+
     // Plata: el valor real llega al instante desde PlayerWallet, pero el HUD lo muestra
     // recién cuando el popup "aterriza" (punch + conteo). Al bajar (compras) no hay popup y
     // el texto se actualiza al toque.

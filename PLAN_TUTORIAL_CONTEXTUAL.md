@@ -134,6 +134,7 @@ y prioridades está en `ARQUITECTURA_PROYECTO.md`, 3.7 → *Carteles contextuale
 | # | Cartel | Cuándo aparece | Se va |
 |---|---|---|---|
 | 11 | R · Limpiar cenizas (sobre la ceniza) | hay ceniza en la parrilla | se limpia |
+| 11b | La ceniza baja el fuego (bajo la pila) | hay ceniza debajo de un carbón encendido en la misma pila | 5 s a la vista |
 | 12 | R · Rotar (sobre la pieza) | se arrastra un corte que se puede rotar (después del 3) | se rota, o a los 10 s a la vista |
 | 13 | 🖱 Agregá el pan (sobre el pan pedido) | panel derecho abierto + el plato necesita pan | pan en el plato |
 | 13b | 🖱 Serví la salsa (sobre el frasco) | panel derecho abierto + al plato le falta una salsa | salsa en el plato |
@@ -142,9 +143,14 @@ y prioridades está en `ARQUITECTURA_PROYECTO.md`, 3.7 → *Carteles contextuale
 | 14b | 🖱 Elegí al cliente | el que pide el corte sin stock no es el elegido | click en ese cliente |
 | 15 | C · Vaciar plato | el cliente rechazó el plato y nadie más que espera quiere ese corte | se vacía el plato |
 | 15b | 🖱 Deshacer (botón ↶) | lo mismo | se deshace |
+| 15c | C · Sacar la carne (sobre el plato) | carne quemada en el plato, o un corte que no pidió nadie de los que esperan | se vacía el plato |
 | 16 | Se quema (sobre la carne) | la cara de abajo de una carne llega a Pasado | 4 s a la vista |
 | 17 | 3 strikes y cerrás (sobre las X del HUD) | el primer strike | 5 s a la vista |
 | 18 | Cerrado: atendé a los que quedan (sobre la hora) | el local cierra a la hora con clientes esperando | 5 s a la vista |
+| 19 | Reiniciá las ayudas en Opciones (bajo el botón de pausa) | después de la primera entrega, cuando hay un lugar libre | 6 s a la vista |
+
+11b, 15c y 19 se sumaron el 2026-09-29, a pedido. Con carne cruda o quemada en el plato, "Plato al cliente" (10) ya no
+aparece: entregarla cuesta un strike.
 
 Implementados en `ScriptableObjects/TutorialHints/Partida/`, en el mismo set. Con joystick los íconos cambian solos (LB,
 RB, Y…): pasar el mouse = seleccionar con el stick; arrastrar = mantener A.
@@ -248,3 +254,6 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - [ ] Derrota total: la pantalla de derrota sin carteles encima.
 - [ ] Opciones → REINICIAR (menú principal y pausa): pasa a LISTO; al volver a la partida aparecen la Q y la E. Con
       joystick se llega con la cruceta desde el "<" de la fila Ayudas.
+- [ ] Poner un carbón nuevo sobre una ceniza sin limpiarla: "La ceniza baja el fuego" bajo la pila.
+- [ ] Dejar que se queme una carne y llevarla al plato: "C · Sacar la carne", y no "Plato al cliente".
+- [ ] Después de la primera entrega: "Reiniciá las ayudas en Opciones" bajo el botón de pausa, una sola vez.

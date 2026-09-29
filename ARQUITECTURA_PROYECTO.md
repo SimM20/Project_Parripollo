@@ -71,6 +71,12 @@
 > borra lo aprendido al apretarlo (`TutorialProgress.Reset`), sin esperar a *Aplicar*, y pasa a decir LISTO. Apagado si
 > no hay nada aprendido (`TutorialProgress.AnyLearned`) o si las ayudas están en No. Secciones 3.7 y 3.10.
 
+> Última actualización parcial: **2026-09-29** (rama `tutorialREV`) — **3 carteles más en la partida**: "La ceniza baja el
+> fuego" (11b, bajo la pila que tiene ceniza debajo de un carbón encendido), "C · Sacar la carne" (15c, carne quemada en el
+> plato o un corte que no pidió nadie de los que esperan) y "Reiniciá las ayudas en Opciones" (19, bajo el botón de pausa,
+> después de la primera entrega). "Plato al cliente" ya no aparece con carne cruda o quemada en el plato (entregarla cuesta
+> un strike) y con esa carne tampoco se piden pan ni salsas. `HudManager.PauseButton`. Sección 3.7 → *Carteles contextuales*.
+
 ---
 
 ## 0. Ficha técnica
@@ -1756,13 +1762,14 @@ capa inicial: un cartel que se aprenda con esa señal necesita un `completeOnlyI
 | `07.VerPedido` (`see_order`) | 🖱 Ver pedido (pasar por encima) | burbuja del cliente, abajo | cliente esperando y señalable | `CustomerHovered` | 40 |
 | `08.DarVuelta` (`flip`) | Click derecho · Dar vuelta | la carne a dar vuelta | cara de abajo ya no cruda, la de arriba sí + capa carne | `MeatFlipped` | 85 |
 | `09.CarneAlPlato` (`to_plate`) | 🖱 Carne al plato | plato | carne a un punto o menos de un pedido (sin crudo ni quemado) + plato vacío + capa carne | `MeatPlacedOnBuildZone` | 90 |
-| `10.PlatoAlCliente` (`deliver`) | 🖱 Plato al cliente | plato | un cliente que espera pidió el corte del plato, y el plato tiene el pan y las salsas que pidió | `ProductDelivered` | 95 |
+| `10.PlatoAlCliente` (`deliver`) | 🖱 Plato al cliente | plato | un cliente que espera pidió el corte del plato, y el plato tiene el pan y las salsas que pidió, sin carne cruda ni quemada | `ProductDelivered` | 95 |
 
 **La primera vez que pasa algo** (mismo set y carpeta; cualquier noche):
 
 | Asset (`id`) | Cartel | Zona | Se ve mientras | Se aprende con | Prio |
 |---|---|---|---|---|---|
 | `11.LimpiarCenizas` (`clean_ashes`) | R · Limpiar cenizas | la primera ceniza, arriba | hay ceniza | `AshesCleaned` | 75 |
+| `11b.CenizaBajaElFuego` (`ash_heat`) | La ceniza baja el fuego | la pila de carbón (el `GridSlot`), abajo | en una pila hay ceniza debajo de un carbón encendido | 5 s a la vista | 74 |
 | `12.Rotar` (`rotate`) | R · Rotar | la pieza que se arrastra, arriba | se arrastra un corte rotable; requiere el 03 | `PieceRotated`, o 10 s a la vista | 65 |
 | `13.AgregarPan` (`add_bread`) | 🖱 Agregá el pan | el pan pedido en el panel, abajo | panel derecho abierto + el plato necesita pan | `BreadAdded` | 96 |
 | `13b.ServirSalsa` (`add_sauce`) | 🖱 Serví la salsa | el frasco de la primera salsa que falta, arriba | panel derecho abierto + al plato le falta una salsa | `ToppingAdded` | 96 |
@@ -1771,9 +1778,17 @@ capa inicial: un cartel que se aprenda con esa señal necesita un `completeOnlyI
 | `14b.ElegirCliente` (`pick_customer`) | 🖱 Elegí al cliente | burbuja de ese cliente, abajo | lo pide otro cliente, no el elegido | `CustomerClicked` si el elegido pasa a ser ese | 88 |
 | `15.VaciarPlato` (`clear_plate`) | C · Vaciar plato | plato, arriba | el cliente rechazó el plato y ningún otro que espera quiere ese corte | `PlateCleared` | 93 |
 | `15b.Deshacer` (`undo`) | 🖱 Deshacer | botón ↶, arriba | lo mismo | `UndoUsed` | 92 |
+| `15c.SacarCarne` (`remove_meat`) | C · Sacar la carne | plato, arriba | el plato tiene carne quemada, o un corte que no pidió ningún cliente de los que esperan (con al menos uno esperando) | `PlateCleared` | 91 |
 | `16.SeQuema` (`burning`) | Se quema | la carne, arriba | la cara de abajo de una carne llegó a Pasado | 4 s a la vista | 99 |
 | `17.Strikes` (`strikes`) | 3 strikes y cerrás | las X del HUD, abajo | hay strikes y todavía no se llegó al límite | 5 s a la vista | 98 |
 | `18.Cerrado` (`closed`) | Cerrado: atendé a los que quedan | la hora del HUD, abajo | cerró a la hora (no por strikes) y quedan clientes | 5 s a la vista | 97 |
+| `19.ReiniciarAyudas` (`reset_hints_tip`) | Reiniciá las ayudas en Opciones | botón de pausa del HUD, abajo | requiere el 10 (después de la primera entrega); espera un lugar libre | 6 s a la vista | 5 |
+
+Por qué baja el fuego la ceniza: el calor de un slot de carbón pesa cada carbón por su lugar en la pila (`GridSlot.
+CalculateInternalHeat`: 100 %, 30,7 % y 15,3 %) y la ceniza da 0. Con ceniza abajo, el carbón nuevo que se pone encima
+calienta a un tercio o menos, y la pila tiene un lugar menos (`MAX_COAL`). "11b" y "11" pueden verse juntos: uno abajo de
+la pila y el otro arriba de la ceniza. "15c" y "15" apuntan al plato: después de un rechazo queda "15" (mayor prioridad),
+y la C aprende los dos. Con carne cruda en el plato no sale ninguno: lo que conviene es devolverla a la parrilla.
 
 La E arranca junto a la Q y, con la prioridad más baja, cede su lugar en cuanto hace falta otro cartel. Un hover
 cualquiera sobre un cliente aprende "Ver pedido" (es el gesto que enseña). `13c` es la misma E pero con prioridad alta,

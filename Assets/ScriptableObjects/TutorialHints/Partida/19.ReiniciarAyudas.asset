@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b482e55cae969045bcb26f9303130fe, type: 3}
+  m_Name: 19.ReiniciarAyudas
+  m_EditorClassIdentifier: 
+  id: reset_hints_tip
+  prompt:
+    input: 0
+    action: 0
+  textKey: hint.reset_hints_tip
+  anchor: 23
+  placement: 3
+  offset: {x: 0, y: 0}
+  requires:
+  - {fileID: 11400000, guid: 0526471f193e90b49a148c3ab6c9f5a5, type: 2}
+  showWhile: 
+  priority: 5
+  completeOn: -1
+  completeOnlyIf: 
+  completeAfterSeconds: 6
