@@ -10,6 +10,8 @@ options.fps,FPS MÁXIMOS,MAX FPS
 options.input,CONTROLES,CONTROLS
 options.language,IDIOMA,LANGUAGE
 options.hints,AYUDAS,HINTS
+options.hints.reset,REINICIAR,RESET
+options.hints.reset.done,LISTO,DONE
 options.apply,APLICAR,APPLY
 options.back,VOLVER,BACK
 options.yes,SÍ,ON

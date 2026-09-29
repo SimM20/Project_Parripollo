@@ -24,6 +24,9 @@
 >   botón real aprende T1 y T2; con el carbón en 0 y la plata justa, "Primero, lo mínimo" sale en la mejora que rompería
 >   el mínimo (no en las que no alcanza la plata) y se va a los 5 s. Con el canvas de la tienda apagado (derrota) no hay
 >   carteles.
+> - **Extra (2026-09-29): botón REINICIAR** en la fila *Ayudas* de Opciones, en el menú principal y en la pausa (mismo
+>   prefab). Probado en los dos: borra lo aprendido al apretarlo (queda `TutorialDone=` en `init.cfg`), pasa a LISTO, y al
+>   reanudar la partida vuelven la Q y la E. Apagado si no hay nada aprendido o si la fila está en No.
 >
 > Desvíos respecto del plan, todos deliberados:
 > - **Q y E van debajo de su pestaña**, no al costado: al costado, el de la izquierda le tapa la cara al primer cliente.
@@ -172,6 +175,7 @@ Implementados en `ScriptableObjects/TutorialHints/Tienda/` (set `CartelesTienda`
   - `TutorialHints=true|false`, con una fila nueva en Opciones: "Ayudas: Sí / No".
   - `TutorialDone=id1,id2,…`, fuera de `SettingsData`: es progreso, no una opción.
   - Volver a prender las ayudas borra la lista y el tutorial arranca de nuevo.
+  - O el botón **REINICIAR** de la misma fila, sin apagarlas: borra la lista al apretarlo (no espera a Aplicar).
 
 ## 5. Fases
 
@@ -242,3 +246,5 @@ Cada fase deja el juego jugable y se puede mergear sola.
 - [ ] Con la plata justa, ir a Mejoras: "Primero, lo mínimo" en la mejora que rompería los mínimos, no en las que no
       alcanza la plata.
 - [ ] Derrota total: la pantalla de derrota sin carteles encima.
+- [ ] Opciones → REINICIAR (menú principal y pausa): pasa a LISTO; al volver a la partida aparecen la Q y la E. Con
+      joystick se llega con la cruceta desde el "<" de la fila Ayudas.

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,7 +8,8 @@ using UnityEngine.UI;
 /// Menú de opciones: resolución, modo de pantalla, VSync, tope de FPS, tipo de control, idioma y ayudas del tutorial.
 /// Los cambios quedan pendientes hasta "APLICAR" (que los aplica y guarda en init.cfg vía
 /// <see cref="GameSettings"/>); "VOLVER", Back (Esc · B / ○) o Pause (Start / Options) cierra y
-/// descarta lo no aplicado.
+/// descarta lo no aplicado. La excepción es "REINICIAR" (ayudas): es una acción, no una opción, y
+/// actúa al apretarlo.
 /// </summary>
 public class OptionsMenuPanel : MonoBehaviour
 {
@@ -20,6 +22,11 @@ public class OptionsMenuPanel : MonoBehaviour
     [SerializeField] private OptionSelectorUI languageRow;
     [Tooltip("Ayudas del tutorial (carteles). Volver a prenderlas reinicia lo aprendido.")]
     [SerializeField] private OptionSelectorUI tutorialHintsRow;
+    [Tooltip("Reinicia las ayudas al apretarlo (sin esperar a Aplicar): los carteles vuelven a aparecer desde el " +
+             "principio. Apagado si no hay nada aprendido o si las ayudas están en No.")]
+    [SerializeField] private Button resetHintsButton;
+    [Tooltip("Texto del botón: lo escribe este script (REINICIAR / LISTO), así que no lleva LocalizedText.")]
+    [SerializeField] private TMP_Text resetHintsLabel;
 
     [Header("Botones")]
     [SerializeField] private Button applyButton;
@@ -57,6 +64,7 @@ public class OptionsMenuPanel : MonoBehaviour
     private readonly List<string> languages = new List<string>();
     private SettingsData saved;
     private SettingsData pending;
+    private bool hintsResetThisVisit;
 
     private void Awake()
     {
@@ -67,6 +75,7 @@ public class OptionsMenuPanel : MonoBehaviour
         if (inputModeRow != null) inputModeRow.OnValueChanged += i => { pending.inputMode = InputModes[i]; RefreshState(); };
         if (languageRow != null) languageRow.OnValueChanged += i => { pending.language = languages[i]; RefreshState(); };
         if (tutorialHintsRow != null) tutorialHintsRow.OnValueChanged += i => { pending.tutorialHints = i == 0; RefreshState(); };
+        if (resetHintsButton != null) resetHintsButton.onClick.AddListener(ResetHints);
 
         if (applyButton != null) applyButton.onClick.AddListener(Apply);
         if (backButton != null) backButton.onClick.AddListener(Close);
@@ -102,6 +111,7 @@ public class OptionsMenuPanel : MonoBehaviour
 
         saved = GameSettings.Current;
         pending = saved;
+        hintsResetThisVisit = false;
         Populate();
         RefreshState();
     }
@@ -121,6 +131,17 @@ public class OptionsMenuPanel : MonoBehaviour
         // Si cambió el idioma, los valores de las filas los arma este script: se vuelven a escribir.
         Populate();
         RefreshState();
+    }
+
+    /// <summary>
+    /// Lo aprendido de los carteles se borra ya (queda guardado en init.cfg): no es una opción que
+    /// espere a Aplicar, y Volver no lo deshace. En la partida, los carteles vuelven al reanudar.
+    /// </summary>
+    private void ResetHints()
+    {
+        TutorialProgress.Reset();
+        hintsResetThisVisit = true;
+        RefreshResetHints();
     }
 
     private void Populate()
@@ -185,6 +206,26 @@ public class OptionsMenuPanel : MonoBehaviour
 
         if (applyButton != null)
             applyButton.interactable = !pending.Equals(saved);
+
+        RefreshResetHints();
+    }
+
+    /// <summary>
+    /// "REINICIAR", o "LISTO" después de usarlo en esta visita al menú. Apagado sin usarlo (nada
+    /// aprendido, o ayudas en No), el texto también se apaga: el ColorTint solo oscurece la chapa.
+    /// </summary>
+    private void RefreshResetHints()
+    {
+        bool canReset = !hintsResetThisVisit && pending.tutorialHints && TutorialProgress.AnyLearned;
+
+        if (resetHintsButton != null)
+            resetHintsButton.interactable = canReset;
+
+        if (resetHintsLabel != null)
+        {
+            resetHintsLabel.text = Loc.Get(hintsResetThisVisit ? "options.hints.reset.done" : "options.hints.reset");
+            resetHintsLabel.alpha = canReset || hintsResetThisVisit ? 1f : 0.45f;
+        }
     }
 
     private static string DisplayModeLabel(FullScreenMode mode)

@@ -27,6 +27,16 @@ public static class TutorialProgress
         OnReset = null;
     }
 
+    /// <summary>Hay al menos un cartel aprendido: reiniciar las ayudas cambiaría algo.</summary>
+    public static bool AnyLearned
+    {
+        get
+        {
+            EnsureLoaded();
+            return learned.Count > 0;
+        }
+    }
+
     public static bool IsLearned(string hintId)
     {
         EnsureLoaded();
