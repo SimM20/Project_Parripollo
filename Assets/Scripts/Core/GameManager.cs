@@ -165,13 +165,12 @@ public class GameManager : MonoBehaviour
     /// Cambia la capa de la parrilla (carne ↔ carbón) por teclado o gamepad.
     /// Espejo exacto del botón de la escena: delega en el mismo GrillLayerToggle.Toggle(),
     /// así que sprite del botón y la señal GrillLayerChanged del tutorial se mantienen sincronizados.
-    /// Nunca mientras se arrastra un item: cambiar de capa a mitad de un drag invalidaría
-    /// el drop y devolvería la pieza a su origen.
+    /// Funciona también con una pieza en la mano (carbón o carne): si se agarró en la capa
+    /// equivocada, se cambia sin soltarla. Los drags no cachean la capa: el preview de hover se
+    /// recalcula cada frame y GridSlot.CanPlaceItem la consulta recién al soltar.
     /// </summary>
     private void TryToggleGrillLayer()
     {
-        if (InputManager.PrimaryHeld) return;
-
         if (grillLayerToggle == null)
         {
             Debug.LogWarning("[GameManager] No hay GrillLayerToggle asignado: no se puede cambiar de capa con la acción ToggleGrillLayer.");

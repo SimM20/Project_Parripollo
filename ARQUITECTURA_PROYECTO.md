@@ -680,7 +680,7 @@ void Toggle(), ShowLayer(GrillLayer), RefreshVisibility()
 ```
 La capa inactiva queda visible con `inactiveAlpha` y colliders desactivados.
 Dos entradas para `Toggle()`: el `OnWorldPointerDown` del propio botón en la escena y `ToggleGrillLayer`
-(`Space` / Y-△) desde `GameManager.TryToggleGrillLayer()` (ignorado con `InputManager.PrimaryHeld`). Ambas pasan por `ShowLayer`,
+(`Space` / Y-△) desde `GameManager.TryToggleGrillLayer()` (funciona también con una pieza en la mano). Ambas pasan por `ShowLayer`,
 así que el icono del botón y `TutorialManager.NotifyGrillLayerChanged` quedan siempre sincronizados.
 
 #### Mapa de calor (`GridSlot.LateUpdate`)
@@ -2098,7 +2098,7 @@ asset, no código. Gamepad en notación Xbox / PlayStation.
 | `Pause` | `Esc` | Menu / Options | Global | Pausa / reanudar vía `GamePause`: congela tiempo, audio e input del mundo y cancela arrastres. Ignorada mientras hay un diálogo con pausa propia (`GamePause.SetDialogPaused`; hoy ninguno) |
 | `ToggleStockPanel` | `Q` | LB / L1 | Parrilla | Abre / cierra el **StockPanel**. Abrir pide `TutorialManager.CheckStockPanelOpenAllowed` |
 | `ToggleToppingsPanel` | `E` | RB / R1 | Parrilla | Abre / cierra el **ToppingsPanel** |
-| `ToggleGrillLayer` | `Space` | Y / △ | Parrilla | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; ignorado con `PrimaryHeld`) |
+| `ToggleGrillLayer` | `Space` | Y / △ | Parrilla | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; funciona también arrastrando una pieza) |
 | `CleanAshes` | `R` | RT / R2 | Parrilla | `CleanAshes()` — destruye carbones en `Ceniza` (gateado por el tutorial) |
 | `Rotate` | `R` | B / ○ | mientras se arrastra carne | Rotar footprint del corte (parrilla, StockPanel, bandeja, plato) |
 | `ClearPlate` | `C` | LT / L2 | Parrilla | Limpiar el plato entero: armado + visuales de carne + sides/toppings + salpicaduras |
