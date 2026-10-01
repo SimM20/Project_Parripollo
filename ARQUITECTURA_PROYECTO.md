@@ -77,6 +77,17 @@
 > después de la primera entrega). "Plato al cliente" ya no aparece con carne cruda o quemada en el plato (entregarla cuesta
 > un strike) y con esa carne tampoco se piden pan ni salsas. `HudManager.PauseButton`. Sección 3.7 → *Carteles contextuales*.
 
+> Última actualización parcial: **2026-10-01** (rama `Barra-Coccion-Rework`) — **barra de cocción nueva** (`MeatCookHoverBar`).
+> Arte de `Sprites/Arte Aseprite/UI y Botones/`: `Barra Coccion v4` (marco + los seis segmentos pintados) y `Indicador de
+> Progreso` (aguja). Salieron los `Seg_*`/`Fill_*`. La aguja recorre cada segmento con el progreso de la cara activa y el
+> cambio de estado cae en el centro del separador; al quemarse salta al centro del segmento negro (la cocción se frena al
+> entrar en Quemado). Un velo oscuro (`PendingShade`, se crea en runtime) tapa lo que la aguja todavía no alcanzó. Desde la
+> mitad de Pasado (`burnWarningStart`) la barra **tiembla y titila en rojo**, con la misma curva de urgencia que
+> `PatienceBar`. Ya quemada deja de temblar: el velo vuelve a tapar todos los segmentos y la barra late en rojo más lento
+> (`burnedPulseSpeed`). Las
+> medidas de los segmentos están en píxeles del sprite, en el inspector. Ahora es el prefab `Prefabs/UI/MeatCookHoverBar.prefab`,
+> con una instancia en `GameScene` y otra en `TutorialScene`.
+
 ---
 
 ## 0. Ficha técnica
@@ -186,7 +197,8 @@ Assets/Resources/Localization/   Tablas de textos (key,es,en). Se cargan todas: 
 Prefabs relevantes: `Prefabs/GrillView.prefab` (contiene `StockPanel`, `MeatTray`, `ToBuild`), `Prefabs/[SYSTEMS].prefab`
 (las escenas son instancias; ahí viven `GrillSystem`, `CustomerSystem`, `UpgradeUnlockActivator`…), `Prefabs/UI/StockPanel.prefab`,
 `Prefabs/UI/PauseCanvas.prefab`, `Prefabs/FeedbackBubble.prefab`, `Prefabs/Cliente*.prefab`, `Prefabs/FondoCicloDia.prefab`
-(fondo de `GameScene`, ver 3.9). `BuildView.prefab` y
+(fondo de `GameScene`, ver 3.9), `Prefabs/UI/MeatCookHoverBar.prefab` (barra de cocción por hover, en `GameScene` y
+`TutorialScene`). `BuildView.prefab` y
 `CoolerView.prefab` siguen en el proyecto pero **no se alcanzan**.
 
 ---
