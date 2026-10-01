@@ -500,6 +500,7 @@ public class GameManager : MonoBehaviour
             {
                 customerSystem.GetViewForCustomer(customer)?.PlayRejectReaction();
                 AudioManager.Instance?.PlayDeliveryRejected();
+                GamepadHaptics.Play(HapticEvent.DeliveryRejected);
                 TutorialSignals.Raise(TutorialSignal.DeliveryRejected);
             }
             return false;
@@ -523,6 +524,7 @@ public class GameManager : MonoBehaviour
 
             customerSystem.TriggerBadCookingLeaveFeedback(
                 customer, eval.validation.burnedCount > 0);
+            GamepadHaptics.Play(HapticEvent.BadCookingDelivered);
             return true;
         }
 
@@ -533,6 +535,9 @@ public class GameManager : MonoBehaviour
             MoneyPopup.Spawn(paidView.transform.position, eval.payment + eval.tip);
 
         PlayerWallet.Instance?.Add(eval.payment + eval.tip);
+
+        // Un toque al entregar; la vibración fuerte llega con la plata al contador (HudManager).
+        GamepadHaptics.Play(HapticEvent.DeliveryAccepted);
 
         // Iniciar feedback de entrega (4 segundos con slot ocupado)
         customerSystem.TriggerDeliveryFeedback(customer, eval.payment, eval.tip, eval.feedbackState);

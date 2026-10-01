@@ -152,6 +152,7 @@ public class HudManager : MonoBehaviour
     {
         if (moneyPunchRoutine != null) StopCoroutine(moneyPunchRoutine);
         moneyPunchRoutine = StartCoroutine(PunchMoney());
+        GamepadHaptics.Play(HapticEvent.MoneyLanded);
 
         StartMoneyCount();
     }

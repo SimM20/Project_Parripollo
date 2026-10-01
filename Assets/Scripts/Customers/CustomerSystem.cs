@@ -1008,6 +1008,9 @@ public class CustomerSystem : MonoBehaviour
     /// </summary>
     public void TriggerAngryLeaveFeedback(Customer customer)
     {
+        if (customer != null && !customer.IsInFeedback)
+            GamepadHaptics.Play(HapticEvent.CustomerLeftAngry);
+
         TriggerLeaveWithStrike(
             customer,
             CustomerFeedbackState.NoPagaSeVa,
