@@ -2,36 +2,53 @@ using UnityEngine;
 
 /// <summary>
 /// Barra de cocción contextual por hover. Singleton de escena (mismo patrón que MeatHoverBubble).
-/// Muestra los seis estados (Crudo..Quemado) y un indicador rojo continuo con el progreso
-/// flotante de la cara activa. Solo aparece durante hover sobre una pieza en la parrilla.
-/// No identifica caras ni muestra el punto solicitado por los clientes.
+/// Muestra los seis estados (Crudo..Quemado) y una aguja con el progreso flotante de la cara activa;
+/// lo que la aguja todavía no alcanzó queda tapado por un velo oscuro. Solo aparece durante hover
+/// sobre una pieza en la parrilla. No identifica caras ni muestra el punto solicitado por los clientes.
 ///
-/// Setup de escena: GameObject con este componente, un SpriteRenderer de fondo con los seis
-/// segmentos y un Transform hijo como indicador rojo. Tamaño/arte: TBD del doc.
+/// Setup: prefab Prefabs/UI/MeatCookHoverBar. Hijos directos de la raíz: la barra ("Barra Coccion v4",
+/// marco + seis segmentos pintados) y la aguja ("Indicador de Progreso"). El velo se crea en runtime.
+/// Las medidas de los segmentos están en píxeles del sprite de la barra, contados desde arriba a la
+/// izquierda como en Aseprite; el tamaño en pantalla se ajusta con la escala de la raíz.
 /// </summary>
 public class MeatCookHoverBar : MonoBehaviour
 {
+    private const int StateCount = 6;
+
     public static MeatCookHoverBar Instance { get; private set; }
 
     [Header("References")]
     [SerializeField] private Transform indicator;
     [SerializeField] private SpriteRenderer barBackground;
 
-    [Tooltip("Rellenos de los seis segmentos (Crudo..Quemado), en orden. Crecen de izquierda a derecha según el progreso.")]
-    [SerializeField] private SpriteRenderer[] segmentFills = new SpriteRenderer[6];
-
     [Header("Layout")]
     [SerializeField] private Vector3 worldOffset = new Vector3(0f, 1.6f, 0f);
-    [Tooltip("Ancho total de la barra en unidades locales. El indicador recorre de -ancho/2 a +ancho/2.")]
-    [SerializeField] private float barWidth = 1.5f;
-    [Tooltip("Margen interno de cada segmento (mismo valor usado al construir los slots de fondo).")]
-    [SerializeField] private float segmentInset = 0.015f;
+
+    [Header("Segmentos del sprite (píxeles, desde arriba a la izquierda)")]
+    [Tooltip("X del primer píxel del segmento Crudo (ancho del marco izquierdo).")]
+    [SerializeField] private float firstSegmentX = 7f;
+    [Tooltip("Ancho de cada segmento de color.")]
+    [SerializeField] private float segmentWidth = 40f;
+    [Tooltip("Ancho del separador entre segmentos. El cambio de estado cae en su centro.")]
+    [SerializeField] private float dividerWidth = 5f;
+    [Tooltip("Y del primer píxel de color de los segmentos.")]
+    [SerializeField] private float segmentTopY = 14f;
+    [Tooltip("Alto del color de los segmentos.")]
+    [SerializeField] private float segmentHeight = 26f;
+
+    [Header("Pendiente")]
+    [Tooltip("Velo sobre la parte de la barra que la aguja todavía no alcanzó.")]
+    [SerializeField] private Color pendingShadeColor = new Color(0f, 0f, 0f, 0.55f);
+    [Tooltip("Entre la barra y la aguja.")]
+    [SerializeField] private int pendingShadeSortingOrder = 5005;
 
     private Meat target;
+    private SpriteRenderer pendingShade;
 
     void Awake()
     {
         Instance = this;
+        BuildPendingShade();
         gameObject.SetActive(false);
     }
 
@@ -44,8 +61,7 @@ public class MeatCookHoverBar : MonoBehaviour
         }
 
         transform.position = target.transform.position + worldOffset;
-        UpdateIndicator();
-        UpdateSegmentFills();
+        UpdateBar();
     }
 
     public void Show(Meat meat)
@@ -56,8 +72,7 @@ public class MeatCookHoverBar : MonoBehaviour
         target = meat;
         gameObject.SetActive(true);
         transform.position = meat.transform.position + worldOffset;
-        UpdateIndicator();
-        UpdateSegmentFills();
+        UpdateBar();
     }
 
     public void Hide()
@@ -73,59 +88,95 @@ public class MeatCookHoverBar : MonoBehaviour
             Hide();
     }
 
-    private void UpdateIndicator()
+    private void UpdateBar()
     {
-        if (indicator == null || target == null)
+        if (target == null || barBackground == null || barBackground.sprite == null)
             return;
 
-        // Progreso 0..1 sobre la escala completa S; se detiene en el inicio de Quemado (5/6).
-        float progress = target.ActiveSideProgress01;
+        float needleX = GetIndicatorPixelX();
 
-        Vector3 local = indicator.localPosition;
-        local.x = (progress - 0.5f) * barWidth;
-        indicator.localPosition = local;
+        if (indicator != null)
+        {
+            Vector3 local = indicator.localPosition;
+            local.x = ArtPixelToParentLocal(needleX, 0f).x;
+            indicator.localPosition = local;
+        }
+
+        UpdatePendingShade(needleX);
     }
 
     /// <summary>
-    /// Rellena cada segmento de izquierda a derecha según el progreso de la cara activa.
-    /// El segmento Quemado solo se llena cuando la cara entró en Quemado (la acumulación se detiene ahí).
+    /// X de la aguja en píxeles del sprite. Cada estado ocupa su segmento y el cambio de estado cae
+    /// en el centro del separador. La cocción se frena al entrar en Quemado (progreso 5/6): en ese
+    /// estado la aguja salta al centro del segmento negro.
     /// </summary>
-    private void UpdateSegmentFills()
+    private float GetIndicatorPixelX()
     {
-        if (segmentFills == null || target == null)
+        float pitch = segmentWidth + dividerWidth;
+
+        if (target.ActiveSideState == MeatStates.Quemado)
+            return firstSegmentX + (StateCount - 1) * pitch + segmentWidth * 0.5f;
+
+        float bands = Mathf.Clamp(target.ActiveSideProgress01 * StateCount, 0f, StateCount - 1);
+        int band = Mathf.Min(Mathf.FloorToInt(bands), StateCount - 2);
+
+        float start = band == 0 ? firstSegmentX : firstSegmentX + band * pitch - dividerWidth * 0.5f;
+        float end = firstSegmentX + (band + 1) * pitch - dividerWidth * 0.5f;
+        return Mathf.Lerp(start, end, bands - band);
+    }
+
+    /// <summary>Estira el velo desde la aguja hasta el final del último segmento.</summary>
+    private void UpdatePendingShade(float needleX)
+    {
+        if (pendingShade == null)
             return;
 
-        float progress = target.ActiveSideProgress01;
-        bool burned = target.ActiveSideState == MeatStates.Quemado;
-        float segWidth = barWidth / 6f;
-        float fillWidth = segWidth - segmentInset;
+        float trackEnd = firstSegmentX + StateCount * segmentWidth + (StateCount - 1) * dividerWidth;
+        Vector3 topLeft = ArtPixelToParentLocal(needleX, segmentTopY);
+        Vector3 bottomRight = ArtPixelToParentLocal(trackEnd, segmentTopY + segmentHeight);
 
-        for (int i = 0; i < segmentFills.Length && i < 6; i++)
-        {
-            SpriteRenderer fill = segmentFills[i];
-            if (fill == null || fill.sprite == null)
-                continue;
+        // Sprite de 1x1 unidad con pivot centrado: posición = centro, escala = tamaño.
+        Transform shade = pendingShade.transform;
+        shade.localPosition = new Vector3(
+            (topLeft.x + bottomRight.x) * 0.5f,
+            (topLeft.y + bottomRight.y) * 0.5f,
+            shade.localPosition.z);
+        shade.localScale = new Vector3(
+            Mathf.Max(0f, bottomRight.x - topLeft.x),
+            Mathf.Abs(topLeft.y - bottomRight.y),
+            1f);
+    }
 
-            // Progreso 0..1 dentro de la banda i. Quemado (i=5) es binario.
-            float amount = i == 5
-                ? (burned ? 1f : 0f)
-                : Mathf.Clamp01(progress * 6f - i);
+    /// <summary>
+    /// Píxel del sprite de la barra (x desde la izquierda, y desde arriba) → espacio local de la raíz.
+    /// Supone que la barra, la aguja y el velo son hijos directos de la raíz.
+    /// </summary>
+    private Vector3 ArtPixelToParentLocal(float x, float yFromTop)
+    {
+        Sprite sprite = barBackground.sprite;
+        float ppu = sprite.pixelsPerUnit;
+        Vector3 barLocal = new Vector3(
+            (x - sprite.pivot.x) / ppu,
+            (sprite.rect.height - yFromTop - sprite.pivot.y) / ppu,
+            0f);
 
-            float spriteWidth = fill.sprite.bounds.size.x;
-            if (spriteWidth <= 0f)
-                continue;
+        Transform bar = barBackground.transform;
+        return bar.localPosition + Vector3.Scale(bar.localScale, barLocal);
+    }
 
-            float segLeft = -barWidth * 0.5f + segWidth * i + segmentInset * 0.5f;
+    private void BuildPendingShade()
+    {
+        var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+        tex.SetPixel(0, 0, Color.white);
+        tex.Apply();
 
-            Vector3 scale = fill.transform.localScale;
-            scale.x = (fillWidth * amount) / spriteWidth;
-            fill.transform.localScale = scale;
-
-            // Anclar el borde izquierdo del sprite en segLeft sin asumir pivot centrado:
-            // leftEdge = pos.x + bounds.min.x * scale.x
-            Vector3 pos = fill.transform.localPosition;
-            pos.x = segLeft - fill.sprite.bounds.min.x * scale.x;
-            fill.transform.localPosition = pos;
-        }
+        var go = new GameObject("PendingShade");
+        go.transform.SetParent(transform, false);
+        pendingShade = go.AddComponent<SpriteRenderer>();
+        pendingShade.sprite = Sprite.Create(tex, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+        pendingShade.color = pendingShadeColor;
+        if (barBackground != null)
+            pendingShade.sortingLayerID = barBackground.sortingLayerID;
+        pendingShade.sortingOrder = pendingShadeSortingOrder;
     }
 }
