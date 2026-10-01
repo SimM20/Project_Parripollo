@@ -224,3 +224,8 @@ MonoBehaviour:
   segmentHeight: 26
   pendingShadeColor: {r: 0, g: 0, b: 0, a: 0.55}
   pendingShadeSortingOrder: 5005
+  burnWarningStart: 0.5
+  burnShakeAmplitude: 0.06
+  burnShakeFrequency: 22
+  burnBlinkColor: {r: 1, g: 0.25, b: 0.25, a: 1}
+  burnedPulseSpeed: 3

@@ -3,8 +3,11 @@ using UnityEngine;
 /// <summary>
 /// Barra de cocción contextual por hover. Singleton de escena (mismo patrón que MeatHoverBubble).
 /// Muestra los seis estados (Crudo..Quemado) y una aguja con el progreso flotante de la cara activa;
-/// lo que la aguja todavía no alcanzó queda tapado por un velo oscuro. Solo aparece durante hover
-/// sobre una pieza en la parrilla. No identifica caras ni muestra el punto solicitado por los clientes.
+/// lo que la aguja todavía no alcanzó queda tapado por un velo oscuro. Cuando la cara está por
+/// quemarse, la barra tiembla y titila en rojo (misma curva que la barra de paciencia de los clientes).
+/// Ya quemada deja de temblar: el velo tapa todos los segmentos y la barra late en rojo, más lento.
+/// Solo aparece durante hover sobre una pieza en la parrilla. No identifica caras ni muestra el punto
+/// solicitado por los clientes.
 ///
 /// Setup: prefab Prefabs/UI/MeatCookHoverBar. Hijos directos de la raíz: la barra ("Barra Coccion v4",
 /// marco + seis segmentos pintados) y la aguja ("Indicador de Progreso"). El velo se crea en runtime.
@@ -42,12 +45,27 @@ public class MeatCookHoverBar : MonoBehaviour
     [Tooltip("Entre la barra y la aguja.")]
     [SerializeField] private int pendingShadeSortingOrder = 5005;
 
+    [Header("Aviso de quemado")]
+    [Tooltip("Parte del segmento Pasado desde la que la barra tiembla y titila (0 = inicio de Pasado, 1 = al quemarse).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float burnWarningStart = 0.5f;
+    [Tooltip("Amplitud del temblor en unidades del mundo. 0.06 se ve igual que el temblor de la barra de paciencia.")]
+    [SerializeField] private float burnShakeAmplitude = 0.06f;
+    [SerializeField] private float burnShakeFrequency = 22f;
+    [Tooltip("Tinte de la barra en el pico del titileo.")]
+    [SerializeField] private Color burnBlinkColor = new Color(1f, 0.25f, 0.25f, 1f);
+    [Tooltip("Velocidad del latido rojo una vez quemada (rad/s). El aviso va de 6 a 16.")]
+    [SerializeField] private float burnedPulseSpeed = 3f;
+
     private Meat target;
     private SpriteRenderer pendingShade;
+    private Color barBaseColor = Color.white;
 
     void Awake()
     {
         Instance = this;
+        if (barBackground != null)
+            barBaseColor = barBackground.color;
         BuildPendingShade();
         gameObject.SetActive(false);
     }
@@ -60,8 +78,7 @@ public class MeatCookHoverBar : MonoBehaviour
             return;
         }
 
-        transform.position = target.transform.position + worldOffset;
-        UpdateBar();
+        Refresh();
     }
 
     public void Show(Meat meat)
@@ -71,8 +88,7 @@ public class MeatCookHoverBar : MonoBehaviour
 
         target = meat;
         gameObject.SetActive(true);
-        transform.position = meat.transform.position + worldOffset;
-        UpdateBar();
+        Refresh();
     }
 
     public void Hide()
@@ -88,7 +104,61 @@ public class MeatCookHoverBar : MonoBehaviour
             Hide();
     }
 
-    private void UpdateBar()
+    private void Refresh()
+    {
+        bool burned = target.ActiveSideState == MeatStates.Quemado;
+        float urgency = burned ? 0f : GetBurnUrgency();
+        transform.position = target.transform.position + worldOffset + GetShakeOffset(urgency);
+        UpdateBar(burned);
+        UpdateBurnBlink(urgency, burned);
+    }
+
+    /// <summary>
+    /// 0 fuera de la zona de aviso; dentro sube de 0.35 a 1 a medida que la cara se acerca a Quemado
+    /// (misma curva que PatienceBar). No contempla la cara ya quemada: de eso se ocupa Refresh.
+    /// </summary>
+    private float GetBurnUrgency()
+    {
+        // 0..1 dentro del segmento Pasado (el anteúltimo).
+        float intoPasado = target.ActiveSideProgress01 * StateCount - (StateCount - 2);
+        if (intoPasado < burnWarningStart)
+            return 0f;
+
+        return Mathf.Lerp(0.35f, 1f, Mathf.InverseLerp(burnWarningStart, 1f, intoPasado));
+    }
+
+    /// <summary>Temblor de toda la barra (aguja y velo incluidos); la carne no se mueve.</summary>
+    private Vector3 GetShakeOffset(float urgency)
+    {
+        if (urgency <= 0f)
+            return Vector3.zero;
+
+        float t = Time.time * burnShakeFrequency;
+        float amp = burnShakeAmplitude * (0.5f + urgency);
+        return new Vector3(Mathf.Sin(t) * amp, Mathf.Cos(t * 1.7f) * amp * 0.5f, 0f);
+    }
+
+    /// <summary>
+    /// Titileo en rojo: el latido se acelera a medida que sube la urgencia. Ya quemada, late lento
+    /// (burnedPulseSpeed) y sin fin.
+    /// </summary>
+    private void UpdateBurnBlink(float urgency, bool burned)
+    {
+        if (barBackground == null)
+            return;
+
+        if (!burned && urgency <= 0f)
+        {
+            barBackground.color = barBaseColor;
+            return;
+        }
+
+        float beatSpeed = burned ? burnedPulseSpeed : Mathf.Lerp(6f, 16f, urgency);
+        float beat = 0.5f + 0.5f * Mathf.Sin(Time.time * beatSpeed);
+        barBackground.color = Color.Lerp(barBaseColor, burnBlinkColor, beat);
+    }
+
+    private void UpdateBar(bool burned)
     {
         if (target == null || barBackground == null || barBackground.sprite == null)
             return;
@@ -102,7 +172,8 @@ public class MeatCookHoverBar : MonoBehaviour
             indicator.localPosition = local;
         }
 
-        UpdatePendingShade(needleX);
+        // Quemada: el velo vuelve a tapar todos los segmentos. La aguja queda encima, en el negro.
+        UpdatePendingShade(burned ? firstSegmentX : needleX);
     }
 
     /// <summary>
@@ -125,14 +196,14 @@ public class MeatCookHoverBar : MonoBehaviour
         return Mathf.Lerp(start, end, bands - band);
     }
 
-    /// <summary>Estira el velo desde la aguja hasta el final del último segmento.</summary>
-    private void UpdatePendingShade(float needleX)
+    /// <summary>Estira el velo desde fromX (píxeles del sprite) hasta el final del último segmento.</summary>
+    private void UpdatePendingShade(float fromX)
     {
         if (pendingShade == null)
             return;
 
         float trackEnd = firstSegmentX + StateCount * segmentWidth + (StateCount - 1) * dividerWidth;
-        Vector3 topLeft = ArtPixelToParentLocal(needleX, segmentTopY);
+        Vector3 topLeft = ArtPixelToParentLocal(fromX, segmentTopY);
         Vector3 bottomRight = ArtPixelToParentLocal(trackEnd, segmentTopY + segmentHeight);
 
         // Sprite de 1x1 unidad con pivot centrado: posición = centro, escala = tamaño.

@@ -81,7 +81,10 @@
 > Arte de `Sprites/Arte Aseprite/UI y Botones/`: `Barra Coccion v4` (marco + los seis segmentos pintados) y `Indicador de
 > Progreso` (aguja). Salieron los `Seg_*`/`Fill_*`. La aguja recorre cada segmento con el progreso de la cara activa y el
 > cambio de estado cae en el centro del separador; al quemarse salta al centro del segmento negro (la cocción se frena al
-> entrar en Quemado). Un velo oscuro (`PendingShade`, se crea en runtime) tapa lo que la aguja todavía no alcanzó. Las
+> entrar en Quemado). Un velo oscuro (`PendingShade`, se crea en runtime) tapa lo que la aguja todavía no alcanzó. Desde la
+> mitad de Pasado (`burnWarningStart`) la barra **tiembla y titila en rojo**, con la misma curva de urgencia que
+> `PatienceBar`. Ya quemada deja de temblar: el velo vuelve a tapar todos los segmentos y la barra late en rojo más lento
+> (`burnedPulseSpeed`). Las
 > medidas de los segmentos están en píxeles del sprite, en el inspector. Ahora es el prefab `Prefabs/UI/MeatCookHoverBar.prefab`,
 > con una instancia en `GameScene` y otra en `TutorialScene`.
 
