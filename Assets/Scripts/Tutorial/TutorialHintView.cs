@@ -430,6 +430,12 @@ public class TutorialHintView : MonoBehaviour
         else
             bounds = new Bounds(target.position, Vector3.zero);
 
+        // Con la burbuja de la carne abierta sobre esta pieza (mouse encima), el cartel se pone por
+        // fuera de las dos: si no, tapa la barra de cocción. Se sigue apuntando a la carne y no a la
+        // burbuja para que el cartel no desaparezca y vuelva a entrar con cada hover.
+        if (MeatHoverBubble.Instance != null && MeatHoverBubble.Instance.TryGetPanelBounds(target, out Bounds bubble))
+            bounds.Encapsulate(bubble);
+
         // Cámara en perspectiva: se proyectan las 8 esquinas, no el centro con un tamaño.
         Vector3 c = bounds.center;
         Vector3 e = bounds.extents;

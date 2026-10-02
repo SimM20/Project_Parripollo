@@ -1,7 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Barra de cocción contextual por hover. Singleton de escena (mismo patrón que MeatHoverBubble).
+/// Barra de cocción contextual por hover. Es parte de la burbuja de la carne (<see cref="MeatHoverBubble"/>):
+/// vive como hija suya, la burbuja la prende solo con la pieza en la parrilla y la acomoda al pie del
+/// panel con <see cref="SetLayoutPosition"/>.
 /// Muestra los seis estados (Crudo..Quemado) y una aguja con el progreso flotante de la cara activa;
 /// lo que la aguja todavía no alcanzó queda tapado por un velo oscuro. Cuando la cara está por
 /// quemarse, la barra tiembla y titila en rojo (misma curva que la barra de paciencia de los clientes).
@@ -9,8 +11,8 @@ using UnityEngine;
 /// Solo aparece durante hover sobre una pieza en la parrilla. No identifica caras ni muestra el punto
 /// solicitado por los clientes.
 ///
-/// Setup: prefab Prefabs/UI/MeatCookHoverBar. Hijos directos de la raíz: la barra ("Barra Coccion v4",
-/// marco + seis segmentos pintados) y la aguja ("Indicador de Progreso"). El velo se crea en runtime.
+/// Setup: prefab Prefabs/UI/MeatCookHoverBar, instanciado como hijo de MeatHoverBubble. Hijos directos
+/// de la raíz: la barra ("Barra Coccion v4", marco + seis segmentos pintados) y la aguja ("Indicador de Progreso"). El velo se crea en runtime.
 /// Las medidas de los segmentos están en píxeles del sprite de la barra, contados desde arriba a la
 /// izquierda como en Aseprite; el tamaño en pantalla se ajusta con la escala de la raíz.
 /// </summary>
@@ -18,17 +20,9 @@ public class MeatCookHoverBar : MonoBehaviour
 {
     private const int StateCount = 6;
 
-    public static MeatCookHoverBar Instance { get; private set; }
-
     [Header("References")]
     [SerializeField] private Transform indicator;
     [SerializeField] private SpriteRenderer barBackground;
-
-    [Header("Layout")]
-    [Tooltip("Espacio en unidades de mundo entre el borde de arriba de la pieza (Meat.VisualTopOffset) " +
-             "y el de abajo de la barra. Se mide desde el sprite y no desde el centro de la pieza para " +
-             "que la barra quede igual de cerca en un chorizo que en una tira de asado.")]
-    [SerializeField] private float gapAboveMeat = 0.12f;
 
     [Header("Segmentos del sprite (píxeles, desde arriba a la izquierda)")]
     [Tooltip("X del primer píxel del segmento Crudo (ancho del marco izquierdo).")]
@@ -63,10 +57,10 @@ public class MeatCookHoverBar : MonoBehaviour
     private Meat target;
     private SpriteRenderer pendingShade;
     private Color barBaseColor = Color.white;
+    private Vector3 layoutPosition;
 
     void Awake()
     {
-        Instance = this;
         if (barBackground != null)
             barBaseColor = barBackground.color;
         BuildPendingShade();
@@ -85,32 +79,26 @@ public class MeatCookHoverBar : MonoBehaviour
     }
 
     /// <summary>
-    /// Distancia en Y desde el pivote de la pieza hasta el borde de arriba de la barra, sin contar
-    /// el temblor. La usa <see cref="MeatHoverBubble"/> para ponerse justo encima.
+    /// Rectángulo de la barra en el espacio del padre (la burbuja), relativo a la posición de la raíz.
+    /// Sale del sprite y no de los bounds del renderer porque tiene que valer con la barra apagada.
     /// </summary>
-    public float GetTopOffset(Meat meat)
+    public Bounds GetLocalBounds()
     {
-        return GetRootOffset(meat) + GetBarEdgeOffset(true);
-    }
-
-    /// <summary>Distancia en Y desde el pivote de la pieza hasta la raíz de la barra.</summary>
-    private float GetRootOffset(Meat meat)
-    {
-        return meat.VisualTopOffset + gapAboveMeat - GetBarEdgeOffset(false);
-    }
-
-    /// <summary>
-    /// Borde de arriba (o de abajo, negativo) del sprite de la barra respecto de la raíz, en
-    /// unidades de mundo. Sale del sprite y no de los bounds del renderer porque tiene que valer
-    /// aunque la barra todavía esté apagada.
-    /// </summary>
-    private float GetBarEdgeOffset(bool top)
-    {
-        if (barBackground == null || barBackground.sprite == null) return 0f;
+        if (barBackground == null || barBackground.sprite == null)
+            return new Bounds(Vector3.zero, Vector3.zero);
 
         Bounds b = barBackground.sprite.bounds;
-        Vector3 edge = barBackground.transform.TransformPoint(new Vector3(0f, top ? b.max.y : b.min.y, 0f));
-        return edge.y - transform.position.y;
+        Transform bar = barBackground.transform;
+        Vector3 center = Vector3.Scale(transform.localScale, bar.localPosition + Vector3.Scale(bar.localScale, b.center));
+        Vector3 size = Vector3.Scale(transform.localScale, Vector3.Scale(bar.localScale, b.size));
+        return new Bounds(center, size);
+    }
+
+    /// <summary>Posición de reposo en el espacio del padre. El temblor de quemado se suma encima.</summary>
+    public void SetLayoutPosition(Vector3 localPosition)
+    {
+        layoutPosition = localPosition;
+        transform.localPosition = localPosition;
     }
 
     public void Show(Meat meat)
@@ -129,18 +117,11 @@ public class MeatCookHoverBar : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    /// <summary>Oculta solo si la barra está mostrando esta pieza.</summary>
-    public void HideIfTarget(Meat meat)
-    {
-        if (target == meat)
-            Hide();
-    }
-
     private void Refresh()
     {
         bool burned = target.ActiveSideState == MeatStates.Quemado;
         float urgency = burned ? 0f : GetBurnUrgency();
-        transform.position = target.transform.position + new Vector3(0f, GetRootOffset(target), 0f) + GetShakeOffset(urgency);
+        transform.localPosition = layoutPosition + GetShakeOffset(urgency);
         UpdateBar(burned);
         UpdateBurnBlink(urgency, burned);
     }
@@ -159,7 +140,7 @@ public class MeatCookHoverBar : MonoBehaviour
         return Mathf.Lerp(0.35f, 1f, Mathf.InverseLerp(burnWarningStart, 1f, intoPasado));
     }
 
-    /// <summary>Temblor de toda la barra (aguja y velo incluidos); la carne no se mueve.</summary>
+    /// <summary>Temblor de toda la barra (aguja y velo incluidos) dentro de la burbuja; la carne no se mueve.</summary>
     private Vector3 GetShakeOffset(float urgency)
     {
         if (urgency <= 0f)

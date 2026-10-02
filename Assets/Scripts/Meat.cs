@@ -76,10 +76,9 @@ public class Meat : Item
 
     /// <summary>
     /// Distancia en Y desde el pivote de la pieza hasta el borde de arriba de su sprite, en
-    /// unidades de mundo. Usa la escala de reposo y no la actual, para que la barra y la burbuja
-    /// de cocción (que se apoyan acá) no salten con el estirón del flip. Contempla la rotación
-    /// de la grilla. Las piezas sin arte (sprite de 1px) devuelven un mínimo para no quedar
-    /// pegadas al centro.
+    /// unidades de mundo. Usa la escala de reposo y no la actual, para que la burbuja de cocción
+    /// (que se apoya acá) no salte con el estirón del flip. Contempla la rotación de la grilla.
+    /// Las piezas sin arte (sprite de 1px) devuelven un mínimo para no quedar pegadas al centro.
     /// </summary>
     public float VisualTopOffset
     {
@@ -356,10 +355,7 @@ public class Meat : Item
     private void ShowHover()
     {
         if (MeatHoverBubble.Instance != null)
-            MeatHoverBubble.Instance.Show(this);
-
-        if (IsOnGrill && MeatCookHoverBar.Instance != null)
-            MeatCookHoverBar.Instance.Show(this);
+            MeatHoverBubble.Instance.Show(this);   // la barra de coccion va adentro de la burbuja
     }
 
     private bool TrySendToBuildBuffer(Vector3 dropWorldPoint)
@@ -385,9 +381,6 @@ public class Meat : Item
 
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();
-
-        if (MeatCookHoverBar.Instance != null)
-            MeatCookHoverBar.Instance.HideIfTarget(this);
 
         ApplyGridRotationPreview();
         UpdateHoverPreview();
@@ -667,9 +660,6 @@ public class Meat : Item
     {
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();
-
-        if (MeatCookHoverBar.Instance != null)
-            MeatCookHoverBar.Instance.HideIfTarget(this);
     }
 
     public override void OnDisable()
@@ -686,8 +676,8 @@ public class Meat : Item
 
         ReleaseOccupiedSlots();
 
-        if (MeatCookHoverBar.Instance != null)
-            MeatCookHoverBar.Instance.HideIfTarget(this);
+        if (MeatHoverBubble.Instance != null)
+            MeatHoverBubble.Instance.HideIfTarget(this);
     }
 
     void OnValidate()

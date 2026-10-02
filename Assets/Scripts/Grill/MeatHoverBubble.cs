@@ -11,25 +11,30 @@ using UnityEngine;
 /// tiene la parrilla se leen igual: el icono es el corte en su punto actual, como el del pedido
 /// es el plato en el punto pedido.
 ///
-/// La jerarquia se arma por codigo con <see cref="WorldBubbleStyle"/>; el GameObject de la
-/// escena solo necesita este componente.
+/// Con la pieza en la parrilla la burbuja suma una fila al pie con la barra de coccion
+/// (<see cref="MeatCookHoverBar"/>): antes eran dos carteles separados, uno arriba del otro.
+///
+/// La jerarquia se arma por codigo con <see cref="WorldBubbleStyle"/>. En la escena el GameObject
+/// lleva este componente y, como hija, la instancia del prefab de la barra.
 /// </summary>
 public class MeatHoverBubble : MonoBehaviour
 {
     public static MeatHoverBubble Instance { get; private set; }
 
+    [Header("Referencias")]
+    [Tooltip("Barra de coccion que va al pie de la burbuja. Si queda vacio se busca entre los hijos.")]
+    [SerializeField] private MeatCookHoverBar cookBar;
+
     [Header("Posicion")]
-    [Tooltip("En la parrilla la burbuja se apoya sobre la barra de coccion (MeatCookHoverBar): " +
-             "este es el espacio, en unidades de mundo, entre el borde de arriba de la barra y " +
-             "el de abajo de la burbuja.")]
-    [SerializeField] private float gapAboveBar = 0.08f;
-    [Tooltip("Sin barra (pieza fuera de la parrilla): espacio entre el borde de arriba de la pieza " +
+    [Tooltip("Espacio, en unidades de mundo, entre el borde de arriba de la pieza " +
              "(Meat.VisualTopOffset) y el de abajo de la burbuja.")]
     [SerializeField] private float gapAboveMeat = 0.12f;
 
     [Header("Tamanio del panel (unidades de mundo)")]
-    [Tooltip("Mismo alto que la burbuja base del cliente.")]
+    [Tooltip("Alto de la fila de arriba (icono, nombre y punto). Mismo alto que la burbuja base del cliente.")]
     [SerializeField] private float height = 0.9f;
+    [Tooltip("Margen entre la barra de coccion y los bordes del panel (abajo y costados).")]
+    [SerializeField] private float barPadding = 0.14f;
     [Tooltip("El ancho sale del texto mas largo (nombre del corte o punto), entre estos limites.")]
     [SerializeField] private float minWidth = 1.6f;
     [SerializeField] private float maxWidth = 2.8f;
@@ -46,9 +51,10 @@ public class MeatHoverBubble : MonoBehaviour
     [SerializeField] private Color pointColor = new Color(0.72f, 0.31f, 0.09f, 1f);
 
     [Header("Orden de dibujo")]
-    [Tooltip("Misma capa que la barra de coccion (MeatBubbleOverlay), por encima de ella (5000-5010).")]
+    [Tooltip("Misma capa que la barra de coccion (MeatBubbleOverlay) y por debajo de ella " +
+             "(5000-5010), para que la barra se dibuje encima del panel.")]
     [SerializeField] private string sortingLayerName = "MeatBubbleOverlay";
-    [SerializeField] private int sortingOrder = 5020;
+    [SerializeField] private int sortingOrder = 4980;
 
     private const float IconSize = 0.6f;
 
@@ -64,6 +70,8 @@ public class MeatHoverBubble : MonoBehaviour
     private MeatStates lastState;
     private bool lastSideA;
     private bool hasIcon;
+    private bool barShown;
+    private float headerCenterY;
     private float popT = 1f;
 
     private static readonly MeatStates[] AllStates =
@@ -92,6 +100,10 @@ public class MeatHoverBubble : MonoBehaviour
         }
 
         transform.position = source.transform.position + GetOffset(source);
+
+        // La fila de la barra va solo con la pieza en la parrilla.
+        if (source.IsOnGrill != barShown)
+            Relayout();
 
         // Refresco en vivo: punto e icono cambian solo cuando cambia la cara activa o su estado.
         if (source.ActiveSideState != lastState || source.IsSideAActive != lastSideA)
@@ -127,17 +139,40 @@ public class MeatHoverBubble : MonoBehaviour
     public void Hide()
     {
         source = null;
+        barShown = false;
+
+        if (cookBar != null)
+            cookBar.Hide();
+
         gameObject.SetActive(false);
+    }
+
+    /// <summary>Oculta solo si la burbuja esta mostrando esta pieza.</summary>
+    public void HideIfTarget(Meat meat)
+    {
+        if (source == meat)
+            Hide();
+    }
+
+    /// <summary>
+    /// Rectangulo del panel en el mundo, si la burbuja esta mostrando la pieza de
+    /// <paramref name="target"/>. Los carteles del tutorial que apuntan a esa carne lo suman al
+    /// de la pieza para ponerse por fuera: son UI de pantalla y si no, la tapan.
+    /// </summary>
+    public bool TryGetPanelBounds(Transform target, out Bounds bounds)
+    {
+        bounds = default;
+        if (!built || source == null || target != source.transform || !gameObject.activeInHierarchy)
+            return false;
+
+        bounds = borderRenderer.bounds;
+        return true;
     }
 
     private Vector3 GetOffset(Meat meat)
     {
         // Z en 0: la camara es perspectiva y separar la burbuja en Z la desalinea de la pieza.
-        MeatCookHoverBar bar = MeatCookHoverBar.Instance;
-        if (!meat.IsOnGrill || bar == null)
-            return new Vector3(0f, meat.VisualTopOffset + gapAboveMeat, 0f);
-
-        return new Vector3(0f, bar.GetTopOffset(meat) + gapAboveBar, 0f);
+        return new Vector3(0f, meat.VisualTopOffset + gapAboveMeat, 0f);
     }
 
     // ── Contenido ────────────────────────────────────────────────────────────
@@ -153,13 +188,36 @@ public class MeatHoverBubble : MonoBehaviour
         hasIcon = GetIconSprite() != null;
         titleText.text = GetTitle();
 
+        barShown = source.IsOnGrill && cookBar != null;
+        Bounds barBounds = barShown ? cookBar.GetLocalBounds() : default;
+
         float textWidth = titleText.GetPreferredValues(titleText.text).x;
         for (int i = 0; i < AllStates.Length; i++)
             textWidth = Mathf.Max(textWidth, detailText.GetPreferredValues(BuildDetail(AllStates[i])).x);
 
         float width = Mathf.Clamp(TextLeftFromEdge() + textWidth + 0.18f, minWidth, maxWidth);
+        float panelHeight = height;
 
-        ApplyLayout(new Vector2(width, height));
+        if (barShown)
+        {
+            // La barra entra entera: el panel se ensancha si hace falta y suma una fila al pie.
+            width = Mathf.Max(width, barBounds.size.x + barPadding * 2f);
+            panelHeight += barBounds.size.y + barPadding;
+        }
+
+        ApplyLayout(new Vector2(width, panelHeight));
+
+        if (barShown)
+        {
+            float barCenterY = -panelHeight * 0.5f + barPadding + barBounds.size.y * 0.5f;
+            cookBar.SetLayoutPosition(new Vector3(-barBounds.center.x, barCenterY - barBounds.center.y, 0f));
+            cookBar.Show(source);
+        }
+        else if (cookBar != null)
+        {
+            cookBar.Hide();
+        }
+
         RefreshContent();
     }
 
@@ -187,7 +245,7 @@ public class MeatHoverBubble : MonoBehaviour
 
         float halfW = panelRenderer.size.x * 0.5f;
         WorldBubbleStyle.FitSprite(iconRenderer.transform, sprite, IconSize,
-            new Vector3(-halfW + 0.12f + IconSize * 0.5f, 0f, 0f));
+            new Vector3(-halfW + 0.12f + IconSize * 0.5f, headerCenterY, 0f));
     }
 
     /// <summary>El corte en el punto y la cara que se estan viendo en la parrilla.</summary>
@@ -233,15 +291,20 @@ public class MeatHoverBubble : MonoBehaviour
         panelRenderer.size = size;
         panelRenderer.color = panelColor;
 
+        // La fila de arriba (icono, nombre y punto) se mide desde el borde de arriba, asi no se
+        // mueve cuando se suma la fila de la barra.
+        float top = halfH;
+        headerCenterY = top - height * 0.5f;
+
         float textLeft = -halfW + TextLeftFromEdge();
         float textWidth = Mathf.Max(0.2f, halfW - 0.1f - textLeft);
 
         titleText.rectTransform.sizeDelta = new Vector2(textWidth, 0.42f);
-        titleText.transform.localPosition = new Vector3(textLeft + textWidth * 0.5f, halfH - 0.28f, 0f);
+        titleText.transform.localPosition = new Vector3(textLeft + textWidth * 0.5f, top - 0.28f, 0f);
         titleText.color = titleColor;
 
         detailText.rectTransform.sizeDelta = new Vector2(textWidth, 0.34f);
-        detailText.transform.localPosition = new Vector3(textLeft + textWidth * 0.5f, -halfH + 0.27f, 0f);
+        detailText.transform.localPosition = new Vector3(textLeft + textWidth * 0.5f, top - height + 0.27f, 0f);
         detailText.color = detailColor;
     }
 
@@ -288,6 +351,13 @@ public class MeatHoverBubble : MonoBehaviour
         titleText.sortingOrder = sortingOrder + 3;
         detailText.sortingLayerID = layerId;
         detailText.sortingOrder = sortingOrder + 3;
+
+        // La barra (hija en la escena) pasa adentro del contenido para seguir al panel y al pop.
+        if (cookBar == null)
+            cookBar = GetComponentInChildren<MeatCookHoverBar>(true);
+
+        if (cookBar != null)
+            cookBar.transform.SetParent(contentRoot, false);
 
         ApplyLayout(size);
         built = true;

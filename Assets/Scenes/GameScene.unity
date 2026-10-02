@@ -13453,7 +13453,8 @@ Transform:
   m_LocalPosition: {x: -17.2, y: 0.0122092515, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 7840172939270752301}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2115442015
@@ -13468,9 +13469,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2e95a0ee26ab894ea8302a530b87e17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gapAboveBar: 0.08
+  cookBar: {fileID: 7840172939270752300}
   gapAboveMeat: 0.12
   height: 0.9
+  barPadding: 0.14
   minWidth: 1.6
   maxWidth: 2.8
   popDuration: 0.1
@@ -13480,7 +13482,7 @@ MonoBehaviour:
   detailColor: {r: 0.29, g: 0.23, b: 0.18, a: 1}
   pointColor: {r: 0.72, g: 0.31, b: 0.09, a: 1}
   sortingLayerName: MeatBubbleOverlay
-  sortingOrder: 5020
+  sortingOrder: 4980
 --- !u!1001 &2137234444
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13672,7 +13674,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 0}
+    m_TransformParent: {fileID: 2115442014}
     m_Modifications:
     - target: {fileID: 4213590045360332938, guid: 08304b4a49c5dd0489e5e87888bbb7e7, type: 3}
       propertyPath: m_Name
@@ -13723,6 +13725,22 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 08304b4a49c5dd0489e5e87888bbb7e7, type: 3}
+--- !u!114 &7840172939270752300 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 601795936717288646, guid: 08304b4a49c5dd0489e5e87888bbb7e7, type: 3}
+  m_PrefabInstance: {fileID: 7840172939270752299}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad127f3084bf6d5468c80c28e6fbbf93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &7840172939270752301 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6449401459497383743, guid: 08304b4a49c5dd0489e5e87888bbb7e7, type: 3}
+  m_PrefabInstance: {fileID: 7840172939270752299}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &9144760440789296728
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13891,7 +13909,6 @@ SceneRoots:
   - {fileID: 697905638}
   - {fileID: 2115442014}
   - {fileID: 401439255}
-  - {fileID: 7840172939270752299}
   - {fileID: 104898951}
   - {fileID: 1432032685}
   - {fileID: 1219608614}

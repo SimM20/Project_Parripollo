@@ -91,11 +91,14 @@
 > Última actualización parcial: **2026-10-01** — **burbuja de estado de la carne rediseñada** (`MeatHoverBubble`). Dejó
 > de ser el círculo + texto de debug: ahora usa el mismo diseño que la burbuja de pedido del cliente (panel crema con
 > borde marrón, ícono del corte en su punto y cara actuales, nombre en negrita y `Punto: X` con el mismo acento, misma
-> clave `order.doneness`). Se arma por código; en las escenas el objeto `MeatHoverBubble` ya no tiene hijos. En la
-> parrilla se apoya sobre la barra de cocción (`MeatCookHoverBar.GetTopOffset(meat)` + `gapAboveBar`). La barra ya no usa
-> un `worldOffset` fijo desde el centro de la pieza (estaba en `1.95` y quedaba lejos de los cortes chicos): se apoya en
-> el borde de arriba del sprite de la carne (`Meat.VisualTopOffset`, en reposo y con la rotación de la grilla, sin el
-> estirón del flip) + `gapAboveMeat`. Fuera de la parrilla la burbuja usa la misma referencia. Las piezas comunes
+> clave `order.doneness`). Se arma por código. **La barra de cocción ahora es parte de la burbuja**: en las escenas la
+> instancia de `MeatCookHoverBar.prefab` es la única hija de `MeatHoverBubble` (campo `cookBar`), y con la pieza en la
+> parrilla la burbuja suma una fila al pie con la barra (`barPadding`; el panel se ensancha si la barra no entra). La
+> barra ya no se ubica sola ni es singleton: la burbuja la prende/apaga y la acomoda con `SetLayoutPosition`, y el temblor
+> de quemado es dentro del panel. La carne solo habla con la burbuja (`Show` / `Hide` / `HideIfTarget`). El panel dibuja
+> en `4980-4983` de `MeatBubbleOverlay` para quedar debajo de la barra (`5000-5010`). La burbuja se apoya en el borde de
+> arriba del sprite de la carne (`Meat.VisualTopOffset`, en reposo y con la rotación de la grilla, sin el estirón del
+> flip) + `gapAboveMeat`; antes la barra estaba a un `worldOffset` fijo de `1.95` del centro de la pieza. Las piezas comunes
 > (panel redondeado 9-sliced, textos, `FitSprite`) pasaron a `UI/WorldBubbleStyle.cs`, que usan las dos burbujas.
 > Salió `MeatHoverText.ToHoverString()` (su único uso era la burbuja vieja); la clave `meat.state` quedó sin uso.
 
@@ -208,8 +211,8 @@ Assets/Resources/Localization/   Tablas de textos (key,es,en). Se cargan todas: 
 Prefabs relevantes: `Prefabs/GrillView.prefab` (contiene `StockPanel`, `MeatTray`, `ToBuild`), `Prefabs/[SYSTEMS].prefab`
 (las escenas son instancias; ahí viven `GrillSystem`, `CustomerSystem`, `UpgradeUnlockActivator`…), `Prefabs/UI/StockPanel.prefab`,
 `Prefabs/UI/PauseCanvas.prefab`, `Prefabs/FeedbackBubble.prefab`, `Prefabs/Cliente*.prefab`, `Prefabs/FondoCicloDia.prefab`
-(fondo de `GameScene`, ver 3.9), `Prefabs/UI/MeatCookHoverBar.prefab` (barra de cocción por hover, en `GameScene` y
-`TutorialScene`). `BuildView.prefab` y
+(fondo de `GameScene`, ver 3.9), `Prefabs/UI/MeatCookHoverBar.prefab` (barra de cocción por hover, hija de `MeatHoverBubble`
+en `GameScene` y `TutorialScene`). `BuildView.prefab` y
 `CoolerView.prefab` siguen en el proyecto pero **no se alcanzan**.
 
 ---
@@ -296,7 +299,7 @@ graph TD
 
 | Patrón | Dónde | Detalle |
 |---|---|---|
-| **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `HudManager`, `StockPanelController`, `ToppingsPanelController`, `MeatHoverBubble`, `MeatCookHoverBar`, `CustomerSelectionFrame`, `DeliveryFeedbackText`, `CustomerFeedbackConfigSO` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
+| **Singleton** (`static Instance`) | `GameManager`, `UIManager`, `AudioManager`, `PlayerWallet`*, `CoolerSystem`*, `ToppingStock`*, `CoalConsumptionTracker`*, `TutorialManager`, `BuildUndoHistory`, `GrillNotificationManager`, `HudManager`, `StockPanelController`, `ToppingsPanelController`, `MeatHoverBubble`, `CustomerSelectionFrame`, `DeliveryFeedbackText`, `CustomerFeedbackConfigSO` | `*` = además `DontDestroyOnLoad`. Los de escena se reasignan en `Awake` sin guard. `GrillLayerToggle` usa `private static instance` |
 | **Observer** (`event Action`) | Ver tabla 2.3 | Suscripción en `OnEnable`/`Start`, desuscripción en `OnDisable`/`OnDestroy` |
 | **Static notification hub + gates** | `TutorialSignals.Raise(...)` y `TutorialManager.Check*Allowed(...)` | 14 señales `TutorialSignal` (evento estático `Raised`, no-op sin suscriptores: el juego no sabe quién escucha) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` no hay `TutorialManager` y ningún gate bloquea |
 | **Command** | `IBuildUndoAction` + `BuildUndoHistory` (pila) | `AddSideUndoAction`, `AddToppingUndoAction`, `SetBreadUndoAction`, **`AddMeatUndoAction`** (devuelve el corte a la bandeja) |
@@ -1737,6 +1740,12 @@ enseguida después de cada señal; en pausa, nada. En cada revisión rearma la f
 4. **Retira** los que no entran: cumplido (pop) si dejaron de valer por algo que el jugador acaba de hacer (apretó Q y se
    abrió el panel); fundido si solo cedieron su lugar. **Muestra** los nuevos, y si la zona cambió de objeto (otro cliente,
    otra carne) el cartel se va y reaparece en el nuevo.
+
+⚠️ Los carteles son UI de pantalla y se dibujan encima de todo. Los que apuntan a una carne (`MeatOnGrill`, `MeatToFlip`,
+`MeatAboutToBurn`, todos `Above`) tapaban la burbuja de la carne con su barra de cocción cuando el mouse estaba encima.
+`TutorialHintView.TryGetTargetScreenRect` suma al rectángulo de la carne el del panel de `MeatHoverBubble`
+(`TryGetPanelBounds`) mientras la burbuja muestra esa pieza, así el cartel se pone por fuera de las dos. El objetivo sigue
+siendo la carne y no la burbuja: si cambiara con cada hover, el director retiraría el cartel y lo volvería a mostrar.
 
 | Señal (`TutorialSignal`) | La dispara |
 |---|---|
