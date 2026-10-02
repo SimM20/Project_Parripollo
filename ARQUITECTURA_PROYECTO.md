@@ -88,6 +88,17 @@
 > medidas de los segmentos están en píxeles del sprite, en el inspector. Ahora es el prefab `Prefabs/UI/MeatCookHoverBar.prefab`,
 > con una instancia en `GameScene` y otra en `TutorialScene`.
 
+> Última actualización parcial: **2026-10-01** — **burbuja de estado de la carne rediseñada** (`MeatHoverBubble`). Dejó
+> de ser el círculo + texto de debug: ahora usa el mismo diseño que la burbuja de pedido del cliente (panel crema con
+> borde marrón, ícono del corte en su punto y cara actuales, nombre en negrita y `Punto: X` con el mismo acento, misma
+> clave `order.doneness`). Se arma por código; en las escenas el objeto `MeatHoverBubble` ya no tiene hijos. En la
+> parrilla se apoya sobre la barra de cocción (`MeatCookHoverBar.GetTopOffset(meat)` + `gapAboveBar`). La barra ya no usa
+> un `worldOffset` fijo desde el centro de la pieza (estaba en `1.95` y quedaba lejos de los cortes chicos): se apoya en
+> el borde de arriba del sprite de la carne (`Meat.VisualTopOffset`, en reposo y con la rotación de la grilla, sin el
+> estirón del flip) + `gapAboveMeat`. Fuera de la parrilla la burbuja usa la misma referencia. Las piezas comunes
+> (panel redondeado 9-sliced, textos, `FitSprite`) pasaron a `UI/WorldBubbleStyle.cs`, que usan las dos burbujas.
+> Salió `MeatHoverText.ToHoverString()` (su único uso era la burbuja vieja); la clave `meat.state` quedó sin uso.
+
 ---
 
 ## 0. Ficha técnica
@@ -294,9 +305,9 @@ graph TD
 | **Registro estático de instancias** | `Coal.ActiveCoals`, `BuildFoodDropZone.ActiveZones`, `TrashZone.ActiveZones`, `ToppingDraggable.ActiveInstances`, `PlateDeliveryDraggable.Instances`, `SlidingPanel.OpenPanels` | Alta en `OnEnable`, baja en `OnDisable`/`OnDestroy`. Habilita APIs estáticas tipo `TryAcceptAt`, `ClearAllSplatters`, `AnyPanelOpen` |
 | **Data-driven (ScriptableObject)** | `ItemDataSO` → `MeatCutSO`, `CoalSO`, `UpgradeSO`; `BreadSO`, `SideSO`, `ToppingSO`, `ProductVariantSO`, `FoodCatalogSO`, `ShopConfigSO`, `TutorialStepSO`, `HudDatabaseSO`, `CustomerFeedbackConfigSO` | ⚠️ Los SO mutan en runtime (`isUnlocked`, `UpgradeSO.currentLevel`, `CoalSO._maxBurnTime`) → **el estado persiste entre sesiones de Editor** (ver `UpgradeStateResetter`) |
 | **Service / Facade** | `FoodAvailabilityService` | Cruza `FoodCatalogSO` (estático) con `CoolerSystem` (stock live) |
-| **Static utility / Extension methods** | `DishValidator`, `CookingDeliveryEvaluator`, `SceneManagementUtils`, `MeatHoverText.ToHoverString()`, `OrderText.ToHoverString()` (sin uso), `CustomerFeedbackExtensions.GetCategory()` | Sin estado, testeables aisladamente |
+| **Static utility / Extension methods** | `DishValidator`, `CookingDeliveryEvaluator`, `SceneManagementUtils`, `MeatHoverText.GetStateDisplayName()`, `OrderText.ToHoverString()` (sin uso), `WorldBubbleStyle`, `CustomerFeedbackExtensions.GetCategory()` | Sin estado, testeables aisladamente |
 | **Object pool** | `GrillNotificationManager.groupPool`, `StockPanelController` (slots) | Reutilizan instancias |
-| **Construcción procedural de UI** | `GrillNotification*UI.CreateProcedural*`, `CustomerSelectionFrame.BuildBars`, `ToppingDraggable.CreateSauceBar`, `CustomerFeedbackBubble.EnsureVisualHierarchy`, `MoneyPopup`, `GridSlot.MakeRadialGlowSprite` | Generan jerarquía + sprites (`Texture2D`) en runtime si falta prefab |
+| **Construcción procedural de UI** | `GrillNotification*UI.CreateProcedural*`, `CustomerSelectionFrame.BuildBars`, `ToppingDraggable.CreateSauceBar`, `CustomerFeedbackBubble.EnsureVisualHierarchy`, `CustomerOrderBubble.Build` / `MeatHoverBubble.Build` (con `WorldBubbleStyle`), `MoneyPopup`, `GridSlot.MakeRadialGlowSprite` | Generan jerarquía + sprites (`Texture2D`) en runtime si falta prefab |
 | **Template Method** | `Item` → `Meat` → `MeatInstance`; `GridSlot` → `GrillSlot`; **`SlidingPanel` → `StockPanelController` / `ToppingsPanelController`** | `virtual OnWorldPointerUp/HandleHeldInput/OnPickedUp/UpdateHoverPreview/Cook`; hooks `OnPanelStarted/OnEnteredGrillView/OnPanelClosing/OnPanelOpened/CanOpen/ValidateReferences` |
 
 ### 2.3 Catálogo de eventos
@@ -1242,7 +1253,9 @@ Burbuja de pedido. **Un solo panel con dos estados**, no dos burbujas:
   juego pausaba (`timeScale` 0).
 - ⚠️ Base y expandida usan **bandas de sorting distintas** para que la burbuja abierta pase por delante de las de los
   clientes de al lado, y las dos quedan **por debajo de los paneles deslizantes** (90) para que un panel abierto las tape.
-- `FitSprite` ajusta cada ícono **por alto** (con tope de ancho 1.3×) y lo recentra por el centro real de sus `bounds`:
+- El panel, los textos y `FitSprite` vienen de `UI/WorldBubbleStyle.cs`, compartido con `MeatHoverBubble` (la burbuja
+  de estado de la carne usa el mismo diseño). Un cambio de estilo ahí cambia las dos.
+- `WorldBubbleStyle.FitSprite` ajusta cada ícono **por alto** (con tope de ancho 1.3×) y lo recentra por el centro real de sus `bounds`:
   los sprites vienen en lienzos de proporciones distintas (`criolla` es 2048x1266, `chimi` es cuadrado) y normalizar
   por el lado mayor los dejaba de tamaños muy dispares en la misma fila.
 

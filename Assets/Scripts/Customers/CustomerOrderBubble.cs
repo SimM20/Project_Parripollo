@@ -71,9 +71,6 @@ public class CustomerOrderBubble : MonoBehaviour
     private bool built;
     private bool hidden;
 
-    private static Sprite panelSprite;
-    private static Sprite borderSprite;
-
     /// <summary>Sprites de los acompaniamientos del pedido, reusando el buffer entre refrescos.</summary>
     private readonly List<Sprite> extraSprites = new List<Sprite>();
     private readonly List<string> extraNames = new List<string>();
@@ -431,7 +428,7 @@ public class CustomerOrderBubble : MonoBehaviour
 
         if (iconRenderer != null)
         {
-            FitSprite(iconRenderer.transform, iconRenderer.sprite, iconSize, new Vector3(iconX, iconY, -0.01f));
+            WorldBubbleStyle.FitSprite(iconRenderer.transform, iconRenderer.sprite, iconSize, new Vector3(iconX, iconY, -0.01f));
             iconRenderer.sortingOrder = order + 2;
         }
 
@@ -511,7 +508,7 @@ public class CustomerOrderBubble : MonoBehaviour
             sr.color = new Color(1f, 1f, 1f, alpha);
             sr.sortingOrder = order + 2;
 
-            FitSprite(
+            WorldBubbleStyle.FitSprite(
                 sr.transform,
                 sprite,
                 iconSize,
@@ -523,98 +520,31 @@ public class CustomerOrderBubble : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Escala y recentra un sprite para que entre en un cuadro de <paramref name="target"/>
-    /// sin deformarse. Los sprites del proyecto tienen tamanios y pivots distintos, asi que
-    /// se corrige por el centro real de los bounds.
-    /// </summary>
-    private static void FitSprite(Transform t, Sprite sprite, float target, Vector3 position)
-    {
-        if (sprite == null)
-        {
-            t.localPosition = position;
-            return;
-        }
-
-        // Se ajusta por alto y no por el lado mayor: los iconos de salsas y guarniciones
-        // vienen en lienzos de proporciones distintas (la criolla es 2048x1266 y el
-        // chimichurri es cuadrado), y normalizar por el lado mayor hacia que los anchos
-        // se vieran la mitad de chicos que el resto de la fila. El ancho se limita para
-        // que un sprite muy apaisado no se le meta encima al de al lado.
-        Vector3 size = sprite.bounds.size;
-        float scale = size.y > 0.0001f ? target / size.y : 1f;
-
-        const float maxWidthRatio = 1.3f;
-        if (size.x * scale > target * maxWidthRatio)
-            scale = target * maxWidthRatio / size.x;
-
-        t.localScale = new Vector3(scale, scale, 1f);
-
-        Vector3 center = sprite.bounds.center * scale;
-        t.localPosition = position - new Vector3(center.x, center.y, 0f);
-    }
-
     // ── Construccion de la jerarquia ─────────────────────────────────────────
 
     private void Build()
     {
         if (built) return;
 
-        EnsureSprites();
-
         var rootGo = new GameObject("OrderBubbleContent");
         rootGo.transform.SetParent(transform, false);
         contentRoot = rootGo.transform;
 
-        borderRenderer = CreatePanel("Border", borderSprite, borderColor);
-        panelRenderer = CreatePanel("Panel", panelSprite, panelColor);
+        borderRenderer = WorldBubbleStyle.CreatePanel(contentRoot, "Border", borderColor, baseSize);
+        panelRenderer = WorldBubbleStyle.CreatePanel(contentRoot, "Panel", panelColor, baseSize);
 
         var iconGo = new GameObject("OrderIcon");
         iconGo.transform.SetParent(contentRoot, false);
         iconRenderer = iconGo.AddComponent<SpriteRenderer>();
 
-        titleText = CreateText("Title", 2.6f, FontStyles.Bold, TextAlignmentOptions.Left);
+        titleText = WorldBubbleStyle.CreateText(contentRoot, "Title", 2.6f, FontStyles.Bold, TextAlignmentOptions.Left);
         // El nombre del corte va siempre en un renglon: con wrap, "Tira de asado" se parte
         // en dos y el segundo renglon se le monta a la fila de iconos.
         titleText.enableWordWrapping = false;
 
-        detailText = CreateText("Detail", 1.9f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+        detailText = WorldBubbleStyle.CreateText(contentRoot, "Detail", 1.9f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
 
         built = true;
-    }
-
-    private SpriteRenderer CreatePanel(string panelName, Sprite sprite, Color color)
-    {
-        var go = new GameObject(panelName);
-        go.transform.SetParent(contentRoot, false);
-
-        var sr = go.AddComponent<SpriteRenderer>();
-        sr.sprite = sprite;
-        sr.color = color;
-        sr.drawMode = SpriteDrawMode.Sliced;   // el panel crece sin deformar las esquinas
-        sr.size = baseSize;
-
-        return sr;
-    }
-
-    private TextMeshPro CreateText(string textName, float fontSize, FontStyles style, TextAlignmentOptions align)
-    {
-        var go = new GameObject(textName);
-        go.transform.SetParent(contentRoot, false);
-
-        var tmp = go.AddComponent<TextMeshPro>();
-        tmp.fontSize = fontSize;
-        tmp.fontStyle = style;
-        tmp.alignment = align;
-        tmp.enableWordWrapping = true;
-        tmp.overflowMode = TextOverflowModes.Truncate;
-        tmp.enableAutoSizing = true;
-        tmp.fontSizeMin = 1.1f;
-        tmp.fontSizeMax = fontSize;
-        tmp.margin = Vector4.zero;
-        tmp.raycastTarget = false;
-
-        return tmp;
     }
 
     private void EnsureExtraIconCount(int count)
@@ -628,46 +558,5 @@ public class CustomerOrderBubble : MonoBehaviour
 
         for (int i = count; i < extraIcons.Count; i++)
             extraIcons[i].enabled = false;
-    }
-
-    /// <summary>
-    /// Panel redondeado 9-sliced generado por codigo, para no depender de un asset:
-    /// el borde es el mismo cuadro con las esquinas un poco mas grandes por detras.
-    /// </summary>
-    private static void EnsureSprites()
-    {
-        if (panelSprite != null && borderSprite != null) return;
-
-        const int size = 64;
-        const int radius = 16;
-
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Bilinear;
-        tex.wrapMode = TextureWrapMode.Clamp;
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                int cx = (x < radius) ? radius : ((x >= size - radius) ? size - radius - 1 : x);
-                int cy = (y < radius) ? radius : ((y >= size - radius) ? size - radius - 1 : y);
-
-                float dx = x - cx;
-                float dy = y - cy;
-                float dist = Mathf.Sqrt(dx * dx + dy * dy);
-
-                float alpha = Mathf.Clamp01(radius - dist + 0.5f);
-                tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-            }
-        }
-
-        tex.Apply();
-
-        var rect = new Rect(0, 0, size, size);
-        var pivot = new Vector2(0.5f, 0.5f);
-        var border = new Vector4(radius, radius, radius, radius);
-
-        panelSprite = Sprite.Create(tex, rect, pivot, 100f, 0, SpriteMeshType.FullRect, border);
-        borderSprite = panelSprite;
     }
 }

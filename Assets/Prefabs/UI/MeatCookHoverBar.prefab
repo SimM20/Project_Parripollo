@@ -216,7 +216,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   indicator: {fileID: 5766859622568842767}
   barBackground: {fileID: 6022135783310239301}
-  worldOffset: {x: 0, y: 1.95, z: 0}
+  gapAboveMeat: 0.12
   firstSegmentX: 7
   segmentWidth: 40
   dividerWidth: 5

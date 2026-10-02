@@ -74,6 +74,38 @@ public class Meat : Item
     public bool IsGridRotated => isGridRotated;
     public bool IsFlipping => isFlipping;
 
+    /// <summary>
+    /// Distancia en Y desde el pivote de la pieza hasta el borde de arriba de su sprite, en
+    /// unidades de mundo. Usa la escala de reposo y no la actual, para que la barra y la burbuja
+    /// de cocción (que se apoyan acá) no salten con el estirón del flip. Contempla la rotación
+    /// de la grilla. Las piezas sin arte (sprite de 1px) devuelven un mínimo para no quedar
+    /// pegadas al centro.
+    /// </summary>
+    public float VisualTopOffset
+    {
+        get
+        {
+            const float minTop = 0.25f;
+            if (spriteRenderer == null || spriteRenderer.sprite == null) return minTop;
+
+            Vector3 restScale = (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : transform.localScale;
+            if (transform.parent != null)
+                restScale = Vector3.Scale(restScale, transform.parent.lossyScale);
+
+            Bounds b = spriteRenderer.sprite.bounds;
+            Quaternion rotation = transform.rotation;
+            float top = float.MinValue;
+
+            for (int i = 0; i < 4; i++)
+            {
+                var corner = new Vector3(i < 2 ? b.min.x : b.max.x, (i % 2 == 0) ? b.min.y : b.max.y, 0f);
+                top = Mathf.Max(top, (rotation * Vector3.Scale(corner, restScale)).y);
+            }
+
+            return Mathf.Max(top, minTop);
+        }
+    }
+
     protected virtual void Awake()
     {
         itemType = ItemType.Meat;

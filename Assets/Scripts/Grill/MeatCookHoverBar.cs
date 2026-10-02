@@ -25,7 +25,10 @@ public class MeatCookHoverBar : MonoBehaviour
     [SerializeField] private SpriteRenderer barBackground;
 
     [Header("Layout")]
-    [SerializeField] private Vector3 worldOffset = new Vector3(0f, 1.6f, 0f);
+    [Tooltip("Espacio en unidades de mundo entre el borde de arriba de la pieza (Meat.VisualTopOffset) " +
+             "y el de abajo de la barra. Se mide desde el sprite y no desde el centro de la pieza para " +
+             "que la barra quede igual de cerca en un chorizo que en una tira de asado.")]
+    [SerializeField] private float gapAboveMeat = 0.12f;
 
     [Header("Segmentos del sprite (píxeles, desde arriba a la izquierda)")]
     [Tooltip("X del primer píxel del segmento Crudo (ancho del marco izquierdo).")]
@@ -81,6 +84,35 @@ public class MeatCookHoverBar : MonoBehaviour
         Refresh();
     }
 
+    /// <summary>
+    /// Distancia en Y desde el pivote de la pieza hasta el borde de arriba de la barra, sin contar
+    /// el temblor. La usa <see cref="MeatHoverBubble"/> para ponerse justo encima.
+    /// </summary>
+    public float GetTopOffset(Meat meat)
+    {
+        return GetRootOffset(meat) + GetBarEdgeOffset(true);
+    }
+
+    /// <summary>Distancia en Y desde el pivote de la pieza hasta la raíz de la barra.</summary>
+    private float GetRootOffset(Meat meat)
+    {
+        return meat.VisualTopOffset + gapAboveMeat - GetBarEdgeOffset(false);
+    }
+
+    /// <summary>
+    /// Borde de arriba (o de abajo, negativo) del sprite de la barra respecto de la raíz, en
+    /// unidades de mundo. Sale del sprite y no de los bounds del renderer porque tiene que valer
+    /// aunque la barra todavía esté apagada.
+    /// </summary>
+    private float GetBarEdgeOffset(bool top)
+    {
+        if (barBackground == null || barBackground.sprite == null) return 0f;
+
+        Bounds b = barBackground.sprite.bounds;
+        Vector3 edge = barBackground.transform.TransformPoint(new Vector3(0f, top ? b.max.y : b.min.y, 0f));
+        return edge.y - transform.position.y;
+    }
+
     public void Show(Meat meat)
     {
         if (meat == null)
@@ -108,7 +140,7 @@ public class MeatCookHoverBar : MonoBehaviour
     {
         bool burned = target.ActiveSideState == MeatStates.Quemado;
         float urgency = burned ? 0f : GetBurnUrgency();
-        transform.position = target.transform.position + worldOffset + GetShakeOffset(urgency);
+        transform.position = target.transform.position + new Vector3(0f, GetRootOffset(target), 0f) + GetShakeOffset(urgency);
         UpdateBar(burned);
         UpdateBurnBlink(urgency, burned);
     }
