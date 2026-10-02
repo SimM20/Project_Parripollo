@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: f1d81d12e560f384891a5dde81a5b9ad
+guid: c8a74e4c3396a13448a8fd0a59f1b022
 ScriptedImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -156,7 +156,7 @@ ScriptedImporter:
     layerType: 0
     blendMode: 0
     cells:
-    - name: Carbon Prendido
+    - name: Carbon Prendido (Fase 3)
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:
