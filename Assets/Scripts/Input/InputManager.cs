@@ -72,6 +72,13 @@ public class InputManager : MonoBehaviour
     public static bool UsingGamepad => ActiveScheme == InputScheme.Gamepad;
 
     /// <summary>
+    /// Último gamepad con el que se jugó (null si nunca se tocó uno o se desconectó). Es el que
+    /// vibra (<see cref="GamepadHaptics"/>): con dos conectados, no tiene sentido sacudir el de la mesa.
+    /// </summary>
+    public static Gamepad ActiveGamepad => Instance != null && Instance.activePad != null && Instance.activePad.added
+        ? Instance.activePad : null;
+
+    /// <summary>
     /// Ruta del control ligado a la acción del mapa Gameplay en ese esquema ("&lt;Keyboard&gt;/q",
     /// "&lt;Gamepad&gt;/leftShoulder"). La primera que aparezca; null si no hay o si todavía no existe
     /// el InputManager. La usa <see cref="InputPrompts"/> para nombrar teclas y botones en los textos.
@@ -155,6 +162,7 @@ public class InputManager : MonoBehaviour
 
     private InputScheme scheme = InputScheme.KeyboardMouse;
     private GamepadFamily gamepadFamily = GamepadFamily.None;
+    private Gamepad activePad;
     private InputMode inputMode = InputMode.Auto;
 
     private Mouse realMouse;
@@ -319,6 +327,9 @@ public class InputManager : MonoBehaviour
 
         if (next == InputScheme.Gamepad && device != null)
         {
+            if (device is Gamepad pad)
+                activePad = pad;
+
             GamepadFamily family = GetFamily(device);
             if (family != gamepadFamily)
             {

@@ -105,6 +105,23 @@ public class Meat : Item
         }
     }
 
+    /// <summary>
+    /// Segundos que le faltan a la cara apoyada para quemarse con el calor que recibe ahora.
+    /// Infinito si no se está cocinando o si esa cara ya está quemada. Lo usa el aviso de quemado
+    /// del gamepad (<see cref="GamepadHaptics.ReportBurnRisk"/>).
+    /// </summary>
+    public float SecondsToBurn
+    {
+        get
+        {
+            if (cut == null || TutorialManager.IsCookingPaused || !IsCurrentlyCooking())
+                return float.PositiveInfinity;
+
+            float remaining = BurnThreshold - (isSideA ? sideACookTime : sideBCookTime);
+            return remaining > 0f ? remaining / GetTotalHeatReceived() : float.PositiveInfinity;
+        }
+    }
+
     protected virtual void Awake()
     {
         itemType = ItemType.Meat;
@@ -127,6 +144,7 @@ public class Meat : Item
     {
         base.Update();
         UpdateEffects();
+        GamepadHaptics.ReportBurnRisk(SecondsToBurn);
     }
 
     private void UpdateEffects()
@@ -282,10 +300,15 @@ public class Meat : Item
         // Solo acumula la cara apoyada; al alcanzar el umbral de Quemado deja de acumular (clamp).
         float burnThreshold = BurnThreshold;
 
+        bool wasBurned = (isSideA ? sideACookTime : sideBCookTime) >= burnThreshold;
+
         if (isSideA)
             sideACookTime = Mathf.Min(sideACookTime + deltaHeat, burnThreshold);
         else
             sideBCookTime = Mathf.Min(sideBCookTime + deltaHeat, burnThreshold);
+
+        if (!wasBurned && (isSideA ? sideACookTime : sideBCookTime) >= burnThreshold)
+            GamepadHaptics.Play(HapticEvent.MeatBurned);
 
         RefreshState();
     }

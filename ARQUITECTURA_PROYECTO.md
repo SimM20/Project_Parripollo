@@ -102,6 +102,15 @@
 > (panel redondeado 9-sliced, textos, `FitSprite`) pasaron a `UI/WorldBubbleStyle.cs`, que usan las dos burbujas.
 > Salió `MeatHoverText.ToHoverString()` (su único uso era la burbuja vieja); la clave `meat.state` quedó sin uso.
 
+> Última actualización parcial: **2026-10-01** (rama `development`) — **vibración del gamepad**. `Input/GamepadHaptics.cs`
+> (en `Resources/InputManager.prefab`, patrones editables en el inspector) vibra al entregar (toque), al llegar la plata al
+> contador (golpe + tic-tic), al rechazar el cliente el plato, al entregar carne cruda/quemada, al quemarse un corte y con
+> un latido que se acelera los últimos 3 s antes de quemarse. El DualSense va por `Input/DualSenseOutput.cs` (reporte HID
+> propio: anda por Bluetooth y no apaga la barra de luz, que además destella). `InputManager.ActiveGamepad`,
+> `Meat.SecondsToBurn`. Sección 3.1 → *Vibración*.
+> Mismo día: también vibra cuando un cliente se va sin paciencia (`CustomerSystem.TriggerAngryLeaveFeedback`), y la barra
+> de luz es un **semáforo de strikes** (verde → amarillo → naranja → rojo que respira al máximo).
+
 ---
 
 ## 0. Ficha técnica
@@ -567,6 +576,57 @@ A lo volvería a disparar cada vez que se agarra algo. La navegación con D-pad 
 cuando se adapten esas pantallas (ver nota 35).
 
 ---
+
+#### Vibración — `Input/GamepadHaptics.cs` + `Input/DualSenseOutput.cs`
+`GamepadHaptics` (singleton, componente del prefab `Resources/InputManager.prefab`, `[DefaultExecutionOrder(1000)]`) es la
+única que hace vibrar. Vibra **solo `InputManager.ActiveGamepad`** (el último gamepad usado) y solo con
+`InputManager.UsingGamepad`: jugando con mouse no vibra nada. Se calla en pausa (`GamePause.IsPaused`: descarta lo que
+estaba sonando), al perder el foco y al cambiar de escena; al salir resetea los motores.
+
+```csharp
+static void Play(HapticEvent id, float strength = 1f)   // evento suelto
+static void ReportBurnRisk(float secondsToBurn)         // cada corte cocinándose, una vez por frame (Meat.Update)
+static bool Enabled                                     // prender/apagar todo (pensado para una opción futura)
+```
+
+| `HapticEvent` | Quién lo dispara | Patrón de fábrica |
+|---|---|---|
+| `DeliveryAccepted` | `GameManager.TryDeliverToCustomer` al cobrar | toque suave (el golpe fuerte es la plata) |
+| `MoneyLanded` | `HudManager.OnMoneyPopupArrived` (≈1 s después: pop + hold + vuelo del popup) | golpe seco + 5 tics que se apagan durante el conteo · destello verde |
+| `DeliveryRejected` | `TryDeliverToCustomer` con `rejectedByCustomer` (corte equivocado o plato inválido) | dos golpes pesados · destello rojo |
+| `BadCookingDelivered` | `TryDeliverToCustomer` con `causesStrike` (crudo/quemado) | golpe largo que se apaga · destello rojo |
+| `MeatBurned` | `Meat.Cook`, cuando la cara apoyada cruza el umbral de Quemado | "pff" corto |
+| `CustomerLeftAngry` | `CustomerSystem.TriggerAngryLeaveFeedback` (paciencia en 0) | un golpe y un rumor que se apaga · destello rojo |
+
+**Aviso de quemado.** `Meat.SecondsToBurn` = calor que le falta a la cara apoyada ÷ calor por segundo que recibe
+(infinito si no se cocina, si esa cara ya está quemada o con `TutorialManager.IsCookingPaused`). Con menos de
+`burnWarningSeconds` (3 s) arranca un latido en el motor grande que se acelera (0.8 s → 0.3 s entre latidos) y se
+intensifica; con varios cortes manda el más urgente. Se puede apagar con `burnWarning` en el prefab.
+
+**Mezcla.** Cada patrón es una lista de `HapticPulse` (`low`/`high` 0..1, duración, silencio, repeticiones con caída). Lo
+que suena a la vez se combina con el **máximo** por motor, no se suma. Un golpe más corto que un frame igual se siente:
+cuenta si se superpone con el intervalo del frame. Solo se le escribe al control cuando cambia algún valor.
+
+**DualSense.** El `SetMotorSpeeds` del Input System 1.19 para `DualSenseGamepadHID` **solo anda por USB** (por Bluetooth no
+calcula el CRC: FIXME en el paquete) y **reescribe la barra de luz** en cada llamada (sin color fijado, la apaga).
+`DualSenseOutput` arma el reporte de salida a mano: `0x02` por USB, `0x31` por Bluetooth con secuencia y CRC32 (semilla
+`0xA2`); USB/Bluetooth se distingue por el `outputReportSize` del descriptor HID (48 = USB). Formato del reporte: el del
+driver `hid-playstation` de Linux y SDL. Se llena con `MemoryMarshal` sobre un struct de tamaño fijo, sin código `unsafe`
+(el proyecto no lo habilita). `dualSenseRumble`: `Improved` (emulación mejorada, firmware ≥ 2.24) o `Classic` (firmware de
+fábrica; si un DualSense no vibra, probar esta). **No es la háptica HD de PS5**: esa es un canal de audio del control
+(solo USB, plugin nativo); acá se usa la emulación de motores, que en los actuadores del DualSense igual da golpes cortos y
+nítidos. Los gatillos adaptativos no se usan (todavía).
+
+**Barra de luz** (DualSense y DualShock 4, `useLightbar`): **semáforo de strikes** de la noche (`StrikeSystem.Instance`).
+`strikeColors` va de más tranquilo a peor y se indexa por **lo que falta para el máximo**, no por los strikes que se
+llevan: con `maxStrikes = 3`, 0 = verde, 1 = amarillo, 2 = naranja ("te queda uno"), 3 = rojo, que además **respira**
+(`limitBreathSeconds`) mientras no entra más gente. Si cambia el máximo, rojo sigue siendo el límite y naranja el último
+aviso. Entre colores hay un fundido (`strikeColorFadeSeconds`). Sin `StrikeSystem` (menú, tienda) usa `lightbarIdle`
+(blanco). Encima van los destellos por evento (`HapticPattern.flashSeconds`/`flashColor`; la plata destella en blanco
+porque el verde es "sin strikes") y el latido rojo del aviso de quemado; si un destello se parece demasiado al color de
+abajo (rojo sobre rojo) parpadea a negro (`flashContrastThreshold`). Los cambios de color solo se mandan hasta
+`lightbarMaxUpdatesPerSecond` (30) veces por segundo; los motores no se limitan. Al salir queda en azul (`lightbarOnQuit`). DualShock 4 y el resto de los gamepads usan el `SetMotorSpeeds` del Input System (DS4:
+`SetMotorSpeedsAndLightBarColor`, un solo comando).
 
 #### `DayClock` — `Core/DayClock.cs` · Singleton (opcional por escena)
 **Única fuente de la hora del juego.** Mapea la franja del local sobre segundos reales.
