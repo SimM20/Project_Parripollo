@@ -102,7 +102,6 @@ public class Coal : Item
 
     public void Burn()
     {
-        spriteRenderer.sprite = coalData.GetSpriteForState(state);
         if (state == CoalStates.Apagado)
             state = CoalStates.Encendido;
 
@@ -111,7 +110,8 @@ public class Coal : Item
         if (currentBurnTime >= MaxBurnTime)
             state = CoalStates.Ceniza;
 
-        if (state == CoalStates.Ceniza) return;
+        // Encendido muestra Fase 1 → 2 → 3 según el tiempo quemado (solo visual).
+        spriteRenderer.sprite = coalData.GetSpriteForBurn(state, currentBurnTime);
     }
 
     public void SetVisualVisibility(bool isVisible)

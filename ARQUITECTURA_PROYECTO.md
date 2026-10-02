@@ -755,6 +755,9 @@ float GetCurrentHeatOutput()   // 6.5 * (1 - burnTime/MaxBurnTime), solo si Ence
 void Burn(), SetVisualVisibility(bool), RegisterOccupiedSlot(GridSlot), ReleaseOccupiedSlots()
 ```
 `enum CoalStates { Apagado, Encendido, Ceniza }` — `Apagado` pasa a `Encendido` en el primer `Burn()`.
+Mientras está `Encendido` el sprite pasa por **Prendido Fase 1 → 2 → 3** según `currentBurnTime / maxBurnTime`
+(`CoalSO.GetSpriteForBurn`, umbrales `_phase2At` = 1/3 y `_phase3At` = 2/3, editables en `CoalData.asset`). Las fases son
+**solo visuales**: el estado sigue siendo `Encendido` y el calor no cambia (ya decae linealmente con el tiempo quemado).
 `CoalSO._maxBurnTime` es el valor real (60 por defecto; la mejora `CoalBurnTime` lo sube a 200 vía `SetMaxBurnTime`).
 
 #### `GrillLayerToggle` — `Grill/GrillLayerToggle.cs`
