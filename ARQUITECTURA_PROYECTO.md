@@ -110,6 +110,10 @@
 > `Meat.SecondsToBurn`. Sección 3.1 → *Vibración*.
 > Mismo día: también vibra cuando un cliente se va sin paciencia (`CustomerSystem.TriggerAngryLeaveFeedback`), y la barra
 > de luz es un **semáforo de strikes** (verde → amarillo → naranja → rojo que respira al máximo).
+> Última actualización parcial: **2026-10-03** (rama `development`) — **la radio funciona como radio**. Carpeta `Radio/`:
+> `Radio` (el objeto del mostrador: click / A-✕ la prende o apaga, lista de canciones en el inspector) y `RadioStation`
+> (emisora DDOL: canciones al azar sin repetir la anterior, que siguen sonando apagada, en la tienda y entre noches).
+> Canciones en `Sound/Radio/` (las del demake de PS1). Sección 3.8 → *Radio* y nota 38.
 
 ---
 
@@ -160,6 +164,7 @@ Assets/Scripts/
 │   ├── Options/        Menú de opciones: panel + fila selectora "< valor >"
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
 │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
+├── Radio/          La radio de la mejora: objeto clickeable del mostrador + emisora DDOL que nunca se corta
 └── Editor/         Solo editor: reseteo de mejoras al salir de Play
 ```
 
@@ -186,6 +191,7 @@ Assets/Scripts/
 | **UI/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
+| **Radio/** | `Radio` (el objeto del mostrador que activa la mejora `RadioUpgrade`: prender/apagar, lista de canciones, salto al ritmo) y `RadioStation` (emisora DDOL creada en runtime: elige, encadena y funde las canciones) | `Radio.cs`, `RadioStation.cs` |
 | **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO` | `UpgradeStateResetter.cs` |
 
 ### Assets de datos
@@ -1432,7 +1438,7 @@ Dos maneras de aplicar el efecto, según a quién le pertenezca la variable:
 | `CoalBurnTimeUpgrade` | `maxBurnTime` del carbón → `200` | `$500` | 1 |
 | `CustomerCapacityUpgrade` | `+1` cliente simultáneo por nivel | `$100` / nivel | 3 |
 | `TipUpgrade` | `+50%` de propina por nivel (**aditivo**: ×1.5 / ×2 / ×2.5) | `$100` / nivel | 3 |
-| `RadioUpgrade` | `+15%` de paciencia total + activa el GO `Radio` de `GameScene` | `$400` | 1 |
+| `RadioUpgrade` | `+15%` de paciencia total + activa el GO `Radio` de `GameScene` (una radio que suena de verdad, 3.8 → *Radio*) | `$400` | 1 |
 
 ⚠️ `currentLevel` se serializa en el asset: **si se compra en el Editor, queda comprado**.
 `Scripts/Editor/UpgradeStateResetter.cs` lo limpia solo al salir del Play Mode (ver abajo).
@@ -1959,6 +1965,36 @@ los dos clips, el otro cubre todo el rango. `OnDisable` silencia sin fade.
 - `FlipPuff`: puff **breve** al dar vuelta la carne. Feedback de la acción, no del estado. `ParticleSystem` nativo
   emitido a mano con cantidad/tamaño/velocidad aleatorios por flip. Hijo del prefab de carne; `Meat.EmitFlipPuff()`.
 
+#### Radio — `Radio/Radio.cs` · `Radio/RadioStation.cs` (DDOL, se crea sola)
+La mejora `RadioUpgrade` deja una radio en el mostrador (`UpgradeUnlockActivator`) que funciona como una radio de verdad,
+igual que en el demake de PS1 (`parripollo-ps1/src/radio.c`).
+
+```csharp
+// Radio (objeto de GameScene)                      // RadioStation (estática hacia afuera)
+AudioClip[] songs; float volume = 0.5f;             static bool IsOn { get; }          // sobrevive entre noches, arranca prendida
+float fadeDuration = 0.4f;                          static void Tune(Radio, AudioClip[], float volume, float fade)  // Radio.OnEnable
+Sprite onSprite, offSprite;   // opcionales        static void Leave(Radio)          // Radio.OnDisable
+void Toggle()                 // OnWorldPointerDown static void SetOn(bool), Toggle()
+                                                    static void Shutdown()            // SceneManagementUtils: run nueva / menú
+```
+
+| Regla | Cómo |
+|---|---|
+| **Nunca se corta** | La emisora es DDOL: `GameScene` se recarga cada noche y una radio de escena arrancaría de cero. Arranca con la primera `Radio` que aparece y desde ahí la canción sigue sonando **apagada, en la tienda y entre noches**; prender/apagar solo funde el volumen (`fadeDuration`), así que al prenderla sigue por donde iba |
+| **Suena solo con la radio en escena y prendida** | Volumen objetivo = `volume` si hay una `Radio` registrada (`Tune`/`Leave`) y `IsOn`; si no, 0 (la canción corre igual) |
+| **Al azar, sin repetir seguida** | Al terminar una canción elige otra de `songs` al azar excluyendo la que sonó; con una sola, se repite. Huecos `null` se saltean. Sin canciones, la radio se prende y apaga igual, muda |
+| **Arranca "ya sonando"** | La primera canción de la emisora empieza en un punto al azar hasta el 60 % (al comprar la radio ya estaba sonando algo) |
+| **Fin de canción** | `!isPlaying` cuenta como "terminó" solo después de haberla visto sonar: con *Load In Background* el clip tarda unos frames en cargar. Si ya cargó y no arrancó (un `Play` perdido por una pausa durante la carga), reintenta el `Play` cada 0,5 s; si en 10 s no arranca (clip roto), pasa a otra. Con el audio pausado (menú o pausa del Editor) no se evalúa |
+| **Pausa** | El menú de pausa la pausa con el resto del audio (`GamePause` → `AudioListener.pause`; `ignoreListenerPause = false`) y al salir sigue donde estaba. A diferencia de PS1, donde seguía sonando. Mientras el audio está pausado no se evalúa el fin de canción (`isPlaying` da false) ni corre el plazo de arranque; el salto del sprite usa `Time.time` y también se frena |
+| **Run nueva** | `SceneManagementUtils.RestartRun` / `ReturnToMainMenu` llaman `RadioStation.Shutdown()`: se corta y vuelve a prendida; la próxima run arranca en otra canción |
+
+En `GameScene`, el root `Radio` tiene el `BoxCollider2D` (ajustado al dibujo, sin el margen transparente que pisaba la
+bandeja) y el componente `Radio`; el sprite está en el hijo `Visual`, que es lo que salta mientras suena (así el collider
+y el recuadro del gamepad quedan quietos). El root está en `z = -0.01` y `Visual` compensa en z local para que el sprite
+quede donde estaba: así el raycast le gana a `PouringZone` (zona de vertido de salsas, `z = 0`, que la tapa casi entera;
+las salsas la miden con `OverlapPoint`, así que no les afecta). Es seleccionable con gamepad (`GamepadNavTargets`, idle).
+Canciones: `Sound/Radio/RadioSong*.mp3`, importadas como **Streaming** + Vorbis (son temas de 3-4 min).
+
 ### 3.9 Fondo con ciclo de día
 
 El fondo de `GameScene` (`Prefabs/FondoCicloDia.prefab`, raíz de escena) está hecho de capas que siguen la hora del
@@ -2299,3 +2335,4 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 36 | **Opciones del jugador: todo pasa por `GameSettings`** (3.10). Nadie más escribe `init.cfg`, `Screen.SetResolution`, `QualitySettings.vSyncCount` ni `Application.targetFrameRate`. Una opción nueva: campo en `SettingsData` (+ `Equals` y `Defaults`), clave en `EnsureLoaded`/`Save`/`IsKnownKey`, efecto en `Apply`, y fila en el prefab `OptionsPanel` + su `OptionSelectorUI` en `OptionsMenuPanel`. El idioma se aplica con `Loc.SetLanguage` desde `GameSettings.Apply`; la fila lista los idiomas de las tablas (3.11). El prefab `OptionsPanel` está en `MainMenuScene` y anidado en `PauseCanvas`: los cambios de layout se hacen en el prefab. Una pantalla nueva que lo use y escuche Esc/Pause tiene que respetar `OptionsMenuPanel.AnyOpen` como hace `GameManager` |
 | 34 | **La tienda es un prefab (`Prefabs/UI/ShopCanvas.prefab`) compartido por `EndScene` y `ShopTutorial`.** Editar el prefab, no la instancia: las escenas solo deben pisar la referencia `shop` (más los valores que Unity maneja solo en el `RectTransform` raíz y en el `Handle` del scrollbar). Referencias de escena que apuntan adentro del canvas: `RunDefeatScreen.shopCanvas` (`EndScene`) y `TutorialManager.canvasParent` (`ShopTutorial`). **Chinchulín, Costillita de cerdo, Pechuga de pollo y Matambre no tienen ningún sprite** (ni `meatSprite*` ni `cookingSprites*`) y están desbloqueados: en la tienda salen sin icono (segunda fila de Carnes). Es un tema de datos |
 | 37 | **Localización: ningún texto visible en literales** (3.11). En código, `Loc.Get("clave")` / `Loc.Format("clave", args)`; en un texto fijo de escena o prefab, el componente `LocalizedText`. La clave nueva va en la tabla que corresponda de `Resources/Localization/` **con todas las columnas llenas**, y después *Tools/Localización/Validar tablas*. Un texto que puede quedar en pantalla mientras cambia el idioma (la pausa tiene Opciones) o el control escucha `Loc.OnTextsChanged`. Para mostrar un ítem: `DisplayName` / `DisplayDescription` del SO, **nunca** `itemName` / `breadName` / `sideName` / `description`. **Cortes y toppings no se traducen**: no llevan `nameKey`. Para nombrar una tecla o botón: token `[[GameAction]]`, nunca la letra escrita. Cambiar un binding en `GameControls.inputactions` actualiza los textos solo; un control físico nuevo necesita su fila `input.*`. `ShopRoot` (tienda 2D deshabilitada, nota 8) y los 6 paneles de tutorial sin uso (`CanvaPanelCoolerInfo`, `DragCarbon`, `DragCarne`, `Panel`, `Pasar a Cooler`, `Volver al Grill`) **no** están traducidos |
+| 38 | **La radio es una emisora que no se corta** (3.8 → *Radio*). La música vive en `RadioStation` (DDOL), no en la `Radio` de la escena: no le pongas un `AudioSource` a la radio ni la pares al apagarla, porque al prenderla tiene que seguir por donde iba. Para cambiar las canciones, el array `songs` del componente `Radio` en `GameScene` (cualquier cantidad, incluso ninguna); temas largos con *Load Type = Streaming*. Una mejora o cartel que necesite saber si suena: `RadioStation.IsOn` |

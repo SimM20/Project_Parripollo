@@ -70,6 +70,7 @@ public static class SceneManagementUtils
         StrikeSystem.ResetStreak();
         DayStats.ResetDay();
         RunStateReset.ResetRunState(catalog);
+        RadioStation.Shutdown();
 
         LoadSceneByName("GameScene");
     }
@@ -87,6 +88,7 @@ public static class SceneManagementUtils
         // (y si venia en el tope, pierde en su primer EndScene).
         StrikeSystem.ResetStreak();
         DayStats.ResetDay();
+        RadioStation.Shutdown(); // DDOL: sin esto la canción seguiría (muda) en la run siguiente
 
         LoadSceneByName("MainMenuScene");
     }

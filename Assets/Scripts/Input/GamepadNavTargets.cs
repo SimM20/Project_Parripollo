@@ -33,7 +33,7 @@ public struct NavTarget
 ///
 ///  • Sin nada agarrado: botones de UI y, en el mundo, todo lo que se puede agarrar o clickear
 ///    (celdas del stock, panes/guarniciones/frascos, carne y carbón de la capa activa, bandeja,
-///    carne del plato, el plato, clientes, pestañas de los paneles y el botón de capa).
+///    carne del plato, el plato, clientes, pestañas de los paneles, el botón de capa y la radio).
 ///  • Arrastrando: solo los lugares donde soltar lo agarrado (huecos válidos de la parrilla,
 ///    plato, bandeja, tacho, zona de vertido o clientes), según <see cref="DragKind"/>. La carne
 ///    no recorre huecos sueltos sino bloques del tamaño real del corte (con su rotación): cada
@@ -133,6 +133,7 @@ public static class GamepadNavTargets
 
         AddAllColliders<StockPanelTab>(into);
         AddAllColliders<GrillLayerToggle>(into);
+        AddAllColliders<Radio>(into);
         AddAllColliders<Meat>(into);
         for (int i = 0; i < Coal.ActiveCoals.Count; i++)
         {
