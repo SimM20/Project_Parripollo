@@ -37,7 +37,15 @@ public class ShopItemCellUI : MonoBehaviour
     private ShopSystem shop;
     private int pendingQty = 1;
 
-    private int MaxQty => (shop != null && item != null) ? shop.GetMaxPurchaseQty(item) : ShopSystem.UnlimitedQty;
+    private int MaxQty
+    {
+        get
+        {
+            if (shop == null) return ShopSystem.UnlimitedQty;
+            if (toppingItem != null) return shop.GetMaxPurchaseQty(toppingItem);
+            return item != null ? shop.GetMaxPurchaseQty(item) : ShopSystem.UnlimitedQty;
+        }
+    }
 
     public Button BuyButton => buyButton;
 
@@ -98,7 +106,9 @@ public class ShopItemCellUI : MonoBehaviour
             icon = toppingItem.toppingSprite;
             name = toppingItem.toppingName;
             price = toppingItem.purchasePrice;
-            stock = Loc.Format("shop.cell.stock", shop.Toppings != null ? shop.Toppings.GetCount(toppingItem) : 0);
+            // Floor y no Round: un frasco al 99,6% no puede decir 100% con el Comprar habilitado.
+            int fillPercent = shop.Toppings != null ? Mathf.FloorToInt(shop.Toppings.GetFillRatio(toppingItem) * 100f) : 0;
+            stock = Loc.Format("shop.cell.sauce_fill", fillPercent);
         }
         else if (item != null)
         {

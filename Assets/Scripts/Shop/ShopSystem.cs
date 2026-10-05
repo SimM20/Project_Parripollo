@@ -132,9 +132,10 @@ public class ShopSystem : MonoBehaviour
         return false;
     }
 
+    /// <summary>La compra rellena el frasco: con el frasco lleno no hay nada que comprar.</summary>
     public bool IsToppingPurchasable(ToppingSO topping)
     {
-        return topping != null;
+        return topping != null && Toppings != null && !Toppings.IsFull(topping);
     }
 
     // ── Sugerencia de carbón ────────────────────────────────────────────
@@ -180,6 +181,9 @@ public class ShopSystem : MonoBehaviour
         return UnlimitedQty;
     }
 
+    /// <summary>Un topping es un relleno del frasco hasta el tope: comprar dos no suma nada.</summary>
+    public int GetMaxPurchaseQty(ToppingSO topping) => 1;
+
     // ── Estado del carrito ──────────────────────────────────────────────
     public int GetCartQty(ItemDataSO item)
     {
@@ -214,7 +218,7 @@ public class ShopSystem : MonoBehaviour
     {
         if (!IsToppingPurchasable(topping)) return;
 
-        qty = Mathf.Max(0, qty);
+        qty = Mathf.Clamp(qty, 0, GetMaxPurchaseQty(topping));
         if (qty == 0) toppingCart.Remove(topping);
         else toppingCart[topping] = qty;
 
@@ -317,13 +321,13 @@ public class ShopSystem : MonoBehaviour
                 Cooler.Add(item, qty);
         }
 
-        // Toppings (stock separado)
+        // Toppings (stock separado): cada compra rellena el frasco
         if (Toppings != null)
         {
             foreach (var kv in toppingCart)
             {
                 if (kv.Key != null && kv.Value > 0)
-                    Toppings.Add(kv.Key, kv.Value);
+                    Toppings.Refill(kv.Key);
             }
         }
 
@@ -422,7 +426,7 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
-        qty = Mathf.Max(1, qty);
+        qty = Mathf.Clamp(qty, 1, GetMaxPurchaseQty(topping));
         float total = topping.purchasePrice * qty;
         if (!Wallet.CanAfford(total))
         {
@@ -445,7 +449,7 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
-        Toppings.Add(topping, qty);
+        Toppings.Refill(topping);
         message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);
         TutorialSignals.Raise(TutorialSignal.ShopPurchased);

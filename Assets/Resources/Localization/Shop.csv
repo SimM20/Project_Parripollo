@@ -2,6 +2,7 @@
 # Tarjeta de la tienda (ShopItemCellUI). Stock y nivel en mayúsculas: se dibujan en Bungee
 shop.cell.stock,TENÉS: {0},YOU HAVE: {0}
 shop.cell.coal_stock,TENÉS: {0} U.,YOU HAVE: {0} U.
+shop.cell.sauce_fill,FRASCO: {0}%,JAR: {0}%
 shop.cell.coal_name,{0} x{1},{0} x{1}
 shop.cell.coal_bag,Bolsa de {0} unidades,Bag of {0} units
 shop.cell.level,NIVEL {0}/{1},LEVEL {0}/{1}

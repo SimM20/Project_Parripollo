@@ -16,6 +16,8 @@ delivery.reject.other_cut,otro corte,another cut
 # Entrega: corte faltante (tecla M)
 delivery.missing_cut.changed,El cliente aceptó cambiar a {0}. Propina anulada.,The customer agreed to switch to {0}. Tip voided.
 delivery.missing_cut.none,No hay otros cortes disponibles en stock para sustituir.,No other cuts in stock to offer instead.
+# Frasco de salsa vacío al agarrarlo (ToppingDraggable)
+sauce.empty,Sin {0}. Rellená el frasco en la tienda.,Out of {0}. Refill the jar at the shop.
 # Entrega: extras mal servidos (CookingDeliveryEvaluator.BuildExtrasMessage)
 delivery.extras.missing,Falta {0},Missing {0}
 delivery.extras.extra,Sobra {0},Extra {0}
