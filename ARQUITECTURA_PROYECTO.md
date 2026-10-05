@@ -114,6 +114,11 @@
 > `Radio` (el objeto del mostrador: click / A-✕ la prende o apaga, lista de canciones en el inspector) y `RadioStation`
 > (emisora DDOL: canciones al azar sin repetir la anterior, que siguen sonando apagada, en la tienda y entre noches).
 > Canciones en `Sound/Radio/` (las del demake de PS1). Sección 3.8 → *Radio* y nota 38.
+> Última actualización parcial: **2026-10-05** (rama `Toppings-Shop-Fix`) — **comprar un topping rellena el frasco**.
+> `ToppingStock` dejó de contar unidades: guarda **cuánta salsa le queda a cada frasco**, y eso pasa de un día al otro.
+> El frasco (`ToppingDraggable`) la lee en `Start` y la guarda al terminar cada vertida. Agarrarlo vacío avisa con
+> `sauce.empty`. En la tienda la compra es de a 1, se bloquea con el frasco lleno y la celda dice `FRASCO: N%`. Los
+> frascos de `TutorialScene` llevan `ignoreStock`. Secciones 2.4, 3.6, 3.7 y nota 39.
 
 ---
 
@@ -375,6 +380,7 @@ Parrilla ──drag a la zona "ToBuild" (superficie naranja = plato)──► PL
 ToppingsPanel [T] ──drag──► plato
    │  BuildDraggableFoodItem (pan / side) → BuildFoodDropZone.TryAcceptAt → SetBread / AddSide + visual + Push(undo)
    │  ToppingDraggable (frasco)           → verter sobre PouringZone → AddTopping + salpicaduras + Push(undo)
+   │                                         la salsa sale de ToppingStock (nota 39); vacío → aviso sauce.empty
    │  Los visuales de side/topping van a SLOTS fijos alrededor de la carne (SpawnPlateVisual(sprite, kind)),
    │  con tamaño normalizado y sorting por DEBAJO del corte: acompañan, nunca tapan (ver 3.4 → Layout del plato)
 
@@ -1479,6 +1485,7 @@ IReadOnlyList<ItemDataSO> GetItemsForCurrentTab() / GetItemsForTab(ShopTabType)
 IReadOnlyList<ToppingSO>  GetToppings()
 bool IsPurchasable(ItemDataSO), IsToppingPurchasable(ToppingSO)
 int  GetMaxPurchaseQty(ItemDataSO)                      // UpgradeSO → 1; resto → UnlimitedQty (int.MaxValue)
+int  GetMaxPurchaseQty(ToppingSO)                       // siempre 1: la compra rellena el frasco hasta el tope
 int  GetSuggestedCoalUnits(), GetSuggestedCoalBags()    // max(0, consumoPromedio − stock)
 int  GetTotalCoalUnits()                                // suma TODO el stock CoalSO del cooler
 int  GetCartQty(ItemDataSO);  void SetQty(...), IncrementQty(...), ClearCart()
@@ -1496,7 +1503,7 @@ bool TryBuyToppingNow(ToppingSO, int qty, out string)    // ← compra individua
 | `Coal` | `ShopConfigSO.coal` (un solo item) | siempre `true` |
 | `Meat` | `FoodCatalogSO.GetAllCuts()` | `cut.isUnlocked` |
 | `Upgrades` | `FoodCatalogSO.GetAllUpgrades()` | `up.isUnlocked && !up.IsMaxed` |
-| `Toppings` | `GetToppings()` → `catalog.GetAvailableToppings()` (devuelve `ToppingSO`, **no** `ItemDataSO`) | siempre `true` |
+| `Toppings` | `GetToppings()` → `catalog.GetAvailableToppings()` (devuelve `ToppingSO`, **no** `ItemDataSO`) | `IsToppingPurchasable`: hay `ToppingStock` y el frasco **no** está lleno |
 
 > El tab `Toppings` es el único que **no** pasa por `GetItemsForTab`: la UI llama a `GetToppings()` y bindea `ToppingSO`. Por eso `ShopGridUI` y `ShopItemCellUI` tienen una rama y un `Bind` por cada tipo.
 
@@ -1508,6 +1515,7 @@ Compra individual (capa uGUI, la activa)
    → botón Comprar → ShopSystem.TryBuyNow(item, qty) / TryBuyToppingNow(topping, qty)
    → valida IsPurchasable → Wallet.CanAfford → Wallet.TrySpend
    → CoalSO: Cooler.Add(coal, unitsPerBag × qty) · UpgradeSO: up.Purchase() (+1 nivel) · resto: Cooler.Add(item, qty)
+   → ToppingSO: Toppings.Refill(topping) (frasco al tope; qty capada a 1)
    → OnPurchaseResult(true, msg) + pendingQty vuelve a 1
    ⚠️ NO emite OnCartChanged. El refresco lo disparan Wallet.OnMoneyChanged y Cooler.OnInventoryChanged
 
@@ -1757,6 +1765,7 @@ Se rehízo copiando `GameScene` (se conserva el GUID de `TutorialScene`). Difier
 | `CoolerSystem.initialStock` | `ChorizoTutorial 10`, `CoalData 10` (solo cuenta si se prueba la escena suelta) |
 | `CustomerSystem` | Solo `ClienteTutorial` (paciencia ×3) · solo `ChorizoTutorial` · `spawnIntervalSeconds 9999` (lo spawnea el paso 5) · `toppingOrderChance 0` · **`basePatienceSeconds 150`** (450 s: 240 no alcanzaba para leer con calma, y si el cliente se va el tutorial se traba) |
 | `FondoCicloDia.fallbackHour` | `6.5`: amanecer fijo, a juego con la hora del HUD (`06:30`, el texto guardado: sin reloj nadie lo escribe) |
+| Frascos (`Item_Chimichurri`, `Item_SalsaCriolla`) | `ToppingDraggable.ignoreStock = true`: arrancan llenos y no gastan la salsa de la run, que llega por DDOL desde `GameScene` (nota 39) |
 
 ⚠️ Los cambios de `GameScene` **no llegan solos**: si se agrega o se mueve algo del gameplay, hay que repetirlo acá (o
 volver a clonar y reaplicar la tabla).
@@ -2336,3 +2345,4 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 34 | **La tienda es un prefab (`Prefabs/UI/ShopCanvas.prefab`) compartido por `EndScene` y `ShopTutorial`.** Editar el prefab, no la instancia: las escenas solo deben pisar la referencia `shop` (más los valores que Unity maneja solo en el `RectTransform` raíz y en el `Handle` del scrollbar). Referencias de escena que apuntan adentro del canvas: `RunDefeatScreen.shopCanvas` (`EndScene`) y `TutorialManager.canvasParent` (`ShopTutorial`). **Chinchulín, Costillita de cerdo, Pechuga de pollo y Matambre no tienen ningún sprite** (ni `meatSprite*` ni `cookingSprites*`) y están desbloqueados: en la tienda salen sin icono (segunda fila de Carnes). Es un tema de datos |
 | 37 | **Localización: ningún texto visible en literales** (3.11). En código, `Loc.Get("clave")` / `Loc.Format("clave", args)`; en un texto fijo de escena o prefab, el componente `LocalizedText`. La clave nueva va en la tabla que corresponda de `Resources/Localization/` **con todas las columnas llenas**, y después *Tools/Localización/Validar tablas*. Un texto que puede quedar en pantalla mientras cambia el idioma (la pausa tiene Opciones) o el control escucha `Loc.OnTextsChanged`. Para mostrar un ítem: `DisplayName` / `DisplayDescription` del SO, **nunca** `itemName` / `breadName` / `sideName` / `description`. **Cortes y toppings no se traducen**: no llevan `nameKey`. Para nombrar una tecla o botón: token `[[GameAction]]`, nunca la letra escrita. Cambiar un binding en `GameControls.inputactions` actualiza los textos solo; un control físico nuevo necesita su fila `input.*`. `ShopRoot` (tienda 2D deshabilitada, nota 8) y los 6 paneles de tutorial sin uso (`CanvaPanelCoolerInfo`, `DragCarbon`, `DragCarne`, `Panel`, `Pasar a Cooler`, `Volver al Grill`) **no** están traducidos |
 | 38 | **La radio es una emisora que no se corta** (3.8 → *Radio*). La música vive en `RadioStation` (DDOL), no en la `Radio` de la escena: no le pongas un `AudioSource` a la radio ni la pares al apagarla, porque al prenderla tiene que seguir por donde iba. Para cambiar las canciones, el array `songs` del componente `Radio` en `GameScene` (cualquier cantidad, incluso ninguna); temas largos con *Load Type = Streaming*. Una mejora o cartel que necesite saber si suena: `RadioStation.IsOn` |
+| 39 | **Un topping se compra para rellenar el frasco, no se acumula.** `ToppingStock` (DDOL) guarda la salsa que queda en cada frasco (`GetSauceAmount` / `GetFillRatio` / `IsFull` / `SetSauceAmount` / `Refill`). Un topping que todavía no tiene entrada cuenta como **lleno**: es el frasco con el que arranca la run, así que no hace falta stock inicial en escena. Lo que sobra en el frasco **pasa al día siguiente**. `ToppingDraggable` lee el valor en **`Start`** (no en `Awake`: en la primera escena el `Awake` del `ToppingStock` puede correr después) y lo guarda **una vez por vertida**, en `StopPouring` (soltar, cancelar o frasco vacío) y en `SetSauceAmount` (undo). Nunca por frame. `RefillSauce()` sigue sin llamadores. **El tutorial no gasta salsa**: sus frascos llevan `ignoreStock` (tabla de 3.7). Un frasco nuevo en `GameScene` no necesita nada; en `TutorialScene` hay que marcarle `ignoreStock`. Los clientes **siguen pidiendo salsas aunque el frasco esté vacío**: es una decisión de diseño, no un olvido |

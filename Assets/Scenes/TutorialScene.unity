@@ -8987,6 +8987,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   toppingData: {fileID: 11400000, guid: d120d754e42f17e4388840a867ce155d, type: 2}
+  ignoreStock: 1
   rotationZone: {fileID: 1533875616}
   rotationSpeed: 360
   sauceColor: {r: 0.18, g: 0.54, b: 0.14, a: 1}
@@ -12838,6 +12839,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   toppingData: {fileID: 11400000, guid: c25de4b6c1ebde54ea0a09036a8f38ec, type: 2}
+  ignoreStock: 1
   rotationZone: {fileID: 1533875616}
   rotationSpeed: 360
   sauceColor: {r: 0.5411765, g: 0.16202848, b: 0.14117648, a: 1}

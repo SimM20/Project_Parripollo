@@ -9,6 +9,10 @@ public class ToppingDraggable : MonoBehaviour
 
     public ToppingSO ToppingData => toppingData;
 
+    [Tooltip("Frasco que no lee ni gasta el ToppingStock: arranca lleno cada vez. Para el tutorial, " +
+             "que no debe tocar la salsa de la run.")]
+    [SerializeField] private bool ignoreStock;
+
     [Header("Rotation")]
     [Tooltip("Collider2D that defines where the container starts rotating. " +
              "Create a separate GameObject with a BoxCollider2D above the food.")]
@@ -148,8 +152,28 @@ public class ToppingDraggable : MonoBehaviour
         CreateSauceBar();
     }
 
+    // En Start y no en Awake: en la primera escena el Awake del ToppingStock puede correr después.
+    void Start()
+    {
+        if (!UsesStock) return;
+
+        currentSauceAmount = ToppingStock.Instance.GetSauceAmount(toppingData);
+        sauceEmpty = currentSauceAmount <= 0f;
+    }
+
+    private bool UsesStock => !ignoreStock && toppingData != null && ToppingStock.Instance != null;
+
+    private void SaveSauceToStock()
+    {
+        if (UsesStock)
+            ToppingStock.Instance.SetSauceAmount(toppingData, currentSauceAmount);
+    }
+
     void OnWorldPointerDown()
     {
+        if (sauceEmpty && UsesStock)
+            DeliveryFeedbackText.Instance?.Show(Loc.Format("sauce.empty", toppingData.toppingName));
+
         isDragging = true;
         GamePause.OnPaused += CancelDrag;
         isPouring = false;
@@ -278,6 +302,9 @@ public class ToppingDraggable : MonoBehaviour
             Destroy(sauceThread.gameObject);
             sauceThread = null;
         }
+
+        // Toda vertida termina acá (soltar, cancelar, frasco vacío): se guarda una vez y no por frame.
+        SaveSauceToStock();
     }
 
     private void InitializeSauceAmount()
@@ -573,6 +600,7 @@ public class ToppingDraggable : MonoBehaviour
         float max = (toppingData != null) ? toppingData.maxSauceAmount : 100f;
         currentSauceAmount = Mathf.Clamp(amount, 0f, max);
         sauceEmpty = currentSauceAmount <= 0f;
+        SaveSauceToStock();
     }
 
     public static void ClearAllSplatters()

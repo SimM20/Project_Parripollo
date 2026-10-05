@@ -133,10 +133,14 @@ public class ShopDetailPanel2D : MonoBehaviour
         if (stockText == null) return;
         if (shop == null) return;
 
-        int stock = 0;
         if (currentTopping != null && shop.Toppings != null)
-            stock = shop.Toppings.GetCount(currentTopping);
-        else if (currentItem != null && shop.Cooler != null)
+        {
+            stockText.text = "Frasco: " + Mathf.FloorToInt(shop.Toppings.GetFillRatio(currentTopping) * 100f) + "%";
+            return;
+        }
+
+        int stock = 0;
+        if (currentItem != null && shop.Cooler != null)
             stock = shop.Cooler.GetCount(currentItem);
 
         stockText.text = "Stock actual: " + stock;
