@@ -34,8 +34,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5135067, y: 0.224}
   m_AnchorMax: {x: 0.5135067, y: 0.224}
-  m_AnchoredPosition: {x: -2, y: -3.368866}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -0.5, y: -0.8422165}
+  m_SizeDelta: {x: 25, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5013809791723803780
 CanvasRenderer:
@@ -109,8 +109,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.000024796, y: 7}
-  m_SizeDelta: {x: 1100.4541, y: 127.5057}
+  m_AnchoredPosition: {x: 0.000006199, y: 3.8866997}
+  m_SizeDelta: {x: 275.11353, y: 19}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4577495357256170139
 CanvasRenderer:
@@ -143,8 +143,8 @@ MonoBehaviour:
   m_text: En Ruta 40 posees 3 pantallas distintas para administrar la parrilla, cada
     una accesible con una key distinta. Probemos con la primer pantalla, el CoolerView.
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
+  m_sharedMaterial: {fileID: 376175267617585177, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -168,15 +168,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 35
-  m_fontSizeBase: 35
+  m_fontSize: 8
+  m_fontSizeBase: 8
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 4.5
+  m_fontSizeMax: 18
   m_fontStyle: 0
   m_HorizontalAlignment: 2
-  m_VerticalAlignment: 256
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -244,8 +244,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.8312272}
   m_AnchorMax: {x: 0.5, y: 0.8312272}
-  m_AnchoredPosition: {x: 0.0000076293945, y: 4}
-  m_SizeDelta: {x: 517.5714, y: 70.9674}
+  m_AnchoredPosition: {x: 0.0000019073486, y: 1}
+  m_SizeDelta: {x: 129.39285, y: 17.74185}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1213585208856083471
 CanvasRenderer:
@@ -277,8 +277,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Tutorial 1: Pantallas'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
+  m_sharedMaterial: {fileID: 376175267617585177, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -302,12 +302,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
-  m_fontSizeBase: 50
+  m_fontSize: 16
+  m_fontSizeBase: 16
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 4.5
+  m_fontSizeMax: 18
   m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -378,8 +378,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5135067, y: 0.08253213}
   m_AnchorMax: {x: 0.5135067, y: 0.08253213}
-  m_AnchoredPosition: {x: -1, y: 2.9999695}
-  m_SizeDelta: {x: 207.4429, y: 41.3652}
+  m_AnchoredPosition: {x: -0.25, y: 0.7499924}
+  m_SizeDelta: {x: 51.860725, y: 10.3413}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1511658097456697756
 CanvasRenderer:
@@ -411,8 +411,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Cooler
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
+  m_sharedMaterial: {fileID: 376175267617585177, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -436,12 +436,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 35
-  m_fontSizeBase: 35
+  m_fontSize: 8
+  m_fontSizeBase: 8
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 4.5
+  m_fontSizeMax: 18
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
@@ -472,7 +472,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0.000009536743}
+  m_margin: {x: 0, y: 0, z: 0, w: 0.0000023841858}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -516,8 +516,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.013196195, y: 0.022395834}
   m_AnchorMax: {x: 0.9850001, y: 0.42439586}
-  m_AnchoredPosition: {x: -0.13043213, y: -2.541565}
-  m_SizeDelta: {x: -0.052599907, y: 5.9889984}
+  m_AnchoredPosition: {x: -0.032608032, y: -0.63539124}
+  m_SizeDelta: {x: -0.013149977, y: 1.4972496}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3543138012171156817
 CanvasRenderer:

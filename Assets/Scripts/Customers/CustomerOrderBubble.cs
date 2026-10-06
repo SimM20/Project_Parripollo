@@ -27,11 +27,12 @@ public class CustomerOrderBubble : MonoBehaviour
 
     [Header("Tamanio del panel (unidades de mundo)")]
     [Tooltip("Los clientes estan a 2.6 de distancia entre si, asi que el ancho base no deberia " +
-             "pasar de ~2.1 o las burbujas de clientes vecinos se tocan.")]
-    [SerializeField] private Vector2 baseSize = new Vector2(1.95f, 0.9f);
+             "pasar de ~2.5 o las burbujas de clientes vecinos se tocan. Con Tiny5 hace falta " +
+             "~2.45 para que la palabra mas larga de un corte (\"Costillita\") entre entera.")]
+    [SerializeField] private Vector2 baseSize = new Vector2(2.45f, 0.9f);
     [Tooltip("Ancho de la expandida. El alto es el maximo: el real sale del contenido, para " +
              "que un pedido corto no deje medio panel vacio.")]
-    [SerializeField] private Vector2 expandedSize = new Vector2(3.2f, 2.1f);
+    [SerializeField] private Vector2 expandedSize = new Vector2(3.7f, 3.2f);
     [Tooltip("El panel crece hacia arriba desde el borde inferior, asi la burbuja no se le va " +
              "encima a la parrilla ni tapa las manos del cliente.")]
     [SerializeField] private bool growUpwards = true;
@@ -358,26 +359,55 @@ public class CustomerOrderBubble : MonoBehaviour
     /// </summary>
     private Vector2 ComputeExpandedSize()
     {
-        int lines = 2; // punto + formato (al plato / en pan)
+        // Se mide el detalle ya escrito: contar renglones fijos (punto, formato, extras, preview)
+        // no sirve con Tiny5, que parte en dos un "Con: chimichurri, criolla" en este ancho.
+        float detailHeight = 2 * TitleLineHeight;
+        if (detailText != null && !string.IsNullOrEmpty(detailText.text))
+            detailHeight = detailText.GetPreferredValues(detailText.text, ExpandedTextWidth(), 0f).y;
 
-        if (extraNames.Count > 0)
-            lines++;
-
-        if (!string.IsNullOrEmpty(previewLine))
-        {
-            lines++;
-
-            for (int i = 0; i < previewLine.Length; i++)
-                if (previewLine[i] == '\n') lines++;
-        }
-
-        // Sin reserva al pie: en la expandida los iconos ya se fueron.
-        float height = 0.56f + lines * 0.24f + 0.14f;
+        // ApplyLayout le da al detalle size.y - 0.58 (del pie del titulo al borde de abajo).
+        float height = detailHeight + 0.58f + 0.04f;
 
         return new Vector2(
             expandedSize.x,
-            Mathf.Clamp(height, baseSize.y + 0.25f, expandedSize.y));
+            Mathf.Clamp(height, CurrentBaseSize().y + 0.25f, expandedSize.y));
     }
+
+    /// <summary>Ancho del texto en la expandida (icono de 0,78), mismo calculo que ApplyLayout.</summary>
+    private float ExpandedTextWidth()
+    {
+        bool hasIcon = iconRenderer != null && iconRenderer.sprite != null;
+        return hasIcon ? expandedSize.x - 1.1f : expandedSize.x - 0.26f;
+    }
+
+    // Un renglón de Tiny5 ×1 (9 px) en unidades de mundo.
+    private const float TitleLineHeight = 9f / PixelGrid.AssetsPPU;
+
+    /// <summary>
+    /// Ancho del título en la burbuja base: el icono chico (0,48) y los márgenes salen del mismo
+    /// cálculo que ApplyLayout.
+    /// </summary>
+    private float BaseTitleWidth()
+    {
+        bool hasIcon = iconRenderer != null && iconRenderer.sprite != null;
+        return hasIcon ? baseSize.x - 0.8f : baseSize.x - 0.26f;
+    }
+
+    /// <summary>
+    /// Con Tiny5, "Costillita de cerdo" no entra en un renglón de la burbuja base, y ensancharla
+    /// la mete encima de la del cliente de al lado. El nombre se parte en dos renglones y la
+    /// burbuja suma uno de alto (crece hacia arriba: la fila de iconos queda donde estaba).
+    /// </summary>
+    private bool BaseTitleWraps()
+    {
+        if (titleText == null || string.IsNullOrEmpty(titleText.text))
+            return false;
+
+        return titleText.GetPreferredValues(titleText.text, 0f, 0f).x > BaseTitleWidth();
+    }
+
+    private Vector2 CurrentBaseSize() =>
+        BaseTitleWraps() ? baseSize + new Vector2(0f, TitleLineHeight) : baseSize;
 
     /// <summary>
     /// Coloca todo para un t de 0 (base) a 1 (expandida). Es una sola funcion para los dos
@@ -392,7 +422,7 @@ public class CustomerOrderBubble : MonoBehaviour
 
         ApplyIcon();
 
-        Vector2 size = Vector2.Lerp(baseSize, ComputeExpandedSize(), eased);
+        Vector2 size = Vector2.Lerp(CurrentBaseSize(), ComputeExpandedSize(), eased);
 
         // El panel crece hacia arriba: se mantiene fijo el borde de abajo.
         float centerY = growUpwards ? (size.y - baseSize.y) * 0.5f : 0f;
@@ -441,10 +471,15 @@ public class CustomerOrderBubble : MonoBehaviour
 
         if (titleText != null)
         {
-            titleText.rectTransform.sizeDelta = new Vector2(Mathf.Max(0.2f, textWidth), Mathf.Lerp(0.42f, 0.4f, eased));
+            // En dos renglones solo en la base (ver BaseTitleWraps); abierta, va en uno.
+            bool twoLines = eased < 0.5f && BaseTitleWraps();
+            titleText.enableWordWrapping = twoLines;
+            float extra = twoLines ? TitleLineHeight : 0f;
+
+            titleText.rectTransform.sizeDelta = new Vector2(Mathf.Max(0.2f, textWidth), Mathf.Lerp(0.42f, 0.4f, eased) + extra);
             titleText.transform.localPosition = new Vector3(
                 textLeft + textWidth * 0.5f,
-                Mathf.Lerp(halfH - 0.28f, halfH - 0.26f, eased),
+                Mathf.Lerp(halfH - 0.28f, halfH - 0.26f, eased) - extra * 0.5f,
                 -0.02f);
             titleText.color = titleColor;
             titleText.sortingOrder = order + 3;

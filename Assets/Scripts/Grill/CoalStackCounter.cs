@@ -65,6 +65,7 @@ public class CoalStackCounter : MonoBehaviour
         rect.localRotation = Quaternion.identity;
         rect.localScale = Vector3.one;
         rect.localPosition = GetBottomRightLocalPosition(style.offset);
+        PixelGrid.SnapFont(label);
 
         MeshRenderer meshRenderer = label.GetComponent<MeshRenderer>();
         if (meshRenderer != null) meshRenderer.sortingOrder = style.sortingOrder;

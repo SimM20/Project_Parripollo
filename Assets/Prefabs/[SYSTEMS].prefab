@@ -183,11 +183,19 @@ MonoBehaviour:
   coalPrefab: {fileID: 0}
   slotDropRadius: 0.8
   coalStackCounterStyle:
-    font: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
+    font: {fileID: 11400000, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
     fontSize: 4
     textColor: {r: 1, g: 1, b: 1, a: 1}
     offset: {x: -0.06, y: 0.06}
     sortingOrder: 50
+  showHeatMap: 1
+  heatMapLowColor: {r: 0.85, g: 0.15, b: 0.05, a: 1}
+  heatMapHighColor: {r: 1, g: 0.7, b: 0.2, a: 1}
+  heatMapMaxAlpha: 0.75
+  heatMapFullHeat: 6
+  heatMapGlowScale: 1.6
+  heatMapFlicker: 0.12
+  heatMapSortingOrder: -1
 --- !u!1 &8917083685848211823
 GameObject:
   m_ObjectHideFlags: 0
@@ -238,17 +246,100 @@ MonoBehaviour:
   maximumCustomersPerNight: 70
   spawnIntervalSeconds: 6
   autoStartNight: 1
+  affluenceCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.5
+      inSlope: 0.99999994
+      outSlope: 0.99999994
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.2
+      value: 0.7
+      inSlope: 3.7499998
+      outSlope: 3.7499998
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.4
+      value: 2
+      inSlope: 2.2499995
+      outSlope: 2.2499995
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.5
+      value: 1.8
+      inSlope: -5.1666665
+      outSlope: -5.1666665
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.62
+      value: 0.8
+      inSlope: -3.8888884
+      outSlope: -3.8888884
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.8
+      value: 0.9
+      inSlope: 4.5085473
+      outSlope: 4.5085473
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.93
+      value: 2
+      inSlope: 0.6593406
+      outSlope: 0.6593406
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1.5
+      inSlope: -7.142858
+      outSlope: -7.142858
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   slots: []
   autoFirstSlotPos: {x: -6, y: 3.2, z: 0}
   autoSlotSpacing: 2.6
   customersParent: {fileID: 0}
   customerPrefabs: []
+  customerSkins: []
+  avoidRepeatedSkinsOnScreen: 1
   availableOrderCuts:
   - cut: {fileID: 0}
     weight: 1
   - cut: {fileID: 0}
     weight: 1
   availabilityService: {fileID: 0}
+  toppingOrderChance: 0.4
+  maxToppingsPerOrder: 2
   nightTwoCut: {fileID: 0}
   nightTwoVariants: []
   basePatienceSeconds: 30
+  feedbackConfig: {fileID: 0}

@@ -19,10 +19,10 @@ public class GrillNotificationGroupUI : MonoBehaviour, IPointerEnterHandler, IPo
 
     [Header("Stack Visuals")]
     [SerializeField] private GameObject[] stackBackingLayers = new GameObject[3];
-    [SerializeField] private float stackOffsetStepX = 8f;
+    [SerializeField] private float stackOffsetStepX = 2f;
 
     [Header("Layout Settings")]
-    [SerializeField] private float horizontalSpacing = 12f;
+    [SerializeField] private float horizontalSpacing = 3f;
 
     private MeatCutSO groupCut;
     private readonly List<Meat> targetMeats = new List<Meat>();
@@ -251,16 +251,16 @@ public class GrillNotificationGroupUI : MonoBehaviour, IPointerEnterHandler, IPo
         if (groupRect == null)
             groupRect = gameObject.AddComponent<RectTransform>();
 
-        groupRect.sizeDelta = new Vector2(80f, 80f);
+        groupRect.sizeDelta = new Vector2(20f, 20f);
 
         LayoutElement groupLayout = GetComponent<LayoutElement>();
         if (groupLayout == null)
             groupLayout = gameObject.AddComponent<LayoutElement>();
 
-        groupLayout.minWidth = 80f;
-        groupLayout.minHeight = 80f;
-        groupLayout.preferredWidth = 80f;
-        groupLayout.preferredHeight = 80f;
+        groupLayout.minWidth = 20f;
+        groupLayout.minHeight = 20f;
+        groupLayout.preferredWidth = 20f;
+        groupLayout.preferredHeight = 20f;
 
         // 1. Contenedor del Stack principal (colapsado)
         if (mainStackContainer == null)
@@ -303,7 +303,7 @@ public class GrillNotificationGroupUI : MonoBehaviour, IPointerEnterHandler, IPo
             badgeRect.sizeDelta = Vector2.zero;
 
             countBadgeText = badgeObj.GetComponent<TextMeshProUGUI>();
-            countBadgeText.fontSize = 13f;
+            countBadgeText.fontSize = PixelGrid.FontPixels;
             countBadgeText.alignment = TextAlignmentOptions.Center;
             countBadgeText.fontStyle = FontStyles.Bold;
             countBadgeText.color = Color.white;

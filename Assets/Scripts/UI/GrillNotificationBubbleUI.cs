@@ -188,13 +188,13 @@ public class GrillNotificationBubbleUI : MonoBehaviour
         bubbleObj.transform.SetParent(parent, false);
 
         RectTransform rect = bubbleObj.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(80f, 80f);
+        rect.sizeDelta = new Vector2(20f, 20f);
 
         LayoutElement layoutElement = bubbleObj.GetComponent<LayoutElement>();
-        layoutElement.minWidth = 80f;
-        layoutElement.minHeight = 80f;
-        layoutElement.preferredWidth = 80f;
-        layoutElement.preferredHeight = 80f;
+        layoutElement.minWidth = 20f;
+        layoutElement.minHeight = 20f;
+        layoutElement.preferredWidth = 20f;
+        layoutElement.preferredHeight = 20f;
         layoutElement.flexibleWidth = 0f;
         layoutElement.flexibleHeight = 0f;
 
@@ -242,7 +242,7 @@ public class GrillNotificationBubbleUI : MonoBehaviour
         textRect.sizeDelta = Vector2.zero;
 
         TextMeshProUGUI tmp = textObj.GetComponent<TextMeshProUGUI>();
-        tmp.fontSize = 11f;
+        tmp.fontSize = PixelGrid.FontPixels;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.fontStyle = FontStyles.Bold;
         tmp.raycastTarget = false;

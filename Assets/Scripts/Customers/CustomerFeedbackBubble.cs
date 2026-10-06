@@ -86,6 +86,7 @@ public class CustomerFeedbackBubble : MonoBehaviour
         reactionEmojiText.fontSize = 5.2f;
         reactionEmojiText.alignment = TextAlignmentOptions.Center;
         reactionEmojiText.sortingOrder = baseSortingOrder + 3;
+        PixelGrid.SnapFont(reactionEmojiText);
 
         // 5. Fila superior: Frase seleccionada
         var phraseGo = new GameObject("PhraseText");
@@ -98,6 +99,7 @@ public class CustomerFeedbackBubble : MonoBehaviour
         phraseText.rectTransform.sizeDelta = new Vector2(1.7f, 0.6f);
         phraseText.enableWordWrapping = true;
         phraseText.sortingOrder = baseSortingOrder + 3;
+        PixelGrid.SnapFont(phraseText);
 
         // 6. Contenedor económico (Nivel inferior)
         var econGo = new GameObject("EconomicContainer");
@@ -114,6 +116,7 @@ public class CustomerFeedbackBubble : MonoBehaviour
         paymentText.alignment = TextAlignmentOptions.Center;
         paymentText.rectTransform.sizeDelta = new Vector2(1.3f, 0.4f);
         paymentText.sortingOrder = baseSortingOrder + 4;
+        PixelGrid.SnapFont(paymentText);
 
         // 6b. Texto de propina
         var tipGo = new GameObject("TipText");
@@ -124,6 +127,7 @@ public class CustomerFeedbackBubble : MonoBehaviour
         tipText.alignment = TextAlignmentOptions.Center;
         tipText.rectTransform.sizeDelta = new Vector2(1.3f, 0.4f);
         tipText.sortingOrder = baseSortingOrder + 4;
+        PixelGrid.SnapFont(tipText);
     }
 
     /// <summary>

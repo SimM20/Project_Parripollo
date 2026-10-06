@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// con una flecha que apunta a lo que señala. Lo crea y lo recicla <see cref="TutorialHintLayer"/>.
 ///
 /// Cada frame se reubica junto a su objetivo: un objeto del mundo (se mide su Renderer o su
-/// Collider2D y se proyecta con la cámara, que es en perspectiva) o un elemento de UI. No se sale
+/// Collider2D y se proyecta con la cámara) o un elemento de UI. No se sale
 /// de la pantalla: si hay que correrlo, la flecha se corre sobre su borde para seguir apuntando.
 /// No recibe clicks, anima con tiempo sin escalar y, si el objetivo se destruye, se va solo.
 /// </summary>
@@ -25,23 +25,23 @@ public class TutorialHintView : MonoBehaviour
     [Tooltip("Triángulo que apunta hacia abajo, con el pivot en el centro de su base. Se rota según el lado.")]
     [SerializeField] private RectTransform arrow;
 
-    [Header("Medidas (px de la resolución de referencia)")]
-    [SerializeField] private float glyphHeight = 40f;
+    [Header("Medidas (px de la resolución de referencia, 480×270)")]
+    [SerializeField] private float glyphHeight = 10f;
     [Tooltip("Margen a cada lado del nombre, en la tecla en blanco.")]
-    [SerializeField] private float keyCapPadding = 10f;
+    [SerializeField] private float keyCapPadding = 2.5f;
     [Tooltip("Distancia entre la punta de la flecha y lo que señala.")]
-    [SerializeField] private float gap = 6f;
-    [SerializeField] private float screenMargin = 12f;
+    [SerializeField] private float gap = 1.5f;
+    [SerializeField] private float screenMargin = 3f;
     [Tooltip("Cuánto se mete la base de la flecha en el borde del cartel, para que no quede una línea entre los dos.")]
-    [SerializeField] private float arrowOverlap = 2f;
+    [SerializeField] private float arrowOverlap = 0.5f;
     [Tooltip("La flecha no se corre hasta las esquinas redondeadas.")]
-    [SerializeField] private float arrowCornerInset = 10f;
+    [SerializeField] private float arrowCornerInset = 2.5f;
 
     [Header("Animación (tiempo sin escalar)")]
     [SerializeField] [Min(0.01f)] private float showDuration = 0.28f;
     [SerializeField] [Min(0.01f)] private float hideDuration = 0.16f;
     [Tooltip("Vaivén hacia el objetivo, en px. 0 = quieto.")]
-    [SerializeField] private float bobAmplitude = 3f;
+    [SerializeField] private float bobAmplitude = 0.75f;
     [SerializeField] private float bobFrequency = 1.2f;
 
     private enum Phase { Hidden, Showing, Visible, Hiding }

@@ -119,6 +119,11 @@
 > El frasco (`ToppingDraggable`) la lee en `Start` y la guarda al terminar cada vertida. Agarrarlo vacío avisa con
 > `sauce.empty`. En la tienda la compra es de a 1, se bloquea con el frasco lleno y la celda dice `FRASCO: N%`. Los
 > frascos de `TutorialScene` llevan `ignoreStock`. Secciones 2.4, 3.6, 3.7 y nota 39.
+> Última actualización parcial: **2026-10-05** (rama `feature/resolucion-480x270`) — **resolución interna 480×270** (pixel
+> art). Las 5 escenas: cámara **ortográfica** + `PixelPerfectCamera` de URP (PPU 25, 480×270, Upscale Render Texture,
+> Stretch Fill); todo el juego se dibuja en una render texture de 480×270 que se estira a la pantalla. La UI de pantalla
+> dejó de ser overlay: canvases **Screen Space - Camera** a 480×270 (sorting layer nuevo `UI`), con todas las medidas
+> escaladas ×¼. Texto en **Tiny5** ×1 (8 px) / ×2 (16 px). Fuente de verdad: `Core/PixelGrid.cs`. Sección 3.12 y nota 22.
 
 ---
 
@@ -127,7 +132,7 @@
 | Campo | Valor |
 |---|---|
 | Motor | Unity **2022.3.62f3**, URP (2D), **Input System 1.19** (Active Input Handling = *Both*) detrás de `InputManager` — ver 3.1 → *Input* |
-| Cámara | **Perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). No es ortográfica — ver nota 22 |
+| Cámara | **Ortográfica** (tamaño `5.4`, en `z = -10`) + `PixelPerfectCamera` a **480×270** / PPU 25. Hasta 2026-10-05 fue perspectiva — ver 3.12 y nota 22 |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`). `Scripts/Editor/` va a `Assembly-CSharp-Editor` |
 | Código propio | `Assets/Scripts/` — **156 archivos, ~27k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
@@ -1533,7 +1538,7 @@ referencia `shop` de los scripts (cada escena tiene su propio `ShopSystem`: cat�
 distintos). Un cambio visual se hace **en el prefab**, no en la escena. En `ShopTutorial` el panel de requisitos
 se oculta solo (`EnforceRunMinimums == false`) y `TutorialManager.canvasParent` apunta a la instancia.
 
-Layout (referencia 1920×1080, fondo `PauseMenubg` con la puerta a la derecha):
+Layout (referencia 480×270 —era 1920×1080, las proporciones no cambiaron—, fondo `PauseMenubg` con la puerta a la derecha):
 
 ```
 [ NamePlate "PARRILLA 40" | "Hoy vinieron N clientes"            MoneyPlate "$1.000" ]  ← caja de la persiana (Header)
@@ -1543,9 +1548,15 @@ Layout (referencia 1920×1080, fondo `PauseMenubg` con la puerta a la derecha):
 [ Requirements: PARA ARRANCAR MAÑANA ... ]                      [ SIGUIENTE: CARNES ]  ← abajo
 ```
 
+- **Tarjeta** (`ShopItemCell 1.prefab`, desde 2026-10-06): 87×140 px, 4 por fila (`GridLayoutGroup` del `ShopCanvas`, spacing 6).
+  El contenido se apila con un `VerticalLayoutGroup` (ícono 30 px, nombre, descripción, precio, stock/nivel, stepper,
+  subtotal; los textos miden 77 px de ancho y crecen según el texto). `BuyButton` y `LockedOverlay` van con
+  `LayoutElement.ignoreLayout`, abajo del todo. Con Tiny5 la descripción más larga de Mejoras ocupa 5 renglones.
+- **Requisitos**: 240×42 px, renglones cada 10 px — título a la izquierda y `Deficit` ("FALTA: …" / "LISTO PARA
+  ARRANCAR") a la derecha en el mismo renglón; abajo carne y carbón; abajo la racha de strikes.
 - Tabs, ayuda y grilla están anclados en `x = 833/1920` (centro de la persiana, sin la puerta) y el botón
   "Siguiente" en `x = 1610/1920`: siguen al fondo estirado en pantallas que no son 16:9.
-- **Lenguaje visual:** dos fuentes — **Bungee** (títulos, botones, números) y **Nunito** (texto corrido). Chapas:
+- **Lenguaje visual:** desde 2026-10-06 una sola fuente, **Tiny5** (3.12); antes eran **Bungee** (títulos, botones, números) y **Nunito** (texto corrido). Chapas:
   `Boton Continuar.png` (oscura: cartel, plata, tabs inactivas, ayuda, requisitos, tarjetas) y
   `Boton Comenzar.png` (dorada: tab activa, Comprar, Siguiente). Las dos tienen `spriteBorder = 28` para usarse
   `Sliced`; el grosor del marco se ajusta con `Image.pixelsPerUnitMultiplier` (≈ `100 / alto`).
@@ -1850,7 +1861,7 @@ capa inicial: un cartel que se aprenda con esa señal necesita un `completeOnlyI
 
 | Pieza | Qué hace |
 |---|---|
-| `TutorialHintLayer` + prefab `Prefabs/UI/TutorialHints.prefab` | Canvas **Screen Space Overlay**, orden **15** (arriba de la tienda, 10; abajo de los popups de `EndScene`, 20/30; el cursor del joystick va en 32000), `CanvasScaler` 1920×1080 / 0.5 como la tienda. **Sin `GraphicRaycaster`** y todos los gráficos con `raycastTarget` apagado: no le saca clicks ni hovers a nada. Se apaga el canvas mientras `GamePause.IsPaused` (menú y diálogo). Crea y recicla los carteles. Está en `GameScene` y en `EndScene` (una instancia del prefab en cada una, al final de la raíz) |
+| `TutorialHintLayer` + prefab `Prefabs/UI/TutorialHints.prefab` | Canvas **Screen Space - Camera** (3.12), sorting layer `UI`, orden **15** (arriba de la tienda, 10; abajo de los popups de `EndScene`, 20/30; el cursor del joystick va en 32000, overlay), `CanvasScaler` 480×270 / 0.5 como la tienda. **Sin `GraphicRaycaster`** y todos los gráficos con `raycastTarget` apagado: no le saca clicks ni hovers a nada. Se apaga el canvas mientras `GamePause.IsPaused` (menú y diálogo). Crea y recicla los carteles. Está en `GameScene` y en `EndScene` (una instancia del prefab en cada una, al final de la raíz) |
 | `TutorialHintView` + prefab `Prefabs/UI/TutorialHint.prefab` | Un cartel. Fondo 9-slice (`Background`, **fuera del layout**: un `Image` Sliced informa como tamaño preferido la suma de sus bordes sin el `pixelsPerUnitMultiplier` y agrandaba el cartel), ícono, texto (`Loc.Get(textKey)`) y flecha. Cada `LateUpdate` mide su objetivo — objeto del mundo: `Renderer` o `Collider2D` del objeto, 8 esquinas proyectadas con la cámara en perspectiva; UI: `RectTransform` con la cámara de su canvas — y se pone del lado pedido (`HintPlacement`), con la punta de la flecha a `gap` px. No se sale de la pantalla: se corre y la flecha compensa sobre su borde. Entra con pop, vaivén hacia el objetivo y sale con pop (cumplido) o fundido; todo en tiempo sin escalar. Si el objetivo se destruye, se va solo. Escucha `Loc.OnTextsChanged`: cambia texto e ícono al cambiar idioma o control |
 | `InputGlyphSetSO` — `ScriptableObjects/TutorialHints/InputGlyphs.asset` | Ícono de cada `HintPrompt` (una `GameAction`, click, click derecho, arrastrar o pasar por encima) para el control en uso. Busca por **control físico del binding** (`InputPrompts.GetControl`), así que cambiar una tecla en `GameControls.inputactions` cambia el ícono solo. Con dibujo (`LetraQ`, `LetraE`, los del mouse) lo usa entero; si no, **tecla o botón de joystick en blanco con el nombre** (`InputPrompts.GetLabel(acción, esquema, familia)`): cualquier binding y cualquier joystick andan sin arte nuevo. Con joystick, arrastrar = mantener A/Cruz y pasar por encima = seleccionar con el stick (`leftStick`, sin dibujo todavía: queda solo el texto) |
 | `TutorialHintDirector` (en el prefab) | Ver *Cómo decide el director*. No busca nada por frame: la foto la arma `TutorialHintContext`. Set por escena: `CartelesPartida` en `GameScene` (el del prefab) y `CartelesTienda` en `EndScene` (override de la instancia) |
@@ -2171,6 +2182,28 @@ sus caracteres (nota 30).
 | `InputPrompts` — `Input/InputPrompts.cs` | Resuelve `[[Accion]]` (nombres de `GameAction` + `PointerPrimary`/`PointerSecondary`) con la tecla o botón **del binding real** en el control activo: teclado (`input.key.<control>`, o la tecla en mayúsculas), Xbox/genérico (`input.xbox.<control>`) o PlayStation (`input.ps.<control>`). Devuelve en negrita. Al cambiar de esquema o de familia de gamepad llama `Loc.RefreshTexts`, así el tutorial pasa de "Q" a "LB"/"L1" en vivo. `GetControl(acción, esquema)` da el control físico del binding ("q", "leftShoulder") y `GetLabel(acción, esquema, familia)` el nombre para un control que no es el activo: los usa `InputGlyphSetSO` para los íconos de los carteles |
 | `LocalizationTools` — `Editor/` | Menú `Tools/Localización/`: **Validar tablas** (celdas vacías, `{n}` o `[[tokens]]` que no coinciden con el español, tokens inexistentes, claves usadas en código o assets que no están), **Recargar tablas**, **Siguiente idioma (Play)** (solo la sesión) y abrir la carpeta. Inspector de `LocalizedText` con el texto de cada idioma |
 
+### 3.12 Resolución interna 480×270 — `Core/PixelGrid.cs` · `UI/PixelUICanvas.cs`
+
+El juego es pixel art y se dibuja a **480×270**. 1 px del arte = 1/25 u del mundo (PPU 25), y la cámara ortográfica
+mide `270 / 25 / 2 = 5.4` (el FOV 56 de antes mostraba 5,32: el encuadre casi no cambió, ~2 % más). Las constantes
+viven en `PixelGrid` (`ReferenceWidth/Height`, `AssetsPPU`, `UiSortingLayer`).
+
+| Pieza | Cómo está |
+|---|---|
+| Cámara (las 5 escenas) | `orthographic`, `PixelPerfectCamera` (URP 2D): `assetsPPU 25`, `480×270`, *Grid Snapping* = **Upscale Render Texture**, *Crop Frame* = **Stretch Fill**. Renderiza a una RT de 480×270 y la estira manteniendo 16:9 (franjas negras en 16:10). En 1080p el escalado es ×4 exacto. `camera.pixelRect` sigue en px de pantalla: `ScreenToWorldPoint`, raycasts y el mouse andan igual |
+| UI de pantalla | Todos los canvases raíz que eran overlay son **Screen Space - Camera** con la cámara de la escena, `planeDistance 1`, sorting layer **`UI`** (último: queda encima de todo el mundo, como el overlay) y el mismo `sortingOrder` de antes. `CanvasScaler` 480×270, match 0.5, `referencePixelsPerUnit = 25` (un sprite a PPU 25 se ve a 1 px por px; los bordes 9-slice del arte viejo a PPU 100 quedan a ¼). Así la UI entra en la misma RT pixelada |
+| `PixelUICanvas` | En cada canvas raíz de pantalla (escenas y prefabs `PauseCanvas`, `ShopCanvas`, `TutorialHints`, `ShopRoot`). Si el canvas no tiene cámara (prefab instanciado en runtime, canvas que sobrevive a un cambio de escena) le pone `Camera.main`. **Ojo:** sin cámara, `Canvas.renderMode` devuelve `ScreenSpaceOverlay` aunque esté guardado como Camera |
+| Canvases creados por código | `GrillNotificationManager` y `TutorialManager` (fallbacks) usan `PixelGrid.ConfigureScreenCanvas` |
+| Medidas | Todo lo que estaba en px de 1920×1080 se escaló ×¼ (posiciones, tamaños, fuentes, paddings, spacings, `LayoutElement`, medidas de `TutorialHintView`, `GrillNotification*`): las proporciones quedaron iguales. Las medidas no son enteras (ej. fuente 9.5): cuando llegue el arte nuevo conviene redondear a px enteros |
+| Lo que **no** cambió | Los canvases **World Space** (`HudCanvas`, `RollBackCanvas`, burbujas): ya estaban en unidades del mundo. Los paneles de `PanelesTutos` dicen World Space pero se instancian **anidados** en `TutorialCanvas`: se miden en px de UI y sí se escalaron. El cursor del joystick (`GamepadCursorView`) sigue en overlay a resolución nativa, como el puntero del sistema |
+| Fondo | `FondoCicloDia`: el cielo (`CieloHorizonte`, `CieloCenit`) se estiró hasta `y = 6.4` porque la vista ahora llega a 5,4 (y en el menú el fondo está corrido −0,6) |
+
+| Texto | **Tiny5** (Google Fonts, OFL: `Fonts/Tiny5-OFL.txt`) en `Fonts/Tiny5-Regular Pixel.asset`: TMP **bitmap** (`RASTER_HINTED`) muestreado a 8 px, atlas en Point, dinámico, fallback LiberationSans. Es la fuente por defecto de `TMP Settings` y la de **todos** los textos (salieron Bungee, Nunito y LiberationSans de escenas y prefabs). Solo dos tamaños: em **8 px (×1)** y, los títulos (los que medían ≥ 12 px de em), **16 px (×2)**: mayúsculas de 5/10 px. El fontSize se calcula para que el em final en la render texture sea exacto: en UI de pantalla compensa la escala de los padres (los paneles de `PanelesTutos` están a 0,71 → fontSize 11,24/22,49); en el mundo, `fontSize × 0,1 × escala × 25` (TextMeshPro 3D). Sin autosize. Los textos que se arman por código pasan por `PixelGrid.SnapFont` (burbujas, feedback del cliente, `MoneyPopup`, contador de carbón) |
+| Texto: límites | El bitmap no tiene outline ni underlay (el `outlineWidth` de `MoneyPopup` ya no hace nada) y la negrita no engorda (`boldSpacing = 0`). Las escalas de animación (`MenuButtonHover` 1,06, pop de carteles y burbujas) deforman la letra mientras duran. Bungee era solo mayúsculas: los textos que la usaban ahora salen en mayúsculas y minúsculas, como están en las tablas |
+| Layouts rehechos para Tiny5 | Tiny5 es ~25 % más ancha que la fuente de antes y el renglón mide 9 px. Se ajustaron: tarjeta y requisitos de la tienda (3.6); **burbuja de pedido** (`CustomerOrderBubble`): base 2,45 × 0,9 (los clientes están a 2,6), el nombre del corte se parte en dos renglones si no entra y la burbuja suma un renglón hacia arriba (`BaseTitleWraps`); la expandida mide 3,7 de ancho y su alto sale del detalle medido (`ComputeExpandedSize`), hasta 3,2; **reacción del cliente** (`FeedbackBubble 1`, override en los 5 prefabs de cliente): fondo 3,2 × 1,88, frase de 2 renglones arriba y Pedido/Propina en dos columnas de 1,44; los **paneles de `PanelesTutos`**: cuerpo centrado entre el título y el botón, con su alto real (6 paneles crecieron); aviso de strikes, popup de fin por strikes y derrota, un poco más altos. Revisado con un auditor de textos encimados / recortados / fuera de su panel en todas las pantallas, en español e inglés. Sin arreglar a propósito: `Pasar a Cooler` y `Volver al Grill` (vista Cooler deprecada, nadie los usa) y dos reacciones de clientes vecinos al mismo tiempo, que se rozan como antes |
+
+Pendiente: el arte actual es HD (PPU 100) visto a ¼; lo resuelve el arte nuevo a PPU 25.
+
 ## 4. Puntos de entrada e inicialización
 
 ### 4.1 Arranque de la aplicación
@@ -2328,7 +2361,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 19 | La entrega tiene **una sola entrada y una sola lógica**: `PlateDeliveryDraggable` → `GameManager.TryDeliverToCustomer(Customer)`, cuyas reglas viven en `EvaluateDelivery`. Al tocar validaciones, pagos o mensajes, editar **solo `EvaluateDelivery`** (el preview del hover lo comparte). El `bool` de retorno decide si el plato vuelve a su sitio: un camino de rechazo nuevo tiene que devolver `false` o el plato desaparece del mostrador |
 | 20 | `PlateDeliveryDraggable` se agrega **en runtime** desde `MeatTransferBuffer.AdoptVisualIntoPlate`. Es el único lugar que crea visuales de carne en el plato: si aparece otro camino que ponga un corte en la zona del plato, tiene que pasar por ahí o ese plato no se podrá arrastrar |
 | 21 | Los clientes se instancian con `customersParent = null` (raíz de escena), así que **no** los alcanza el toggle de `ViewManager` y sus colliders siguen activos. De eso depende el hover de la entrega por arrastre (`Physics2D.OverlapPointNonAlloc`). El único que apaga su collider es `CustomerView.ApplyPickingState` (panel encima / feedback) |
-| 22 | **La cámara está en perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). Dos consecuencias, y las dos ya mordieron: (a) **nunca** `cam.ScreenToWorldPoint(InputManager.PointerPosition)` a secas — con `z = 0` devuelve la posición de la cámara. Siempre `pos.z = Mathf.Abs(objeto.z - cam.z)` antes de convertir (`Item.GetMouseWorldPosition` es la referencia; lo repiten `Meat.RestoreHoverIfPointerOver`, `ToBuildDraggableMeat`, `StockPanelSlot`, `PlateDeliveryDraggable`; `MoneyPopup.TryGetHudTarget` hace lo mismo para el destino del vuelo). (b) El pick de `WorldPointerDispatcher` (`OnWorldPointerDown` sobre `Collider2D`, misma lógica que el `OnMouseDown` nativo) reparte el click a **un solo** collider, y los visuales del plato quedan apoyados sobre el de la zona `ToBuild` — mismo plano `z = 0` y sin handler de mouse — así que se lo quedaba la zona y la carne del plato dejaba de ser agarrable. Por eso `PlateDeliveryDraggable` resuelve su propio pick en `Update`. Si algún otro objeto apilado sobre un collider "mudo" deja de responder al mouse, es el mismo caso |
+| 22 | **La cámara es ortográfica desde 2026-10-05** (3.12); antes fue perspectiva (`orthographic: 0`, FOV `56`, en `z = -10`). Lo que sigue valiendo: (a) `cam.ScreenToWorldPoint(InputManager.PointerPosition)` se usa con `pos.z = Mathf.Abs(objeto.z - cam.z)` para caer en el plano del objeto (con ortográfica el `x/y` ya no depende del `z`, pero se mantiene el patrón: `Item.GetMouseWorldPosition` es la referencia; lo repiten `Meat.RestoreHoverIfPointerOver`, `ToBuildDraggableMeat`, `StockPanelSlot`, `PlateDeliveryDraggable`; `MoneyPopup.TryGetHudTarget` hace lo mismo para el destino del vuelo). (b) El pick de `WorldPointerDispatcher` (`OnWorldPointerDown` sobre `Collider2D`, misma lógica que el `OnMouseDown` nativo) reparte el click a **un solo** collider, y los visuales del plato quedan apoyados sobre el de la zona `ToBuild` — mismo plano `z = 0` y sin handler de mouse — así que se lo quedaba la zona y la carne del plato dejaba de ser agarrable. Por eso `PlateDeliveryDraggable` resuelve su propio pick en `Update`. Si algún otro objeto apilado sobre un collider "mudo" deja de responder al mouse, es el mismo caso. (c) Separar sprites en `z` ya no cambia su tamaño ni su lugar: el orden va por `sortingOrder` |
 | 23 | **Un solo corte por plato** (`BuildFoodDropZone.TryAcceptMeatAt` rechaza el segundo). Si se vuelve a permitir más de uno hay que revisar `Meat.OnWorldPointerUp` (`IsPlateOccupiedAt`), `AdoptVisualIntoPlate` (sorting por índice), el preview de tintes, que ya iteran listas y deberían tolerarlo (la carne no tiene slot: cada corte queda donde se soltó, así que el layout no limita) |
 | 27 | **La carne del plato siempre se dibuja sobre sides/toppings.** `plateMeatSortingBase` (400, en `MeatTransferBuffer`) tiene que quedar **por encima** de `BuildFoodDropZone.sideTopSortingOrder` (390) + cantidad de visuales; si se cambia uno, revisar el otro. Los visuales de sides/toppings van a slots fijos desde el centro del plato (ver 3.4): agregar un item nuevo al `ToppingsPanel` no requiere tocar el layout, solo si se quiere un tercer slot |
 | 24 | **Paneles encima de clientes.** Los dos `SlidingPanel` se despliegan sobre la fila de clientes y comparten z con ellos. Cualquier objeto nuevo con collider en esa zona tiene que gatearse igual que `CustomerView.ApplyPickingState` (`SlidingPanel.IsAreaCoveredByOpenPanel`) o va a robar clicks a las celdas del panel. Y al revés: un pick que no use `OnWorldPointerXXX` tiene que preguntar `IsPointOverPanel` antes de aceptar el click (`PlateDeliveryDraggable` lo hace) |

@@ -18,9 +18,9 @@ public class GrillNotificationManager : MonoBehaviour
     [SerializeField] private Sprite circleSprite;
 
     [Header("Layout Configuration")]
-    [SerializeField] private Vector2 bubbleSize = new Vector2(80f, 80f);
-    [SerializeField] private float spacing = 15f;
-    [SerializeField] private Vector2 leftMarginOffset = new Vector2(25f, 0f);
+    [SerializeField] private Vector2 bubbleSize = new Vector2(20f, 20f);
+    [SerializeField] private float spacing = 3.75f;
+    [SerializeField] private Vector2 leftMarginOffset = new Vector2(6.25f, 0f);
 
     private readonly List<GrillNotificationGroupUI> activeGroups = new List<GrillNotificationGroupUI>();
     private readonly List<GrillNotificationGroupUI> groupPool = new List<GrillNotificationGroupUI>();
@@ -201,13 +201,9 @@ public class GrillNotificationManager : MonoBehaviour
 
         if (targetCanvas == null)
         {
-            GameObject canvasObj = new GameObject("GrillNotificationCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            GameObject canvasObj = new GameObject("GrillNotificationCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(PixelUICanvas));
             targetCanvas = canvasObj.GetComponent<Canvas>();
-            targetCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            CanvasScaler scaler = canvasObj.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            PixelGrid.ConfigureScreenCanvas(targetCanvas);
         }
 
         GameObject containerObj = new GameObject("GrillNotificationContainer", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));

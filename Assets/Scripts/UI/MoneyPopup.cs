@@ -68,6 +68,7 @@ public class MoneyPopup : MonoBehaviour
         tmp.outlineColor = style.outlineColor;
         tmp.outlineWidth = style.outlineWidth;
         tmp.rectTransform.sizeDelta = new Vector2(4f, 1.5f);
+        PixelGrid.SnapFont(tmp);
 
         var renderer = go.GetComponent<Renderer>();
         if (renderer != null) renderer.sortingOrder = style.sortingOrder;

@@ -25,7 +25,7 @@ public class TutorialHintSO : ScriptableObject
     [Header("Dónde")]
     public HintAnchorId anchor;
     public HintPlacement placement = HintPlacement.Above;
-    [Tooltip("Corrimiento extra, en px de la resolución de referencia (1920×1080).")]
+    [Tooltip("Corrimiento extra, en px de la resolución de referencia (480×270).")]
     public Vector2 offset;
 
     [Header("Cuándo se muestra")]

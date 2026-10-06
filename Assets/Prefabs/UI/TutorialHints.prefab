@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 4039790783123291809}
   - component: {fileID: 4474114525576242278}
   - component: {fileID: 7696550257704992333}
+  - component: {fileID: 4263615012660878813}
   m_Layer: 0
   m_Name: TutorialHints
   m_TagString: Untagged
@@ -49,9 +50,9 @@ Canvas:
   m_GameObject: {fileID: 6727964211491014112}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 0
+  m_RenderMode: 1
   m_Camera: {fileID: 0}
-  m_PlaneDistance: 100
+  m_PlaneDistance: 1
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
   m_OverrideSorting: 0
@@ -60,7 +61,7 @@ Canvas:
   m_VertexColorAlwaysGammaSpace: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
+  m_SortingLayerID: 1056677900
   m_SortingOrder: 15
   m_TargetDisplay: 0
 --- !u!114 &6747579014142073811
@@ -76,9 +77,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_UiScaleMode: 1
-  m_ReferencePixelsPerUnit: 100
+  m_ReferencePixelsPerUnit: 25
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1920, y: 1080}
+  m_ReferenceResolution: {x: 480, y: 270}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
@@ -136,3 +137,15 @@ MonoBehaviour:
   set: {fileID: 11400000, guid: 2a310c0242b21054fae7be6be57c2e72, type: 2}
   maxVisible: 2
   evaluateInterval: 0.2
+--- !u!114 &4263615012660878813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6727964211491014112}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3085de4b89c7899429e5237a2d822ff9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

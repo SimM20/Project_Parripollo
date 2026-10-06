@@ -51,11 +51,10 @@ public static class WorldBubbleStyle
         tmp.alignment = align;
         tmp.enableWordWrapping = true;
         tmp.overflowMode = TextOverflowModes.Truncate;
-        tmp.enableAutoSizing = true;
-        tmp.fontSizeMin = 1.1f;
-        tmp.fontSizeMax = fontSize;
         tmp.margin = Vector4.zero;
         tmp.raycastTarget = false;
+        // Las burbujas quedan a escala 1 en el mundo: fontSize pasa a Tiny5 ×1 o ×2 (ver PixelGrid).
+        PixelGrid.SnapFont(tmp, 1f);
 
         return tmp;
     }

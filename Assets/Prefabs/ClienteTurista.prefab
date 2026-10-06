@@ -129,8 +129,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   chestOffset: {x: 0, y: 0.04, z: -0.13}
-  baseSize: {x: 1.95, y: 0.9}
-  expandedSize: {x: 3.2, y: 2.1}
+  baseSize: {x: 2.45, y: 0.9}
+  expandedSize: {x: 3.7, y: 3.2}
   growUpwards: 1
   expandDuration: 0.13
   panelColor: {r: 0.97, g: 0.94, b: 0.86, a: 0.97}
@@ -242,6 +242,13 @@ MonoBehaviour:
   urgentThreshold: 0.2
   urgentShakeAmplitude: 0.03
   urgentShakeFrequency: 22
+  patienceTrackColor: {r: 0.18, g: 0.13, b: 0.11, a: 1}
+  patienceOutlineColor: {r: 0.05, g: 0.03, b: 0.02, a: 0.9}
+  urgentBodySquash: 0.12
+  rejectShakeAmplitude: 0.08
+  rejectShakeCycles: 3
+  rejectShakeSeconds: 0.45
+  rejectTint: {r: 1, g: 0.45, b: 0.45, a: 1}
   skinRenderer: {fileID: 1587522016403547180}
   selectionHighlight: {fileID: 0}
   feedbackBubble: {fileID: 0}
@@ -460,15 +467,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 493997649649612064, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 2.5068
+      value: 2.88
       objectReference: {fileID: 0}
     - target: {fileID: 493997649649612064, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0.25
+      value: 0.21
       objectReference: {fileID: 0}
     - target: {fileID: 493997649649612064, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.32
+      value: 0.49
       objectReference: {fileID: 0}
     - target: {fileID: 1591983344546937019, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: reactionEmojiText
@@ -488,7 +495,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2385540892317876987, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_fontSize
-      value: 2
+      value: 3.2
       objectReference: {fileID: 0}
     - target: {fileID: 2385540892317876987, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_margin.w
@@ -496,7 +503,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2385540892317876987, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_fontSizeBase
-      value: 2
+      value: 3.2
       objectReference: {fileID: 0}
     - target: {fileID: 2385540892317876987, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_HorizontalAlignment
@@ -504,11 +511,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2492494758474821300, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_fontSize
-      value: 2
+      value: 3.2
       objectReference: {fileID: 0}
     - target: {fileID: 2492494758474821300, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_fontSizeBase
-      value: 2
+      value: 3.2
       objectReference: {fileID: 0}
     - target: {fileID: 4192243231764589532, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_LocalPosition.x
@@ -536,19 +543,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4731405464719432568, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.91429925
+      value: 1.0666667
       objectReference: {fileID: 0}
     - target: {fileID: 4731405464719432568, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.5263408
+      value: 0.62666667
       objectReference: {fileID: 0}
     - target: {fileID: 4731405464719432568, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.205
+      value: 0.20999965
       objectReference: {fileID: 0}
     - target: {fileID: 4731405464719432568, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.7237
+      value: -0.87
       objectReference: {fileID: 0}
     - target: {fileID: 5032636506817455012, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_Size.x
@@ -624,15 +631,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5889668990293890480, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0.787
+      value: 0.93
       objectReference: {fileID: 0}
     - target: {fileID: 7144801022193865517, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_fontSize
-      value: 2
+      value: 3.2
       objectReference: {fileID: 0}
     - target: {fileID: 7144801022193865517, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_fontSizeBase
-      value: 2
+      value: 3.2
       objectReference: {fileID: 0}
     - target: {fileID: 8798338000412759542, guid: e77b95ab51c46914cae8b4ada47d9755, type: 3}
       propertyPath: m_Name

@@ -37,7 +37,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1366, y: 768}
+  m_SizeDelta: {x: 341.5, y: 192}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &2158462324461615789
 Canvas:
@@ -75,7 +75,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_UiScaleMode: 0
-  m_ReferencePixelsPerUnit: 100
+  m_ReferencePixelsPerUnit: 25
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 800, y: 600}
   m_ScreenMatchMode: 0
@@ -126,10 +126,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 5635509082535610527}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.4602124}
-  m_AnchorMax: {x: 0.5, y: 0.4602124}
-  m_AnchoredPosition: {x: 0.000049591, y: -1.9999983}
-  m_SizeDelta: {x: 792.3691, y: 189.8056}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0.00001239775, y: -14.535882}
+  m_SizeDelta: {x: 198.09227, y: 51.6}
   m_Pivot: {x: 0.5, y: 0.5000001}
 --- !u!222 &3973952360246278464
 CanvasRenderer:
@@ -163,8 +163,8 @@ MonoBehaviour:
     su pedido, cerr\xE1 el stock con Q y pas\xE1 el cursor sobre \xE9l. \xA1Ojo que
     se quema!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
+  m_sharedMaterial: {fileID: 376175267617585177, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -188,12 +188,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 35
-  m_fontSizeBase: 35
+  m_fontSize: 11.24451
+  m_fontSizeBase: 11.24451
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 4.5
+  m_fontSizeMax: 18
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -278,8 +278,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.74272704}
   m_AnchorMax: {x: 0.5, y: 0.74272704}
-  m_AnchoredPosition: {x: 0.0000076298, y: 35.484}
-  m_SizeDelta: {x: 1000, y: 70.9674}
+  m_AnchoredPosition: {x: 0.00000190745, y: 8.871}
+  m_SizeDelta: {x: 250, y: 17.74185}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9119669365709871999
 CanvasRenderer:
@@ -311,8 +311,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Tutorial 2: Cocina'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
+  m_sharedMaterial: {fileID: 376175267617585177, guid: 9195bde6082fc934286e0bfdffd7aa7c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -336,12 +336,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
-  m_fontSizeBase: 50
+  m_fontSize: 22.48902
+  m_fontSizeBase: 22.48902
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 4.5
+  m_fontSizeMax: 18
   m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -427,8 +427,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5742189}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 2.8250732, y: -1}
-  m_SizeDelta: {x: 270.2212, y: 125}
+  m_AnchoredPosition: {x: 0.7062683, y: -0.25}
+  m_SizeDelta: {x: 67.5553, y: 31.25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7263035189658538346
 CanvasRenderer:

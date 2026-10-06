@@ -951,9 +951,10 @@ public class TutorialManager : MonoBehaviour
         // Fallback: create dynamic canvas
         GameObject canvasGo = new GameObject("TutorialCanvas");
         Canvas c = canvasGo.AddComponent<Canvas>();
-        c.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>().uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
         canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+        canvasGo.AddComponent<PixelUICanvas>();
+        PixelGrid.ConfigureScreenCanvas(c);
         return canvasGo.transform;
     }
 
