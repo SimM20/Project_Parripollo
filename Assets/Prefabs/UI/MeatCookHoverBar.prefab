@@ -73,7 +73,7 @@ SpriteRenderer:
   m_SortingLayerID: 583324713
   m_SortingLayer: 1
   m_SortingOrder: 5010
-  m_Sprite: {fileID: 21300000, guid: 7ee86db2b46897643b213261ecbbf531, type: 3}
+  m_Sprite: {fileID: 21300000, guid: f6a22337986bf544aa229f14c269bf1a, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -157,7 +157,7 @@ SpriteRenderer:
   m_SortingLayerID: 583324713
   m_SortingLayer: 1
   m_SortingOrder: 5000
-  m_Sprite: {fileID: 21300000, guid: e02267356e67e824bb557b814694c829, type: 3}
+  m_Sprite: {fileID: 21300000, guid: fbf9785534843984983bb8dd3b316586, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -217,11 +217,11 @@ MonoBehaviour:
   indicator: {fileID: 5766859622568842767}
   barBackground: {fileID: 6022135783310239301}
   gapAboveMeat: 0.12
-  firstSegmentX: 7
-  segmentWidth: 40
-  dividerWidth: 5
-  segmentTopY: 14
-  segmentHeight: 26
+  firstSegmentX: 1
+  segmentWidth: 8
+  dividerWidth: 1
+  segmentTopY: 3
+  segmentHeight: 5
   pendingShadeColor: {r: 0, g: 0, b: 0, a: 0.55}
   pendingShadeSortingOrder: 5005
   burnWarningStart: 0.5

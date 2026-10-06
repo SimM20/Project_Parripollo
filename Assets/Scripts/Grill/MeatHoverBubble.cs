@@ -35,9 +35,10 @@ public class MeatHoverBubble : MonoBehaviour
     [SerializeField] private float height = 0.9f;
     [Tooltip("Margen entre la barra de coccion y los bordes del panel (abajo y costados).")]
     [SerializeField] private float barPadding = 0.14f;
-    [Tooltip("El ancho sale del texto mas largo (nombre del corte o punto), entre estos limites.")]
+    [Tooltip("El ancho sale del texto mas largo (nombre del corte o punto), entre estos limites. " +
+             "maxWidth tiene que dejar entrar el punto mas largo con Tiny5: 'Doneness: Overcooked' pide ~4,1.")]
     [SerializeField] private float minWidth = 1.6f;
-    [SerializeField] private float maxWidth = 2.8f;
+    [SerializeField] private float maxWidth = 4.2f;
 
     [Header("Transicion")]
     [Tooltip("Segundos del 'pop' al aparecer. En tiempo sin escalar, igual que la del cliente.")]
@@ -99,7 +100,7 @@ public class MeatHoverBubble : MonoBehaviour
             return;
         }
 
-        transform.position = source.transform.position + GetOffset(source);
+        transform.position = PositionFor(source);
 
         // La fila de la barra va solo con la pieza en la parrilla.
         if (source.IsOnGrill != barShown)
@@ -133,7 +134,7 @@ public class MeatHoverBubble : MonoBehaviour
             ApplyPop();
         }
 
-        transform.position = meat.transform.position + GetOffset(meat);
+        transform.position = PositionFor(meat);
     }
 
     public void Hide()
@@ -167,6 +168,28 @@ public class MeatHoverBubble : MonoBehaviour
 
         bounds = borderRenderer.bounds;
         return true;
+    }
+
+    /// <summary>
+    /// Arriba de la pieza, corrida en X lo justo para que el panel no se salga de la pantalla
+    /// (sobre las columnas de los bordes de la parrilla, una burbuja ancha quedaba cortada).
+    /// </summary>
+    private Vector3 PositionFor(Meat meat)
+    {
+        Vector3 position = meat.transform.position + GetOffset(meat);
+
+        Camera cam = Camera.main;
+        if (cam == null || borderRenderer == null)
+            return position;
+
+        const float edgeMargin = 1f / PixelGrid.AssetsPPU;   // 1 px de aire contra el borde
+        float halfView = PixelGrid.ReferenceWidth * 0.5f / PixelGrid.AssetsPPU;
+        float halfPanel = borderRenderer.size.x * 0.5f + edgeMargin;
+        float centerX = cam.transform.position.x;
+        if (halfPanel < halfView)
+            position.x = Mathf.Clamp(position.x, centerX - halfView + halfPanel, centerX + halfView - halfPanel);
+
+        return position;
     }
 
     private Vector3 GetOffset(Meat meat)
@@ -303,7 +326,9 @@ public class MeatHoverBubble : MonoBehaviour
         titleText.transform.localPosition = new Vector3(textLeft + textWidth * 0.5f, top - 0.28f, 0f);
         titleText.color = titleColor;
 
-        detailText.rectTransform.sizeDelta = new Vector2(textWidth, 0.34f);
+        // Alto de un renglon de Tiny5 (9 px = 0,36 u) con margen: con Truncate, si el renglon no entra
+        // entero TextMeshPro no dibuja nada.
+        detailText.rectTransform.sizeDelta = new Vector2(textWidth, 0.42f);
         detailText.transform.localPosition = new Vector3(textLeft + textWidth * 0.5f, top - height + 0.27f, 0f);
         detailText.color = detailColor;
     }

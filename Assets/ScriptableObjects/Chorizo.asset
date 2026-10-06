@@ -16,20 +16,20 @@ MonoBehaviour:
   basePrice: 100
   category: 0
   _visualOffset: {x: 0, y: 0, z: 0}
-  meatSpriteA: {fileID: 21300000, guid: a5e60188c878cca42a25ac42089479f5, type: 3}
-  meatSpriteB: {fileID: 21300000, guid: a5e60188c878cca42a25ac42089479f5, type: 3}
+  meatSpriteA: {fileID: 21300000, guid: f476f761dc76d3b4fabc7b2ce183a485, type: 3}
+  meatSpriteB: {fileID: 21300000, guid: f476f761dc76d3b4fabc7b2ce183a485, type: 3}
   cookingSpritesA:
-    crudo: {fileID: 21300000, guid: da97b655637c0754f84452fa38d8a92a, type: 3}
-    jugoso: {fileID: 21300000, guid: bc3fd957f2f41f7468c9b8068ed052a8, type: 3}
-    hecho: {fileID: 21300000, guid: e27fc8fe27303754d88f6327f229a5f6, type: 3}
-    muyHecho: {fileID: 21300000, guid: 0046be8b1f113fb47ba07ac6fd4c9391, type: 3}
-    pasado: {fileID: 21300000, guid: 5fcbcd1fe0a9acf4ca610bb157db271b, type: 3}
+    crudo: {fileID: 21300000, guid: 46362d449bc6c654c900151b3b55a617, type: 3}
+    jugoso: {fileID: 21300000, guid: fbee9c6df66669349b78ba08b48c09f2, type: 3}
+    hecho: {fileID: 21300000, guid: 8a02932d6532cb14096ca9ce3348e577, type: 3}
+    muyHecho: {fileID: 21300000, guid: e8b0ddabee5ab2941bbf4eb0be181deb, type: 3}
+    pasado: {fileID: 21300000, guid: cb5b30807b89e96419ac3ba5e7a76629, type: 3}
   cookingSpritesB:
-    crudo: {fileID: 21300000, guid: da97b655637c0754f84452fa38d8a92a, type: 3}
-    jugoso: {fileID: 21300000, guid: bc3fd957f2f41f7468c9b8068ed052a8, type: 3}
-    hecho: {fileID: 21300000, guid: e27fc8fe27303754d88f6327f229a5f6, type: 3}
-    muyHecho: {fileID: 21300000, guid: 0046be8b1f113fb47ba07ac6fd4c9391, type: 3}
-    pasado: {fileID: 21300000, guid: 5fcbcd1fe0a9acf4ca610bb157db271b, type: 3}
+    crudo: {fileID: 21300000, guid: 46362d449bc6c654c900151b3b55a617, type: 3}
+    jugoso: {fileID: 21300000, guid: fbee9c6df66669349b78ba08b48c09f2, type: 3}
+    hecho: {fileID: 21300000, guid: 8a02932d6532cb14096ca9ce3348e577, type: 3}
+    muyHecho: {fileID: 21300000, guid: e8b0ddabee5ab2941bbf4eb0be181deb, type: 3}
+    pasado: {fileID: 21300000, guid: cb5b30807b89e96419ac3ba5e7a76629, type: 3}
   timeHeatA: 80
   timeHeatB: 55
   grillSpace: {x: 1, y: 2}

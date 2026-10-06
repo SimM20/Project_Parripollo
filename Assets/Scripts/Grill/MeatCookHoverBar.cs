@@ -12,7 +12,7 @@ using UnityEngine;
 /// solicitado por los clientes.
 ///
 /// Setup: prefab Prefabs/UI/MeatCookHoverBar, instanciado como hijo de MeatHoverBubble. Hijos directos
-/// de la raíz: la barra ("Barra Coccion v4", marco + seis segmentos pintados) y la aguja ("Indicador de Progreso"). El velo se crea en runtime.
+/// de la raíz: la barra ("Barra Coccion v4" de Pixel480, 55×11: marco + seis segmentos pintados) y la aguja ("Indicador de Progreso"). El velo se crea en runtime.
 /// Las medidas de los segmentos están en píxeles del sprite de la barra, contados desde arriba a la
 /// izquierda como en Aseprite; el tamaño en pantalla se ajusta con la escala de la raíz.
 /// </summary>
@@ -26,15 +26,15 @@ public class MeatCookHoverBar : MonoBehaviour
 
     [Header("Segmentos del sprite (píxeles, desde arriba a la izquierda)")]
     [Tooltip("X del primer píxel del segmento Crudo (ancho del marco izquierdo).")]
-    [SerializeField] private float firstSegmentX = 7f;
+    [SerializeField] private float firstSegmentX = 1f;
     [Tooltip("Ancho de cada segmento de color.")]
-    [SerializeField] private float segmentWidth = 40f;
+    [SerializeField] private float segmentWidth = 8f;
     [Tooltip("Ancho del separador entre segmentos. El cambio de estado cae en su centro.")]
-    [SerializeField] private float dividerWidth = 5f;
+    [SerializeField] private float dividerWidth = 1f;
     [Tooltip("Y del primer píxel de color de los segmentos.")]
-    [SerializeField] private float segmentTopY = 14f;
+    [SerializeField] private float segmentTopY = 3f;
     [Tooltip("Alto del color de los segmentos.")]
-    [SerializeField] private float segmentHeight = 26f;
+    [SerializeField] private float segmentHeight = 5f;
 
     [Header("Pendiente")]
     [Tooltip("Velo sobre la parte de la barra que la aguja todavía no alcanzó.")]

@@ -16,20 +16,20 @@ MonoBehaviour:
   basePrice: 0
   category: 0
   _visualOffset: {x: 0, y: 0, z: 0}
-  meatSpriteA: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-  meatSpriteB: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
+  meatSpriteA: {fileID: 21300000, guid: 7e32c84c75839bd40821a1c7209bcc33, type: 3}
+  meatSpriteB: {fileID: 21300000, guid: 7e32c84c75839bd40821a1c7209bcc33, type: 3}
   cookingSpritesA:
-    crudo: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    jugoso: {fileID: 21300000, guid: f82f92550ee6b3543a0de68942d4204c, type: 3}
-    hecho: {fileID: 21300000, guid: 850d0e6c67825ad4aaab38e00213e717, type: 3}
-    muyHecho: {fileID: 21300000, guid: 97ee150ec73de2244952f005a748d92d, type: 3}
-    pasado: {fileID: 21300000, guid: f9e00d03b0a3bf042b55d10c940f53f0, type: 3}
+    crudo: {fileID: 21300000, guid: 7e32c84c75839bd40821a1c7209bcc33, type: 3}
+    jugoso: {fileID: 21300000, guid: 9c7b07d05f6a3694ea37a6c607df9683, type: 3}
+    hecho: {fileID: 21300000, guid: 19641004f16fc654cb84c9839e9f0f1d, type: 3}
+    muyHecho: {fileID: 21300000, guid: 4e9b60a8e87777846a65820ab0517586, type: 3}
+    pasado: {fileID: 21300000, guid: 2e79ea749ba4b224f9337f9c873d0d5f, type: 3}
   cookingSpritesB:
-    crudo: {fileID: 21300000, guid: bca4c17648151b343adecd0852585853, type: 3}
-    jugoso: {fileID: 21300000, guid: f82f92550ee6b3543a0de68942d4204c, type: 3}
-    hecho: {fileID: 21300000, guid: 850d0e6c67825ad4aaab38e00213e717, type: 3}
-    muyHecho: {fileID: 21300000, guid: 97ee150ec73de2244952f005a748d92d, type: 3}
-    pasado: {fileID: 21300000, guid: f9e00d03b0a3bf042b55d10c940f53f0, type: 3}
+    crudo: {fileID: 21300000, guid: 7e32c84c75839bd40821a1c7209bcc33, type: 3}
+    jugoso: {fileID: 21300000, guid: 9c7b07d05f6a3694ea37a6c607df9683, type: 3}
+    hecho: {fileID: 21300000, guid: 19641004f16fc654cb84c9839e9f0f1d, type: 3}
+    muyHecho: {fileID: 21300000, guid: 4e9b60a8e87777846a65820ab0517586, type: 3}
+    pasado: {fileID: 21300000, guid: 2e79ea749ba4b224f9337f9c873d0d5f, type: 3}
   timeHeatA: 0
   timeHeatB: 0
   grillSpace: {x: 1, y: 1}

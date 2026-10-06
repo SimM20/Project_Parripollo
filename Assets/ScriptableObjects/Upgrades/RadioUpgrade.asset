@@ -16,7 +16,7 @@ MonoBehaviour:
   nameKey: upgrade.radio.name
   basePrice: 800
   category: 0
-  icon: {fileID: 21300000, guid: fd5906d09f5b8b6469b6e3a0be09b975, type: 3}
+  icon: {fileID: 21300000, guid: f25779f76697d53448e1ab0f0e03b721, type: 3}
   description: 'Una radio en el mostrador: la espera se hace mas corta y los clientes
     te aguantan un 15% mas.'
   descriptionKey: upgrade.radio.desc

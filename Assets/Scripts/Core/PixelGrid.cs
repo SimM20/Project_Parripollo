@@ -11,7 +11,8 @@ using UnityEngine.UI;
 /// <c>referencePixelsPerUnit = 25</c>, un sprite importado a PPU 25 se ve a 1 px por px en la UI.
 ///
 /// Texto: Tiny5 (<c>Fonts/Tiny5-Regular Pixel.asset</c>, bitmap a 8 px, filtro Point) a ×1 (em 8 px) o,
-/// los títulos, a ×2 (16 px). Otros tamaños deforman las letras.
+/// los títulos, a ×2 (16 px). Los títulos de pantalla pueden ir a otros múltiplos enteros (el del menú
+/// principal a ×5, los encabezados de panel a ×3); tamaños que no son múltiplo de 8 deforman las letras.
 /// </summary>
 public static class PixelGrid
 {

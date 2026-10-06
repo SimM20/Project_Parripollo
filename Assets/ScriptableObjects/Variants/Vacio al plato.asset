@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: Vacio al plato
   m_EditorClassIdentifier: 
   displayName: "Vac\xEDo al plato"
-  variantSprite: {fileID: 21300000, guid: 130fcf45a0e926f4bb5102b6fa08bb28, type: 3}
+  variantSprite: {fileID: 21300000, guid: 8297aac66d82694478d48d0100b730e4, type: 3}
   cookingSprites:
-    crudo: {fileID: 21300000, guid: a5bfd5a8325b8a140973565e6a79a8f4, type: 3}
-    jugoso: {fileID: 21300000, guid: d440372c0d9090b48b2723ecda226272, type: 3}
-    hecho: {fileID: 21300000, guid: 130fcf45a0e926f4bb5102b6fa08bb28, type: 3}
-    muyHecho: {fileID: 21300000, guid: fe0237e711856bf468a8075954e81304, type: 3}
-    pasado: {fileID: 21300000, guid: c5ec22eaf1f2d6d4ebf02a1b3ba0b036, type: 3}
+    crudo: {fileID: 21300000, guid: a22ce2b94e70be2468677ef56bfd8cd6, type: 3}
+    jugoso: {fileID: 21300000, guid: 3a4e0c1053b156845ac84e554167c55f, type: 3}
+    hecho: {fileID: 21300000, guid: 8297aac66d82694478d48d0100b730e4, type: 3}
+    muyHecho: {fileID: 21300000, guid: bc1d566912c24be4eb0e81295dff25a0, type: 3}
+    pasado: {fileID: 21300000, guid: 667601d667b8ee6429ce835b3c261fa2, type: 3}
     quemado: {fileID: 0}
   cut: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
   bread: {fileID: 0}

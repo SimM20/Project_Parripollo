@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Chimichurri
   m_EditorClassIdentifier: 
   toppingName: Chimichurri
-  toppingSprite: {fileID: 21300000, guid: 6dd34467404701b41b5f42d519f40c82, type: 3}
+  toppingSprite: {fileID: 21300000, guid: dc9bc08efe22e0847b9b944db4f40637, type: 3}
   maxSauceAmount: 100
   sauceDrainRate: 10
   purchasePrice: 100
