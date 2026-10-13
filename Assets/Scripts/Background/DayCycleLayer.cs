@@ -97,6 +97,20 @@ public class DayCycleLayer : MonoBehaviour, IDayCycleVisual
     }
 
     /// <summary>
+    /// Tinte de la capa a esa hora, sin aplicarlo. Para lo que tiene que verse "como esta capa"
+    /// aunque no sea parte de su sprite (los vehículos de la ruta, ver <see cref="RoadTraffic"/>).
+    /// Sin claves, el color que el renderer ya tiene.
+    /// </summary>
+    public Color ColorAt(float hour)
+    {
+        if (keys.Count == 0)
+            return GetComponent<SpriteRenderer>().color;
+
+        FindKeys(hour, out Key from, out Key to, out float t);
+        return Color.Lerp(from.color, to.color, t);
+    }
+
+    /// <summary>
     /// Clave anterior y siguiente a <paramref name="hour"/> (dando la vuelta por la medianoche) y el
     /// avance entre ellas. Recorre la lista entera: no depende del orden en que estén cargadas.
     /// </summary>
