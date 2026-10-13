@@ -126,6 +126,15 @@
 > `sauce.empty`. En la tienda la compra es de a 1, se bloquea con el frasco lleno y la celda dice `FRASCO: N%`. Los
 > frascos de `TutorialScene` llevan `ignoreStock`. Secciones 2.4, 3.6, 3.7 y nota 39.
 
+> Última actualización parcial: **2026-10-13** (rama `Progresion`) — **sistema de reputación**. Carpeta nueva `Reputation/`:
+> `ReputationSystem` (estática, de la run) lleva una experiencia de la que sale el nivel 0–10 (`Resources/ReputationConfig.asset`).
+> Suben las entregas bien hechas; bajan las malas, los clientes enojados y terminar la jornada a mano. Más reputación =
+> más clientes esperados al abrir el día y más plata por corte. Cada nivel de las mejoras pide una reputación
+> (`UpgradeSO.requiredReputationPerLevel`); la tarjeta bloqueada lleva candado y leyenda. Los locales (escenarios) ponen un
+> tope en el nivel 4 y el 8 que se levanta comprando el próximo en el cartel del header de la tienda (sin cambio visual por
+> ahora). HUD nuevo en la partida (`ReputationHudView`) y panel en la tienda (`ShopReputationUI`). Secciones 1, 2.3, 3.1,
+> 3.5, 3.6 → *Reputación*, 4.5 y nota 40.
+
 ---
 
 ## 0. Ficha técnica
@@ -176,6 +185,7 @@ Assets/Scripts/
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
 │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
 ├── Radio/          La radio de la mejora: objeto clickeable del mostrador + emisora DDOL que nunca se corta
+├── Reputation/     Reputación de la run (estática): niveles, experiencia por evento, tope de los locales, HUD de la partida
 └── Editor/         Solo editor: reseteo de mejoras al salir de Play
 ```
 
@@ -203,6 +213,7 @@ Assets/Scripts/
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
 | **Radio/** | `Radio` (el objeto del mostrador que activa la mejora `RadioUpgrade`: prender/apagar, lista de canciones, salto al ritmo) y `RadioStation` (emisora DDOL creada en runtime: elige, encadena y funde las canciones) | `Radio.cs`, `RadioStation.cs` |
+| **Reputation/** | `ReputationSystem` (estática: experiencia, nivel, tope de los locales, multiplicadores de clientes y plata, evento `OnChanged`), `ReputationConfigSO` (balance, en `Resources/`) y `ReputationHudView` (barra del HUD de la partida). La tienda tiene sus piezas en `Shop/`: `ShopReputationUI` y `ShopVenueSignUI` | `ReputationSystem.cs`, `ReputationConfigSO.cs`, `ReputationHudView.cs` |
 | **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO` | `UpgradeStateResetter.cs` |
 
 ### Assets de datos
@@ -215,7 +226,7 @@ Assets/ScriptableObjects/
 ├── Toppings/        ToppingSO   — Chimichurri, Salsa criolla
 ├── Variants/        ProductVariantSO
 ├── Tutorial/        TutorialStepSO ×31 (secuencia ordenada 1..31)
-├── Upgrades/        UpgradeSO   — CoalBurnTimeUpgrade, CustomerCapacityUpgrade, TipUpgrade, RadioUpgrade
+├── Upgrades/        UpgradeSO   — CoalBurnTimeUpgrade, CustomerCapacityUpgrade, TipUpgrade, RadioUpgrade (cada uno con su reputación por nivel)
 ├── FoodCatalog.asset / FoodCatalogTutorial.asset
 ├── CustomerFeedbackSO.asset     (CustomerFeedbackConfigSO: tiempos, colores y sprites del feedback; las frases están en las tablas)
 ├── ShopConfig.asset / CoalData.asset
@@ -224,9 +235,10 @@ Assets/ScriptableObjects/
 ```
 
 ```
+Assets/Resources/ReputationConfig.asset   ReputationConfigSO: experiencia por nivel, por evento, bonus y locales (ver 3.6 → Reputación)
 Assets/Resources/Localization/   Tablas de textos (key,es,en). Se cargan todas: el reparto es solo por orden
 ├── Menus.csv       idioma, menú principal, opciones, pausa, oferta de tutorial
-├── Gameplay.csv    HUD, entrega (rechazos, preview), armado del plato, aviso de strikes
+├── Gameplay.csv    HUD, entrega (rechazos, preview), armado del plato, aviso de strikes, reputación (reputation.*)
 ├── Customers.csv   puntos de cocción, pedido, burbuja de reacción, frases de clientes
 ├── Shop.csv        tienda, requisitos, popup de strikes, derrota, EndScreen
 ├── Items.csv       carbón, panes, guarniciones, mejoras (nameKey / descriptionKey de los SO)
@@ -356,6 +368,7 @@ graph TD
 | `InputManager` | `static OnSchemeChanged`, `static OnGamepadFamilyChanged` | `InputPrompts` (→ `Loc.RefreshTexts`), resto de la navegación del gamepad |
 | `SceneManagementUtils` | `OnSceneLoaded` (static) | (disponible; suscrito vía `RuntimeInitializeOnLoadMethod`) |
 | `ShopButton2D` / `ShopTabButton2D` | `OnClicked`, `OnTabClicked(ShopTabType)` | Celdas, barras de tabs |
+| `ReputationSystem` | `static OnChanged(ReputationChange)` | `ReputationHudView` (barra del HUD), `ShopReputationUI`, `ShopVenueSignUI`, `ShopGridUI` (→ `RefreshVisuals`: el nivel traba o destraba mejoras). Dispara con cada cambio de experiencia (aunque el tope no deje entrar nada), al comprar un local y al reiniciar la run |
 | `CoalStock` | `OnChanged(int)` | (clase legacy, sin uso activo) |
 
 ### 2.4 Secuencia: del stock al cliente (todo dentro de `GrillView`)
@@ -470,9 +483,12 @@ que va a pasar al soltar. Al tocar una regla, tocar solo `EvaluateDelivery`.
 
 Orden de las reglas: cliente válido y **no en feedback** → `HasAnyCut` → corte == `order.PrimaryCut` (si no, todos los
 `cutOffsets` en `CutBlocked`) → `TryBuildSandwich`/`TryBuildPlatedDish` → `Validate` (cocción) → `EvaluateCut` por corte
-→ **`EvaluateExtras`** (toppings y pan, ver 3.4) → si hay crudo/quemado: `causesStrike = true`, `accepted = true`,
+(`cookingOffset` = el peor) → **`EvaluateExtras`** (toppings y pan, ver 3.4) → `payment × ReputationSystem.MoneyMultiplier`
+(redondeado; la propina no) → si hay crudo/quemado: `causesStrike = true`, `accepted = true`,
 `payment = tip = 0`, `feedbackState = EntregaCrudaOQuemada`, `strikeShort` = `Crudo` / `Quemado` / `Crudo y quemado`
-→ si no, `EvaluateDeliveryFeedback` con `catalog.GetTipMultiplier()`.
+→ si no, `EvaluateDeliveryFeedback` con `catalog.GetTipMultiplier()` → `reputationXp` (ver 3.6 → *Reputación*).
+`TryDeliverToCustomer` aplica `reputationXp` solo en la entrega cobrada; el crudo/quemado lo cobra `CustomerSystem` junto
+con el strike.
 
 Una entrega con crudo/quemado **se concreta igual** (el plato se consume) y saca al cliente por
 `CustomerSystem.TriggerBadCookingLeaveFeedback(customer, burned)`, el mismo camino del que se queda sin paciencia pero
@@ -1227,8 +1243,11 @@ se va a mitad del arrastre, `RemoveCustomer` suelta el recuadro antes de destrui
 cliente seleccionado (el arrastre manda sobre la selección). `CollapseAllOrderBubbles()` las devuelve a tamaño base —
 nunca las oculta, porque la base vive siempre sobre el pecho del cliente.
 
-**Clientes esperados en la jornada**: `min(customersFirstNight + (noche−1) × customersAddedPerNight, maximumCustomersPerNight)`
-(por defecto `20 + 5·(n−1)`, cap `70`; en `GameScene`: `21 + 4·(n−1)`, cap `63`).
+**Clientes esperados en la jornada**: `min((customersFirstNight + (noche−1) × customersAddedPerNight) × reputación, maximumCustomersPerNight)`
+(por defecto `20 + 5·(n−1)`, cap `70`; en `GameScene`: `21 + 4·(n−1)`, cap `63`). `reputación` es
+`ReputationSystem.CustomersMultiplier` (`+5%` por nivel, contando lo avanzado dentro del nivel; ver 3.6 → *Reputación*) y
+**solo aplica con reloj**: se resuelve en `Start`, así que lo que se gana o pierde hoy sube o baja la curva de mañana. El cap
+sigue siendo absoluto: desde la noche ~11 la base ya lo toca y la reputación deja de sumar clientes.
 Con `DayClock` **no es un cupo**: fija el ritmo promedio de llegada
 (`BaseSpawnIntervalSeconds = DayDurationSeconds / esperados` → `300/21 ≈ 14,3 s` la noche 1).
 Subir los clientes de la noche es **apretar el ritmo**, no alargar la jornada: la jornada dura siempre lo mismo.
@@ -1419,6 +1438,7 @@ Mejora de tienda **por niveles**, data-driven. Los assets viven en `ScriptableOb
 registran en `FoodCatalogSO.allUpgrades` (de ahí los toma el tab `Upgrades`).
 ```csharp
 bool isUnlocked;  int maxLevel = 1;  int currentLevel = 0;   // currentLevel muta y persiste
+int[] requiredReputationPerLevel;    // reputación que pide cada nivel (elemento 0 = primer nivel; faltan → se repite el último)
 UpgradeEffectType effectType;        // CoalBurnTime | MaxSimultaneousCustomers | TipPercent | CustomerPatience
 CoalSO targetCoal;  float upgradedMaxBurnTime;               // efecto CoalBurnTime
 int customersPerLevel = 1;                                   // efecto MaxSimultaneousCustomers
@@ -1426,6 +1446,7 @@ float tipBonusPerLevel = 0.5f;                               // efecto TipPercen
 float patienceBonusPerLevel = 0.15f;                         // efecto CustomerPatience
 
 int   CurrentLevel { get; }  int MaxLevel { get; }  bool IsMaxed { get; }
+int   RequiredReputationForNextLevel { get; } // lo que pide el próximo nivel; 0 sin requisito o al máximo
 int   MaxSimultaneousCustomersBonus { get; }  // CurrentLevel × customersPerLevel, 0 si no aplica
 float TipMultiplierBonus { get; }             // CurrentLevel × tipBonusPerLevel, 0 si no aplica
 float PatienceMultiplierBonus { get; }       // CurrentLevel × patienceBonusPerLevel, 0 si no aplica
@@ -1445,12 +1466,15 @@ Dos maneras de aplicar el efecto, según a quién le pertenezca la variable:
 > tienda: `EndScene` no tiene `CustomerSystem`. El patrón es guardar el nivel en el SO — que sobrevive
 > al cambio de escena — y que el sistema de `GameScene` lo lea al arrancar.
 
-| Asset | Efecto | Precio | Niveles |
-|---|---|---|---|
-| `CoalBurnTimeUpgrade` | `maxBurnTime` del carbón → `200` | `$500` | 1 |
-| `CustomerCapacityUpgrade` | `+1` cliente simultáneo por nivel | `$100` / nivel | 3 |
-| `TipUpgrade` | `+50%` de propina por nivel (**aditivo**: ×1.5 / ×2 / ×2.5) | `$100` / nivel | 3 |
-| `RadioUpgrade` | `+15%` de paciencia total + activa el GO `Radio` de `GameScene` (una radio que suena de verdad, 3.8 → *Radio*) | `$400` | 1 |
+| Asset | Efecto | Precio | Niveles | Reputación por nivel |
+|---|---|---|---|---|
+| `CoalBurnTimeUpgrade` | `maxBurnTime` del carbón → `200` | `$700` | 1 | 3 |
+| `CustomerCapacityUpgrade` | `+1` cliente simultáneo por nivel | `$300` / nivel | 3 | 2 · 4 · 7 |
+| `TipUpgrade` | `+50%` de propina por nivel (**aditivo**: ×1.5 / ×2 / ×2.5) | `$250` / nivel | 3 | 1 · 4 · 8 |
+| `RadioUpgrade` | `+15%` de paciencia total + activa el GO `Radio` de `GameScene` (una radio que suena de verdad, 3.8 → *Radio*) | `$800` | 1 | 9 |
+
+La reputación la chequea `ShopSystem.GetPurchaseBlock` (ver *Reputación*): un nivel ya comprado no se pierde si después
+baja la reputación; lo que se traba es el próximo.
 
 ⚠️ `currentLevel` se serializa en el asset: **si se compra en el Editor, queda comprado**.
 `Scripts/Editor/UpgradeStateResetter.cs` lo limpia solo al salir del Play Mode (ver abajo).
@@ -1489,7 +1513,9 @@ event Action OnCartChanged, OnTabChanged;  event Action<bool,string> OnPurchaseR
 void SetTab(ShopTabType)                                // no-op si ya es el tab actual
 IReadOnlyList<ItemDataSO> GetItemsForCurrentTab() / GetItemsForTab(ShopTabType)
 IReadOnlyList<ToppingSO>  GetToppings()
-bool IsPurchasable(ItemDataSO), IsToppingPurchasable(ToppingSO)
+PurchaseBlock GetPurchaseBlock(ItemDataSO, out int requiredReputation), GetPurchaseBlock(ToppingSO)
+                                                        // None | Reputation | Locked | Maxed | JarFull | Unavailable
+bool IsPurchasable(ItemDataSO), IsToppingPurchasable(ToppingSO)   // == PurchaseBlock.None
 int  GetMaxPurchaseQty(ItemDataSO)                      // UpgradeSO → 1; resto → UnlimitedQty (int.MaxValue)
 int  GetMaxPurchaseQty(ToppingSO)                       // siempre 1: la compra rellena el frasco hasta el tope
 int  GetSuggestedCoalUnits(), GetSuggestedCoalBags()    // max(0, consumoPromedio − stock)
@@ -1500,16 +1526,18 @@ List<MeatCutSO> GetLowStockCuts()
 bool TryConfirmPurchase(out string)                      // carrito completo — solo la capa 2D
 bool TryBuyNow(ItemDataSO, int qty, out string)          // ← compra individual (capa activa)
 bool TryBuyToppingNow(ToppingSO, int qty, out string)    // ← compra individual (capa activa)
+VenueBlock GetNextVenueBlock()                           // None | AllOwned | Reputation | Money | Minimums | NotConfigured
+bool TryBuyNextVenue(out string)                         // ← cartel "local mejor" (ver Reputación)
 ```
 
 **Fuentes de items por tab** (`GetItemsForTab`):
 
-| Tab | Origen | Filtro `IsPurchasable` |
+| Tab | Origen | Filtro `IsPurchasable` (bloqueo de `GetPurchaseBlock`) |
 |---|---|---|
 | `Coal` | `ShopConfigSO.coal` (un solo item) | siempre `true` |
-| `Meat` | `FoodCatalogSO.GetAllCuts()` | `cut.isUnlocked` |
-| `Upgrades` | `FoodCatalogSO.GetAllUpgrades()` | `up.isUnlocked && !up.IsMaxed` |
-| `Toppings` | `GetToppings()` → `catalog.GetAvailableToppings()` (devuelve `ToppingSO`, **no** `ItemDataSO`) | `IsToppingPurchasable`: hay `ToppingStock` y el frasco **no** está lleno |
+| `Meat` | `FoodCatalogSO.GetAllCuts()` | `cut.isUnlocked` (si no, `Locked`) |
+| `Upgrades` | `FoodCatalogSO.GetAllUpgrades()` | no al máximo (`Maxed`), `up.isUnlocked` (`Locked`) y `ReputationSystem.Level >= up.RequiredReputationForNextLevel` (`Reputation`) |
+| `Toppings` | `GetToppings()` → `catalog.GetAvailableToppings()` (devuelve `ToppingSO`, **no** `ItemDataSO`) | `IsToppingPurchasable`: hay `ToppingStock` y el frasco **no** está lleno (`JarFull`) |
 
 > El tab `Toppings` es el único que **no** pasa por `GetItemsForTab`: la UI llama a `GetToppings()` y bindea `ToppingSO`. Por eso `ShopGridUI` y `ShopItemCellUI` tienen una rama y un `Bind` por cada tipo.
 
@@ -1542,12 +1570,18 @@ se oculta solo (`EnforceRunMinimums == false`) y `TutorialManager.canvasParent` 
 Layout (referencia 1920×1080, fondo `PauseMenubg` con la puerta a la derecha):
 
 ```
-[ NamePlate "PARRILLA 40" | "Hoy vinieron N clientes"            MoneyPlate "$1.000" ]  ← caja de la persiana (Header)
+[ NamePlate "PARRILLA 40" | "Hoy vinieron N clientes"   VenuePlate "LOCAL MEJOR"   MoneyPlate "$1.000" ]  ← Header
             [ 1. CARBÓN ][ 2. CARNES ][ 3. MEJORAS ][ 4. TOPPINGS ]                     ← Tabs
             [ línea de ayuda de la tab (Nunito) ]                                        ← SubHeader
             [ tarjeta ][ tarjeta ][ tarjeta ][ tarjeta ]   (4 columnas, scroll vertical)  ← GridArea
-[ Requirements: PARA ARRANCAR MAÑANA ... ]                      [ SIGUIENTE: CARNES ]  ← abajo
+[ Requirements: PARA ARRANCAR MAÑANA ... ] [ Reputation: NV 3 ] [ SIGUIENTE: CARNES ]  ← abajo
 ```
+
+- **Reputación** (`ShopContent/Reputation`, 300×150 en `x = 846`, misma chapa que los requisitos): a 16:9 queda a
+  ~26 px de los requisitos y del "Siguiente". En pantallas más angostas que 16:9 el "Siguiente" (anclado en `0.84`) se le
+  viene encima: mismo límite que ya tenían los requisitos.
+- **Cartel del local mejor** (`Header/VenuePlate`, 360×80, a la izquierda de la plata): con la reputación corta el
+  `Comprar` queda apagado con el candado encima y la leyenda dice el nivel que pide.
 
 - Tabs, ayuda y grilla están anclados en `x = 833/1920` (centro de la persiana, sin la puerta) y el botón
   "Siguiente" en `x = 1610/1920`: siguen al fondo estirado en pantallas que no son 16:9.
@@ -1575,9 +1609,11 @@ el flag `started` evita refrescar antes del primer `Start`.
 | `ShopTabButtonUI` | `[RequireComponent(Button)]`. Expone `ShopTabType Tab` y `Action<ShopTabType> OnTabClicked`. `SetActiveState(bool)` cambia el `label` de color y la chapa de `background`: si tiene `activeSprite`/`inactiveSprite` cambia de sprite (chapa dorada/oscura), si no, tiñe con los colores de fondo |
 | `ShopHeaderUI` | Header: nombre de la tienda (`shopName`), plata (`$N0`) y clientes de la jornada (`shop.header.customers`, `"Hoy vinieron {0} clientes"`, desde `DayStats`). `totalCoalText` quedó **sin asignar** en el rediseño (el carbón ya se ve en requisitos y en la tarjeta), pero el campo sigue vivo. Se suscribe a `Wallet.OnMoneyChanged` **y** `Cooler.OnInventoryChanged` |
 | `ShopGridUI` | Reconstruye la grilla al cambiar de tab. `AdjustCellCount` instancia/destruye celdas (`ShopItemCell 1.prefab`) bajo el `Content` del ScrollView y las bindea. Ante cambios de stock/plata solo llama `RefreshVisuals()` de cada celda (no reconstruye) |
-| `ShopItemCellUI` | Celda: icono, nombre, descripción, precio, **stock actual** (`stockText`, hijo `ItemStock` bajo el precio: `"TENÉS: N"` desde `Cooler.GetCount` / `ToppingStock.GetCount`, `"TENÉS: N U."` en carbón, `"NIVEL X/Y"` en mejoras), `pendingQty`, subtotal. El carbón agrega el tamaño de bolsa al nombre (`"Carbón x10"` / `"Charcoal x10"`) y a la descripción (`"Bolsa de 10 unidades"`) cuando `unitsPerBag > 1`. La descripción (`ItemDesc`) va en **Nunito** con auto-size 11–16, en una caja de 224×50 sin márgenes (no se sale de la tarjeta ni pisa el precio): antes era Bungee Hairline 12 y sus trazos, más finos que un píxel a ese tamaño, se dibujaban cortados. Los textos salen de las claves `shop.cell.*`; el nombre de cada item es `DisplayName` (y `DisplayDescription` en mejoras). Sin `stockText`, el nivel de la mejora vuelve a la descripción. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. **Oculta el −/+ (`stepperRoot`) si el item se compra de a uno** (mejoras) y muestra el total (`shop.cell.subtotal`, `"Total: $N"`) **solo con cantidad > 1**. `lockedOverlay` es un velo oscuro sobre toda la tarjeta (`LockedOverlay`, sin `raycastTarget`) + icono atenuado para lo no comprable (bloqueado o mejora al máximo). Si el item no tiene sprite, el icono se apaga (un `Image` sin sprite dibuja un cuadrado blanco). Tarjeta de 280×480 |
+| `ShopItemCellUI` | Celda: icono, nombre, descripción, precio, **stock actual** (`stockText`, hijo `ItemStock` bajo el precio: `"TENÉS: N"` desde `Cooler.GetCount` / `ToppingStock.GetCount`, `"TENÉS: N U."` en carbón, `"NIVEL X/Y"` en mejoras), `pendingQty`, subtotal. El carbón agrega el tamaño de bolsa al nombre (`"Carbón x10"` / `"Charcoal x10"`) y a la descripción (`"Bolsa de 10 unidades"`) cuando `unitsPerBag > 1`. La descripción (`ItemDesc`) va en **Nunito** con auto-size 11–16, en una caja de 224×50 sin márgenes (no se sale de la tarjeta ni pisa el precio): antes era Bungee Hairline 12 y sus trazos, más finos que un píxel a ese tamaño, se dibujaban cortados. Los textos salen de las claves `shop.cell.*`; el nombre de cada item es `DisplayName` (y `DisplayDescription` en mejoras). Sin `stockText`, el nivel de la mejora vuelve a la descripción. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. **Oculta el −/+ (`stepperRoot`) si el item se compra de a uno** (mejoras) y muestra el total (`shop.cell.subtotal`, `"Total: $N"`) **solo con cantidad > 1**. `lockedOverlay` es un velo oscuro sobre toda la tarjeta (`LockedOverlay`, sin `raycastTarget`) + icono atenuado para lo no comprable (bloqueado o mejora al máximo). **Lo no comprable explica por qué** (`ShopSystem.GetPurchaseBlock`): `LockReason` (Bungee, en el lugar del −/+, que se oculta) dice `"NECESITÁS REPUTACIÓN NV N"`, `"BLOQUEADO"`, `"NIVEL MÁXIMO"` o `"FRASCO LLENO"` (`shop.cell.lock.*`), y lo bloqueado de verdad (reputación, corte trabado) suma el candado `LockIcon` (`Sprites/candado.png`) sobre el icono. Los dos van **después** del velo para dibujarse encima. La falta de plata y los mínimos no llevan leyenda: el `Comprar` apagado ya lo dice. Si el item no tiene sprite, el icono se apaga (un `Image` sin sprite dibuja un cuadrado blanco). Tarjeta de 280×480 |
 | `ShopSubtitleUI` | Una línea de ayuda por tab (`detailText`, Nunito). `titleText` es **opcional** y en el prefab está sin asignar: la tab activa ya dice en qué sección estás. En `Coal` el detalle es dinámico: `shop.help.coal` (`"Venís usando {0} unidades de carbón por jornada."`) o `shop.help.coal.first_night` si `DaysPlayed == 0` |
 | `ShopNextButtonUI` | Avanza `Coal → Meat → Upgrades → Toppings` cambiando el label (`"Siguiente: Carnes"`…`"Arrancar el día"`); en `Toppings` el botón carga `GameScene` |
+| `ShopReputationUI` | Panel de reputación: `"REPUTACIÓN"`, `"NV 3"`, barra hacia el próximo nivel con `"120/400"` (en el tope, llena y `"TOPE DEL LOCAL"`), `"HOY +85"` (balance de la jornada que terminó, verde/rojo) y lo que da hoy la reputación (`"CLIENTES +15%   PLATA +12%"`). No necesita `shop`: lee `ReputationSystem` y escucha su `OnChanged` |
+| `ShopVenueSignUI` | Cartel del local mejor: `"LOCAL MEJOR  $3.000"` + una leyenda según `shop.GetNextVenueBlock()` (`"NECESITÁS REPUTACIÓN NV 4"` con candado sobre el botón, `"TE FALTA PLATA"`, `"PRIMERO LO MÍNIMO DE MAÑANA"` o `"SUBE EL TOPE DE REPUTACIÓN"`). `Comprar` → `shop.TryBuyNextVenue` + punch del cartel. Con todos los locales comprados: `"MEJOR LOCAL / YA ES TUYO"` y sin botón. Escucha plata, stock y `ReputationSystem.OnChanged`. Cada escena pisa su `shop` |
 
 Lecturas para los carteles del tutorial (no cambian nada de la tienda): `ShopItemCellUI.CanBuy` y `BlockedByMinimums`
 (separan el Comprar apagado por plata del apagado por los mínimos) y `BuyButton`; `ShopGridUI.Cells` y `Viewport`;
@@ -1682,6 +1718,82 @@ Como el mínimo es `10 + (N-1)`, en el **día 31** el requisito llega a 40 y des
 ⚠️ **Varios cortes tienen `basePrice = 0`** (`Paty`, `Chinchulín`, `Costillita de cerdo`, `Pechuga de pollo`,
 `Matambre`). Como el costo de la carne faltante usa el corte comprable más barato, hoy completar el mínimo de
 carne sale **$0** y la derrota económica depende solo del carbón. Es un tema de datos, no de código.
+
+---
+
+#### Reputación — `Reputation/` · `Resources/ReputationConfig.asset`
+
+Progresión de la run por **niveles de reputación (0 a 10)**. Entregar bien la sube; entregar mal, que un cliente se vaya
+enojado o cortar la jornada a mano la bajan. La reputación mueve tres cosas: **cuántos clientes vienen** (la curva de
+afluencia del día siguiente), **cuánta plata deja cada corte** y **qué mejoras se pueden comprar**. Además los **locales**
+(escenarios) le ponen un tope: al llegar al nivel 4 la reputación no crece hasta comprar el segundo local, y al 8 hasta
+comprar el tercero. Los escenarios todavía no existen: comprar un local solo levanta el tope, **sin cambio visual**.
+
+```csharp
+// ReputationSystem — estática, de la run (como la racha de StrikeSystem). Lee su config de Resources.
+int   TotalXp, OwnedVenues (arranca en 1), XpToday;
+int   Level, MaxLevel, XpIntoLevel, XpForNextLevel;  float LevelProgress01, Value;   // Value = nivel + avance
+int   LevelCap;  bool IsMaxLevel, IsBlockedByVenue, IsCapped;                       // tope de los locales
+float CustomersMultiplier, MoneyMultiplier;                                          // 1 + bonus × Value
+ReputationConfigSO.Venue NextVenue;  bool IsNextVenueUnlocked;
+static event Action<ReputationChange> OnChanged;   // reason, requested, applied, levelBefore/After
+int   AddXp(int amount, ReputationReason);          // aplica topes, avisa, devuelve lo que entró
+void  RegisterVenuePurchased(), BeginDay(), ResetRun();
+string FormatSigned(int), FormatProgress();         // "+20" · "120/400" | "TOPE DEL LOCAL" | "NIVEL MÁXIMO"
+```
+
+**Niveles.** `ReputationConfigSO.xpPerLevel` es la experiencia que pide **cada** nivel contada desde el anterior:
+`100, 250, 400, 500, 750, 900, 1000, 1200, 1350, 1500` (llegar al 10 = 7950 en total). Se arranca en el nivel 0. El nivel
+**sale de la experiencia total**, así que perder experiencia puede bajar de nivel; lo ya comprado en la tienda no se pierde.
+
+**Qué suma y qué resta** (valores del asset, todos editables):
+
+| Evento | Experiencia | Dónde |
+|---|---|---|
+| Entrega en el punto exacto | `+15` | `GameManager.EvaluateDelivery` → `reputationXp`; lo aplica `TryDeliverToCustomer` |
+| … y el cliente se fue contento (`EntregaExcelente` / `TuristaFeliz`) | `+5` extra | idem |
+| Entrega a un punto del pedido | `+5` | idem |
+| Entrega a dos puntos o más (se cobra la mitad) | `−5` | idem |
+| Cada topping que falta o sobra, y el pan de más | `−5` c/u | idem (`extras.offset`) |
+| Entrega cruda o quemada (el cliente se va, +1 strike) | `−20` | `CustomerSystem.TriggerLeaveWithStrike` |
+| Cliente que se queda sin paciencia | `−15` | `CustomerSystem.TriggerLeaveWithStrike` (aunque los strikes ya estén llenos) |
+| Terminar la jornada a mano desde la pausa | `−20` a `−80` según lo que faltaba de jornada | `GameManager.EndNight(true)` |
+
+Una entrega perfecta y rápida da `+20`; con un topping mal, `+10`. El cierre por 3 strikes **no** cobra el castigo de
+terminar antes: esos clientes ya restaron de a uno. El castigo de terminar a mano se cobra siempre (mínimo `−20`), incluso
+con el local ya cerrado: los que esperaban se quedan sin comer.
+
+**Topes.** Lo que se gana no pasa de la experiencia del nivel `LevelCap` (el nivel del próximo local sin comprar, o el
+máximo); lo que se pierde no baja de 0. En el tope (`IsBlockedByVenue`) lo ganado se descarta —el HUD dice `TOPE DEL
+LOCAL`— pero lo perdido sí entra: un cliente enojado en el nivel 4 bloqueado baja al 3 con 485/500, y la próxima buena
+entrega lo vuelve a dejar en el tope.
+
+**Efectos** (`Value` = nivel + avance dentro del nivel, así cualquier cambio cuenta):
+
+| Efecto | Fórmula | Dónde se aplica |
+|---|---|---|
+| Clientes esperados | `× (1 + 0.05 × Value)` → `+50%` en el 10 | `CustomerSystem.CalculateCustomersForNight`, en `Start` y solo con `DayClock`: lo que pasa hoy cambia la curva de mañana. El cap `maximumCustomersPerNight` sigue mandando |
+| Plata por corte | `× (1 + 0.04 × Value)` → `+40%` en el 10, redondeado | `GameManager.EvaluateDelivery`, después de los recortes de cocción y extras. **La propina no** (la mejora de propina es aparte) |
+| Mejoras | `UpgradeSO.requiredReputationPerLevel` (tabla en `UpgradeSO`) | `ShopSystem.GetPurchaseBlock` |
+
+**Locales** (`ReputationConfigSO.venues`): `Parrilla 40` (el inicial), segundo local (nivel 4, `$3.000`) y tercero (nivel 8,
+`$4.000`). El próximo local se compra en el cartel del header de la tienda (`ShopVenueSignUI` → `ShopSystem.TryBuyNextVenue`):
+pide el nivel, la plata y **respeta los mínimos del próximo día** (mismo guard que las mejoras). La compra llama
+`RegisterVenuePurchased` (sube `OwnedVenues` y el tope) y dispara `TutorialSignal.ShopPurchased`. El día que haya escenarios,
+el lugar para engancharlos es ese.
+
+| Pieza | Dónde vive |
+|---|---|
+| Estado de la run | `ReputationSystem` (estática). `ResetRun()` desde `SceneManagementUtils.RestartRun` **y** `ReturnToMainMenu`, igual que la racha de strikes. `SubsystemRegistration` lo limpia al entrar a Play sin domain reload |
+| Balance | `Resources/ReputationConfig.asset` (`ReputationConfigSO`). Sin el asset avisa y usa los valores por defecto del script |
+| Balance del día (`XpToday`) | `BeginDay()` en `CustomerSystem.StartNight`; la tienda lo muestra como `HOY +N` |
+| HUD de la partida | `HudCanvas/MainPanel/HudContainer (Reputation)` + `ReputationHudView`: `NV 3`, barra y `120/400`. Cada cambio anima la barra y muestra `+20` / `-15` debajo; al subir de nivel punch dorado y `¡NIVEL 4!`, al bajar rojo y `BAJASTE A NIVEL 3`. En el tope, barra llena apagada + candado. Para que entre el contenedor, `HudCanvas` pasó de 15.2 a 18.9 de ancho con el borde izquierdo en el mismo lugar (termina en `x ≈ 9.15`, adentro del 16:9) |
+| Tienda | `ShopReputationUI` (panel de abajo), `ShopVenueSignUI` (cartel del header) y el candado + leyenda de `ShopItemCellUI` (ver *UI de tienda*) |
+| Textos | `reputation.*` en `Gameplay.csv` (los comparten HUD y tienda), `shop.reputation.*`, `shop.venue.*` y `shop.cell.lock.*` en `Shop.csv` |
+| QA | `ReputationHudView` → menú contextual en Play: *QA/Sumar 50 de reputación*, *QA/Restar 30 de reputación* |
+
+⚠️ `TutorialScene` (clon de `GameScene`, nota 17) **no** tiene el HUD de reputación: el tutorial no es parte de la run y
+se borra en la fase 7. Si se lo vuelve a usar, sus entregas igual mueven la reputación estática.
 
 ---
 
@@ -2315,8 +2427,10 @@ Ya **no existen**: `W`/`E`, `←`/`→` (cambio de vista), `A`/`D` (selección d
 
 ```
 GameScene
+   Start: esperados = base de la noche × ReputationSystem.CustomersMultiplier · StartNight → ReputationSystem.BeginDay()
    06:30 ──────────────── DayClock corre 14,5 h en 300 s reales ──────────────── 21:00
      │  CustomerSystem.SpawnLoop: un cliente cada (300/esperados) ÷ curva de afluencia
+     │  Cada entrega / cliente enojado → ReputationSystem.AddXp → HUD de reputación
      │                                                                            │
      │  [3er strike] StrikeSystem.OnLimitReached ──► DayClock.CloseEarly ──►  DayClock.OnClosingTime
      │                                                   HUD: "21:00" → "CERRADO"
@@ -2332,7 +2446,8 @@ GameScene
          ├─ CoalConsumptionTracker.RegisterDayCompleted()   // DaysPlayed++, aplica desbloqueos
          └─ LoadSceneByName("EndScene")
 
-   El botón "terminar el día" del menú de pausa llama al mismo GameManager.EndNight().
+   El botón "terminar el día" del menú de pausa llama a GameManager.EndNightEarly(): mismo camino, más la racha de
+   strikes y el castigo de reputación por cortar la jornada (antes de StopDay, con lo que faltaba de jornada).
 
 EndScene
    ├─ RunDefeatScreen  Awake: si la run está perdida (recursos o 3 noches seguidas con el cartel)
@@ -2340,7 +2455,8 @@ EndScene
    ├─ StrikeEndPopup   si la noche cerró por strikes: popup modal sobre la tienda, “Ir a la tienda” lo cierra
    ├─ EndScreen        muestra el dinero · botones: MainMenu / Retry / GoShopping (su Canvas está desactivado: se entra directo a la tienda)
    ├─ ShopSystem       tabs Coal → Meat → Upgrades → Toppings  (arranca en Coal)
-   │     Header:     nombre de tienda · plata · total de carbón en el cooler
+   │     Header:     nombre de tienda · clientes del día · cartel del local mejor (TryBuyNextVenue) · plata
+   │     Abajo:      requisitos de mañana · reputación (nivel, barra, HOY ±N, bonus) · Siguiente
    │     Breadcrumb: 4 ShopTabButtonUI → SetTab (salto directo a cualquier tab)
    │     Grid:       celdas con −/+ y botón Comprar → TryBuyNow / TryBuyToppingNow (pago inmediato)
    │     Next:       avance secuencial de tab; en Toppings → SceneManager.LoadScene("GameScene")
@@ -2350,6 +2466,7 @@ EndScene
 SceneManagementUtils.ReturnToMainMenu()   ← reset total
    destruye PlayerWallet, CoalConsumptionTracker, CoolerSystem, ToppingStock (los 4 DDOL)
    + CoolerSystem.PrepareForNewGame()  (invalida el backup estático de stock)
+   + StrikeSystem.ResetStreak() · DayStats.ResetDay() · ReputationSystem.ResetRun()  (estáticos de la run)
 ```
 
 ---
@@ -2400,3 +2517,4 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 37 | **Localización: ningún texto visible en literales** (3.11). En código, `Loc.Get("clave")` / `Loc.Format("clave", args)`; en un texto fijo de escena o prefab, el componente `LocalizedText`. La clave nueva va en la tabla que corresponda de `Resources/Localization/` **con todas las columnas llenas**, y después *Tools/Localización/Validar tablas*. Un texto que puede quedar en pantalla mientras cambia el idioma (la pausa tiene Opciones) o el control escucha `Loc.OnTextsChanged`. Para mostrar un ítem: `DisplayName` / `DisplayDescription` del SO, **nunca** `itemName` / `breadName` / `sideName` / `description`. **Cortes y toppings no se traducen**: no llevan `nameKey`. Para nombrar una tecla o botón: token `[[GameAction]]`, nunca la letra escrita. Cambiar un binding en `GameControls.inputactions` actualiza los textos solo; un control físico nuevo necesita su fila `input.*`. `ShopRoot` (tienda 2D deshabilitada, nota 8) y los 6 paneles de tutorial sin uso (`CanvaPanelCoolerInfo`, `DragCarbon`, `DragCarne`, `Panel`, `Pasar a Cooler`, `Volver al Grill`) **no** están traducidos |
 | 38 | **La radio es una emisora que no se corta** (3.8 → *Radio*). La música vive en `RadioStation` (DDOL), no en la `Radio` de la escena: no le pongas un `AudioSource` a la radio ni la pares al apagarla, porque al prenderla tiene que seguir por donde iba. Para cambiar las canciones, el array `songs` del componente `Radio` en `GameScene` (cualquier cantidad, incluso ninguna); temas largos con *Load Type = Streaming*. Una mejora o cartel que necesite saber si suena: `RadioStation.IsOn` |
 | 39 | **Un topping se compra para rellenar el frasco, no se acumula.** `ToppingStock` (DDOL) guarda la salsa que queda en cada frasco (`GetSauceAmount` / `GetFillRatio` / `IsFull` / `SetSauceAmount` / `Refill`). Un topping que todavía no tiene entrada cuenta como **lleno**: es el frasco con el que arranca la run, así que no hace falta stock inicial en escena. Lo que sobra en el frasco **pasa al día siguiente**. `ToppingDraggable` lee el valor en **`Start`** (no en `Awake`: en la primera escena el `Awake` del `ToppingStock` puede correr después) y lo guarda **una vez por vertida**, en `StopPouring` (soltar, cancelar o frasco vacío) y en `SetSauceAmount` (undo). Nunca por frame. `RefillSauce()` sigue sin llamadores. **El tutorial no gasta salsa**: sus frascos llevan `ignoreStock` (tabla de 3.7). Un frasco nuevo en `GameScene` no necesita nada; en `TutorialScene` hay que marcarle `ignoreStock`. Los clientes **siguen pidiendo salsas aunque el frasco esté vacío**: es una decisión de diseño, no un olvido |
+| 40 | **La reputación es estática y de la run** (`ReputationSystem`, 3.6 → *Reputación*): no hay nada en escena que la lleve, así que anda igual en `GameScene`, la tienda y abriendo `EndScene` suelto en el Editor (ahí arranca en 0). Cualquier camino nuevo que empiece una run tiene que llamar `ReputationSystem.ResetRun()` como `RestartRun` y `ReturnToMainMenu`, o la run hereda la reputación (y los locales comprados) de la anterior. Una regla nueva de experiencia va en `ReputationConfigSO` (el número) y en el lugar donde pasa el evento (el `AddXp`): si es de la entrega, en `EvaluateDelivery` (`reputationXp`), así el preview y la entrega no se separan. Un cambio de experiencia **siempre** dispara `OnChanged`, aunque el tope no deje entrar nada (`applied = 0`): el HUD lo usa para decir `TOPE DEL LOCAL`. Para el día que existan los escenarios, el gancho es `ShopSystem.TryBuyNextVenue` / `ReputationSystem.RegisterVenuePurchased` (hoy solo suben el tope) y `ReputationConfigSO.Venue` es donde va lo que identifique a cada uno |

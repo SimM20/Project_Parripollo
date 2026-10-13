@@ -240,11 +240,21 @@ public class GameManager : MonoBehaviour
         public string strikeShort;
         public CookingDeliveryEvaluator.DeliveryValidation validation;
 
+        /// <summary>Precio de los cortes, ya con el bonus de reputación (<see cref="ReputationSystem.MoneyMultiplier"/>).</summary>
         public float payment;
         public float tip;
         /// <summary>Peor desfase de toda la entrega: cocción de cada corte y extras (toppings/pan).</summary>
         public int worstOffset;
+        /// <summary>Peor desfase de cocción solo (sin toppings ni pan). Lo usa la reputación.</summary>
+        public int cookingOffset;
         public CustomerFeedbackState feedbackState;
+
+        /// <summary>
+        /// Lo que la entrega le suma (o resta) a la reputación. En una entrega cobrada lo aplica
+        /// <see cref="TryDeliverToCustomer"/>; con crudo/quemado lo aplica CustomerSystem junto con el
+        /// strike, como a cualquier cliente que se va enojado.
+        /// </summary>
+        public int reputationXp;
 
         /// <summary>
         /// Toppings faltantes/sobrantes y pan de más, medidos en la misma escala de desfase
@@ -360,6 +370,8 @@ public class GameManager : MonoBehaviour
                 result.worstOffset = cutResult.worstOffset;
         }
 
+        result.cookingOffset = result.worstOffset;
+
         // ── Extras: toppings faltantes/sobrantes y pan de más, misma escala que la cocción ──
         // Cada error suma 1 de desfase: uno solo cuesta la propina, dos o más parten el precio.
         result.extras = CookingDeliveryEvaluator.EvaluateExtras(
@@ -376,6 +388,9 @@ public class GameManager : MonoBehaviour
             result.payment = (result.payment - unreducedPayment)
                            + CookingDeliveryEvaluator.ApplyReducedPrice(unreducedPayment);
 
+        // ── Reputación: un local con más fama cobra más cada corte. La propina va aparte ──
+        result.payment = Mathf.Round(result.payment * ReputationSystem.MoneyMultiplier);
+
         // ── Crudo/Quemado: la entrega se concreta, pero no paga y cuesta un strike ──
         // El plato se consume igual y el cliente se retira enojado, como el que no fue atendido.
         if (result.validation.CausesStrike)
@@ -390,6 +405,7 @@ public class GameManager : MonoBehaviour
             result.worstOffset = 0;
             result.extrasNote = null;
             result.feedbackState = CustomerFeedbackState.EntregaCrudaOQuemada;
+            result.reputationXp = ReputationSystem.Config.GetAngryLeaveXp(result.feedbackState);
             result.accepted = true;
             return result;
         }
@@ -406,6 +422,8 @@ public class GameManager : MonoBehaviour
 
         result.tip = feedbackEval.tipAmount;
         result.feedbackState = feedbackEval.state;
+        result.reputationXp = ReputationSystem.Config.GetDeliveryXp(
+            result.cookingOffset, result.extras.offset, result.feedbackState);
         result.accepted = true;
         return result;
     }
@@ -536,6 +554,10 @@ public class GameManager : MonoBehaviour
 
         PlayerWallet.Instance?.Add(eval.payment + eval.tip);
 
+        // Cómo salió el plato mueve la reputación: el punto exacto y un cliente contento suman,
+        // lo pasado y los toppings mal puestos restan.
+        ReputationSystem.AddXp(eval.reputationXp, ReputationReason.Delivery);
+
         // Un toque al entregar; la vibración fuerte llega con la plata al contador (HudManager).
         GamepadHaptics.Play(HapticEvent.DeliveryAccepted);
 
@@ -544,6 +566,7 @@ public class GameManager : MonoBehaviour
 
         Debug.Log("✔ Pedido entregado. Pago: " + eval.payment + " | Propinas: " + eval.tip
                   + " | Desfase: " + eval.worstOffset + " | Estado: " + eval.feedbackState
+                  + " | Reputación: " + ReputationSystem.FormatSigned(eval.reputationXp)
                   + (eval.extrasNote != null ? " | Extras: " + eval.extrasNote : ""));
         TutorialSignals.Raise(TutorialSignal.ProductDelivered);
         return true;
@@ -569,6 +592,18 @@ public class GameManager : MonoBehaviour
             return;
 
         customerSystem.OnNightEnded -= EndNight;
+
+        // Cortar la jornada a mano cuesta reputación: más cuanto más temprano se la corta, y un
+        // mínimo aunque el local ya haya cerrado (los que esperaban se quedan sin comer).
+        if (endedEarlyByPlayer)
+        {
+            DayClock clock = DayClock.Instance;
+            float remainingDay = clock != null && !clock.HasClosed ? 1f - clock.Normalized01 : 0f;
+
+            ReputationSystem.AddXp(
+                ReputationSystem.Config.GetEarlyEndXp(remainingDay),
+                ReputationReason.EarlyDayEnd);
+        }
 
         DayClock.Instance?.StopDay();
 

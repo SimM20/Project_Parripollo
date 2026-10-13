@@ -69,6 +69,7 @@ public static class SceneManagementUtils
 
         StrikeSystem.ResetStreak();
         DayStats.ResetDay();
+        ReputationSystem.ResetRun();
         RunStateReset.ResetRunState(catalog);
         RadioStation.Shutdown();
 
@@ -88,6 +89,7 @@ public static class SceneManagementUtils
         // (y si venia en el tope, pierde en su primer EndScene).
         StrikeSystem.ResetStreak();
         DayStats.ResetDay();
+        ReputationSystem.ResetRun(); // estática, como la racha: la run siguiente arranca en reputación 0
         RadioStation.Shutdown(); // DDOL: sin esto la canción seguiría (muda) en la run siguiente
 
         LoadSceneByName("MainMenuScene");

@@ -28,9 +28,22 @@ public class ShopItemCellUI : MonoBehaviour
     [SerializeField] private Button plusButton;
     [SerializeField] private Button buyButton;
 
+    [Header("Bloqueo")]
+    [Tooltip("Candado sobre el ícono. Aparece si el item está bloqueado: le falta reputación o todavía no se desbloqueó.")]
+    [SerializeField] private Image lockIcon;
+
+    [Tooltip("Por qué no se puede comprar (reputación que falta, nivel máximo, frasco lleno). Va en el lugar del −/+, por encima del velo.")]
+    [SerializeField] private TextMeshProUGUI lockReasonText;
+
     [Header("Colors")]
     [SerializeField] private Color normalIconColor = Color.white;
     [SerializeField] private Color lockedIconColor = new Color(1f, 1f, 1f, 0.35f);
+
+    [Tooltip("Leyenda de algo bloqueado (falta reputación).")]
+    [SerializeField] private Color lockReasonColor = new Color(0.98f, 0.76f, 0.3f);
+
+    [Tooltip("Leyenda de algo que ya se completó (mejora al máximo, frasco lleno).")]
+    [SerializeField] private Color completeReasonColor = new Color(0.45f, 0.85f, 0.4f);
 
     private ItemDataSO item;
     private ToppingSO toppingItem;
@@ -93,7 +106,8 @@ public class ShopItemCellUI : MonoBehaviour
 
         pendingQty = Mathf.Clamp(pendingQty, 1, MaxQty);
 
-        bool purchasable;
+        ShopSystem.PurchaseBlock block;
+        int requiredReputation = 0;
         Sprite icon;
         string name;
         string description = "";
@@ -102,7 +116,7 @@ public class ShopItemCellUI : MonoBehaviour
 
         if (toppingItem != null)
         {
-            purchasable = shop.IsToppingPurchasable(toppingItem);
+            block = shop.GetPurchaseBlock(toppingItem);
             icon = toppingItem.toppingSprite;
             name = toppingItem.toppingName;
             price = toppingItem.purchasePrice;
@@ -112,7 +126,7 @@ public class ShopItemCellUI : MonoBehaviour
         }
         else if (item != null)
         {
-            purchasable = shop.IsPurchasable(item);
+            block = shop.GetPurchaseBlock(item, out requiredReputation);
             icon = ResolveIcon(item);
             name = ResolveName(item);
             description = ResolveDescription(item);
@@ -120,6 +134,21 @@ public class ShopItemCellUI : MonoBehaviour
             stock = ResolveStock(item);
         }
         else return;
+
+        bool purchasable = block == ShopSystem.PurchaseBlock.None;
+
+        // Lo bloqueado lleva candado y leyenda; lo completo (al máximo, frasco lleno) solo la leyenda.
+        // La leyenda ocupa el lugar del −/+, que en un item que no se puede comprar no sirve.
+        bool locked = block == ShopSystem.PurchaseBlock.Reputation || block == ShopSystem.PurchaseBlock.Locked;
+        string reason = ResolveBlockReason(block, requiredReputation);
+
+        if (lockIcon != null) lockIcon.enabled = locked;
+        if (lockReasonText != null)
+        {
+            lockReasonText.gameObject.SetActive(!string.IsNullOrEmpty(reason));
+            lockReasonText.text = reason ?? "";
+            lockReasonText.color = locked ? lockReasonColor : completeReasonColor;
+        }
 
         if (iconImage != null)
         {
@@ -135,7 +164,7 @@ public class ShopItemCellUI : MonoBehaviour
         if (priceText != null) priceText.text = $"${price:N0}";
         if (qtyText != null) qtyText.text = pendingQty.ToString();
         if (subtotalText != null) subtotalText.text = pendingQty > 1 ? Loc.Format("shop.cell.subtotal", price * pendingQty) : "";
-        if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1);
+        if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1 && purchasable);
 
         bool canAfford = shop.Wallet != null && shop.Wallet.CanAfford(price * pendingQty);
 
@@ -240,4 +269,16 @@ public class ShopItemCellUI : MonoBehaviour
 
     private string FormatUpgradeLevel(UpgradeSO up)
         => Loc.Format("shop.cell.level", up.CurrentLevel, up.MaxLevel);
+
+    private static string ResolveBlockReason(ShopSystem.PurchaseBlock block, int requiredReputation)
+    {
+        switch (block)
+        {
+            case ShopSystem.PurchaseBlock.Reputation: return Loc.Format("shop.cell.lock.reputation", requiredReputation);
+            case ShopSystem.PurchaseBlock.Locked: return Loc.Get("shop.cell.lock.locked");
+            case ShopSystem.PurchaseBlock.Maxed: return Loc.Get("shop.cell.lock.maxed");
+            case ShopSystem.PurchaseBlock.JarFull: return Loc.Get("shop.cell.lock.jar_full");
+            default: return null;
+        }
+    }
 }

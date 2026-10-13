@@ -32,6 +32,11 @@ public class UpgradeSO : ItemDataSO
     [Tooltip("Niveles ya comprados. Muta en runtime y persiste entre sesiones de Editor.")]
     [Min(0)] public int currentLevel = 0;
 
+    [Header("Reputación")]
+    [Tooltip("Nivel de reputación que pide cada nivel de la mejora para poder comprarse: el elemento 0 es " +
+             "el primer nivel. Si faltan elementos se repite el último; vacío = sin requisito.")]
+    public int[] requiredReputationPerLevel = new int[0];
+
     [Header("Efecto")]
     [Tooltip("Que variable modifica la mejora.")]
     public UpgradeEffectType effectType = UpgradeEffectType.CoalBurnTime;
@@ -63,6 +68,19 @@ public class UpgradeSO : ItemDataSO
 
     /// <summary>True cuando ya no quedan niveles por comprar.</summary>
     public bool IsMaxed => CurrentLevel >= MaxLevel;
+
+    /// <summary>Reputación que pide el próximo nivel de la mejora. 0 si no pide nada o ya está al máximo.</summary>
+    public int RequiredReputationForNextLevel
+    {
+        get
+        {
+            if (IsMaxed || requiredReputationPerLevel == null || requiredReputationPerLevel.Length == 0)
+                return 0;
+
+            int index = Mathf.Min(CurrentLevel, requiredReputationPerLevel.Length - 1);
+            return Mathf.Max(0, requiredReputationPerLevel[index]);
+        }
+    }
 
     /// <summary>Clientes simultaneos extra que aporta la mejora en su nivel actual.</summary>
     public int MaxSimultaneousCustomersBonus =>

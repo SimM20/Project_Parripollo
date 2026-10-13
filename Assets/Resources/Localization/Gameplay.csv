@@ -35,6 +35,13 @@ dish.sandwich.wrong_bread,{0} requiere {1} pero se usó {2}.,{0} needs a {1} but
 # HUD de la partida
 hud.day,DÍA {0},DAY {0}
 hud.closed,CERRADO,CLOSED
+# Reputación (ReputationSystem): la comparten el HUD de la partida (ReputationHudView) y la tienda (ShopReputationUI). NV = nivel
+reputation.title,REPUTACIÓN,REPUTATION
+reputation.level,NV {0},LV {0}
+reputation.capped,TOPE DEL LOCAL,VENUE CAP
+reputation.max,NIVEL MÁXIMO,MAX LEVEL
+reputation.level_up,¡NIVEL {0}!,LEVEL {0}!
+reputation.level_down,BAJASTE A NIVEL {0},DOWN TO LEVEL {0}
 # Aviso de strikes en gameplay (StrikeLimitNotice)
 strike.notice.title,¡Te clavaron el cartel!,They left you hanging!
 strike.notice.body,Se te fueron tres clientes con una calentura bárbara y corrieron la voz.\nPor hoy no para nadie más. Cerrá la parrilla y mañana será otro día.,"Three customers stormed off furious and spread the word.\nNobody else is stopping by today. Close up the grill, tomorrow's another day."

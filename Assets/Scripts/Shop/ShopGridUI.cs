@@ -23,6 +23,7 @@ public class ShopGridUI : MonoBehaviour
     void OnEnable()
     {
         Loc.OnTextsChanged += RefreshAllCells;
+        ReputationSystem.OnChanged += OnReputationChanged;   // el nivel destraba (o traba) mejoras
         if (shop != null)
         {
             shop.OnTabChanged += RebuildAll;
@@ -42,6 +43,7 @@ public class ShopGridUI : MonoBehaviour
     void OnDisable()
     {
         Loc.OnTextsChanged -= RefreshAllCells;
+        ReputationSystem.OnChanged -= OnReputationChanged;
         if (shop != null)
         {
             shop.OnTabChanged -= RebuildAll;
@@ -52,6 +54,8 @@ public class ShopGridUI : MonoBehaviour
     }
 
     private void OnMoneyChanged(float _) => RefreshAllCells();
+
+    private void OnReputationChanged(ReputationChange _) => RefreshAllCells();
 
     private void RefreshAllCells()
     {

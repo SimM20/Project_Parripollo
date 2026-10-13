@@ -209,6 +209,9 @@ public class CustomerSystem : MonoBehaviour
         Debug.Log(
             "[CustomerSystem] Iniciando noche " + currentNight +
             " | Clientes de esta noche: " + customersTargetTonight +
+            (DayClock.Instance != null
+                ? " (reputación nivel " + ReputationSystem.Level + ", x" + ReputationSystem.CustomersMultiplier.ToString("0.00") + ")"
+                : "") +
             " | Máximo configurado: " + maximumCustomersPerNight +
             " | Simultáneos: " + resolvedMaxSimultaneousCustomers +
             " (base " + Mathf.Max(1, maxSimultaneousCustomers) + ")" +
@@ -301,7 +304,13 @@ public class CustomerSystem : MonoBehaviour
         int calculated =
             safeBase + ((safeNight - 1) * safeIncrement);
 
-        return Mathf.Min(calculated, safeMaximum);
+        // Con reloj, la reputación levanta (o baja, si se perdió) la curva de afluencia: más
+        // clientes esperados en la misma jornada. Se resuelve al abrir, así que lo que pasa hoy
+        // cambia la curva de mañana. Sin reloj (tutorial) el cupo queda como estaba.
+        if (DayClock.Instance != null)
+            calculated = Mathf.RoundToInt(calculated * ReputationSystem.CustomersMultiplier);
+
+        return Mathf.Clamp(calculated, 1, safeMaximum);
     }
 
     /// <summary>
@@ -385,6 +394,9 @@ public class CustomerSystem : MonoBehaviour
 
         // Los strikes pertenecen sólo a esta noche: contador en 0, spawn habilitado, HUD reiniciado.
         StrikeSystem.Instance?.ResetForNewNight();
+
+        // La reputación sí es de la run; lo que arranca de cero es el balance del día que muestra la tienda.
+        ReputationSystem.BeginDay();
 
         CacheAffluenceAverage();
 
@@ -1056,6 +1068,11 @@ public class CustomerSystem : MonoBehaviour
         {
             AudioManager.Instance?.PlayStrike();
         }
+
+        // Un cliente enojado baja la reputación siempre, aunque el contador de strikes ya esté lleno.
+        ReputationSystem.AddXp(
+            ReputationSystem.Config.GetAngryLeaveXp(state),
+            ReputationReason.AngryCustomer);
 
         if (dragHoverView != null && dragHoverView.Customer == customer)
         {

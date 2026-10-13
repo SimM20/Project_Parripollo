@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ad1a075bc641d14ea4f9a93941060e0, type: 3}
+  m_Name: ReputationConfig
+  m_EditorClassIdentifier: 
+  xpPerLevel: 64000000fa00000090010000f4010000ee02000084030000e8030000b004000046050000dc050000
+  perfectDeliveryXp: 15
+  happyCustomerBonusXp: 5
+  acceptableDeliveryXp: 5
+  poorDeliveryPenalty: 5
+  extrasMistakePenalty: 5
+  badCookingPenalty: 20
+  angryLeavePenalty: 15
+  earlyEndPenaltyMin: 20
+  earlyEndPenaltyMax: 80
+  customersBonusPerLevel: 0.05
+  moneyBonusPerLevel: 0.04
+  venues:
+  - id: Parrilla 40
+    requiredLevel: 0
+    price: 0
+  - id: Segundo local
+    requiredLevel: 4
+    price: 3000
+  - id: Tercer local
+    requiredLevel: 8
+    price: 4000

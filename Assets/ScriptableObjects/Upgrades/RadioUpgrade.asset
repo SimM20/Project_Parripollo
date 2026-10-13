@@ -23,6 +23,7 @@ MonoBehaviour:
   isUnlocked: 1
   maxLevel: 1
   currentLevel: 0
+  requiredReputationPerLevel: 09000000
   effectType: 3
   targetCoal: {fileID: 0}
   upgradedMaxBurnTime: 0

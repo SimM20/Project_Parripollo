@@ -8,10 +8,25 @@ shop.cell.coal_bag,Bolsa de {0} unidades,Bag of {0} units
 shop.cell.level,NIVEL {0}/{1},LEVEL {0}/{1}
 shop.cell.subtotal,Total: ${0:N0},Total: ${0:N0}
 shop.cell.buy,Comprar,Buy
+# Candado y leyenda de la tarjeta (ShopItemCellUI): por qué no se puede comprar
+shop.cell.lock.reputation,NECESITÁS REPUTACIÓN NV {0},NEEDS REPUTATION LV {0}
+shop.cell.lock.locked,BLOQUEADO,LOCKED
+shop.cell.lock.maxed,NIVEL MÁXIMO,MAX LEVEL
+shop.cell.lock.jar_full,FRASCO LLENO,JAR IS FULL
 # Header de la tienda (ShopHeaderUI)
 shop.header.customers,Hoy vinieron {0} clientes,{0} customers came by today
 shop.header.customers.one,Hoy vino {0} cliente,{0} customer came by today
 shop.header.coal,Carbón: {0} u.,Charcoal: {0} u.
+"# Reputación y local mejor en el header (ShopReputationUI / ShopVenueSignUI), en mayúsculas: Bungee"
+shop.reputation.today,HOY {0},TODAY {0}
+shop.reputation.bonus,CLIENTES {0}%   PLATA {1}%,CUSTOMERS {0}%   MONEY {1}%
+shop.venue.title,LOCAL MEJOR,BETTER VENUE
+shop.venue.all_owned.title,MEJOR LOCAL,BEST VENUE
+shop.venue.all_owned,YA ES TUYO,IT'S YOURS
+shop.venue.requires,NECESITÁS REPUTACIÓN NV {0},NEEDS REPUTATION LV {0}
+shop.venue.ready,SUBE EL TOPE DE REPUTACIÓN,RAISES THE REPUTATION CAP
+shop.venue.no_money,TE FALTA PLATA,NOT ENOUGH MONEY
+shop.venue.minimums,PRIMERO LO MÍNIMO DE MAÑANA,TOMORROW'S MINIMUM FIRST
 # Tabs y línea de ayuda por tab (ShopSubtitleUI)
 shop.tab.coal,1. Carbón,1. Charcoal
 shop.tab.meat,2. Carnes,2. Meats
@@ -23,7 +38,7 @@ shop.help.coal.first_night,Primera jornada: todavía no hay datos de consumo.,Fi
 shop.help.meat.title,CORTES DE CARNE,MEAT CUTS
 shop.help.meat,Elegí los cortes para la noche.,Pick the cuts for tonight.
 shop.help.upgrades.title,MEJORAS PARA LA PARRILLA,GRILL UPGRADES
-shop.help.upgrades,Invertí en mejoras permanentes.,Invest in permanent upgrades.
+shop.help.upgrades,Invertí en mejoras permanentes. Las mejores piden más reputación.,Invest in permanent upgrades. The best ones need more reputation.
 shop.help.toppings.title,TOPPINGS Y SALSAS,TOPPINGS & SAUCES
 shop.help.toppings,Comprá condimentos para tus platos.,Buy condiments for your dishes.
 # Botón Siguiente (ShopNextButtonUI)
@@ -52,6 +67,7 @@ shop.buy.done,Compra realizada por ${0},Purchase complete: ${0}
 shop.buy.item_unavailable,Ese item no se puede comprar.,That item can't be bought.
 shop.buy.topping_unavailable,Ese topping no se puede comprar.,That topping can't be bought.
 shop.buy.below_minimum,Esa compra te deja sin plata para el mínimo del próximo día.,That purchase leaves you short for tomorrow's minimum.
+shop.buy.reputation_locked,Te falta reputación: pide nivel {0}.,Not enough reputation: needs level {0}.
 "# Popup de cierre por strikes (StrikeEndPopup, EndScene)"
 strike.popup.title,Se terminó el día antes de tiempo,The day ended early
 strike.popup.body,"Llegaste al límite de clientes perdidos de la jornada.\n\nCuando tres clientes se van por falta de paciencia, corren la voz y dejan de llegar nuevos clientes.\n\nAtendiste a los que quedaban, pero por hoy no pasa nadie más. Mañana arrancás de nuevo.","You hit today's limit of lost customers.\n\nWhen three customers walk out of patience, word gets around and new customers stop showing up.\n\nYou served the ones still waiting, but nobody else is coming today. Tomorrow's a fresh start."

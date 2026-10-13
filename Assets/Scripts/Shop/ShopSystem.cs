@@ -123,20 +123,59 @@ public class ShopSystem : MonoBehaviour
         return catalog.GetAvailableToppings();
     }
 
-    public bool IsPurchasable(ItemDataSO item)
+    /// <summary>
+    /// Por qué un item no se puede comprar, sin contar la plata ni los mínimos del próximo día (esos
+    /// dependen de la cantidad y los resuelve la compra). La tarjeta lo muestra con candado y leyenda.
+    /// </summary>
+    public enum PurchaseBlock
     {
-        if (item == null) return false;
-        if (item is CoalSO) return true;
-        if (item is MeatCutSO cut) return cut.isUnlocked;
-        if (item is UpgradeSO up) return up.isUnlocked && !up.IsMaxed;
-        return false;
+        None,
+        /// <summary>La mejora pide más reputación (<see cref="UpgradeSO.requiredReputationPerLevel"/>).</summary>
+        Reputation,
+        /// <summary>Todavía no se desbloqueó (un corte que llega en otra noche, una mejora apagada).</summary>
+        Locked,
+        /// <summary>La mejora ya está al máximo.</summary>
+        Maxed,
+        /// <summary>El frasco de salsa ya está lleno.</summary>
+        JarFull,
+        /// <summary>No es algo que venda la tienda.</summary>
+        Unavailable
+    }
+
+    /// <summary>
+    /// Ver <see cref="PurchaseBlock"/>. Con <see cref="PurchaseBlock.Reputation"/>,
+    /// <paramref name="requiredReputation"/> es el nivel que falta alcanzar.
+    /// </summary>
+    public PurchaseBlock GetPurchaseBlock(ItemDataSO item, out int requiredReputation)
+    {
+        requiredReputation = 0;
+
+        if (item == null) return PurchaseBlock.Unavailable;
+        if (item is CoalSO) return PurchaseBlock.None;
+        if (item is MeatCutSO cut) return cut.isUnlocked ? PurchaseBlock.None : PurchaseBlock.Locked;
+
+        if (item is UpgradeSO up)
+        {
+            if (up.IsMaxed) return PurchaseBlock.Maxed;
+            if (!up.isUnlocked) return PurchaseBlock.Locked;
+
+            requiredReputation = up.RequiredReputationForNextLevel;
+            return ReputationSystem.Level >= requiredReputation ? PurchaseBlock.None : PurchaseBlock.Reputation;
+        }
+
+        return PurchaseBlock.Unavailable;
     }
 
     /// <summary>La compra rellena el frasco: con el frasco lleno no hay nada que comprar.</summary>
-    public bool IsToppingPurchasable(ToppingSO topping)
+    public PurchaseBlock GetPurchaseBlock(ToppingSO topping)
     {
-        return topping != null && Toppings != null && !Toppings.IsFull(topping);
+        if (topping == null || Toppings == null) return PurchaseBlock.Unavailable;
+        return Toppings.IsFull(topping) ? PurchaseBlock.JarFull : PurchaseBlock.None;
     }
+
+    public bool IsPurchasable(ItemDataSO item) => GetPurchaseBlock(item, out _) == PurchaseBlock.None;
+
+    public bool IsToppingPurchasable(ToppingSO topping) => GetPurchaseBlock(topping) == PurchaseBlock.None;
 
     // ── Sugerencia de carbón ────────────────────────────────────────────
     /// <summary>
@@ -350,9 +389,12 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
-        if (!IsPurchasable(item))
+        PurchaseBlock block = GetPurchaseBlock(item, out int requiredReputation);
+        if (block != PurchaseBlock.None)
         {
-            message = Loc.Get("shop.buy.item_unavailable");
+            message = block == PurchaseBlock.Reputation
+                ? Loc.Format("shop.buy.reputation_locked", requiredReputation)
+                : Loc.Get("shop.buy.item_unavailable");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }
@@ -570,5 +612,90 @@ public class ShopSystem : MonoBehaviour
         if (!EnforceRunMinimums || topping == null) return true;
 
         return BuildRunStatus(topping.purchasePrice * Mathf.Max(1, qty), 0, 0).CanContinue;
+    }
+
+    // ── Locales (reputación) ────────────────────────────────────────────
+
+    /// <summary>Por qué no se puede comprar el próximo local (ver <see cref="ReputationSystem.NextVenue"/>).</summary>
+    public enum VenueBlock
+    {
+        None,
+        /// <summary>Ya se tienen todos los locales.</summary>
+        AllOwned,
+        /// <summary>La reputación todavía no llega al nivel del local.</summary>
+        Reputation,
+        Money,
+        /// <summary>Se puede pagar, pero dejaría los mínimos del próximo día fuera de alcance.</summary>
+        Minimums,
+        NotConfigured
+    }
+
+    public VenueBlock GetNextVenueBlock()
+    {
+        ReputationConfigSO.Venue next = ReputationSystem.NextVenue;
+
+        if (next == null) return VenueBlock.AllOwned;
+        if (ReputationSystem.Level < next.requiredLevel) return VenueBlock.Reputation;
+        if (Wallet == null) return VenueBlock.NotConfigured;
+        if (!Wallet.CanAfford(next.price)) return VenueBlock.Money;
+        if (!IsVenuePurchaseAllowedByRunMinimums(next.price)) return VenueBlock.Minimums;
+        return VenueBlock.None;
+    }
+
+    /// <summary>Mismo guard que las mejoras: un local no se paga con la plata del mínimo de mañana.</summary>
+    public bool IsVenuePurchaseAllowedByRunMinimums(float price)
+    {
+        if (!EnforceRunMinimums) return true;
+
+        return BuildRunStatus(price, 0, 0).CanContinue;
+    }
+
+    /// <summary>
+    /// Compra el próximo local: cobra y le avisa a <see cref="ReputationSystem"/>, que levanta el tope
+    /// de la reputación. Por ahora no hay escenarios nuevos, así que no cambia nada visual.
+    /// </summary>
+    public bool TryBuyNextVenue(out string message)
+    {
+        ReputationConfigSO.Venue next = ReputationSystem.NextVenue;
+        VenueBlock block = GetNextVenueBlock();
+
+        if (block != VenueBlock.None)
+        {
+            switch (block)
+            {
+                case VenueBlock.Reputation:
+                    message = Loc.Format("shop.buy.reputation_locked", next.requiredLevel);
+                    break;
+                case VenueBlock.Money:
+                    message = Loc.Format("shop.buy.not_enough_money", next.price.ToString("F0"));
+                    break;
+                case VenueBlock.Minimums:
+                    message = Loc.Get("shop.buy.below_minimum");
+                    break;
+                case VenueBlock.NotConfigured:
+                    message = Loc.Get("shop.buy.not_configured");
+                    break;
+                default:
+                    message = Loc.Get("shop.buy.item_unavailable");
+                    break;
+            }
+
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        if (!Wallet.TrySpend(next.price))
+        {
+            message = Loc.Get("shop.buy.payment_failed");
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        ReputationSystem.RegisterVenuePurchased();
+
+        message = Loc.Format("shop.buy.done", next.price.ToString("F0"));
+        OnPurchaseResult?.Invoke(true, message);
+        TutorialSignals.Raise(TutorialSignal.ShopPurchased);
+        return true;
     }
 }
