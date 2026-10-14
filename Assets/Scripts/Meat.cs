@@ -48,6 +48,23 @@ public class Meat : Item
     [SerializeField] private bool rotatePreviewVisual = true;
     [SerializeField] private float rotatedPreviewAngleZ = 90f;
 
+    [Header("Cooking Speed")]
+    [Tooltip("Aceleración por estado: cada estado que alcanza una cara suma este porcentaje a su velocidad de cocción. " +
+             "0.05 = Crudo x1, Jugoso x1.05, Hecho x1.10, Bien Hecho x1.15, Pasado x1.20.")]
+    [Min(0f)]
+    [SerializeField] private float cookSpeedBonusPerState = 0.05f;
+
+    [Tooltip("Fracción del calor que le llega a la cara de arriba (la que no está apoyada), antes del frenado por estado. " +
+             "0 = no se cocina. Con 0.3, al dar vuelta un corte en Bien Hecho la otra cara está por llegar a Jugoso o recién llegó.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float idleSideHeatFactor = 0.3f;
+
+    [Tooltip("Frenado por estado de la cara de arriba, el efecto opuesto a cookSpeedBonusPerState: cada estado que alcanzó " +
+             "le resta este porcentaje a su velocidad. 0.2 = Crudo x1, Jugoso x0.8, Hecho x0.6, Bien Hecho x0.4, Pasado x0.2. " +
+             "Así la cara que ya se cocinó casi no se mueve al darla vuelta. Desde 0.25, Pasado queda frenado del todo.")]
+    [Min(0f)]
+    [SerializeField] private float idleSideSlowdownPerState = 0.2f;
+
     [Header("Cooking State (Heat Units)")]
     public float sideACookTime = 0f;
     public float sideBCookTime = 0f;
@@ -106,20 +123,48 @@ public class Meat : Item
     }
 
     /// <summary>
-    /// Segundos que le faltan a la cara apoyada para quemarse con el calor que recibe ahora.
-    /// Infinito si no se está cocinando o si esa cara ya está quemada. Lo usa el aviso de quemado
-    /// del gamepad (<see cref="GamepadHaptics.ReportBurnRisk"/>).
+    /// Segundos que le faltan al corte para quemarse con el calor que recibe ahora: la primera de
+    /// las dos caras en llegar, porque la de arriba también se cocina (más lento). Infinito si no
+    /// se está cocinando o si ya tiene una cara quemada. Lo usa el aviso de quemado del gamepad
+    /// (<see cref="GamepadHaptics.ReportBurnRisk"/>).
     /// </summary>
     public float SecondsToBurn
     {
         get
         {
-            if (cut == null || TutorialManager.IsCookingPaused || !IsCurrentlyCooking())
+            if (cut == null || TutorialManager.IsCookingPaused || !IsCurrentlyCooking() || IsAnySideBurned)
                 return float.PositiveInfinity;
 
-            float remaining = BurnThreshold - (isSideA ? sideACookTime : sideBCookTime);
-            return remaining > 0f ? remaining / GetTotalHeatReceived() : float.PositiveInfinity;
+            float heat = GetTotalHeatReceived();
+            return Mathf.Min(SecondsToBurnSide(true, heat), SecondsToBurnSide(false, heat));
         }
+    }
+
+    /// <summary>
+    /// Estima con la velocidad del estado actual de la cara. En Pasado, la última banda antes de
+    /// Quemado y la única en la que avisa el gamepad, el resultado es exacto.
+    /// </summary>
+    private float SecondsToBurnSide(bool sideA, float heatPerSecond)
+    {
+        float sideHeat = sideA ? sideACookTime : sideBCookTime;
+        float remaining = BurnThreshold - sideHeat;
+        float rate = heatPerSecond * GetSideCookRate(sideA, cut.GetStateForHeat(sideHeat));
+        return remaining > 0f && rate > 0f ? remaining / rate : float.PositiveInfinity;
+    }
+
+    /// <summary>
+    /// Qué parte del calor del corte acumula una cara según su estado. La apoyada lo recibe todo y
+    /// acelera cookSpeedBonusPerState por cada estado alcanzado; la de arriba recibe
+    /// idleSideHeatFactor y frena idleSideSlowdownPerState por cada estado alcanzado.
+    /// </summary>
+    private float GetSideCookRate(bool sideA, MeatStates sideState)
+    {
+        int stateIndex = (int)sideState;
+
+        if (sideA == isSideA)
+            return 1f + cookSpeedBonusPerState * stateIndex;
+
+        return idleSideHeatFactor * Mathf.Max(0f, 1f - idleSideSlowdownPerState * stateIndex);
     }
 
     protected virtual void Awake()
@@ -297,17 +342,20 @@ public class Meat : Item
 
         float deltaHeat = GetTotalHeatReceived() * Time.deltaTime;
 
-        // Solo acumula la cara apoyada; al alcanzar el umbral de Quemado deja de acumular (clamp).
+        // La cara apoyada acelera con cada estado y la de arriba frena (ver GetSideCookRate).
+        // Al alcanzar el umbral de Quemado deja de acumular (clamp).
         float burnThreshold = BurnThreshold;
 
-        bool wasBurned = (isSideA ? sideACookTime : sideBCookTime) >= burnThreshold;
+        bool sideAWasBurned = sideACookTime >= burnThreshold;
+        bool sideBWasBurned = sideBCookTime >= burnThreshold;
 
-        if (isSideA)
-            sideACookTime = Mathf.Min(sideACookTime + deltaHeat, burnThreshold);
-        else
-            sideBCookTime = Mathf.Min(sideBCookTime + deltaHeat, burnThreshold);
+        float sideAGain = deltaHeat * GetSideCookRate(true, SideAState);
+        float sideBGain = deltaHeat * GetSideCookRate(false, SideBState);
 
-        if (!wasBurned && (isSideA ? sideACookTime : sideBCookTime) >= burnThreshold)
+        sideACookTime = Mathf.Min(sideACookTime + sideAGain, burnThreshold);
+        sideBCookTime = Mathf.Min(sideBCookTime + sideBGain, burnThreshold);
+
+        if ((!sideAWasBurned && sideACookTime >= burnThreshold) || (!sideBWasBurned && sideBCookTime >= burnThreshold))
             GamepadHaptics.Play(HapticEvent.MeatBurned);
 
         RefreshState();
