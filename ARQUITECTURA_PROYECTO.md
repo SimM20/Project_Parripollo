@@ -2086,9 +2086,9 @@ Vehículos que pasan cada tanto por la ruta dibujada en el `Paisaje`. Implementa
 | Campo de inspector | Valor | |
 |---|---|---|
 | `vehicleTypes` | 6 tipos | `{ label, bodies[], lights, weight, speed (mín, máx) }`. Auto (4 colores, peso 3), Auto chico (3, 2), Camioneta (3, 2), Camión (2, 1,2), Camión con acoplado (2, 1), Micro (2, 0,6). Autos ~2,5–3,6 u/s, camiones ~1,8–2,5 |
-| `lanes` | 2 carriles | `{ label, y, towardsRight, scale, speedMultiplier, haze, sortingOrder, spawnInterval }`. **Atrás**: `y = 1.08`, hacia la izquierda, escala y velocidad × 0,8, `haze` azulado, order 0, cada 6–16 s. **Adelante**: `y = 0.68`, hacia la derecha, × 1, order 10, cada 5–14 s |
+| `lanes` | 2 carriles | `{ label, y, towardsRight, scale, speedMultiplier, haze, sortingOrder, spawnInterval }`. **Atrás**: `y = 1.08`, hacia la izquierda, escala 1,6 y velocidad × 0,8, `haze` azulado, order 0, cada 6–16 s. **Adelante**: `y = 0.68`, hacia la derecha, escala 2 y velocidad × 1, order 10, cada 5–14 s. Con escala 2 un pixel de arte mide lo mismo que el de los clientes; el camión con acoplado llega a la altura del cuello de un cliente y deja cielo libre arriba |
 | `roadHalfLength` | `9.6` | Media ruta (el `Paisaje` mide 19,2 u): los vehículos entran y salen justo afuera |
-| `minGap` | `1.5` | Espacio mínimo con el de adelante para entrar |
+| `minGap` | `3` | Espacio mínimo con el de adelante para entrar (en unidades: si se cambia la escala de los carriles, escalarlo igual) |
 | `densityByHour` | curva 0–24 | Divide el intervalo del carril: 1 de 08:00 a 19:00, ~0,5 de madrugada y de noche. 0 = no pasa nadie |
 | `tintSource` | `Paisaje` | Capa de la que toman el tinte vehículos y recortes (`DayCycleLayer.ColorAt(hora)`) |
 | `lightsByHour` | curva 0–24 | Alfa de las luces: prendidas hasta 05:45, apagadas a las 07:15, se prenden de 19:00 a 20:00 |
@@ -2118,7 +2118,7 @@ Vehículos que pasan cada tanto por la ruta dibujada en el `Paisaje`. Implementa
 - Como va en el prefab, hay tránsito también en `MainMenuScene` y `TutorialScene` (a las 06:30, con luces).
 
 **Arte — `Sprites/FondoCicloDia/Vehiculos/` (placeholder).** Pixel art generado por script con la paleta del `Paisaje`,
-a **PPU 25** (un pixel de arte = 4 px, como sol y luna), `Point`, sin compresión. Por tipo: `<Tipo>_<Color>.png` (una
+a **PPU 25** (un pixel de arte = 4 px, como sol y luna; con la escala 2 del carril de adelante, 8 px), `Point`, sin compresión. Por tipo: `<Tipo>_<Color>.png` (una
 carrocería por color) y `<Tipo>_Luces.png` (faros, haz de luz y luces traseras prendidos). **Requisitos para reemplazarlos**:
 dibujados **mirando a la derecha** (el carril que va a la izquierda los espeja con `flipX`); carrocerías y luces de un tipo
 en el **mismo lienzo** (la carrocería + el largo del haz por delante) y con el **mismo pivote**, al pie (`y = 0`) del

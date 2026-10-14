@@ -605,7 +605,7 @@ MonoBehaviour:
   - label: "Carril de atr\xE1s (hacia la izquierda)"
     y: 1.08
     towardsRight: 0
-    scale: 0.8
+    scale: 1.6
     speedMultiplier: 0.8
     haze: {r: 0.88, g: 0.91, b: 0.96, a: 1}
     sortingOrder: 0
@@ -613,13 +613,13 @@ MonoBehaviour:
   - label: Carril de adelante (hacia la derecha)
     y: 0.68
     towardsRight: 1
-    scale: 1
+    scale: 2
     speedMultiplier: 1
     haze: {r: 1, g: 1, b: 1, a: 1}
     sortingOrder: 10
     spawnInterval: {x: 5, y: 14}
   roadHalfLength: 9.6
-  minGap: 1.5
+  minGap: 3
   densityByHour:
     serializedVersion: 2
     m_Curve:

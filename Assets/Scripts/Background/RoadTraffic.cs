@@ -68,7 +68,8 @@ public class RoadTraffic : MonoBehaviour, IDayCycleVisual
         [Tooltip("Sentido de circulación. Tildado = de izquierda a derecha.")]
         public bool towardsRight = true;
 
-        [Tooltip("Escala de los vehículos. Menos de 1 = más lejos.")]
+        [Tooltip("Escala de los vehículos. 2 = un pixel de arte igual al de los clientes. " +
+                 "Más chica que la del carril de adelante = más lejos.")]
         [Min(0.1f)]
         public float scale = 1f;
 
