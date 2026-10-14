@@ -5511,9 +5511,6 @@ MonoBehaviour:
   heatOffset: {x: 0, y: 0, z: 0}
   smokeOffset: {x: 0, y: 0.05, z: -0.05}
   smokeSortingOrderOffset: 4
-  driveBurnShader: 1
-  burnVisualStart: 0.6
-  burnVisualMax: 1
   flipPuff: {fileID: 161407075749097421}
   flipPuffContactOffsetY: 0.04
   hardSound: {fileID: 8300000, guid: f9664a6745285f54bb5c333b900cf4cf, type: 3}
@@ -5524,10 +5521,21 @@ MonoBehaviour:
   flipSound: {fileID: 0}
   rotatePreviewVisual: 1
   rotatedPreviewAngleZ: 90
+  cookSpeedBonusPerState: 0.07
+  idleSideHeatFactor: 0.3
+  idleSideSlowdownPerState: 0.3
   sideACookTime: 0
   sideBCookTime: 0
   isSideA: 1
   state: 0
+  softOnlyHeat: 2
+  hardOnlyHeat: 7
+  mixSmoothTime: 0.6
+  volumeAtLowHeat: 0.65
+  fadeInTime: 0.35
+  fadeOutTime: 0.25
+  pitchVariation: 0.04
+  randomizeStartOffset: 1
 --- !u!212 &-7293428179474734505
 SpriteRenderer:
   m_ObjectHideFlags: 0

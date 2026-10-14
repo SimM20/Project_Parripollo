@@ -177,7 +177,7 @@ public class GamepadHaptics : MonoBehaviour
 
     /// <summary>
     /// La llama cada corte que se está cocinando, una vez por frame, con los segundos que le faltan
-    /// a la cara apoyada para quemarse. Se queda con el más urgente.
+    /// a su primera cara en quemarse. Se queda con el más urgente.
     /// </summary>
     public static void ReportBurnRisk(float secondsToBurn)
     {
