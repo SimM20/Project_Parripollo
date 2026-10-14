@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using System.Collections;
 using System;
+using UnityEngine.Serialization;
 
 
 public class CustomerSystem : MonoBehaviour
@@ -68,7 +69,11 @@ public class CustomerSystem : MonoBehaviour
 
     [Header("Slots (optional)")]
     [SerializeField] private List<Transform> slots = new List<Transform>();
-    [SerializeField] private Vector3 autoFirstSlotPos = new Vector3(-6f, 3.2f, 0f);
+    [Tooltip("Centro de la fila de clientes. Los slots se reparten parejos a los dos lados " +
+             "según los clientes simultáneos de la noche (base + mejoras): con 3 queda uno en " +
+             "el centro y uno a cada lado, y cada mesa extra vuelve a centrar la fila.")]
+    [FormerlySerializedAs("autoFirstSlotPos")]
+    [SerializeField] private Vector3 autoSlotRowCenter = new Vector3(0f, 3.2f, 0f);
     [SerializeField] private float autoSlotSpacing = 2.6f;
     [SerializeField] private Transform customersParent;
 
@@ -1263,7 +1268,12 @@ public class CustomerSystem : MonoBehaviour
         if (slots != null && slotIndex >= 0 && slotIndex < slots.Count && slots[slotIndex] != null)
             return slots[slotIndex].position;
 
-        return autoFirstSlotPos + Vector3.right * (autoSlotSpacing * slotIndex);
+        // La fila se centra sobre la capacidad de la noche y no sobre los clientes presentes:
+        // los slots quedan fijos toda la jornada y cada mejora de capacidad la vuelve a centrar.
+        int slotCount = slotViews != null ? slotViews.Length : MaxSimultaneousCustomers;
+        float offset = (slotIndex - (slotCount - 1) * 0.5f) * autoSlotSpacing;
+
+        return autoSlotRowCenter + Vector3.right * offset;
     }
 
     private CustomerPrefabEntry PickCustomerEntry()

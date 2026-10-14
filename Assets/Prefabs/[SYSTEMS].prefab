@@ -239,7 +239,7 @@ MonoBehaviour:
   spawnIntervalSeconds: 6
   autoStartNight: 1
   slots: []
-  autoFirstSlotPos: {x: -6, y: 3.2, z: 0}
+  autoSlotRowCenter: {x: 0, y: 3.2, z: 0}
   autoSlotSpacing: 2.6
   customersParent: {fileID: 0}
   customerPrefabs: []

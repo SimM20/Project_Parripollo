@@ -7795,7 +7795,7 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: dd74f019187152940a5589cb8c5b392e, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
-      propertyPath: autoFirstSlotPos.y
+      propertyPath: autoSlotRowCenter.y
       value: 1.94
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
