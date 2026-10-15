@@ -665,9 +665,9 @@ public class MeatTransferBuffer : MonoBehaviour
         }
 
         Vector2Int requiredSize = ResolveRequiredSize(cut, rotateFootprint);
-        if (GridSlot.TryFindContiguousPlacement(grillSystem.slots, requiredSize, worldPoint, ItemType.Meat, null, out List<GridSlot> placementSlots))
+        if (GridSlot.TryFindPreviewPlacement(grillSystem.slots, requiredSize, worldPoint, ItemType.Meat, null, out List<GridSlot> placementSlots, out bool isValid))
         {
-            SetMeatHolderHover(placementSlots, true);
+            SetMeatHolderHover(placementSlots, isValid);
             return;
         }
 

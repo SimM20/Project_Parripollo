@@ -727,9 +727,9 @@ public class Meat : Item
         Vector2Int requiredSize = GetRequiredGridSize();
         GridSlot[] allSlots = FindObjectsOfType<GridSlot>();
 
-        if (GridSlot.TryFindContiguousPlacement(allSlots, requiredSize, transform.position, itemType, gameObject, out List<GridSlot> slotsEncontrados))
+        if (GridSlot.TryFindPreviewPlacement(allSlots, requiredSize, transform.position, itemType, gameObject, out List<GridSlot> slotsEncontrados, out bool isValid))
         {
-            SetHoverPreview(slotsEncontrados, true);
+            SetHoverPreview(slotsEncontrados, isValid);
             return;
         }
 

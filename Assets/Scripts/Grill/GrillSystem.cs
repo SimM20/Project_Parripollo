@@ -33,6 +33,23 @@ public class GrillSystem : MonoBehaviour
     [Tooltip("Orden de dibujo. -1 = sobre el fondo 'Parrilla' (-2) y debajo de las barras (0): el calor se ve entre las barras.")]
     [SerializeField] private int heatMapSortingOrder = -1;
 
+    [Header("Placement Preview")]
+    [Tooltip("Recuadro de los slots donde caería la pieza que se arrastra y se puede soltar.")]
+    [SerializeField] private Color previewValidColor = new Color(0.9f, 1f, 0.6f, 0.85f);
+    [Tooltip("Mismo recuadro cuando no se puede soltar: lugar ocupado o capa equivocada (carne en modo carbón y al revés).")]
+    [SerializeField] private Color previewInvalidColor = new Color(1f, 0.36f, 0.2f, 0.9f);
+    [Tooltip("Tamaño del recuadro relativo a la celda. <1 deja aire entre celdas vecinas.")]
+    [Range(0.1f, 1f)]
+    [SerializeField] private float previewInset = 0.88f;
+    [Tooltip("Segundos del fundido al aparecer o irse (0 = sin fundido).")]
+    [Min(0f)]
+    [SerializeField] private float previewFadeTime = 0.08f;
+    [Tooltip("Respiración del alpha mientras está activo (0 = quieto).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float previewPulse = 0.12f;
+    [Tooltip("Orden de dibujo. 0 = sobre el mapa de calor (-1) y debajo de carne y carbón (2).")]
+    [SerializeField] private int previewSortingOrder = 0;
+
     private readonly List<CoalStackCounter> coalStackCounters = new List<CoalStackCounter>();
 
     void Update() => UpdateHeatPropagation();
@@ -41,6 +58,7 @@ public class GrillSystem : MonoBehaviour
     {
         GridSlot.AssignGridCoordinates(slots);
         PushHeatMapConfig();
+        PushPlacementPreviewConfig();
     }
 
     private void PushHeatMapConfig()
@@ -50,12 +68,21 @@ public class GrillSystem : MonoBehaviour
             heatMapFullHeat, heatMapGlowScale, heatMapFlicker, heatMapSortingOrder);
     }
 
+    private void PushPlacementPreviewConfig()
+    {
+        GridSlot.ConfigurePlacementPreview(
+            previewValidColor, previewInvalidColor, previewInset,
+            previewFadeTime, previewPulse, previewSortingOrder);
+    }
+
 #if UNITY_EDITOR
-    // Permite ajustar el mapa de calor en Play sin reiniciar.
+    // Permite ajustar el mapa de calor y el preview de colocación en Play sin reiniciar.
     private void OnValidate()
     {
-        if (Application.isPlaying)
-            PushHeatMapConfig();
+        if (!Application.isPlaying) return;
+
+        PushHeatMapConfig();
+        PushPlacementPreviewConfig();
     }
 #endif
 

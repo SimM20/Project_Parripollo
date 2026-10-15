@@ -716,7 +716,9 @@ bool IsOccupied { get; }   Meat currentMeat { get; }
 
 void PlaceItem(GameObject), PlaceMeat(Meat), ClearSlot(), RemoveCoal(Coal)
 bool CanPlaceItem(ItemType, GameObject)     // respeta GrillLayerToggle.IsItemTypeAllowed
-void SetHoverPreview(bool, bool), ClearHoverPreview(), SetBaseHoverColor(Color)
+void SetHoverPreview(bool, bool), ClearHoverPreview()
+static bool TryFindPreviewPlacement(..., out List<GridSlot>, out bool isValid)  // preview: capa equivocada → bloque en rojo
+static void ConfigurePlacementPreview(...)   // la llama GrillSystem (header Placement Preview)
 
 static List<List<GridSlot>> BuildLogicalRows(IList<GridSlot>)
 static void AssignGridCoordinates(IList<GridSlot>)
@@ -815,7 +817,17 @@ fundan en un campo continuo. `heatMapSortingOrder = -1`: sobre el fondo `Parrill
 las barras** (`Grill`, 0), así el calor se ve entre las barras como brasa. Config en `GrillSystem` →
 header *Heat Map* (`[SYSTEMS].prefab`), aplicada a todos los slots vía `GridSlot.ConfigureHeatGlow`
 (estática; `OnValidate` la refresca en Play). Solo `acceptsType == Meat` y solo con la capa Meat
-activa; el hover preview sigue en el sprite del slot y no se toca. Se apaga con `showHeatMap = false`.
+activa. Se apaga con `showHeatMap = false`.
+
+#### Preview de colocación (`GridSlot.SetHoverPreview`)
+
+Ya no tiñe el sprite del slot: cada slot cuelga en runtime un hijo `PlacementPreview` (recuadro redondeado
+generado por código, `SpriteDrawMode.Sliced`, escala del slot anulada para que el borde no se deforme),
+`sortingOrder = 0` (sobre el mapa de calor, debajo de carne/carbón en 2), con fundido corto y respiración leve
+en tiempo sin escalar. Colores cálidos: válido amarillo-verdoso, inválido rojo-naranja. Config en `GrillSystem` →
+header *Placement Preview*. Los llamadores (`Meat`, `Coal`, `MeatTransferBuffer`, `CoalTransferBuffer`) usan
+`GridSlot.TryFindPreviewPlacement`: con la capa equivocada (carne en modo carbón o al revés) y el puntero sobre la
+parrilla, pinta en rojo el bloque donde caería en su capa. `StockPanelSlot` ya no limpia el preview por capa.
 
 #### `CoalStackCounter` — `Grill/CoalStackCounter.cs`
 

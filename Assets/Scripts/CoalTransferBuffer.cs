@@ -100,8 +100,8 @@ public class CoalTransferBuffer : MonoBehaviour
 
         Vector2Int requiredSize = Vector2Int.one;
 
-        if (GridSlot.TryFindContiguousPlacement(grillSystem.slots, requiredSize, worldPoint, ItemType.Coal, null, out List<GridSlot> placementSlots))
-            SetCoalHolderHover(placementSlots, true);
+        if (GridSlot.TryFindPreviewPlacement(grillSystem.slots, requiredSize, worldPoint, ItemType.Coal, null, out List<GridSlot> placementSlots, out bool isValid))
+            SetCoalHolderHover(placementSlots, isValid);
 
         else
         {

@@ -304,12 +304,7 @@ public class StockPanelSlot : MonoBehaviour
         if (owner == null || draggingItem == null)
             return;
 
-        if (!GrillLayerToggle.IsItemTypeAllowed(draggingItem.category))
-        {
-            ClearHoverPreview();
-            return;
-        }
-
+        // Con la capa equivocada los buffers pintan el bloque en rojo: no se puede soltar ahí.
         if (draggingItem is MeatCutSO cut)
         {
             MeatTransferBuffer meatBuffer = owner.MeatBuffer;

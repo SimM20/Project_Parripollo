@@ -123,7 +123,6 @@ public class GrillLayerToggle : MonoBehaviour
             Color c = sr.color;
             c.a = 0f;
             sr.color = c;
-            slot.SetBaseHoverColor(c);
         }
 
         Collider2D col = slot.GetComponent<Collider2D>();

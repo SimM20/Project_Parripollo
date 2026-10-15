@@ -13580,6 +13580,11 @@ MonoBehaviour:
   minWidth: 1.6
   maxWidth: 2.8
   popDuration: 0.1
+  stateFlashDuration: 0.18
+  stateFlashPunch: 0.06
+  stateFlashBubblePunch: 0.01
+  stateFlashColor: {r: 0.98, g: 0.62, b: 0.18, a: 1}
+  burnedFlashColor: {r: 0.86, g: 0.16, b: 0.1, a: 1}
   panelColor: {r: 0.97, g: 0.94, b: 0.86, a: 0.97}
   borderColor: {r: 0.29, g: 0.19, b: 0.13, a: 1}
   titleColor: {r: 0.16, g: 0.12, b: 0.09, a: 1}
