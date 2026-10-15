@@ -57,6 +57,17 @@ public class Meat : Item
     [SerializeField] private int flipSortingOrderBoost = 50;
     [SerializeField] private AudioClip flipSound;
 
+    [Header("State Change Feedback")]
+    [Tooltip("Cuanto crece la pieza en el golpe al pasar al punto siguiente (0.07 = 7%).")]
+    [SerializeField] private float statePulseScale = 0.07f;
+    [Tooltip("Multiplicador del golpe al quemarse.")]
+    [SerializeField] private float burnedPulseMultiplier = 1.8f;
+    [Tooltip("Segundos del golpe.")]
+    [Min(0.01f)] [SerializeField] private float statePulseDuration = 0.28f;
+
+    private float statePulseT = 1f;
+    private float statePulseAmount;
+
     private bool isFlipping = false;
     private Coroutine flipCoroutine;
     private Vector3 baseLocalScale = Vector3.one;
@@ -226,6 +237,7 @@ public class Meat : Item
     {
         base.Update();
         UpdateDragFloat();
+        UpdateStatePulse();
         UpdateEffects();
         GamepadHaptics.ReportBurnRisk(SecondsToBurn);
     }
@@ -283,6 +295,60 @@ public class Meat : Item
 
         floatWeight = 0f;
         floatTime = 0f;
+    }
+
+    // ── Cambio de punto ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// La cara apoyada paso al punto siguiente por la coccion: puff de humo (mas fuerte cuanto
+    /// mas cocida) y un golpe de escala en la pieza. El cartel lo detecta por su cuenta.
+    /// Quemado no pide puff: BurnSmoke ya larga su golpe propio al quemarse.
+    /// </summary>
+    private void PlayStateAdvanceFeedback(MeatStates newState)
+    {
+        bool burnedNow = newState == MeatStates.Quemado;
+
+        if (smoke != null && !burnedNow)
+            smoke.Puff(Mathf.InverseLerp((int)MeatStates.Jugoso, (int)MeatStates.Pasado, (int)newState));
+
+        statePulseAmount = statePulseScale * (burnedNow ? burnedPulseMultiplier : 1f);
+        if (!isFlipping && !isHeldByMouse)
+            statePulseT = 0f;
+    }
+
+    /// <summary>
+    /// Sube y baja la escala de reposo con un seno: termina exacto en baseLocalScale. El flip y el
+    /// agarre manejan la escala por su cuenta, asi que el golpe se corta si arranca alguno.
+    /// </summary>
+    private void UpdateStatePulse()
+    {
+        if (statePulseT >= 1f) return;
+
+        if (isFlipping)
+        {
+            statePulseT = 1f;   // el flip ya pisa la escala cada frame y la deja en reposo
+            return;
+        }
+
+        if (isHeldByMouse)
+        {
+            StopStatePulse();
+            return;
+        }
+
+        statePulseT = Mathf.Min(1f, statePulseT + Time.deltaTime / statePulseDuration);
+        float pulse = 1f + statePulseAmount * Mathf.Sin(statePulseT * Mathf.PI);
+        Vector3 baseScale = (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : Vector3.one;
+        transform.localScale = new Vector3(baseScale.x * pulse, baseScale.y * pulse, baseScale.z);
+    }
+
+    /// <summary>Corta el golpe y deja la pieza en su escala de reposo.</summary>
+    private void StopStatePulse()
+    {
+        if (statePulseT >= 1f) return;
+
+        statePulseT = 1f;
+        transform.localScale = (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : Vector3.one;
     }
 
     // ── Efectos ──────────────────────────────────────────────────────────────
@@ -506,7 +572,12 @@ public class Meat : Item
         if ((!sideAWasBurned && sideACookTime >= burnThreshold) || (!sideBWasBurned && sideBCookTime >= burnThreshold))
             GamepadHaptics.Play(HapticEvent.MeatBurned);
 
+        // El feedback sale de aca y no de RefreshState: ese tambien corre al restaurar una pieza
+        // (MeatTransferBuffer) y ahi el punto "salta" sin que la carne se haya cocinado.
+        MeatStates stateBefore = state;
         RefreshState();
+        if (state > stateBefore)
+            PlayStateAdvanceFeedback(state);
     }
 
     public override void OnWorldPointerUp()
@@ -600,6 +671,8 @@ public class Meat : Item
     {
         if (isFlipping)
             CancelFlipAnimation();
+
+        StopStatePulse();
 
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();
@@ -897,6 +970,7 @@ public class Meat : Item
         if (isFlipping)
             CancelFlipAnimation();
 
+        StopStatePulse();
         ClearDragFloat();
     }
 

@@ -14,6 +14,9 @@ using UnityEngine;
 /// Con la pieza en la parrilla la burbuja suma una fila al pie con la barra de coccion
 /// (<see cref="MeatCookHoverBar"/>): antes eran dos carteles separados, uno arriba del otro.
 ///
+/// Cuando la cara apoyada pasa al punto siguiente, el borde parpadea una vez y el icono y el
+/// punto dan un golpe suave (en rojo al quemarse). La carne hace su parte por su lado: puff de humo y pulso.
+///
 /// La jerarquia se arma por codigo con <see cref="WorldBubbleStyle"/>. En la escena el GameObject
 /// lleva este componente y, como hija, la instancia del prefab de la barra.
 /// </summary>
@@ -42,6 +45,17 @@ public class MeatHoverBubble : MonoBehaviour
     [Header("Transicion")]
     [Tooltip("Segundos del 'pop' al aparecer. En tiempo sin escalar, igual que la del cliente.")]
     [SerializeField] private float popDuration = 0.1f;
+
+    [Header("Cambio de punto")]
+    [Tooltip("Segundos del destello (un solo parpadeo) cuando la carne pasa al punto siguiente. En tiempo sin escalar.")]
+    [Min(0.01f)] [SerializeField] private float stateFlashDuration = 0.18f;
+    [Tooltip("Cuanto crecen el icono y el punto en el golpe (0.06 = 6%).")]
+    [SerializeField] private float stateFlashPunch = 0.06f;
+    [Tooltip("Cuanto crece el cartel entero en el golpe.")]
+    [SerializeField] private float stateFlashBubblePunch = 0.01f;
+    [Tooltip("Color del borde en el parpadeo; el panel toma un poco de este tono.")]
+    [SerializeField] private Color stateFlashColor = new Color(0.98f, 0.62f, 0.18f, 1f);
+    [SerializeField] private Color burnedFlashColor = new Color(0.86f, 0.16f, 0.10f, 1f);
 
     [Header("Colores (los mismos que CustomerOrderBubble)")]
     [SerializeField] private Color panelColor = new Color(0.97f, 0.94f, 0.86f, 0.97f);
@@ -73,6 +87,11 @@ public class MeatHoverBubble : MonoBehaviour
     private bool barShown;
     private float headerCenterY;
     private float popT = 1f;
+
+    private float flashT = 1f;
+    private Color flashColor;
+    private Vector3 iconBaseScale = Vector3.one;
+    private Vector3 detailBasePosition;
 
     private static readonly MeatStates[] AllStates =
     {
@@ -107,14 +126,35 @@ public class MeatHoverBubble : MonoBehaviour
             Relayout();
 
         // Refresco en vivo: punto e icono cambian solo cuando cambia la cara activa o su estado.
-        if (source.ActiveSideState != lastState || source.IsSideAActive != lastSideA)
+        // Destella solo si la misma cara avanzo de punto: dar vuelta la pieza tambien cambia el
+        // punto que se ve, y eso no es que se haya cocinado.
+        MeatStates activeState = source.ActiveSideState;
+        bool sameSide = source.IsSideAActive == lastSideA;
+        if (activeState != lastState || !sameSide)
+        {
+            bool advanced = sameSide && activeState > lastState;
             RefreshContent();
+            if (advanced)
+                StartStateFlash(activeState);
+        }
+
+        bool animating = false;
 
         if (popT < 1f)
         {
             popT = popDuration > 0.0001f ? Mathf.MoveTowards(popT, 1f, Time.unscaledDeltaTime / popDuration) : 1f;
-            ApplyPop();
+            animating = true;
         }
+
+        if (flashT < 1f)
+        {
+            flashT = Mathf.MoveTowards(flashT, 1f, Time.unscaledDeltaTime / stateFlashDuration);
+            ApplyFlash();
+            animating = true;
+        }
+
+        if (animating)
+            ApplyScale();
     }
 
     /// <summary>Muestra la burbuja siguiendo a la pieza y actualizando el estado mientras se cocina.</summary>
@@ -130,8 +170,9 @@ public class MeatHoverBubble : MonoBehaviour
 
         if (!wasShowingIt)
         {
+            StopFlash();
             popT = 0f;
-            ApplyPop();
+            ApplyScale();
         }
 
         transform.position = meat.RestPosition + GetOffset(meat);
@@ -139,6 +180,7 @@ public class MeatHoverBubble : MonoBehaviour
 
     public void Hide()
     {
+        StopFlash();
         source = null;
         barShown = false;
 
@@ -247,6 +289,7 @@ public class MeatHoverBubble : MonoBehaviour
         float halfW = panelRenderer.size.x * 0.5f;
         WorldBubbleStyle.FitSprite(iconRenderer.transform, sprite, IconSize,
             new Vector3(-halfW + 0.12f + IconSize * 0.5f, headerCenterY, 0f));
+        iconBaseScale = iconRenderer.transform.localScale;   // el golpe del destello escala desde aca
     }
 
     /// <summary>El corte en el punto y la cara que se estan viendo en la parrilla.</summary>
@@ -305,16 +348,76 @@ public class MeatHoverBubble : MonoBehaviour
         titleText.color = titleColor;
 
         detailText.rectTransform.sizeDelta = new Vector2(textWidth, 0.34f);
-        detailText.transform.localPosition = new Vector3(textLeft + textWidth * 0.5f, top - height + 0.27f, 0f);
+        detailBasePosition = new Vector3(textLeft + textWidth * 0.5f, top - height + 0.27f, 0f);
+        detailText.transform.localPosition = detailBasePosition;
         detailText.color = detailColor;
     }
 
-    private void ApplyPop()
+    /// <summary>Escala del cartel: el pop de aparicion por el golpe del destello de cambio de punto.</summary>
+    private void ApplyScale()
     {
         // Crece desde el borde de abajo, con un leve sobrepaso al final.
         float t = popT;
-        float scale = t >= 1f ? 1f : Mathf.LerpUnclamped(0.8f, 1f, 1f + 2.2f * Mathf.Pow(t - 1f, 3f) + 1.2f * Mathf.Pow(t - 1f, 2f));
+        float pop = t >= 1f ? 1f : Mathf.LerpUnclamped(0.8f, 1f, 1f + 2.2f * Mathf.Pow(t - 1f, 3f) + 1.2f * Mathf.Pow(t - 1f, 2f));
+        float scale = pop * (1f + stateFlashBubblePunch * FlashPunch());
         transform.localScale = new Vector3(scale, scale, 1f);
+    }
+
+    // ── Destello de cambio de punto ──────────────────────────────────────────
+
+    private void StartStateFlash(MeatStates newState)
+    {
+        flashColor = newState == MeatStates.Quemado ? burnedFlashColor : stateFlashColor;
+        flashT = 0f;
+        ApplyFlash();
+        ApplyScale();
+    }
+
+    /// <summary>Corta el destello y deja colores y escalas en reposo.</summary>
+    private void StopFlash()
+    {
+        if (flashT >= 1f) return;
+
+        flashT = 1f;
+        if (built) ApplyFlash();
+        ApplyScale();
+    }
+
+    /// <summary>
+    /// Un solo parpadeo: el borde va hacia flashColor y vuelve, el panel toma un poco de ese tono
+    /// y, al mismo tiempo, el icono y el punto dan un golpe de escala.
+    /// </summary>
+    private void ApplyFlash()
+    {
+        float blink = FlashPunch();
+
+        borderRenderer.color = Color.Lerp(borderColor, flashColor, blink);
+        Color panelTint = new Color(flashColor.r, flashColor.g, flashColor.b, panelColor.a);
+        panelRenderer.color = Color.Lerp(panelColor, panelTint, blink * 0.22f);
+
+        float s = 1f + stateFlashPunch * FlashPunch();
+        iconRenderer.transform.localScale = new Vector3(iconBaseScale.x * s, iconBaseScale.y * s, iconBaseScale.z);
+
+        // El texto esta alineado a la izquierda y escala desde el centro de su rect: se corre
+        // para que el borde izquierdo no se le meta encima al icono.
+        detailText.transform.localScale = new Vector3(s, s, 1f);
+        float width = detailText.rectTransform.sizeDelta.x;
+        detailText.transform.localPosition = detailBasePosition + new Vector3((s - 1f) * width * 0.5f, 0f, 0f);
+    }
+
+    /// <summary>
+    /// Curva del destello: llega al pico en el primer cuarto y despues se apaga suave. Con un
+    /// seno simetrico el golpe se lee lento aunque dure poco.
+    /// </summary>
+    private float FlashPunch()
+    {
+        const float attack = 0.25f;
+
+        if (flashT >= 1f) return 0f;
+        if (flashT < attack) return Mathf.Sin(flashT / attack * Mathf.PI * 0.5f);
+
+        float decay = (flashT - attack) / (1f - attack);
+        return 1f - Mathf.SmoothStep(0f, 1f, decay);
     }
 
     // ── Construccion de la jerarquia ─────────────────────────────────────────
