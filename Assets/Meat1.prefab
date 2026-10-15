@@ -5511,6 +5511,11 @@ MonoBehaviour:
   heatOffset: {x: 0, y: 0, z: 0}
   smokeOffset: {x: 0, y: 0.05, z: -0.05}
   smokeSortingOrderOffset: 4
+  burnAlertPrefab: {fileID: 6580758161821604602, guid: 3f4e23b5b44942d4c8c49e93372f5a81, type: 3}
+  dragLiftHeight: 0.05
+  dragBobAmplitude: 0.022
+  dragBobFrequency: 1.2
+  dragEaseTime: 0.18
   flipPuff: {fileID: 161407075749097421}
   flipPuffContactOffsetY: 0.04
   hardSound: {fileID: 8300000, guid: f9664a6745285f54bb5c333b900cf4cf, type: 3}
@@ -5519,6 +5524,9 @@ MonoBehaviour:
   flipLiftHeight: 0.6
   flipSortingOrderBoost: 50
   flipSound: {fileID: 0}
+  statePulseScale: 0.07
+  burnedPulseMultiplier: 1.8
+  statePulseDuration: 0.28
   rotatePreviewVisual: 1
   rotatedPreviewAngleZ: 90
   cookSpeedBonusPerState: 0.07

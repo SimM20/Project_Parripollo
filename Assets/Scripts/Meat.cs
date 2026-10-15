@@ -21,10 +21,16 @@ public class Meat : Item
     [Tooltip("Orden de dibujo del humo relativo al sprite de la carne.")]
     [SerializeField] private int smokeSortingOrderOffset = 4;
 
+    [Header("Aviso de quemado")]
+    [Tooltip("Cartel '!' que aparece sobre la pieza cuando se esta por quemar y el puntero no esta encima. Vacio = sin aviso.")]
+    [SerializeField] private MeatBurnAlert burnAlertPrefab;
+
     private GameObject heatInstance;
     private GameObject smokeInstance;
     private BurnSmoke smoke;
+    private MeatBurnAlert burnAlert;
     private Transform fxRoot;
+    private bool isPointerOver;
 
     [Header("Drag Float")]
     [Tooltip("Cuanto se despega la pieza del puntero mientras se la arrastra (unidades de mundo).")]
@@ -119,6 +125,19 @@ public class Meat : Item
     public bool IsSideAActive => isSideA;
     public bool IsGridRotated => isGridRotated;
     public bool IsFlipping => isFlipping;
+    public bool IsCooking => IsCurrentlyCooking();
+
+    /// <summary>
+    /// El puntero (mouse o cursor del gamepad) esta sobre la pieza: entre el Enter y el Exit del
+    /// <see cref="WorldPointerDispatcher"/>, los mismos que abren y cierran la burbuja de estado.
+    /// </summary>
+    public bool IsPointerOver => isPointerOver;
+
+    /// <summary>
+    /// El sprite de la pieza se esta dibujando. GrillSystem y ViewManager apagan los renderers de las
+    /// piezas para ocultarlas; el aviso de quemado, que no es hijo de la pieza, lo sigue por aca.
+    /// </summary>
+    public bool IsVisualShown => spriteRenderer != null && spriteRenderer.enabled;
 
     /// <summary>
     /// Posicion de la pieza sin el flote del arrastre. La burbuja y los FX se enganchan aca
@@ -182,18 +201,31 @@ public class Meat : Item
                 return float.PositiveInfinity;
 
             float heat = GetTotalHeatReceived();
-            return Mathf.Min(SecondsToBurnSide(true, heat), SecondsToBurnSide(false, heat));
+            return Mathf.Min(SecondsToSideHeat(true, BurnThreshold, heat), SecondsToSideHeat(false, BurnThreshold, heat));
         }
     }
 
     /// <summary>
-    /// Estima con la velocidad del estado actual de la cara. En Pasado, la última banda antes de
-    /// Quemado y la única en la que avisa el gamepad, el resultado es exacto.
+    /// Segundos que le faltan a la cara apoyada para acumular <paramref name="targetHeat"/> con el
+    /// calor que recibe ahora. Infinito si no se está cocinando o si ya llegó. Lo usa el cartel de
+    /// quemado (<see cref="MeatBurnAlert"/>) para aparecer con anticipación.
     /// </summary>
-    private float SecondsToBurnSide(bool sideA, float heatPerSecond)
+    public float SecondsToActiveSideHeat(float targetHeat)
+    {
+        if (cut == null || TutorialManager.IsCookingPaused || !IsCurrentlyCooking())
+            return float.PositiveInfinity;
+
+        return SecondsToSideHeat(isSideA, targetHeat, GetTotalHeatReceived());
+    }
+
+    /// <summary>
+    /// Estima con la velocidad del estado actual de la cara. Dentro de una misma banda (en Pasado,
+    /// la última antes de Quemado y la única en la que avisa el gamepad) el resultado es exacto.
+    /// </summary>
+    private float SecondsToSideHeat(bool sideA, float targetHeat, float heatPerSecond)
     {
         float sideHeat = sideA ? sideACookTime : sideBCookTime;
-        float remaining = BurnThreshold - sideHeat;
+        float remaining = targetHeat - sideHeat;
         float rate = heatPerSecond * GetSideCookRate(sideA, cut.GetStateForHeat(sideHeat));
         return remaining > 0f && rate > 0f ? remaining / rate : float.PositiveInfinity;
     }
@@ -357,6 +389,14 @@ public class Meat : Item
     {
         bool showHeat = IsCurrentlyCooking();
         bool isBurned = IsAnySideBurned;
+
+        // El aviso de quemado se crea con la primera coccion y despues decide solo cuando se ve.
+        // Va suelto en la escena y no bajo el nodo FX (ver MeatBurnAlert); se destruye con la pieza.
+        if (burnAlert == null && burnAlertPrefab != null && showHeat)
+        {
+            burnAlert = Instantiate(burnAlertPrefab);
+            burnAlert.Bind(this);
+        }
 
         if (heatInstance == null && heatPrefab == null && smokeInstance == null && smokePrefab == null)
             return;
@@ -947,12 +987,14 @@ public class Meat : Item
 
     void OnWorldPointerEnter()
     {
+        isPointerOver = true;
         if (isHeldByMouse) return;
         ShowHover();
     }
 
     void OnWorldPointerExit()
     {
+        isPointerOver = false;
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();
     }
@@ -972,6 +1014,7 @@ public class Meat : Item
 
         StopStatePulse();
         ClearDragFloat();
+        isPointerOver = false;   // apagada no recibe el Exit del dispatcher
     }
 
     void OnDestroy()
@@ -980,6 +1023,9 @@ public class Meat : Item
             CancelFlipAnimation();
 
         ReleaseOccupiedSlots();
+
+        if (burnAlert != null)
+            Destroy(burnAlert.gameObject);
 
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.HideIfTarget(this);
