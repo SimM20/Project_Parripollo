@@ -99,7 +99,8 @@ public class MeatHoverBubble : MonoBehaviour
             return;
         }
 
-        transform.position = source.transform.position + GetOffset(source);
+        // RestPosition y no transform.position: el cartel no hereda el flote de la carne.
+        transform.position = source.RestPosition + GetOffset(source);
 
         // La fila de la barra va solo con la pieza en la parrilla.
         if (source.IsOnGrill != barShown)
@@ -133,7 +134,7 @@ public class MeatHoverBubble : MonoBehaviour
             ApplyPop();
         }
 
-        transform.position = meat.transform.position + GetOffset(meat);
+        transform.position = meat.RestPosition + GetOffset(meat);
     }
 
     public void Hide()
