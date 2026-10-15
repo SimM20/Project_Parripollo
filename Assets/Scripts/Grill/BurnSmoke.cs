@@ -110,10 +110,25 @@ public class BurnSmoke : MonoBehaviour
     [Header("Transiciones")]
     [Tooltip("Que tan rapido sigue el humo los cambios de coccion (en perfiles por segundo).")]
     [Min(0.01f)] [SerializeField] private float blendSpeed = 1.5f;
-    [Tooltip("Bocanadas que salen de golpe en el momento en que el corte se quema.")]
-    [Min(0)] [SerializeField] private int burnBurst = 24;
     [Tooltip("Velocidad de las rafagas (ver gustiness de cada perfil).")]
     [SerializeField] private float gustFrequency = 1.6f;
+
+    [Header("Puff de quemado")]
+    [Tooltip("Bocanadas que salen de golpe en el momento en que el corte se quema.")]
+    [Min(0)] [SerializeField] private int burnBurst = 70;
+    [Tooltip("Opacidad de las bocanadas del golpe: hollin puro, sin importar el perfil.")]
+    [Range(0f, 1f)] [SerializeField] private float burnOpacity = 0.95f;
+    [Tooltip("Cuanto mas grandes salen las bocanadas del golpe que las del perfil de quemado.")]
+    [SerializeField] private float burnSizeBoost = 2.4f;
+    [Tooltip("Cuanto mas rapido suben y se abren las bocanadas del golpe.")]
+    [SerializeField] private float burnSpeedBoost = 2.5f;
+    [Tooltip("Cuanto mas duran las bocanadas del golpe.")]
+    [SerializeField] private float burnLifetimeBoost = 1.25f;
+    [Tooltip("Segundos que se suman (negativo = restan) a la vida de las bocanadas del golpe, despues del boost.")]
+    [SerializeField] private float burnLifetimeOffset = -0.5f;
+    [Tooltip("Pico de emision extra despues del golpe (4 = el quintuple del perfil) y segundos que tarda en apagarse.")]
+    [SerializeField] private float burnEmissionBoost = 4f;
+    [Min(0.01f)] [SerializeField] private float burnEmissionDecay = 2f;
 
     [Header("Puff de cambio de punto")]
     [Tooltip("Bocanadas de golpe con el puff mas suave (Jugoso) y con el mas fuerte (Pasado).")]
@@ -139,8 +154,9 @@ public class BurnSmoke : MonoBehaviour
     [SerializeField] private float noiseFrequency = 0.45f;
     [SerializeField] private float noiseScrollSpeed = 0.3f;
     [SerializeField] private float spinDegreesPerSecond = 20f;
-    [Tooltip("Tope de bocanadas vivas. Tiene que alcanzar para el perfil de quemado mas el golpe inicial.")]
-    [Min(1)] [SerializeField] private int maxParticles = 180;
+    [Tooltip("Tope de bocanadas vivas. Tiene que alcanzar para el perfil de quemado mas el golpe " +
+             "inicial y su pico de emision: lo que pase el tope no se emite.")]
+    [Min(1)] [SerializeField] private int maxParticles = 400;
 
     [Header("Color")]
     [SerializeField] private Color steamColor = new Color(0.90f, 0.89f, 0.87f, 1f);
@@ -165,6 +181,7 @@ public class BurnSmoke : MonoBehaviour
     private bool wasBurned;
     private float gustSeed;
     private float puffBoost;
+    private float burnBoost;
 
     private static readonly int ColorId = Shader.PropertyToID("_Color");
 
@@ -208,13 +225,44 @@ public class BurnSmoke : MonoBehaviour
         else if (!emitting && ps.isEmitting)
             ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
 
-        if (justBurned && burnBurst > 0 && ps.isPlaying)
-            ps.Emit(burnBurst);
+        if (justBurned && ps.isPlaying)
+            BurnPuff();
 
         if (puffBoost > 0f)
             puffBoost = Mathf.MoveTowards(puffBoost, 0f, puffEmissionBoost * Time.deltaTime / puffEmissionDecay);
 
+        if (burnBoost > 0f)
+            burnBoost = Mathf.MoveTowards(burnBoost, 0f, burnEmissionBoost * Time.deltaTime / burnEmissionDecay);
+
         ApplyEmission();
+    }
+
+    /// <summary>
+    /// Golpe de humo negro al quemarse: una nube de hollin puro, mucho mas cargada, grande, rapida
+    /// y duradera que el perfil de quemado, y un pico de emision que tarda un par de segundos en
+    /// apagarse. Lo dispara SetState en el frame en que el corte se quema (el perfil ya es el de quemado).
+    /// </summary>
+    private void BurnPuff()
+    {
+        Color color = sootColor;
+        color.a = burnOpacity;
+
+        // La posicion sale de la forma (toda la superficie de la pieza); el resto se pisa aca.
+        // La velocidad va en espacio de mundo: el nodo FX no rota.
+        var ep = new ParticleSystem.EmitParams { startColor = color };
+        for (int i = 0; i < burnBurst; i++)
+        {
+            ep.startSize = Random.Range(current.sizeMin, current.sizeMax) * burnSizeBoost;
+            ep.startLifetime = Mathf.Max(0.2f,
+                Random.Range(current.lifetimeMin, current.lifetimeMax) * burnLifetimeBoost + burnLifetimeOffset);
+            ep.velocity = new Vector3(
+                Random.Range(-current.lateralSpread, current.lateralSpread) * burnSpeedBoost,
+                Random.Range(current.riseSpeedMin, current.riseSpeedMax) * burnSpeedBoost,
+                0f);
+            ps.Emit(ep, 1);
+        }
+
+        burnBoost = burnEmissionBoost;
     }
 
     /// <summary>
@@ -344,7 +392,7 @@ public class BurnSmoke : MonoBehaviour
         }
 
         var emission = ps.emission;
-        emission.rateOverTime = current.emissionRate * gust * (1f + puffBoost);
+        emission.rateOverTime = current.emissionRate * gust * (1f + puffBoost + burnBoost);
     }
 
     /// <summary>Lo que no cambia con el perfil: se fija una vez.</summary>
