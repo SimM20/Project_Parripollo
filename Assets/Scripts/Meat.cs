@@ -16,13 +16,31 @@ public class Meat : Item
     [SerializeField] private GameObject heatPrefab;
     [SerializeField] private GameObject smokePrefab;
     [SerializeField] private Vector3 heatOffset = Vector3.zero;
-    [SerializeField] private Vector3 smokeOffset = new Vector3(0f, 0.8f, -0.1f);
+    [Tooltip("Corrimiento del humo respecto del centro del sprite. El area de emision ya cubre la pieza entera.")]
+    [SerializeField] private Vector3 smokeOffset = new Vector3(0f, 0.05f, -0.05f);
     [Tooltip("Orden de dibujo del humo relativo al sprite de la carne.")]
     [SerializeField] private int smokeSortingOrderOffset = 4;
 
     private GameObject heatInstance;
     private GameObject smokeInstance;
+    private BurnSmoke smoke;
     private Transform fxRoot;
+
+    [Header("Drag Float")]
+    [Tooltip("Cuanto se despega la pieza del puntero mientras se la arrastra (unidades de mundo).")]
+    [SerializeField] private float dragLiftHeight = 0.05f;
+    [Tooltip("Amplitud de la oscilacion mientras flota.")]
+    [SerializeField] private float dragBobAmplitude = 0.022f;
+    [Tooltip("Oscilaciones por segundo mientras flota.")]
+    [SerializeField] private float dragBobFrequency = 1.2f;
+    [Tooltip("Segundos que tarda en despegar al agarrarla.")]
+    [SerializeField] private float dragEaseTime = 0.18f;
+
+    private float floatWeight;
+    private float floatTime;
+    private Vector3 floatOffset;
+    private Vector3 lastFloatedPosition;
+    private Vector2 baseColliderOffset;
 
     [Header("Flip Puff")]
     [SerializeField] private FlipPuff flipPuff;
@@ -90,6 +108,23 @@ public class Meat : Item
     public bool IsSideAActive => isSideA;
     public bool IsGridRotated => isGridRotated;
     public bool IsFlipping => isFlipping;
+
+    /// <summary>
+    /// Posicion de la pieza sin el flote del arrastre. La burbuja y los FX se enganchan aca
+    /// para no flotar con la carne.
+    /// </summary>
+    public Vector3 RestPosition => transform.position - floatOffset;
+
+    /// <summary>Que tan cerca de quemarse esta la cara apoyada: 0 cruda, 1 en el umbral de Quemado.</summary>
+    private float ActiveSideBurnProgress01
+    {
+        get
+        {
+            float burnThreshold = BurnThreshold;
+            float heat = isSideA ? sideACookTime : sideBCookTime;
+            return burnThreshold > 0f ? Mathf.Clamp01(heat / burnThreshold) : 0f;
+        }
+    }
 
     /// <summary>
     /// Distancia en Y desde el pivote de la pieza hasta el borde de arriba de su sprite, en
@@ -178,6 +213,8 @@ public class Meat : Item
 
         baseLocalScale = transform.localScale;
         ownCollider = GetComponent<Collider2D>();
+        if (ownCollider != null)
+            baseColliderOffset = ownCollider.offset;
 
         if (flipPuff == null)
             flipPuff = GetComponentInChildren<FlipPuff>(true);
@@ -188,9 +225,67 @@ public class Meat : Item
     protected override void Update()
     {
         base.Update();
+        UpdateDragFloat();
         UpdateEffects();
         GamepadHaptics.ReportBurnRisk(SecondsToBurn);
     }
+
+    // ── Flote del arrastre ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mientras se arrastra, la pieza va despegada del puntero y oscila lento. El drag la vuelve
+    /// a poner bajo el puntero cada frame y aca se le suma el flote, asi que la deteccion de slots
+    /// (UpdateHoverPreview, que corre antes) y el drop usan siempre la posicion sin flote. El humo
+    /// y el calor no flotan (StabilizeFxRoot) y el collider se compensa para quedar bajo el puntero.
+    /// </summary>
+    private void UpdateDragFloat()
+    {
+        bool canFloat = isHeldByMouse && !isFlipping;
+        if (!canFloat)
+        {
+            ClearDragFloat();
+            return;
+        }
+
+        floatWeight = dragEaseTime > 0f ? Mathf.MoveTowards(floatWeight, 1f, Time.deltaTime / dragEaseTime) : 1f;
+
+        // Arranca en fase 0 (sin salto) y sube: el despegue y la oscilacion se suman.
+        floatTime += Time.deltaTime;
+        float bob = Mathf.Sin(floatTime * dragBobFrequency * 2f * Mathf.PI) * dragBobAmplitude;
+        float lift = Mathf.SmoothStep(0f, 1f, floatWeight) * (dragLiftHeight + bob);
+        SetFloatOffset(new Vector3(0f, lift, 0f));
+    }
+
+    private void SetFloatOffset(Vector3 offset)
+    {
+        // Si algo movio la pieza desde el ultimo frame (el drag lo hace cada frame), esa ya es
+        // la posicion de reposo.
+        Vector3 rest = transform.position;
+        if (rest == lastFloatedPosition)
+            rest -= floatOffset;
+
+        floatOffset = offset;
+        lastFloatedPosition = rest + offset;
+        transform.position = lastFloatedPosition;
+
+        if (ownCollider != null)
+        {
+            Vector2 localOffset = offset == Vector3.zero ? Vector2.zero : (Vector2)transform.InverseTransformVector(offset);
+            ownCollider.offset = baseColliderOffset - localOffset;
+        }
+    }
+
+    /// <summary>Apoya la pieza al toque: al soltarla o al cancelar el agarre, que usan su posicion.</summary>
+    private void ClearDragFloat()
+    {
+        if (floatOffset != Vector3.zero)
+            SetFloatOffset(Vector3.zero);
+
+        floatWeight = 0f;
+        floatTime = 0f;
+    }
+
+    // ── Efectos ──────────────────────────────────────────────────────────────
 
     private void UpdateEffects()
     {
@@ -215,21 +310,72 @@ public class Meat : Item
             heatInstance.SetActive(true);
         }
 
-        // Humo continuo: existe SOLO mientras alguna cara esta quemada, y vive colgado
-        // de este corte. Varios cortes quemados => varias instancias independientes.
-        if (smokeInstance != null)
-        {
-            if (smokeInstance.activeSelf != isBurned)
-                smokeInstance.SetActive(isBurned);
-        }
-        else if (smokePrefab != null && isBurned)
+        // Humo: acompaña toda la coccion, se espesa a medida que la cara apoyada se acerca a
+        // quemarse y se dispara al quemarse (un corte quemado humea aunque no este en la parrilla).
+        // Vive colgado de este corte: varios cortes => varias instancias independientes.
+        bool showSmoke = showHeat || isBurned;
+
+        if (smokeInstance == null && smokePrefab != null && showSmoke)
         {
             smokeInstance = Instantiate(smokePrefab, EnsureFxRoot());
-            smokeInstance.transform.localPosition = smokeOffset;
             smokeInstance.transform.localRotation = Quaternion.identity;
+            smoke = smokeInstance.GetComponent<BurnSmoke>();
             SetUpSmokeRenderers(smokeInstance);
-            smokeInstance.SetActive(true);
         }
+
+        if (smokeInstance == null) return;
+
+        PlaceSmokeSource();
+
+        if (smoke != null)
+            smoke.SetState(showSmoke, ActiveSideBurnProgress01, isBurned);
+        else if (smokeInstance.activeSelf != showSmoke)
+            smokeInstance.SetActive(showSmoke);
+    }
+
+    /// <summary>
+    /// El humo sale de toda la superficie de la pieza y no de un punto: le pasa el rectangulo
+    /// del sprite en reposo (contempla la rotacion de la grilla, no el estiron del flip) en el
+    /// espacio local del humo, y lo centra sobre el sprite.
+    /// </summary>
+    private void PlaceSmokeSource()
+    {
+        Vector3 center = Vector3.zero;
+        Vector3 size = new Vector3(0.3f, 0.3f, 0f);
+
+        if (spriteRenderer != null && spriteRenderer.sprite != null)
+        {
+            Vector3 restScale = (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : transform.localScale;
+            if (transform.parent != null)
+                restScale = Vector3.Scale(restScale, transform.parent.lossyScale);
+
+            Bounds b = spriteRenderer.sprite.bounds;
+            Quaternion rotation = transform.rotation;
+            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, 0f);
+            Vector3 max = new Vector3(float.MinValue, float.MinValue, 0f);
+
+            for (int i = 0; i < 4; i++)
+            {
+                var corner = new Vector3(i < 2 ? b.min.x : b.max.x, (i % 2 == 0) ? b.min.y : b.max.y, 0f);
+                Vector3 p = rotation * Vector3.Scale(corner, restScale);
+                min = Vector3.Min(min, new Vector3(p.x, p.y, 0f));
+                max = Vector3.Max(max, new Vector3(p.x, p.y, 0f));
+            }
+
+            // De mundo al espacio del humo: el nodo FX no rota, solo escala.
+            Vector3 unit = smokeInstance.transform.lossyScale;
+            center = new Vector3(SafeDivide(min.x + max.x, 2f * unit.x), SafeDivide(min.y + max.y, 2f * unit.y), 0f);
+            size = new Vector3(SafeDivide(max.x - min.x, unit.x), SafeDivide(max.y - min.y, unit.y), 0f);
+        }
+
+        smokeInstance.transform.localPosition = smokeOffset + center;
+        if (smoke != null)
+            smoke.SetSourceSize(size);
+    }
+
+    private static float SafeDivide(float value, float divisor)
+    {
+        return Mathf.Abs(divisor) < 0.0001f ? value : value / divisor;
     }
 
     private Transform EnsureFxRoot()
@@ -244,12 +390,14 @@ public class Meat : Item
 
     /// <summary>
     /// El humo tiene que subir en vertical de mundo y no deformarse: la carne rota 90 grados
-    /// con R y el flip le aplasta la escala en X. El nodo FX cancela ambas cosas.
+    /// con R y el flip le aplasta la escala en X. El nodo FX cancela ambas cosas, y tambien el
+    /// flote del arrastre: humo y calor no se despegan con la pieza.
     /// </summary>
     private void StabilizeFxRoot()
     {
         if (fxRoot == null) return;
 
+        fxRoot.position = RestPosition;
         fxRoot.rotation = Quaternion.identity;
 
         Vector3 baseScale = (baseLocalScale.sqrMagnitude > 0.0001f) ? baseLocalScale : Vector3.one;
@@ -363,6 +511,9 @@ public class Meat : Item
 
     public override void OnWorldPointerUp()
     {
+        // El Up no trae Drag: la pieza sigue con el flote del frame anterior. Se apoya antes de
+        // decidir el destino, que se mide con la posicion bajo el puntero.
+        ClearDragFloat();
         if (!EndHold()) return;
 
         if (TrashZone.TryConsumeAtWorldPoint(transform.position, this))
@@ -733,11 +884,20 @@ public class Meat : Item
             MeatHoverBubble.Instance.Hide();
     }
 
+    /// <summary>La pausa corta el arrastre: la pieza vuelve a su lugar apoyada, sin el flote.</summary>
+    protected override void CancelDrag()
+    {
+        ClearDragFloat();
+        base.CancelDrag();
+    }
+
     public override void OnDisable()
     {
         base.OnDisable();
         if (isFlipping)
             CancelFlipAnimation();
+
+        ClearDragFloat();
     }
 
     void OnDestroy()

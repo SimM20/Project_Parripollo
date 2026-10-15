@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Puff breve de vapor/humo al dar vuelta un corte. Es feedback de la ACCION de flip,
 /// no del estado de coccion: sale igual con la carne cruda, hecha o quemada, y no tiene
-/// relacion con el humo continuo de quemado (ver Meat.UpdateEffects / smokePrefab).
+/// relacion con el humo continuo de coccion (ver Meat.UpdateEffects / BurnSmoke).
 ///
 /// Usa el ParticleSystem nativo de Unity emitiendo a mano: cada flip decide cuantas
 /// particulas, de que tamano y con que velocidad, asi no se repite siempre la misma animacion.
