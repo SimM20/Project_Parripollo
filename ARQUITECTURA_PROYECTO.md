@@ -125,6 +125,18 @@
 > El frasco (`ToppingDraggable`) la lee en `Start` y la guarda al terminar cada vertida. Agarrarlo vacío avisa con
 > `sauce.empty`. En la tienda la compra es de a 1, se bloquea con el frasco lleno y la celda dice `FRASCO: N%`. Los
 > frascos de `TutorialScene` llevan `ignoreStock`. Secciones 2.4, 3.6, 3.7 y nota 39.
+> Última actualización parcial: **2026-10-14** (rama `Coccion-Update`) — **cartel "!" de carne por quemarse**
+> (`Grill/MeatBurnAlert.cs`, prefab `Prefabs/UI/MeatBurnAlert.prefab`, arte `Sprites/Arte Aseprite/UI y Botones/Alerta Quemado`).
+> Burbuja pixel art (16x17, Point, 32 PPU, pivote en la colita) que aparece sobre la pieza **1 s antes** de que la cara
+> apoyada llegue a la mitad de Pasado (el umbral del temblor de `MeatCookHoverBar`; `leadSeconds`, con el calor que recibe
+> ahora: `Meat.SecondsToActiveSideHeat`) y **solo con el puntero fuera de la pieza**. Transición con
+> `MeatHoverBubble`: al entrar el puntero el "!" sube, crece y se desvanece por encima de la burbuja; al salir vuelve
+> achicándose desde ella. Late más rápido cuanto más cerca de quemarse; se oculta al quemarse, fuera de la parrilla y
+> durante el flip. `Meat` lo instancia (`burnAlertPrefab`, asignado en `Meat1.prefab`) con la primera cocción y lo destruye
+> con la pieza. **No es hijo de la carne**: `GrillLayerToggle`, `GrillSystem.SetMeatVisualsVisible` y `ViewManager` prenden
+> y apagan todos los `SpriteRenderer` hijos de cada pieza (y `GamepadNavTargets` los suma al área de selección); el cartel
+> sigue la visibilidad del sprite de la pieza con `Meat.IsVisualShown`. Nuevos en `Meat`: `IsPointerOver` (entre el Enter y
+> el Exit del dispatcher, los mismos que abren y cierran la burbuja), `IsVisualShown` e `IsCooking`. Sección 3.8 → *VFX de parrilla*.
 
 ---
 
@@ -1979,6 +1991,13 @@ los dos clips, el otro cubre todo el rango. `OnDisable` silencia sin fade.
   pasa a `true` (`smokePrefab`, bajo el `FxRoot` del corte); se apaga solo al desactivarse. Bocanadas superpuestas generadas por código.
 - `FlipPuff`: puff **breve** al dar vuelta la carne. Feedback de la acción, no del estado. `ParticleSystem` nativo
   emitido a mano con cantidad/tamaño/velocidad aleatorios por flip. Hijo del prefab de carne; `Meat.EmitFlipPuff()`.
+- `MeatBurnAlert`: cartel "!" pixel art de **carne por quemarse**, uno por corte (`burnAlertPrefab`), **suelto en la escena**
+  y no bajo la pieza (los toggles de capa y de vista prenden todos los renderers hijos). Avisa si la pieza se cocina y se ve
+  (`Meat.IsVisualShown`), a la cara apoyada le falta menos de `leadSeconds` (1 s, con el calor de ahora) para llegar a
+  `warningStart` de Pasado (0.5, igual que la barra) o ya lo pasó, y no está quemada ni en flip. Fases: `PopIn` (primera vez) → `Shown`; con `Meat.IsPointerOver` → `ToBubble` (sube `bubbleRise`, crece a
+  `bubbleScale` y se desvanece, en orden 5020 por encima de la burbuja) → `Hidden`; al salir el puntero → `FromBubble`
+  (el camino inverso) → `Shown`. Transiciones en tiempo sin escalar, latido en tiempo de juego. Se ubica y escala en mundo
+  cada `LateUpdate` (`gapAboveMeat` 0.2 sobre `Meat.VisualTopOffset`, `height` 0.55), en `MeatBubbleOverlay` orden 4950.
 
 #### Radio — `Radio/Radio.cs` · `Radio/RadioStation.cs` (DDOL, se crea sola)
 La mejora `RadioUpgrade` deja una radio en el mostrador (`UpgradeUnlockActivator`) que funciona como una radio de verdad,

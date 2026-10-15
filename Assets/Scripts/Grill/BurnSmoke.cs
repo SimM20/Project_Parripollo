@@ -115,6 +115,20 @@ public class BurnSmoke : MonoBehaviour
     [Tooltip("Velocidad de las rafagas (ver gustiness de cada perfil).")]
     [SerializeField] private float gustFrequency = 1.6f;
 
+    [Header("Puff de cambio de punto")]
+    [Tooltip("Bocanadas de golpe con el puff mas suave (Jugoso) y con el mas fuerte (Pasado).")]
+    [Min(0)] [SerializeField] private int puffCountMin = 4;
+    [Min(0)] [SerializeField] private int puffCountMax = 11;
+    [Tooltip("Cuanto mas cargadas (opacidad) salen las bocanadas del puff que las del perfil.")]
+    [SerializeField] private float puffOpacityBoost = 2f;
+    [Tooltip("Cuanto mas grandes salen las bocanadas del puff que las del perfil.")]
+    [SerializeField] private float puffSizeBoost = 1.35f;
+    [Tooltip("Cuanto mas rapido suben y se abren las bocanadas del puff.")]
+    [SerializeField] private float puffSpeedBoost = 1.6f;
+    [Tooltip("Pico de emision extra despues del puff (2 = el triple del perfil) y segundos que tarda en apagarse.")]
+    [SerializeField] private float puffEmissionBoost = 2f;
+    [Min(0.01f)] [SerializeField] private float puffEmissionDecay = 0.35f;
+
     [Header("Forma")]
     [Tooltip("Cuanto se expande cada bocanada al subir.")]
     [SerializeField] private float expansion = 3f;
@@ -150,6 +164,7 @@ public class BurnSmoke : MonoBehaviour
     private bool shapeDirty = true;
     private bool wasBurned;
     private float gustSeed;
+    private float puffBoost;
 
     private static readonly int ColorId = Shader.PropertyToID("_Color");
 
@@ -196,6 +211,42 @@ public class BurnSmoke : MonoBehaviour
         if (justBurned && burnBurst > 0 && ps.isPlaying)
             ps.Emit(burnBurst);
 
+        if (puffBoost > 0f)
+            puffBoost = Mathf.MoveTowards(puffBoost, 0f, puffEmissionBoost * Time.deltaTime / puffEmissionDecay);
+
+        ApplyEmission();
+    }
+
+    /// <summary>
+    /// Golpe corto de humo: unas bocanadas de una, mas cargadas, grandes y rapidas que las del
+    /// perfil, y un pico de emision que se apaga en unas decimas. Lo dispara Meat cuando la cara
+    /// apoyada pasa al punto siguiente. <paramref name="strength01"/>: 0 el primer cambio (Jugoso),
+    /// 1 el ultimo antes de quemarse (Pasado). Quemado no pasa por aca: tiene su propio golpe.
+    /// </summary>
+    public void Puff(float strength01)
+    {
+        if (ps == null || !ps.isEmitting) return;
+
+        strength01 = Mathf.Clamp01(strength01);
+        int count = Mathf.RoundToInt(Mathf.Lerp(puffCountMin, puffCountMax, strength01));
+
+        Color color = Color.Lerp(steamColor, sootColor, current.darkness);
+        color.a = Mathf.Min(1f, current.opacity * puffOpacityBoost);
+
+        // La posicion sale de la forma (toda la superficie de la pieza); el resto se pisa aca.
+        // La velocidad va en espacio de mundo: el nodo FX no rota.
+        var ep = new ParticleSystem.EmitParams { startColor = color };
+        for (int i = 0; i < count; i++)
+        {
+            ep.startSize = Random.Range(current.sizeMin, current.sizeMax) * puffSizeBoost;
+            ep.velocity = new Vector3(
+                Random.Range(-current.lateralSpread, current.lateralSpread) * puffSpeedBoost,
+                Random.Range(current.riseSpeedMin, current.riseSpeedMax) * puffSpeedBoost,
+                0f);
+            ps.Emit(ep, 1);
+        }
+
+        puffBoost = Mathf.Max(puffBoost, puffEmissionBoost * Mathf.Lerp(0.6f, 1f, strength01));
         ApplyEmission();
     }
 
@@ -293,7 +344,7 @@ public class BurnSmoke : MonoBehaviour
         }
 
         var emission = ps.emission;
-        emission.rateOverTime = current.emissionRate * gust;
+        emission.rateOverTime = current.emissionRate * gust * (1f + puffBoost);
     }
 
     /// <summary>Lo que no cambia con el perfil: se fija una vez.</summary>
@@ -406,5 +457,6 @@ public class BurnSmoke : MonoBehaviour
         cookingEnd.Sanitize();
         burned.Sanitize();
         maxParticles = Mathf.Max(1, maxParticles);
+        if (puffCountMax < puffCountMin) puffCountMax = puffCountMin;
     }
 }
