@@ -18,7 +18,11 @@ public class HudManager : MonoBehaviour
     [Tooltip("Duración del conteo animado del valor mostrado hacia el real.")]
     [SerializeField] private float moneyCountSeconds = 0.35f;
 
+    [Header("Tip Popup")]
+    [SerializeField] private TipPopupStyle tipPopupStyle = new TipPopupStyle();
+
     public MoneyPopupStyle PopupStyle => moneyPopupStyle;
+    public TipPopupStyle TipStyle => tipPopupStyle;
 
     /// <summary>Botón de pausa del HUD (arriba a la izquierda).</summary>
     public Button PauseButton => pauseButton;
@@ -128,7 +132,8 @@ public class HudManager : MonoBehaviour
             // Subió y hay un popup volando: él dispara el conteo al llegar (OnMoneyPopupArrived).
             // Si por lo que sea no llega, el conteo arranca solo pasado el vuelo.
             moneyCountPending = true;
-            float fallback = moneyPopupStyle.popInSeconds + moneyPopupStyle.holdSeconds + moneyPopupStyle.flySeconds + 0.2f;
+            float fallback = moneyPopupStyle.popInSeconds + moneyPopupStyle.holdSeconds + moneyPopupStyle.flySeconds
+                           + tipPopupStyle.delaySeconds + tipPopupStyle.greatExtraHoldSeconds + 0.2f;
             StartCoroutine(MoneyCountFallback(fallback));
             return;
         }
@@ -147,22 +152,34 @@ public class HudManager : MonoBehaviour
         return money != null ? money.transform : null;
     }
 
-    /// <summary>Llamado por MoneyPopup al aterrizar: punch del contenedor y conteo hasta el valor real.</summary>
+    /// <summary>
+    /// Llamado por MoneyPopup al aterrizar: punch del contenedor y conteo hasta lo que ya llegó.
+    /// Con cobro y propina en vuelo, el contador sube en dos tiempos: primero la comida y
+    /// después la propina, así se ve cuánto aportó cada una.
+    /// </summary>
     public void OnMoneyPopupArrived()
     {
         if (moneyPunchRoutine != null) StopCoroutine(moneyPunchRoutine);
         moneyPunchRoutine = StartCoroutine(PunchMoney());
 
-        StartMoneyCount();
+        if (!moneyCountPending) return;
+
+        int landed = targetMoney - Mathf.RoundToInt(MoneyPopup.InFlightAmount);
+        if (landed >= targetMoney) moneyCountPending = false;
+        CountTo(Mathf.Max(displayedMoney, landed));
     }
 
     private void StartMoneyCount()
     {
         if (!moneyCountPending) return;
         moneyCountPending = false;
+        CountTo(targetMoney);
+    }
 
+    private void CountTo(int value)
+    {
         if (moneyCountRoutine != null) StopCoroutine(moneyCountRoutine);
-        moneyCountRoutine = StartCoroutine(CountMoney(displayedMoney, targetMoney));
+        moneyCountRoutine = StartCoroutine(CountMoney(displayedMoney, value));
     }
 
     private IEnumerator MoneyCountFallback(float delay)
