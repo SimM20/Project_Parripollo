@@ -18,6 +18,23 @@ public class StockPanelSlot : MonoBehaviour
     [Header("Colors")]
     [SerializeField] private Color availableColor = Color.white;
     [SerializeField] private Color emptyColor = new Color(0.45f, 0.45f, 0.45f, 1f);
+    [Tooltip("Color del contador cuando quedan pocas unidades (y al menos una).")]
+    [SerializeField] private Color lowCountColor = new Color(1f, 0.74f, 0.32f, 1f);
+    [Tooltip("Con esta cantidad o menos el contador toma lowCountColor. 0 = nunca.")]
+    [Min(0)] [SerializeField] private int lowCountThreshold = 3;
+
+    [Header("Feedback")]
+    [Tooltip("Escala del icono con el puntero encima. Solo el icono: la celda y su collider no cambian.")]
+    [SerializeField] private float iconHoverScale = 1.12f;
+    [SerializeField] [Min(0.01f)] private float iconScaleSmoothTime = 0.06f;
+    [Tooltip("Alfa del icono mientras se arrastra una unidad desde esta celda.")]
+    [Range(0f, 1f)] [SerializeField] private float iconDraggingAlpha = 0.45f;
+    [Tooltip("Segundos de la aparicion del fantasma al agarrar.")]
+    [SerializeField] [Min(0.01f)] private float ghostPopSeconds = 0.12f;
+    [Tooltip("Segundos de la vuelta del fantasma a la celda cuando se suelta donde no entra.")]
+    [SerializeField] [Min(0.01f)] private float ghostReturnSeconds = 0.16f;
+    [Tooltip("Golpe del contador cuando cambia la cantidad (0.25 = 25 %).")]
+    [SerializeField] private float countPunch = 0.25f;
 
     [Header("Drag Ghost")]
     [SerializeField] private int ghostSortingOrder = 6000;
@@ -45,16 +62,32 @@ public class StockPanelSlot : MonoBehaviour
     private bool isDragging;
     private bool isGridRotated;
 
+    // Presentacion: el icono es un hijo sin collider, se puede escalar sin tocar el area de la celda.
+    private Vector3 iconBaseScale = Vector3.one;
+    private float iconScale = 1f;
+    private float iconScaleVelocity;
+    private bool pointerOver;
+    private Vector3 ghostBaseScale = Vector3.one;
+    private float ghostPopT = 1f;
+    private ItemDataSO lastBoundItem;
+    private int lastBoundCount = -1;
+
     void Awake()
     {
         if (iconRenderer == null)
             iconRenderer = GetComponent<SpriteRenderer>();
+
+        if (iconRenderer != null)
+            iconBaseScale = iconRenderer.transform.localScale;
 
         EnsureCollider2D();
     }
 
     void Update()
     {
+        UpdateIconFeedback();
+        UpdateGhostPop();
+
         if (!isDragging || draggingItem == null)
             return;
 
@@ -69,10 +102,70 @@ public class StockPanelSlot : MonoBehaviour
 
     void OnDisable()
     {
+        pointerOver = false;
+        ResetIconScale();
+
         if (!isDragging)
             return;
 
         CancelDrag();
+    }
+
+    // ── Feedback de la celda (solo visual) ──────────────────────────────────
+
+    void OnWorldPointerEnter() => pointerOver = true;
+
+    void OnWorldPointerExit() => pointerOver = false;
+
+    /// <summary>
+    /// El icono crece con el puntero encima (si hay algo para agarrar) y vuelve al soltar. Tiempo
+    /// sin escalar: es respuesta al puntero. El collider es de la celda y no se toca.
+    /// </summary>
+    private void UpdateIconFeedback()
+    {
+        if (iconRenderer == null) return;
+
+        float target = pointerOver && isInteractable && !isDragging ? iconHoverScale : 1f;
+        if (Mathf.Abs(iconScale - target) < 0.0005f && Mathf.Abs(iconScaleVelocity) < 0.0005f)
+            return;
+
+        iconScale = Mathf.SmoothDamp(iconScale, target, ref iconScaleVelocity, iconScaleSmoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
+        iconRenderer.transform.localScale = iconBaseScale * iconScale;
+    }
+
+    private void ResetIconScale()
+    {
+        iconScale = 1f;
+        iconScaleVelocity = 0f;
+        if (iconRenderer != null)
+            iconRenderer.transform.localScale = iconBaseScale;
+    }
+
+    /// <summary>El fantasma aparece creciendo desde la celda en vez de saltar a tamaño completo.</summary>
+    private void UpdateGhostPop()
+    {
+        if (ghost == null || ghostPopT >= 1f) return;
+
+        ghostPopT = Mathf.Min(1f, ghostPopT + Time.unscaledDeltaTime / ghostPopSeconds);
+        ghost.transform.localScale = ghostBaseScale * Mathf.LerpUnclamped(0.6f, 1f, FeelEase.OutBack(ghostPopT, 1.6f));
+    }
+
+    /// <summary>Icono atenuado mientras una unidad de esta celda va en la mano; normal al terminar.</summary>
+    private void SetIconDragging(bool dragging)
+    {
+        if (iconRenderer == null) return;
+
+        Color c = isInteractable ? availableColor : emptyColor;
+        if (dragging) c.a *= iconDraggingAlpha;
+        iconRenderer.color = c;
+    }
+
+    /// <summary>El drop no sirvió: el fantasma vuelve volando a la celda y se apaga (el stock no se tocó).</summary>
+    private void PlayGhostReturn()
+    {
+        if (ghostRenderer == null || iconRenderer == null) return;
+
+        SpriteGhost.Spawn(ghostRenderer, SpriteGhost.Motion.Into(iconRenderer.transform.position, ghostReturnSeconds, 0.6f, false));
     }
 
     // ── Binding ─────────────────────────────────────────────────────────────
@@ -90,15 +183,24 @@ public class StockPanelSlot : MonoBehaviour
         if (iconRenderer != null)
         {
             iconRenderer.sprite = ResolveIcon(boundItem);
-            iconRenderer.color = isInteractable ? availableColor : emptyColor;
+            SetIconDragging(isDragging);
             FitIconToSlot();
         }
 
         if (countLabel != null)
         {
             countLabel.text = count.ToString();
-            countLabel.color = isInteractable ? availableColor : emptyColor;
+            bool low = isInteractable && lowCountThreshold > 0 && count <= lowCountThreshold;
+            countLabel.color = !isInteractable ? emptyColor : low ? lowCountColor : availableColor;
+
+            // Golpe del contador solo si cambió la cantidad de la misma variedad (no al reordenar
+            // las celdas del pool). Es un texto sin collider.
+            if (boundItem != null && boundItem == lastBoundItem && lastBoundCount >= 0 && count != lastBoundCount)
+                ScalePunch.Punch(countLabel.transform, countPunch, 0.2f, true);
         }
+
+        lastBoundItem = boundItem;
+        lastBoundCount = count;
     }
 
     /// <summary>
@@ -116,7 +218,8 @@ public class StockPanelSlot : MonoBehaviour
             return;
 
         float factor = iconLocalSize / largestSide;
-        iconRenderer.transform.localScale = new Vector3(factor, factor, 1f);
+        iconBaseScale = new Vector3(factor, factor, 1f);
+        iconRenderer.transform.localScale = iconBaseScale * iconScale;
     }
 
     /// <summary>Coloca el ícono y el contador por encima del fondo del panel.</summary>
@@ -155,6 +258,7 @@ public class StockPanelSlot : MonoBehaviour
 
         Vector3 mouseWorld = GetMouseWorldPosition();
         CreateGhost(mouseWorld);
+        SetIconDragging(true);
 
         owner.NotifyDragStarted(this);
         UpdateHoverPreview(mouseWorld);
@@ -188,11 +292,17 @@ public class StockPanelSlot : MonoBehaviour
         isDragging = false;
         GamePause.OnPaused -= CancelDrag;
         ClearHoverPreview();
-        DestroyGhost();
+        SetIconDragging(false);
 
         // Los gates se evalúan ANTES del TryTake: un drop rechazado nunca toca el stock.
-        if (IsDropAccepted(dropWorldPoint))
-            TryPlaceOnGrill(droppedItem, dropWorldPoint, rotated);
+        bool placed = IsDropAccepted(dropWorldPoint) && TryPlaceOnGrill(droppedItem, dropWorldPoint, rotated);
+
+        // Colocado: la pieza real sigue desde donde estaba el fantasma (asentado propio).
+        // Rechazado: el fantasma vuelve a la celda, así se lee que no se usó nada del stock.
+        if (!placed)
+            PlayGhostReturn();
+
+        DestroyGhost();
 
         draggingItem = null;
 
@@ -213,6 +323,7 @@ public class StockPanelSlot : MonoBehaviour
         GamePause.OnPaused -= CancelDrag;
         ClearHoverPreview();
         DestroyGhost();
+        SetIconDragging(false);
         draggingItem = null;
 
         if (owner != null)
@@ -234,37 +345,41 @@ public class StockPanelSlot : MonoBehaviour
         return owner.IsPointInDropArea(dropWorldPoint);
     }
 
-    private void TryPlaceOnGrill(ItemDataSO droppedItem, Vector3 dropWorldPoint, bool rotateFootprint)
+    /// <summary>Descuenta y spawnea en la parrilla. Devuelve true solo si la pieza quedó colocada.</summary>
+    private bool TryPlaceOnGrill(ItemDataSO droppedItem, Vector3 dropWorldPoint, bool rotateFootprint)
     {
         if (droppedItem == null || owner == null)
-            return;
+            return false;
 
         GrillSystem grill = owner.Grill;
         if (grill == null)
         {
             Debug.LogWarning("[StockPanelSlot] No hay GrillSystem cableado en StockPanelController: se cancela el drop.");
-            return;
+            return false;
         }
 
         CoolerSystem cooler = CoolerSystem.Instance;
         if (cooler == null)
-            return;
+            return false;
 
         // Retiro atómico: primero se descuenta, y si el spawn falla se devuelve.
         if (!cooler.TryTake(droppedItem, 1))
-            return;
+            return false;
 
         if (droppedItem is MeatCutSO cut)
         {
             if (!grill.TrySpawnMeatAtPoint(cut, dropWorldPoint, out Meat spawnedMeat, rotateFootprint))
             {
                 cooler.Add(droppedItem, 1);
-                return;
+                return false;
             }
+
+            // Solo visual: el corte se ve llegar desde donde estaba el fantasma.
+            spawnedMeat.PlayDropSettle(ghost != null ? ghost.transform.position : dropWorldPoint);
 
             TutorialSignals.Raise(TutorialSignal.MeatDraggedToGrill, cut: cut, meat: spawnedMeat);
             TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: cut, meat: spawnedMeat);
-            return;
+            return true;
         }
 
         if (droppedItem is CoalSO coal)
@@ -272,16 +387,19 @@ public class StockPanelSlot : MonoBehaviour
             if (!grill.TrySpawnCoalAtPoint(coal, dropWorldPoint, out Coal spawnedCoal) || spawnedCoal == null)
             {
                 cooler.Add(droppedItem, 1);
-                return;
+                return false;
             }
+
+            spawnedCoal.PlayDropSettle(ghost != null ? ghost.transform.position : dropWorldPoint);
 
             TutorialSignals.Raise(TutorialSignal.CoalDraggedToGrill, coal: coal, target: spawnedCoal.transform);
             TutorialSignals.Raise(TutorialSignal.CoalPlacedOnGrill, coal: coal, target: spawnedCoal.transform);
-            return;
+            return true;
         }
 
         // Tipo desconocido: se devuelve el stock retirado.
         cooler.Add(droppedItem, 1);
+        return false;
     }
 
     /// <summary>Los cortes de footprint cuadrado no se rotan: quedarian identicos.</summary>
@@ -352,7 +470,9 @@ public class StockPanelSlot : MonoBehaviour
             ghostRenderer.sortingLayerID = iconRenderer.sortingLayerID;
 
         ghost.transform.position = worldPoint;
-        ghost.transform.localScale = ResolveGhostScale(draggingItem);
+        ghostBaseScale = ResolveGhostScale(draggingItem);
+        ghostPopT = 0f;
+        ghost.transform.localScale = ghostBaseScale * 0.6f;
         ApplyGhostRotation();
     }
 

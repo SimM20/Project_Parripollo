@@ -42,11 +42,24 @@ public class Meat : Item
     [Tooltip("Segundos que tarda en despegar al agarrarla.")]
     [SerializeField] private float dragEaseTime = 0.18f;
 
+    [Header("Drop Settle")]
+    [Tooltip("Segundos que tarda el dibujo en llegar al bloque al soltarla en la parrilla. La pieza ya quedo ahi " +
+             "(slots y collider): solo se la ve llegar.")]
+    [Min(0f)] [SerializeField] private float settleSeconds = 0.12f;
+    [Tooltip("Saltito al apoyarse en la parrilla (unidades de mundo). 0 = sin saltito.")]
+    [Min(0f)] [SerializeField] private float settleHop = 0.06f;
+    [Tooltip("Segundos de la vuelta al origen cuando se suelta donde no entra.")]
+    [Min(0f)] [SerializeField] private float rejectReturnSeconds = 0.16f;
+    [Tooltip("Puff de contacto (el del flip) al terminar de apoyarse en la parrilla.")]
+    [SerializeField] private bool landingPuff = true;
+
     private float floatWeight;
     private float floatTime;
     private Vector3 floatOffset;
     private Vector3 lastFloatedPosition;
     private Vector2 baseColliderOffset;
+    private readonly SettleOffset settle = new SettleOffset();
+    private bool puffOnSettle;
 
     [Header("Flip Puff")]
     [SerializeField] private FlipPuff flipPuff;
@@ -138,6 +151,9 @@ public class Meat : Item
     /// piezas para ocultarlas; el aviso de quemado, que no es hijo de la pieza, lo sigue por aca.
     /// </summary>
     public bool IsVisualShown => spriteRenderer != null && spriteRenderer.enabled;
+
+    /// <summary>Renderer del corte (para los fantasmas del tacho).</summary>
+    public SpriteRenderer VisualRenderer => spriteRenderer;
 
     /// <summary>
     /// Posicion de la pieza sin el flote del arrastre. La burbuja y los FX se enganchan aca
@@ -287,7 +303,9 @@ public class Meat : Item
         bool canFloat = isHeldByMouse && !isFlipping;
         if (!canFloat)
         {
-            ClearDragFloat();
+            floatWeight = 0f;
+            floatTime = 0f;
+            UpdateSettle();
             return;
         }
 
@@ -319,14 +337,61 @@ public class Meat : Item
         }
     }
 
-    /// <summary>Apoya la pieza al toque: al soltarla o al cancelar el agarre, que usan su posicion.</summary>
+    /// <summary>
+    /// Apoya la pieza al toque: al soltarla, al cancelar el agarre, al agarrarla o al darla vuelta,
+    /// que usan su posicion. Corta tambien un asentado en curso.
+    /// </summary>
     private void ClearDragFloat()
     {
+        settle.Stop();
+        puffOnSettle = false;
+
         if (floatOffset != Vector3.zero)
             SetFloatOffset(Vector3.zero);
 
         floatWeight = 0f;
         floatTime = 0f;
+    }
+
+    // ── Asentado al soltar ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// La pieza ya esta en su lugar logico; el dibujo arranca donde el jugador la solto y llega
+    /// en un instante. Usa el mismo canal que el flote (floatOffset), asi el collider, la burbuja
+    /// y el humo quedan en el lugar real desde el primer frame.
+    /// </summary>
+    private void BeginSettle(Vector3 visualFrom, float seconds, float hop, bool puffWhenLanded)
+    {
+        visualFrom.z = transform.position.z;
+        puffOnSettle = settle.Begin(visualFrom - transform.position, seconds, hop) && puffWhenLanded;
+        SetFloatOffset(settle.Evaluate());
+    }
+
+    private void UpdateSettle()
+    {
+        if (!settle.Active)
+        {
+            if (floatOffset != Vector3.zero)
+                SetFloatOffset(Vector3.zero);
+            return;
+        }
+
+        SetFloatOffset(settle.Tick(Time.deltaTime));
+
+        if (!settle.Active && puffOnSettle)
+        {
+            puffOnSettle = false;
+            EmitFlipPuff();
+        }
+    }
+
+    /// <summary>
+    /// Asentado de una pieza que se acaba de poner en la parrilla desde afuera (stock, bandeja,
+    /// plato): el dibujo llega desde <paramref name="visualFrom"/>, donde se la solto.
+    /// </summary>
+    public void PlayDropSettle(Vector3 visualFrom)
+    {
+        BeginSettle(visualFrom, settleSeconds, settleHop, landingPuff);
     }
 
     // ── Cambio de punto ──────────────────────────────────────────────────────
@@ -623,7 +688,9 @@ public class Meat : Item
     public override void OnWorldPointerUp()
     {
         // El Up no trae Drag: la pieza sigue con el flote del frame anterior. Se apoya antes de
-        // decidir el destino, que se mide con la posicion bajo el puntero.
+        // decidir el destino, que se mide con la posicion bajo el puntero. Donde se la veia
+        // (con el flote) es desde donde arranca el asentado.
+        Vector3 releaseVisual = transform.position;
         ClearDragFloat();
         if (!EndHold()) return;
 
@@ -638,6 +705,7 @@ public class Meat : Item
         if (BuildFoodDropZone.IsPlateOccupiedAt(transform.position))
         {
             transform.position = startPosition;
+            BeginSettle(releaseVisual, rejectReturnSeconds, 0f, false);
             RestoreHoverIfPointerOver();
             return;
         }
@@ -659,12 +727,15 @@ public class Meat : Item
             Vector3 rawOffset = (cut != null) ? cut.visualOffset : Vector3.zero;
             Vector3 rotatedOffset = transform.rotation * rawOffset;
             transform.position = CalcCenter(slotsEncontrados) + rotatedOffset;
+            BeginSettle(releaseVisual, settleSeconds, settleHop, landingPuff);
 
             RestoreHoverIfPointerOver();
             return;
         }
 
+        // No entra: vuelve a donde estaba, y se la ve volver (no aparece de golpe en el origen).
         transform.position = startPosition;
+        BeginSettle(releaseVisual, rejectReturnSeconds, 0f, false);
         RestoreHoverIfPointerOver();
     }
 
@@ -714,6 +785,11 @@ public class Meat : Item
 
         StopStatePulse();
 
+        // Agarrada a mitad de un asentado: se apoya y el origen pasa a ser su lugar real
+        // (Item tomo startPosition con el corrimiento visual incluido).
+        ClearDragFloat();
+        startPosition = transform.position;
+
         if (MeatHoverBubble.Instance != null)
             MeatHoverBubble.Instance.Hide();
 
@@ -753,6 +829,10 @@ public class Meat : Item
     public void Flip()
     {
         if (isFlipping) return;
+
+        // El flip toma la posicion actual como base del salto: un asentado en curso se apoya antes.
+        if (!isHeldByMouse)
+            ClearDragFloat();
 
         if (gameObject.activeInHierarchy)
         {

@@ -9,6 +9,25 @@ using UnityEngine;
 /// </summary>
 public static class WorldBubbleStyle
 {
+    // Paleta comun de las burbujas (los mismos valores por defecto que CustomerOrderBubble y
+    // MeatHoverBubble): panel crema, borde marron, textos oscuros.
+    public static readonly Color PanelColor = new Color(0.97f, 0.94f, 0.86f, 0.97f);
+    public static readonly Color BorderColor = new Color(0.29f, 0.19f, 0.13f, 1f);
+    public static readonly Color TitleColor = new Color(0.16f, 0.12f, 0.09f, 1f);
+    public static readonly Color DetailColor = new Color(0.29f, 0.23f, 0.18f, 1f);
+
+    // Montos y resultados sobre el panel crema. Tienen que ser oscuros: el verde y el amarillo
+    // claros de los carteles viejos (#4ADE80, #FACC15) casi no se leian sobre crema.
+    public static readonly Color MoneyGood = new Color(0.12f, 0.49f, 0.22f, 1f);   // cobra / propina
+    public static readonly Color MoneyWarn = new Color(0.66f, 0.42f, 0.02f, 1f);   // sin propina, pendiente
+    public static readonly Color MoneyHalf = new Color(0.78f, 0.34f, 0.05f, 1f);   // cobra la mitad
+    public static readonly Color MoneyBad = new Color(0.75f, 0.14f, 0.10f, 1f);    // rechazo, $0, strike
+
+    public static readonly string MoneyGoodHex = "#" + ColorUtility.ToHtmlStringRGB(MoneyGood);
+    public static readonly string MoneyWarnHex = "#" + ColorUtility.ToHtmlStringRGB(MoneyWarn);
+    public static readonly string MoneyHalfHex = "#" + ColorUtility.ToHtmlStringRGB(MoneyHalf);
+    public static readonly string MoneyBadHex = "#" + ColorUtility.ToHtmlStringRGB(MoneyBad);
+
     private static Sprite panelSprite;
 
     /// <summary>

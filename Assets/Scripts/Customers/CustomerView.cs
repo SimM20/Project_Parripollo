@@ -44,6 +44,23 @@ public class CustomerView : MonoBehaviour
     [Tooltip("Tinte del cuerpo al rechazar. Arranca en este color y vuelve al normal durante el sacudon.")]
     [SerializeField] private Color rejectTint = new Color(1f, 0.45f, 0.45f, 1f);
 
+    [Header("Arrival / Slot Move / Leave")]
+    [Tooltip("Segundos de la llegada: cae a su lugar desde un poco mas arriba y aparece. Es solo el dibujo: " +
+             "el cliente ya cuenta paciencia y recibe entregas desde el primer frame.")]
+    [SerializeField] [Min(0.01f)] private float arrivalSeconds = 0.35f;
+    [Tooltip("Desde cuanto mas arriba cae al llegar (unidades de mundo). Desde arriba y no desde abajo: los pies " +
+             "estan justo sobre el borde de la parrilla y, subiendo, las piernas la pisaban.")]
+    [SerializeField] [Min(0f)] private float arrivalDrop = 0.18f;
+    [Tooltip("Segundos del corrimiento del dibujo al pasar a otro lugar de la fila. El lugar real cambia al instante.")]
+    [SerializeField] [Min(0.01f)] private float slotMoveSeconds = 0.3f;
+    [Tooltip("Saltito al correrse de lugar, como un paso.")]
+    [SerializeField] [Min(0f)] private float slotMoveHop = 0.08f;
+    [Tooltip("Segundos de la salida. Es un fantasma del cuerpo: el cliente real ya se fue.")]
+    [SerializeField] [Min(0.01f)] private float leaveSeconds = 0.35f;
+    [Tooltip("Cuanto se corre hacia el costado al irse (unidades de mundo). Negativo = a la izquierda, " +
+             "lejos de la fila que se corre a ocupar su lugar desde la derecha.")]
+    [SerializeField] private float leaveDrift = -0.45f;
+
     [Header("Skin")]
     [Tooltip("Renderer del cuerpo del cliente. Es el que recibe la imagen que le toca al spawnear, " +
              "elegida del pool de CustomerSystem. Si queda vacio se busca solo entre los hijos.")]
@@ -80,6 +97,13 @@ public class CustomerView : MonoBehaviour
     private Vector3 skinBasePosition;
     private Color skinBaseColor = Color.white;
     private Coroutine rejectRoutine;
+
+    // Raiz visual: todos los hijos (cuerpo, barra, burbujas) cuelgan de aca. El collider de pick
+    // vive en la raiz del cliente, asi que mover el dibujo nunca mueve el area de interaccion.
+    private Transform visualRoot;
+    private readonly SettleOffset visualMove = new SettleOffset();
+    private float arrivalT = 1f;
+    private static readonly List<Transform> ChildBuffer = new List<Transform>();
 
     private static bool deliveryDragActive;
     private static event Action OnDeliveryDragActiveChanged;
@@ -128,6 +152,126 @@ public class CustomerView : MonoBehaviour
 
         if (orderBubble != null)
             orderBubble.Bind(customer, this);
+
+        PlayArrival();
+    }
+
+    // ── Llegada, cambio de lugar y salida (solo presentacion) ───────────────
+
+    /// <summary>Pasa todos los hijos a una raiz visual propia, sin cambiar ninguna posicion local.</summary>
+    private void BuildVisualRoot()
+    {
+        if (visualRoot != null) return;
+
+        ChildBuffer.Clear();
+        for (int i = 0; i < transform.childCount; i++)
+            ChildBuffer.Add(transform.GetChild(i));
+
+        visualRoot = new GameObject("Visual").transform;
+        visualRoot.SetParent(transform, false);
+
+        for (int i = 0; i < ChildBuffer.Count; i++)
+            ChildBuffer[i].SetParent(visualRoot, false);
+
+        ChildBuffer.Clear();
+    }
+
+    /// <summary>Cae a su lugar en el mostrador y el cuerpo aparece. No demora nada: el cliente ya esta activo.</summary>
+    private void PlayArrival()
+    {
+        if (visualRoot == null) return;
+
+        arrivalT = 0f;
+        visualMove.Begin(new Vector3(0f, arrivalDrop, 0f), arrivalSeconds, 0f);
+        ApplyVisualMotion();
+    }
+
+    /// <summary>
+    /// Cambia de lugar en la fila: la posicion real (collider, area de pick, recuadro) cambia al
+    /// instante y el dibujo camina hasta ahi.
+    /// </summary>
+    public void MoveToSlot(Vector3 worldPosition)
+    {
+        Vector3 visualFrom = visualRoot != null ? visualRoot.position : transform.position;
+        transform.position = worldPosition;
+
+        if (visualRoot == null) return;
+
+        visualRoot.localPosition = Vector3.zero;
+        visualMove.Begin(visualFrom - worldPosition, slotMoveSeconds, slotMoveHop);
+        ApplyVisualMotion();
+    }
+
+    /// <summary>
+    /// Salida: un fantasma del cuerpo se corre y se desvanece. Lo llama CustomerSystem justo antes
+    /// de destruir al cliente; no cambia cuando se libera el lugar.
+    /// </summary>
+    public void PlayLeave()
+    {
+        if (skinRenderer == null || !isActiveAndEnabled) return;
+
+        StopRejectReaction();
+        FinishArrival();
+
+        SpriteGhost.Spawn(skinRenderer, new SpriteGhost.Motion
+        {
+            duration = leaveSeconds,
+            scaleFrom = 1f,
+            scaleTo = 0.94f,
+            alphaFrom = 1f,
+            alphaTo = 0f,
+            moveBy = new Vector3(leaveDrift, 0f, 0f),
+        });
+    }
+
+    private void UpdateVisualMotion()
+    {
+        if (visualRoot == null) return;
+
+        if (visualMove.Active || arrivalT < 1f)
+        {
+            if (visualMove.Active)
+                visualMove.Tick(Time.deltaTime);
+
+            bool arriving = arrivalT < 1f;
+            if (arriving)
+                arrivalT = Mathf.Min(1f, arrivalT + Time.deltaTime / arrivalSeconds);
+
+            ApplyVisualMotion();
+
+            // Ultimo frame de la llegada: el cuerpo queda exactamente con su color base.
+            if (arriving && arrivalT >= 1f && skinRenderer != null && rejectRoutine == null)
+                skinRenderer.color = skinBaseColor;
+        }
+        else if (visualRoot.localPosition != Vector3.zero)
+        {
+            visualRoot.localPosition = Vector3.zero;
+        }
+    }
+
+    private void ApplyVisualMotion()
+    {
+        Vector3 worldOffset = visualMove.Evaluate();
+        visualRoot.localPosition = worldOffset == Vector3.zero ? Vector3.zero : transform.InverseTransformVector(worldOffset);
+
+        // El cuerpo aparece en el primer tercio de la llegada (la barra y la burbuja ya se ven
+        // enteras: un cuerpo transparente mucho rato detras de ellas se leia como un fantasma).
+        if (skinRenderer != null && rejectRoutine == null && arrivalT < 1f)
+        {
+            Color c = skinBaseColor;
+            c.a *= FeelEase.OutCubic(arrivalT * 3f);
+            skinRenderer.color = c;
+        }
+    }
+
+    /// <summary>Termina la llegada de golpe (antes de una reaccion que maneja el color del cuerpo).</summary>
+    private void FinishArrival()
+    {
+        if (arrivalT >= 1f) return;
+
+        arrivalT = 1f;
+        if (skinRenderer != null)
+            skinRenderer.color = skinBaseColor;
     }
 
     /// <summary>
@@ -249,6 +393,9 @@ public class CustomerView : MonoBehaviour
             orderGo.transform.SetParent(transform, false);
             orderBubble = orderGo.AddComponent<CustomerOrderBubble>();
         }
+
+        // Al final: incluye las burbujas creadas arriba.
+        BuildVisualRoot();
     }
 
     void OnEnable()
@@ -273,6 +420,7 @@ public class CustomerView : MonoBehaviour
     {
         if (skinRenderer == null || !isActiveAndEnabled) return;
 
+        FinishArrival();
         StopRejectReaction();
         rejectRoutine = StartCoroutine(RejectRoutine());
     }
@@ -322,6 +470,8 @@ public class CustomerView : MonoBehaviour
 
     void Update()
     {
+        UpdateVisualMotion();
+
         if (customer == null || patienceBar == null) return;
 
         if (patienceBar.Tick(customer.Patience01))
@@ -472,6 +622,8 @@ public class CustomerView : MonoBehaviour
     {
         if (customer != null)
             customer.StartFeedback();
+
+        FinishArrival();
 
         if (config == null)
             config = CustomerFeedbackConfigSO.Instance;

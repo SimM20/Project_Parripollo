@@ -31,6 +31,10 @@ public class StrikeEndPopup : MonoBehaviour
     {
         if (root == null) root = gameObject;
 
+        // Presentación: la ventana entra con un pop y el botón responde como los del resto de los menús.
+        UIPopIn.Ensure(root.transform.Find("Panel"));
+        MenuButtonHover.Ensure(continueButton);
+
         if (titleText != null) titleText.text = Loc.Get("strike.popup.title");
         if (bodyText != null) bodyText.text = Loc.Get("strike.popup.body");
 

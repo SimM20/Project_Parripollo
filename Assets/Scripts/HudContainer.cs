@@ -9,8 +9,13 @@ public class HudContainer: MonoBehaviour
     [SerializeField] private HudContainers type;
     [SerializeField] private HudDatabaseSO data;
 
+    private Color baseTextColor = Color.white;
+    private bool baseColorCaptured;
+
     private void Awake()
     {
+        CaptureBaseColor();
+
         if (data == null || type == HudContainers.None)
             return;
 
@@ -25,6 +30,21 @@ public class HudContainer: MonoBehaviour
 
     public HudContainers GetContainerType() { return type; }
     public void UpdateText(string newText) { text.text = newText; }
+
+    /// <summary>Tiñe el texto (null = color original del prefab). Solo presentación.</summary>
+    public void SetTextTint(Color? tint)
+    {
+        if (text == null) return;
+        CaptureBaseColor();
+        text.color = tint ?? baseTextColor;
+    }
+
+    private void CaptureBaseColor()
+    {
+        if (baseColorCaptured || text == null) return;
+        baseTextColor = text.color;
+        baseColorCaptured = true;
+    }
 }
 
 public enum HudContainers

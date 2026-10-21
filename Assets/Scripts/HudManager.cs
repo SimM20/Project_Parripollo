@@ -18,6 +18,14 @@ public class HudManager : MonoBehaviour
     [Tooltip("Duración del conteo animado del valor mostrado hacia el real.")]
     [SerializeField] private float moneyCountSeconds = 0.35f;
 
+    [Header("Counters Feedback")]
+    [Tooltip("Golpe de escala del contador de clientes cuando llega uno (0.18 = 18 %).")]
+    [SerializeField] private float customersPunch = 0.18f;
+    [Tooltip("Golpe del reloj cuando el local cierra.")]
+    [SerializeField] private float closedPunch = 0.25f;
+    [Tooltip("Color de la hora mientras el local está cerrado: el estado se lee sin leer el texto.")]
+    [SerializeField] private Color closedTimeColor = new Color(1f, 0.62f, 0.42f, 1f);
+
     public MoneyPopupStyle PopupStyle => moneyPopupStyle;
 
     /// <summary>Botón de pausa del HUD (arriba a la izquierda).</summary>
@@ -33,12 +41,18 @@ public class HudManager : MonoBehaviour
     private Coroutine moneyPunchRoutine;
     private Vector3 moneyBaseScale = Vector3.one;
 
+    private int shownCustomers = -1;
+    private bool closedShown;
+
     private void Awake()
     {
         Instance = this;
 
         if (pauseButton != null)
             pauseButton.onClick.AddListener(() => UIManager.Instance?.PauseGame());
+
+        // Mismo hover/click que los botones de los menús.
+        MenuButtonHover.Ensure(pauseButton);
 
         HudContainer money = GetContainer(HudContainers.Money);
         if (money != null) moneyBaseScale = money.transform.localScale;
@@ -82,6 +96,7 @@ public class HudManager : MonoBehaviour
                         break;
                     case HudContainers.Customers:
                         int customers = UIManager.Instance != null ? UIManager.Instance.GetArrivedCustomers() : 0;
+                        shownCustomers = customers;
                         container.UpdateText(customers.ToString());
                         break;
                     case HudContainers.Time:
@@ -110,10 +125,24 @@ public class HudManager : MonoBehaviour
     {
         if (!gameObject.activeInHierarchy) return;
 
+        // Al cerrar el local la hora cambia de color y da un golpe: es un cambio de estado de la jornada.
+        bool closed = DayClock.Instance != null && DayClock.Instance.HasClosed;
+        bool closedChanged = closed != closedShown;
+        closedShown = closed;
+
         foreach (var container in containers)
         {
-            if (container != null && container.GetContainerType() == HudContainers.Time)
-                container.UpdateText(value);
+            if (container == null || container.GetContainerType() != HudContainers.Time)
+                continue;
+
+            container.UpdateText(value);
+
+            if (closedChanged)
+            {
+                container.SetTextTint(closed ? closedTimeColor : (Color?)null);
+                if (closed)
+                    ScalePunch.Punch(container.transform, closedPunch, 0.3f);
+            }
         }
     }
 
@@ -248,10 +277,18 @@ public class HudManager : MonoBehaviour
     {
         if (!gameObject.activeInHierarchy) return;
 
+        // Llega un cliente: el contador da un golpe (no al arrancar ni al reiniciarse).
+        bool arrived = shownCustomers >= 0 && customers > shownCustomers;
+        shownCustomers = customers;
+
         foreach (var container in containers)
         {
-            if (container != null && container.GetContainerType() == HudContainers.Customers)
-                container.UpdateText(customers.ToString());
+            if (container == null || container.GetContainerType() != HudContainers.Customers)
+                continue;
+
+            container.UpdateText(customers.ToString());
+            if (arrived)
+                ScalePunch.Punch(container.transform, customersPunch, 0.22f);
         }
     }
 

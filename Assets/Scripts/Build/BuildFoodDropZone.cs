@@ -359,6 +359,9 @@ public class BuildFoodDropZone : MonoBehaviour
 
         plateSideTopVisuals.Add(new PlateVisualEntry { go = go, kind = kind, fitScale = FitScale(sprite, size) });
         LayoutRow(kind);
+
+        // El recién llegado aparece con un pop. Es un visual sin collider: escalarlo no cambia nada.
+        ScalePunch.PopIn(go.transform);
         return true;
     }
 
@@ -373,7 +376,10 @@ public class BuildFoodDropZone : MonoBehaviour
         plateSideTopVisuals.RemoveAt(last);
 
         if (entry.go != null)
+        {
+            SpriteGhost.Spawn(entry.go.GetComponent<SpriteRenderer>(), SpriteGhost.Motion.Vanish(0.1f, 0.22f));
             Destroy(entry.go);
+        }
 
         // Los que quedan se vuelven a centrar (y a agrandar, si la fila estaba apretada).
         LayoutRow(entry.kind);
@@ -482,8 +488,12 @@ public class BuildFoodDropZone : MonoBehaviour
     {
         for (int i = 0; i < plateSideTopVisuals.Count; i++)
         {
-            if (plateSideTopVisuals[i].go != null)
-                Destroy(plateSideTopVisuals[i].go);
+            GameObject go = plateSideTopVisuals[i].go;
+            if (go == null) continue;
+
+            // Solo visual: se desvanece donde está (plato limpiado o entregado al cliente).
+            SpriteGhost.Spawn(go.GetComponent<SpriteRenderer>(), SpriteGhost.Motion.Vanish(0.1f, 0.24f));
+            Destroy(go);
         }
 
         plateSideTopVisuals.Clear();

@@ -247,6 +247,7 @@ public class MeatTransferBuffer : MonoBehaviour
             return false;
 
         entry.ApplyTo(spawnedMeat, rotateFootprint);
+        spawnedMeat.PlayDropSettle(dropWorldPoint);
         RemoveTrayEntryAt(entryId, true);
 
         RefreshVisuals();
@@ -306,6 +307,7 @@ public class MeatTransferBuffer : MonoBehaviour
             return false;
 
         returnedData.ApplyTo(spawnedMeat, rotateFootprint);
+        spawnedMeat.PlayDropSettle(dropWorldPoint);
         RemovePlateEntryAt(index);
 
         RefreshVisuals();
@@ -458,6 +460,10 @@ public class MeatTransferBuffer : MonoBehaviour
         if (visual.GetComponent<PlateDeliveryDraggable>() == null)
             visual.AddComponent<PlateDeliveryDraggable>();
 
+        // Onda detras del corte recien apoyado: "quedo en el plato". Es un fantasma, el visual
+        // real (y su collider de agarre) no se escala.
+        SpriteGhost.Spawn(renderer, SpriteGhost.Motion.Echo());
+
         plateMeatCuts.Add(entry);
         plateMeatVisuals.Add(visual);
         return visual;
@@ -469,8 +475,12 @@ public class MeatTransferBuffer : MonoBehaviour
     {
         for (int i = 0; i < plateMeatVisuals.Count; i++)
         {
-            if (plateMeatVisuals[i] != null)
-                Destroy(plateMeatVisuals[i]);
+            if (plateMeatVisuals[i] == null) continue;
+
+            // Solo visual: el corte se desvanece donde está (en el plato al limpiarlo, sobre el
+            // cliente al entregarlo). El visual real se destruye igual que siempre.
+            SpriteGhost.Spawn(plateMeatVisuals[i].GetComponent<SpriteRenderer>(), SpriteGhost.Motion.Vanish(0.12f, 0.26f));
+            Destroy(plateMeatVisuals[i]);
         }
 
         plateMeatVisuals.Clear();
@@ -522,6 +532,9 @@ public class MeatTransferBuffer : MonoBehaviour
         go.transform.localEulerAngles = variantSpriteRotation;
 
         go.GetComponent<PlateDeliveryDraggable>()?.RefreshCollider();
+
+        // El pan transforma el corte en sándwich: una onda del dibujo nuevo marca el cambio.
+        SpriteGhost.Spawn(sr, SpriteGhost.Motion.Echo());
     }
 
     /// <summary>

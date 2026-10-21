@@ -8,6 +8,12 @@ public class TrashZone : MonoBehaviour
     [SerializeField] private bool onlyWhenGrillView = true;
     [SerializeField] private ViewManager viewManager;
 
+    [Header("Feedback")]
+    [Tooltip("Segundos que tarda lo tirado en caer adentro del tacho (solo visual: ya se destruyo).")]
+    [Min(0.01f)] [SerializeField] private float swallowSeconds = 0.2f;
+    [Tooltip("Onda que se abre detras del tacho al tragar algo. No toca su transform ni su collider.")]
+    [SerializeField] private bool binEcho = true;
+
     private static readonly List<TrashZone> ActiveZones = new List<TrashZone>();
 
     void Awake() => EnsureReferences();
@@ -82,9 +88,34 @@ public class TrashZone : MonoBehaviour
             coal.ReleaseOccupiedSlots();
         }
 
+        PlaySwallowFeedback(item);
         Destroy(item.gameObject);
 
         Debug.Log("Objeto tirado a la basura: " + itemName);
+    }
+
+    /// <summary>
+    /// Lo tirado cae por la boca del tacho (un fantasma: el objeto real ya se destruye) y el tacho
+    /// "traga" con una onda detras. Sin escalar ni mover el tacho: es una zona de drop.
+    /// </summary>
+    private void PlaySwallowFeedback(Item item)
+    {
+        SpriteRenderer source = item is Meat meat ? meat.VisualRenderer
+                              : item is Coal coal ? coal.VisualRenderer
+                              : item.GetComponent<SpriteRenderer>();
+
+        SpriteRenderer bin = GetComponent<SpriteRenderer>();
+        Vector3 mouth = transform.position;
+        if (bin != null)
+        {
+            Bounds b = bin.bounds;
+            mouth = new Vector3(b.center.x, b.max.y - b.size.y * 0.2f, transform.position.z);
+        }
+
+        SpriteGhost.Spawn(source, SpriteGhost.Motion.Into(mouth, swallowSeconds));
+
+        if (binEcho && bin != null)
+            SpriteGhost.Spawn(bin, SpriteGhost.Motion.Echo(1.15f, 0.35f, 0.22f));
     }
 
     private Collider2D GetZoneCollider()

@@ -14,6 +14,16 @@ public class MenuButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [SerializeField] private float pressedScale = 0.97f;
     [SerializeField] private float smoothTime = 0.08f;
 
+    /// <summary>
+    /// Suma este juice a un botón armado en escena sin él, para que responda igual que los del
+    /// resto de los menús. No hace nada si ya lo tiene.
+    /// </summary>
+    public static void Ensure(Component button)
+    {
+        if (button != null && button.GetComponent<MenuButtonHover>() == null && button.transform is RectTransform)
+            button.gameObject.AddComponent<MenuButtonHover>();
+    }
+
     private RectTransform rect;
     private Selectable selectable;
     private Vector3 baseScale;

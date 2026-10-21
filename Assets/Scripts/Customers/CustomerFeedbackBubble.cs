@@ -2,32 +2,73 @@ using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
-/// Componente visual de feedback contextual que se muestra sobre el cliente
-/// al resolver una entrega, un abandono (paciencia 0) o un cambio por faltante.
-/// Implementa la secuencia en 4 etapas y código de colores según el spec doc.
+/// Cartel de resultado que se muestra sobre el cliente al resolver una entrega, un abandono
+/// (paciencia 0) o un cambio por faltante: reacción del cliente + lo que pagó y la propina.
+/// Implementa la secuencia en 4 etapas del spec doc.
+///
+/// Usa el mismo diseño que la burbuja de pedido (<see cref="CustomerOrderBubble"/>) y la de estado
+/// de la carne (<see cref="MeatHoverBubble"/>): panel crema 9-sliced con borde, ícono a la izquierda,
+/// título en negrita y una línea de detalle (<see cref="WorldBubbleStyle"/>). Aparece donde estaba la
+/// burbuja de pedido (que se apaga durante el feedback), así el pedido "se convierte" en el resultado.
+/// El color de la categoría (verde / amarillo / rojo de <see cref="CustomerFeedbackConfigSO"/>) tiñe
+/// el borde y los montos.
 /// </summary>
 public class CustomerFeedbackBubble : MonoBehaviour
 {
-    [Header("Positioning")]
-    [SerializeField] private Vector3 offsetAboveCustomer = new Vector3(0f, 1.85f, -0.5f);
+    [Header("Posición (unidades de mundo)")]
+    [Tooltip("Centro del cartel respecto de la burbuja de pedido del cliente. Por defecto el borde de arriba " +
+             "queda a la altura del de la burbuja de pedido base (no tapa la cara) y crece hacia abajo.")]
+    [SerializeField] private Vector3 cardOffset = new Vector3(0f, -0.04f, -0.13f);
+    [Tooltip("Los clientes están a 2.6 entre sí: más de ~2.3 de ancho y los carteles vecinos se tocan.")]
+    [SerializeField] private Vector2 cardSize = new Vector2(2.25f, 1.3f);
+    [Tooltip("Orden del borde; panel, ícono y textos van encima. Por encima de los paneles deslizantes (90): " +
+             "el resultado de una entrega no queda tapado.")]
     [SerializeField] private int baseSortingOrder = 600;
 
-    [Header("Visual Elements (Auto-generados si no están asignados)")]
-    [SerializeField] private Transform contentRoot;
-    [SerializeField] private SpriteRenderer backgroundRenderer;
-    [SerializeField] private SpriteRenderer borderRenderer;
-    [SerializeField] private SpriteRenderer reactionSpriteRenderer;
-    [SerializeField] private TextMeshPro reactionEmojiText;
-    [SerializeField] private TextMeshPro phraseText;
-    [SerializeField] private Transform economicContainer;
-    [SerializeField] private TextMeshPro paymentText;
-    [SerializeField] private TextMeshPro tipText;
+    [Header("Colores (los de CustomerOrderBubble / MeatHoverBubble)")]
+    [SerializeField] private Color panelColor = WorldBubbleStyle.PanelColor;
+    [SerializeField] private Color borderColor = WorldBubbleStyle.BorderColor;
+    [SerializeField] private Color titleColor = WorldBubbleStyle.TitleColor;
+    [SerializeField] private Color detailColor = WorldBubbleStyle.DetailColor;
+    [Tooltip("Cuánto toma el borde el color de la categoría (CustomerFeedbackConfigSO).")]
+    [Range(0f, 1f)] [SerializeField] private float borderCategoryTint = 0.75f;
+    [Tooltip("Cuánto toma el panel el color de la categoría. Poco: el texto tiene que seguir leyéndose.")]
+    [Range(0f, 1f)] [SerializeField] private float panelCategoryTint = 0.08f;
 
+    [Header("Animación")]
+    [Tooltip("Escala de arranque de la entrada (crece con un rebote corto).")]
+    [Range(0.1f, 1f)] [SerializeField] private float entranceFromScale = 0.6f;
+    [Tooltip("Escala final de la salida (se achica mientras se desvanece).")]
+    [Range(0.1f, 1f)] [SerializeField] private float exitToScale = 0.75f;
+
+    [Tooltip("Jerarquía vieja del prefab (fondo oscuro con borde de color, LiberationSans). Se oculta: el " +
+             "cartel se arma por código para verse igual en todos los clientes.")]
+    [FormerlySerializedAs("contentRoot")]
+    [SerializeField] private Transform legacyRoot;
+
+    private const float BorderThickness = 0.09f;
+    private const float IconSize = 0.56f;
+    private const float Padding = 0.12f;
+    private const float TopRowHeight = 0.58f;   // ícono + frase
+    // Los tiempos de la secuencia no cambian: el lugar del cliente queda ocupado exactamente
+    // feedbackDuration (CustomerFeedbackConfigSO) y de eso dependen el spawn y el fin de la noche.
+    private const float EntranceDuration = 0.15f;
+    private const float EconomicPopDuration = 0.12f;
+
+    private Transform cardRoot;
+    private SpriteRenderer borderRenderer;
+    private SpriteRenderer panelRenderer;
+    private SpriteRenderer iconRenderer;
+    private TextMeshPro phraseText;
+    private TextMeshPro economyText;
+    private bool built;
+
+    private Color shownBorderColor;
+    private Color shownPanelColor;
     private Coroutine sequenceCoroutine;
-    private static Sprite roundedBoxSprite;
-    private static Sprite borderBoxSprite;
 
     private void Awake()
     {
@@ -35,95 +76,38 @@ public class CustomerFeedbackBubble : MonoBehaviour
         HideImmediate();
     }
 
-    /// <summary>
-    /// Construye la jerarquía visual procedimentalmente si no viene preconfigurada en un prefab.
-    /// Garantiza funcionamiento out-of-the-box sin requerir setup manual en el editor.
-    /// </summary>
+    /// <summary>Arma el cartel por código (una sola vez) y oculta la jerarquía vieja del prefab.</summary>
     public void EnsureVisualHierarchy()
     {
-        if (contentRoot != null) return;
+        if (built) return;
 
-        // Raíz de contenido escalable para animaciones
-        var rootGo = new GameObject("ContentRoot");
+        if (legacyRoot != null)
+            legacyRoot.gameObject.SetActive(false);
+
+        var rootGo = new GameObject("FeedbackCard");
         rootGo.transform.SetParent(transform, false);
-        rootGo.transform.localPosition = offsetAboveCustomer;
-        contentRoot = rootGo.transform;
+        cardRoot = rootGo.transform;
 
-        EnsureProceduralSprites();
+        borderRenderer = WorldBubbleStyle.CreatePanel(cardRoot, "Border", borderColor, cardSize + new Vector2(BorderThickness, BorderThickness));
+        panelRenderer = WorldBubbleStyle.CreatePanel(cardRoot, "Panel", panelColor, cardSize);
 
-        // 1. Sombra / Borde exterior de color
-        var borderGo = new GameObject("Border");
-        borderGo.transform.SetParent(contentRoot, false);
-        borderGo.transform.localPosition = Vector3.zero;
-        borderGo.transform.localScale = new Vector3(2.55f, 1.35f, 1f);
-        borderRenderer = borderGo.AddComponent<SpriteRenderer>();
-        borderRenderer.sprite = borderBoxSprite;
+        var iconGo = new GameObject("Icon");
+        iconGo.transform.SetParent(cardRoot, false);
+        iconRenderer = iconGo.AddComponent<SpriteRenderer>();
+
+        // La frase puede ocupar dos renglones; el detalle es uno solo (pago y propina).
+        phraseText = WorldBubbleStyle.CreateText(cardRoot, "Phrase", 2.4f, FontStyles.Bold, TextAlignmentOptions.Left);
+        economyText = WorldBubbleStyle.CreateText(cardRoot, "Economy", 1.9f, FontStyles.Normal, TextAlignmentOptions.Left);
+        economyText.enableWordWrapping = false;
+
+        // Todo en el mismo Z (cámara perspectiva): el orden lo resuelve sortingOrder.
         borderRenderer.sortingOrder = baseSortingOrder;
-
-        // 2. Fondo del panel
-        var bgGo = new GameObject("Background");
-        bgGo.transform.SetParent(contentRoot, false);
-        bgGo.transform.localPosition = new Vector3(0f, 0f, -0.01f);
-        bgGo.transform.localScale = new Vector3(2.45f, 1.25f, 1f);
-        backgroundRenderer = bgGo.AddComponent<SpriteRenderer>();
-        backgroundRenderer.sprite = roundedBoxSprite;
-        backgroundRenderer.color = new Color(0.12f, 0.12f, 0.14f, 0.96f);
-        backgroundRenderer.sortingOrder = baseSortingOrder + 1;
-
-        // 3. Fila superior: Sprite de reacción
-        var spriteGo = new GameObject("ReactionSprite");
-        spriteGo.transform.SetParent(contentRoot, false);
-        spriteGo.transform.localPosition = new Vector3(-0.85f, 0.28f, -0.02f);
-        spriteGo.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
-        reactionSpriteRenderer = spriteGo.AddComponent<SpriteRenderer>();
-        reactionSpriteRenderer.sortingOrder = baseSortingOrder + 3;
-
-        // 4. Fila superior: Emoji fallback (si no hay sprite dibujado)
-        var emojiGo = new GameObject("ReactionEmoji");
-        emojiGo.transform.SetParent(contentRoot, false);
-        emojiGo.transform.localPosition = new Vector3(-0.85f, 0.28f, -0.02f);
-        reactionEmojiText = emojiGo.AddComponent<TextMeshPro>();
-        reactionEmojiText.fontSize = 5.2f;
-        reactionEmojiText.alignment = TextAlignmentOptions.Center;
-        reactionEmojiText.sortingOrder = baseSortingOrder + 3;
-
-        // 5. Fila superior: Frase seleccionada
-        var phraseGo = new GameObject("PhraseText");
-        phraseGo.transform.SetParent(contentRoot, false);
-        phraseGo.transform.localPosition = new Vector3(0.18f, 0.28f, -0.02f);
-        phraseText = phraseGo.AddComponent<TextMeshPro>();
-        phraseText.fontSize = 3.3f;
-        phraseText.fontStyle = FontStyles.Bold;
-        phraseText.alignment = TextAlignmentOptions.Left;
-        phraseText.rectTransform.sizeDelta = new Vector2(1.7f, 0.6f);
-        phraseText.enableWordWrapping = true;
+        panelRenderer.sortingOrder = baseSortingOrder + 1;
+        iconRenderer.sortingOrder = baseSortingOrder + 2;
         phraseText.sortingOrder = baseSortingOrder + 3;
+        economyText.sortingOrder = baseSortingOrder + 3;
 
-        // 6. Contenedor económico (Nivel inferior)
-        var econGo = new GameObject("EconomicContainer");
-        econGo.transform.SetParent(contentRoot, false);
-        econGo.transform.localPosition = new Vector3(0f, -0.25f, -0.02f);
-        economicContainer = econGo.transform;
-
-        // 6a. Texto de pago
-        var payGo = new GameObject("PaymentText");
-        payGo.transform.SetParent(economicContainer, false);
-        payGo.transform.localPosition = new Vector3(-0.45f, 0f, 0f);
-        paymentText = payGo.AddComponent<TextMeshPro>();
-        paymentText.fontSize = 2.8f;
-        paymentText.alignment = TextAlignmentOptions.Center;
-        paymentText.rectTransform.sizeDelta = new Vector2(1.3f, 0.4f);
-        paymentText.sortingOrder = baseSortingOrder + 4;
-
-        // 6b. Texto de propina
-        var tipGo = new GameObject("TipText");
-        tipGo.transform.SetParent(economicContainer, false);
-        tipGo.transform.localPosition = new Vector3(0.55f, 0f, 0f);
-        tipText = tipGo.AddComponent<TextMeshPro>();
-        tipText.fontSize = 2.8f;
-        tipText.alignment = TextAlignmentOptions.Center;
-        tipText.rectTransform.sizeDelta = new Vector2(1.3f, 0.4f);
-        tipText.sortingOrder = baseSortingOrder + 4;
+        built = true;
     }
 
     /// <summary>
@@ -143,9 +127,6 @@ public class CustomerFeedbackBubble : MonoBehaviour
         enabled = true;
 
         EnsureVisualHierarchy();
-
-        if (contentRoot != null)
-            contentRoot.gameObject.SetActive(true);
 
         if (sequenceCoroutine != null)
         {
@@ -177,120 +158,86 @@ public class CustomerFeedbackBubble : MonoBehaviour
         if (config == null)
             config = CustomerFeedbackConfigSO.Instance;
 
-        if (contentRoot != null)
-            contentRoot.gameObject.SetActive(true);
-
-        // ── Configuración Visual por Estado y Categoría ──
+        // ── Contenido y colores por estado / categoría ──
         CustomerFeedbackCategory category = state.GetCategory();
+        bool severe = category == CustomerFeedbackCategory.NegativeSevere;
         Color categoryColor = config.GetColor(category);
+        categoryColor.a = 1f;
 
-        if (borderRenderer != null)
-            borderRenderer.color = categoryColor;
+        shownBorderColor = Color.Lerp(borderColor, categoryColor, borderCategoryTint);
+        shownBorderColor.a = borderColor.a;
+        shownPanelColor = Color.Lerp(panelColor, categoryColor, panelCategoryTint);
+        shownPanelColor.a = panelColor.a;
 
-        if (backgroundRenderer != null)
+        // Ícono: el dibujo propio del estado si Arte lo cargó en la config; si no, el plato del
+        // pedido, el mismo ícono de la burbuja de pedido.
+        Sprite icon = config.GetSprite(state);
+        if (icon == null)
         {
-            // Tinte sutil oscuro en el fondo con el tono de la categoría
-            Color bgTint = category == CustomerFeedbackCategory.NegativeSevere
-                ? new Color(0.25f, 0.05f, 0.05f, 0.97f)
-                : new Color(0.10f, 0.11f, 0.13f, 0.96f);
-            backgroundRenderer.color = bgTint;
+            CustomerView view = GetComponentInParent<CustomerView>();
+            icon = view != null ? view.GetDishSprite() : null;
         }
 
-        // Sprite o Emoji
-        Sprite stateSprite = config.GetSprite(state);
-        if (stateSprite != null)
-        {
-            if (reactionSpriteRenderer != null)
-            {
-                reactionSpriteRenderer.sprite = stateSprite;
-                reactionSpriteRenderer.enabled = true;
-            }
-            if (reactionEmojiText != null)
-                reactionEmojiText.text = string.Empty;
-        }
-        else
-        {
-            if (reactionSpriteRenderer != null)
-                reactionSpriteRenderer.enabled = false;
+        phraseText.text = config.GetRandomPhrase(state, burnedVariant);
+        phraseText.color = severe ? Color.Lerp(titleColor, WorldBubbleStyle.MoneyBad, 0.7f) : titleColor;
 
-            if (reactionEmojiText != null)
-                reactionEmojiText.text = config.GetFallbackEmoji(state);
-        }
+        economyText.text = BuildEconomyLine(state, payment, tip, isMissingReplacement);
+        economyText.color = detailColor;
 
-        // Frase de reacción
-        string phrase = config.GetRandomPhrase(state, burnedVariant);
-        if (phraseText != null)
-        {
-            phraseText.text = phrase;
-            phraseText.color = category == CustomerFeedbackCategory.NegativeSevere
-                ? new Color(1f, 0.6f, 0.6f, 1f)
-                : Color.white;
-        }
+        Layout(icon);
+        PlaceCard();
 
-        // Preparar desglose económico (oculto en Etapa 1)
-        if (economicContainer != null)
-            economicContainer.gameObject.SetActive(false);
+        cardRoot.gameObject.SetActive(true);
+        economyText.gameObject.SetActive(false);   // Etapa 2
 
-        FormatEconomicTexts(state, payment, tip, isMissingReplacement, categoryColor);
-
-        // ── Etapa 1 — Reacción: Aparecen primero Sprite y Frase con rebote suave ──
+        // ── Etapa 1 — Reacción: el cartel crece con un rebote corto y aparece ──
         float elapsed = 0f;
-        float entranceDuration = 0.15f;
-        while (elapsed < entranceDuration)
+        while (elapsed < EntranceDuration)
         {
             elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / entranceDuration);
-            // Overshoot elástico (0 -> 1.15 -> 1)
-            float s = Mathf.Sin(t * Mathf.PI * 0.5f) * 1.05f;
-            if (contentRoot != null)
-                contentRoot.localScale = new Vector3(s, s, 1f);
+            float t = Mathf.Clamp01(elapsed / EntranceDuration);
+            cardRoot.localScale = Vector3.one * Mathf.LerpUnclamped(entranceFromScale, 1f, FeelEase.OutBack(t, 1.6f));
+            SetAlpha(FeelEase.OutCubic(t * 1.5f));
             yield return null;
         }
 
-        if (contentRoot != null)
-            contentRoot.localScale = Vector3.one;
+        cardRoot.localScale = Vector3.one;
+        SetAlpha(1f);
 
         // Espera de la separación temporal hacia Etapa 2
-        float delay = Mathf.Max(0.05f, config.EconomicFeedbackDelay - entranceDuration);
+        float delay = Mathf.Max(0.05f, config.EconomicFeedbackDelay - EntranceDuration);
         yield return new WaitForSeconds(delay);
 
-        // ── Etapa 2 — Resultado económico: Aparece inmediatamente después debajo ──
-        if (economicContainer != null)
-        {
-            economicContainer.gameObject.SetActive(true);
-            economicContainer.localScale = new Vector3(0.5f, 0.5f, 1f);
-        }
+        // ── Etapa 2 — Resultado económico: aparece la línea de pago y propina con un pop ──
+        economyText.gameObject.SetActive(true);
+        Transform economy = economyText.transform;
+        Vector3 economyScale = economy.localScale;
 
-        float econPopElapsed = 0f;
-        float econPopDuration = 0.12f;
-        while (econPopElapsed < econPopDuration)
+        float econElapsed = 0f;
+        while (econElapsed < EconomicPopDuration)
         {
-            econPopElapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(econPopElapsed / econPopDuration);
-            float s = Mathf.Lerp(0.5f, 1f, t);
-            if (economicContainer != null)
-                economicContainer.localScale = new Vector3(s, s, 1f);
+            econElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(econElapsed / EconomicPopDuration);
+            economy.localScale = economyScale * Mathf.LerpUnclamped(0.5f, 1f, FeelEase.OutBack(t, 2f));
             yield return null;
         }
 
-        if (economicContainer != null)
-            economicContainer.localScale = Vector3.one;
+        economy.localScale = economyScale;
 
-        // ── Etapa 3 — Permanencia: Permanece visible hasta completar los 4 segundos ──
-        float timeSpentSoFar = entranceDuration + delay + econPopDuration;
+        // ── Etapa 3 — Permanencia: visible hasta completar la duración del feedback ──
+        float timeSpentSoFar = EntranceDuration + delay + EconomicPopDuration;
         float remainingHoldTime = Mathf.Max(0.1f, config.FeedbackDuration - timeSpentSoFar - config.ExitAnimationDuration);
         yield return new WaitForSeconds(remainingHoldTime);
 
-        // ── Etapa 4 — Salida: Desaparición suave y ejecución del callback ──
+        // ── Etapa 4 — Salida: se achica y se desvanece; después el callback ──
         float exitElapsed = 0f;
         float exitDuration = Mathf.Max(0.05f, config.ExitAnimationDuration);
         while (exitElapsed < exitDuration)
         {
             exitElapsed += Time.deltaTime;
             float t = Mathf.Clamp01(exitElapsed / exitDuration);
-            float s = Mathf.Lerp(1f, 0f, t * t); // ease in scale down
-            if (contentRoot != null)
-                contentRoot.localScale = new Vector3(s, s, 1f);
+            cardRoot.localScale = Vector3.one * Mathf.Lerp(1f, exitToScale, FeelEase.InQuad(t));
+            SetAlpha(1f - FeelEase.InQuad(t));
             yield return null;
         }
 
@@ -300,51 +247,128 @@ public class CustomerFeedbackBubble : MonoBehaviour
         onComplete?.Invoke();
     }
 
+    // ── Contenido ────────────────────────────────────────────────────────────
+
     private static string OrderLabel => Loc.Get("feedback.order");
     private static string TipLabel => Loc.Get("feedback.tip");
 
-    private void FormatEconomicTexts(
-        CustomerFeedbackState state,
-        float payment,
-        float tip,
-        bool isMissingReplacement,
-        Color accentColor)
+    /// <summary>
+    /// Dos renglones, "Pedido: $X" y "Propina: +$Y", con los montos alineados en columna. Las
+    /// etiquetas van en el color de detalle; los montos en negrita con la paleta de montos de
+    /// <see cref="WorldBubbleStyle"/> (legible sobre crema).
+    /// </summary>
+    private static string BuildEconomyLine(CustomerFeedbackState state, float payment, float tip, bool isMissingReplacement)
     {
+        string orderValue;
+        string tipValue;
+
         if (state == CustomerFeedbackState.CambioPorFaltante || isMissingReplacement)
         {
-            if (paymentText != null)
-                paymentText.text = $"<color=#E0E0E0>{OrderLabel}</color> <color=#FACC15>{Loc.Get("feedback.pending")}</color>";
-
-            if (tipText != null)
-                tipText.text = $"<color=#E0E0E0>{TipLabel}</color> <color=#EF4444>{Loc.Get("feedback.voided")}</color>";
+            orderValue = Value(WorldBubbleStyle.MoneyWarnHex, Loc.Get("feedback.pending"));
+            tipValue = Value(WorldBubbleStyle.MoneyBadHex, Loc.Get("feedback.voided"));
         }
         else if (state.GetCategory() == CustomerFeedbackCategory.NegativeSevere)
         {
             // Se fue sin pagar (paciencia 0 o entrega cruda/quemada): $0 en rojo, no en verde.
-            if (paymentText != null)
-                paymentText.text = $"<color=#E0E0E0>{OrderLabel}</color> <color=#EF4444><b>$0</b></color>";
-
-            if (tipText != null)
-                tipText.text = $"<color=#E0E0E0>{TipLabel}</color> <color=#EF4444><b>$0</b></color>";
+            orderValue = Value(WorldBubbleStyle.MoneyBadHex, "$0");
+            tipValue = Value(WorldBubbleStyle.MoneyBadHex, "$0");
         }
         else
         {
-            if (paymentText != null)
-                paymentText.text = $"<color=#E0E0E0>{OrderLabel}</color> <color=#4ADE80>${(int)payment}</color>";
+            orderValue = Value(WorldBubbleStyle.MoneyGoodHex, "$" + (int)payment);
 
-            if (tipText != null)
-            {
-                if (tip > 0)
-                {
-                    tipText.text = $"<color=#E0E0E0>{TipLabel}</color> <color=#4ADE80>+${(int)tip}</color>";
-                }
-                else
-                {
-                    // "El valor: Propina: $0 debe tener una lectura visual negativa fuerte."
-                    tipText.text = $"<color=#E0E0E0>{TipLabel}</color> <color=#EF4444><b>$0</b></color>";
-                }
-            }
+            // "El valor: Propina: $0 debe tener una lectura visual negativa fuerte."
+            tipValue = tip > 0
+                ? Value(WorldBubbleStyle.MoneyGoodHex, "+$" + (int)tip)
+                : Value(WorldBubbleStyle.MoneyBadHex, "$0");
         }
+
+        return OrderLabel + ValueColumn + orderValue + LineBreak + TipLabel + ValueColumn + tipValue;
+    }
+
+    // Columna de los montos: todos arrancan a la misma altura aunque "Pedido:" y "Propina:" midan distinto.
+    private const string ValueColumn = "<pos=48%>";
+    private const string LineBreak = "\n";
+
+    private static string Value(string hex, string text) => "<b><color=" + hex + ">" + text + "</color></b>";
+
+    // ── Layout ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mismo esquema que la burbuja de pedido: arriba el ícono a la izquierda y la frase en negrita a
+    /// la derecha; abajo, a todo el ancho, los dos renglones de montos.
+    /// </summary>
+    private void Layout(Sprite icon)
+    {
+        float halfW = cardSize.x * 0.5f;
+        float halfH = cardSize.y * 0.5f;
+
+        borderRenderer.size = cardSize + new Vector2(BorderThickness, BorderThickness);
+        panelRenderer.size = cardSize;
+
+        float left = -halfW + Padding + 0.04f;
+        float right = halfW - Padding;
+        float rowCenterY = halfH - Padding - TopRowHeight * 0.5f;
+
+        bool hasIcon = icon != null;
+        iconRenderer.sprite = icon;
+        iconRenderer.enabled = hasIcon;
+
+        float iconX = left + IconSize * 0.5f;
+        if (hasIcon)
+            WorldBubbleStyle.FitSprite(iconRenderer.transform, icon, IconSize, new Vector3(iconX, rowCenterY, -0.01f));
+
+        // Sin ícono la frase ocupa todo el ancho en vez de dejar el hueco.
+        float phraseLeft = hasIcon ? iconX + IconSize * 0.5f + 0.1f : left;
+        float phraseWidth = Mathf.Max(0.2f, right - phraseLeft);
+        phraseText.rectTransform.sizeDelta = new Vector2(phraseWidth, TopRowHeight);
+        phraseText.transform.localPosition = new Vector3(phraseLeft + phraseWidth * 0.5f, rowCenterY, -0.02f);
+
+        float economyTop = halfH - Padding - TopRowHeight - 0.04f;
+        float economyBottom = -halfH + Padding;
+        float economyWidth = right - left;
+        economyText.rectTransform.sizeDelta = new Vector2(economyWidth, Mathf.Max(0.2f, economyTop - economyBottom));
+        economyText.transform.localPosition = new Vector3((left + right) * 0.5f, (economyTop + economyBottom) * 0.5f, -0.02f);
+    }
+
+    /// <summary>
+    /// Deja las medidas en unidades de mundo aunque el cliente venga escalado (los prefabs vienen
+    /// en x2, igual que con la burbuja de pedido) y apoya el cartel donde está la burbuja de
+    /// pedido del cliente (o en su origen si no tiene), corrido <see cref="cardOffset"/>.
+    /// </summary>
+    private void PlaceCard()
+    {
+        Transform parent = transform.parent;
+        if (parent != null)
+        {
+            Vector3 p = parent.lossyScale;
+            transform.localScale = new Vector3(
+                Mathf.Approximately(p.x, 0f) ? 1f : 1f / p.x,
+                Mathf.Approximately(p.y, 0f) ? 1f : 1f / p.y,
+                Mathf.Approximately(p.z, 0f) ? 1f : 1f / p.z);
+        }
+
+        CustomerView view = GetComponentInParent<CustomerView>();
+        Vector3 anchor = view != null && view.OrderBubble != null ? view.OrderBubble.transform.position
+                       : parent != null ? parent.position
+                       : transform.position;
+
+        cardRoot.position = anchor + cardOffset;
+    }
+
+    private void SetAlpha(float alpha)
+    {
+        Color c = shownBorderColor;
+        c.a *= alpha;
+        borderRenderer.color = c;
+
+        c = shownPanelColor;
+        c.a *= alpha;
+        panelRenderer.color = c;
+
+        iconRenderer.color = new Color(1f, 1f, 1f, alpha);
+        phraseText.alpha = alpha;
+        economyText.alpha = alpha;
     }
 
     public void HideImmediate()
@@ -355,75 +379,10 @@ public class CustomerFeedbackBubble : MonoBehaviour
             sequenceCoroutine = null;
         }
 
-        if (contentRoot != null)
+        if (cardRoot != null)
         {
-            contentRoot.localScale = Vector3.zero;
-            contentRoot.gameObject.SetActive(false);
+            cardRoot.localScale = Vector3.one;
+            cardRoot.gameObject.SetActive(false);
         }
-    }
-
-    private static void EnsureProceduralSprites()
-    {
-        if (roundedBoxSprite != null && borderBoxSprite != null) return;
-
-        int width = 96;
-        int height = 54;
-        int radius = 14;
-
-        Texture2D bgTex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        Texture2D borderTex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        bgTex.filterMode = FilterMode.Bilinear;
-        borderTex.filterMode = FilterMode.Bilinear;
-
-        int borderWidth = 3;
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                float dist = GetDistanceToRoundedCorner(x, y, width, height, radius);
-                float alpha = Mathf.Clamp01(radius - dist + 0.5f);
-
-                bgTex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-
-                // Borde exterior
-                float borderAlpha = alpha;
-                if (dist < radius - borderWidth)
-                {
-                    float innerEdge = (radius - borderWidth) - dist;
-                    borderAlpha = Mathf.Clamp01(1f - innerEdge);
-                }
-
-                borderTex.SetPixel(x, y, new Color(1f, 1f, 1f, borderAlpha));
-            }
-        }
-
-        bgTex.Apply();
-        borderTex.Apply();
-
-        roundedBoxSprite = Sprite.Create(
-            bgTex,
-            new Rect(0, 0, width, height),
-            new Vector2(0.5f, 0.5f),
-            100f
-        );
-
-        borderBoxSprite = Sprite.Create(
-            borderTex,
-            new Rect(0, 0, width, height),
-            new Vector2(0.5f, 0.5f),
-            100f
-        );
-    }
-
-    private static float GetDistanceToRoundedCorner(int x, int y, int w, int h, int r)
-    {
-        int cx = (x < r) ? r : ((x >= w - r) ? w - r - 1 : x);
-        int cy = (y < r) ? r : ((y >= h - r) ? h - r - 1 : y);
-
-        int dx = x - cx;
-        int dy = y - cy;
-
-        return Mathf.Sqrt(dx * dx + dy * dy);
     }
 }

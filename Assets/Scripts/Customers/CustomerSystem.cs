@@ -853,30 +853,31 @@ public class CustomerSystem : MonoBehaviour
 
     /// <summary>
     /// Línea de preview económico para la burbuja de arrastre.
-    /// Colores: misma paleta que CustomerFeedbackBubble.
+    /// Colores: la paleta de montos de <see cref="WorldBubbleStyle"/>, la misma del cartel de
+    /// resultado (CustomerFeedbackBubble). Va sobre el panel crema: tonos oscuros.
     /// </summary>
     private static string BuildDeliveryPreviewLine(GameManager.DeliveryEvaluation eval)
     {
         if (!eval.accepted)
-            return "<color=#EF4444>" + eval.rejectShort + "</color>";
+            return "<color=" + WorldBubbleStyle.MoneyBadHex + ">" + eval.rejectShort + "</color>";
 
         // Se entrega igual, pero con crudo/quemado el cliente se va sin pagar y cuesta un strike.
         if (eval.causesStrike)
-            return "<color=#EF4444>" + Loc.Format("delivery.preview.strike", eval.strikeShort) + "</color>";
+            return "<color=" + WorldBubbleStyle.MoneyBadHex + ">" + Loc.Format("delivery.preview.strike", eval.strikeShort) + "</color>";
 
         string payment = "$" + (int)eval.payment;
         string line;
 
         if (eval.tip > 0f)
-            line = "<color=#4ADE80>" + Loc.Format("delivery.preview.tip", payment, "$" + (int)eval.tip) + "</color>";
+            line = "<color=" + WorldBubbleStyle.MoneyGoodHex + ">" + Loc.Format("delivery.preview.tip", payment, "$" + (int)eval.tip) + "</color>";
         else if (eval.worstOffset >= 2)
-            line = "<color=#F59E0B>" + Loc.Format("delivery.preview.half", payment) + "</color>";
+            line = "<color=" + WorldBubbleStyle.MoneyHalfHex + ">" + Loc.Format("delivery.preview.half", payment) + "</color>";
         else
-            line = "<color=#FACC15>" + Loc.Format("delivery.preview.no_tip", payment) + "</color>";
+            line = "<color=" + WorldBubbleStyle.MoneyWarnHex + ">" + Loc.Format("delivery.preview.no_tip", payment) + "</color>";
 
         // Toppings/pan mal entregados: se acepta igual, pero se avisa qué falló.
         if (!string.IsNullOrEmpty(eval.extrasNote))
-            line += "\n<color=#FACC15>" + eval.extrasNote + "</color>";
+            line += "\n<color=" + WorldBubbleStyle.MoneyWarnHex + ">" + eval.extrasNote + "</color>";
 
         return line;
     }
@@ -1172,6 +1173,8 @@ public class CustomerSystem : MonoBehaviour
         int slotIndex = customer.slotIndex;
         if (slotIndex >= 0 && slotIndex < slotViews.Length && slotViews[slotIndex] != null)
         {
+            // Solo visual: un fantasma del cuerpo se va; el lugar se libera igual que siempre.
+            slotViews[slotIndex].PlayLeave();
             Destroy(slotViews[slotIndex].gameObject);
             slotViews[slotIndex] = null;
         }
@@ -1227,7 +1230,7 @@ public class CustomerSystem : MonoBehaviour
 
             // actualizar customer.slotIndex + mover transform
             view.Customer.slotIndex = i;
-            view.transform.position = GetSlotPosition(i);
+            view.MoveToSlot(GetSlotPosition(i));   // lugar real al instante, el dibujo camina
 
             // El slot nuevo puede quedar debajo (o fuera) de un panel desplegado.
             view.RefreshPickingState();

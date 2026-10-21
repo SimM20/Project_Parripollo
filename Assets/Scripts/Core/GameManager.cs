@@ -194,6 +194,8 @@ public class GameManager : MonoBehaviour
             {
                 coal.ReleaseOccupiedSlots();
 
+                // Solo visual: la ceniza se vuela en un fantasma, el carbón ya se fue.
+                SpriteGhost.Spawn(coal.VisualRenderer, SpriteGhost.Motion.Vanish(0.22f, 0.32f));
                 Destroy(coal.gameObject);
 
                 cleanedCount++;

@@ -26,6 +26,14 @@ public abstract class SlidingPanel : MonoBehaviour
     [SerializeField] private float openLocalX = 0f;
     [SerializeField] private float closedLocalX = -5f;
     [SerializeField] [Min(0f)] private float slideDuration = 0.2f;
+    [Tooltip("Rebote al terminar de abrirse (0 = sin rebote). Cerrar nunca rebota. Las celdas no se pueden " +
+             "arrastrar hasta que termina el deslizamiento, igual que antes.")]
+    [SerializeField] [Range(0f, 2f)] private float openOvershoot = 0.8f;
+
+    [Header("Panel Look")]
+    [Tooltip("El fondo se dibuja 100 % opaco. Con espacio de color lineal, un alfa de 0.96 ya dejaba ver nubes " +
+             "y autos detras de las celdas y ensuciaba la lectura del stock.")]
+    [SerializeField] private bool opaqueBackground = true;
 
     /// <summary>True si el panel esta desplegado (o yendo hacia desplegado).</summary>
     public bool IsOpen { get; private set; }
@@ -72,6 +80,13 @@ public abstract class SlidingPanel : MonoBehaviour
         // el Show(Grill) inicial nunca nos llega: hay que auto-inicializarse aca.
         if (slidingRoot != null)
             slidingRoot.gameObject.SetActive(true);
+
+        if (opaqueBackground && panelBackground != null)
+        {
+            Color c = panelBackground.color;
+            c.a = 1f;
+            panelBackground.color = c;
+        }
 
         OnPanelStarted();
         Close(true);
@@ -330,23 +345,27 @@ public abstract class SlidingPanel : MonoBehaviour
             return;
         }
 
-        slideRoutine = StartCoroutine(SlideRoutine(targetX, duration));
+        bool opening = Mathf.Approximately(targetX, openLocalX);
+        slideRoutine = StartCoroutine(SlideRoutine(targetX, duration, opening ? openOvershoot : 0f));
     }
 
-    private IEnumerator SlideRoutine(float targetX, float duration)
+    private IEnumerator SlideRoutine(float targetX, float duration, float overshoot)
     {
         float startX = slidingRoot.localPosition.x;
         float elapsed = 0f;
 
         // La pausa (GamePause) pone Time.timeScale = 0: el deslizamiento corre en tiempo no
         // escalado para no quedar a mitad de camino.
+        // Ease-out (y no SmoothStep): arranca a toda velocidad, así la tecla responde en el mismo
+        // frame; al abrir se pasa apenas y se asienta.
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration));
+            float t = Mathf.Clamp01(elapsed / duration);
+            float k = overshoot > 0f ? FeelEase.OutBack(t, overshoot) : FeelEase.OutCubic(t);
 
             Vector3 position = slidingRoot.localPosition;
-            position.x = Mathf.Lerp(startX, targetX, k);
+            position.x = Mathf.LerpUnclamped(startX, targetX, k);
             slidingRoot.localPosition = position;
 
             yield return null;

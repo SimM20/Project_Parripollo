@@ -15,6 +15,9 @@ public class RollbackButtonUI : MonoBehaviour
     void Awake()
     {
         button = GetComponent<Button>();
+
+        // Mismo hover/click que los botones de los menús (deshabilitado no reacciona).
+        MenuButtonHover.Ensure(button);
     }
 
     void OnEnable()

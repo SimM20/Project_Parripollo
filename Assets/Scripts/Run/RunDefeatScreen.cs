@@ -52,6 +52,11 @@ public class RunDefeatScreen : MonoBehaviour
     {
         if (root == null) root = gameObject;
 
+        // Presentación: la ventana entra con un pop y los botones responden como los del resto de los menús.
+        UIPopIn.Ensure(root.transform.Find("Panel"));
+        MenuButtonHover.Ensure(mainMenuButton);
+        MenuButtonHover.Ensure(retryButton);
+
         if (mainMenuButton != null) mainMenuButton.onClick.AddListener(GoToMainMenu);
         if (retryButton != null) retryButton.onClick.AddListener(RestartRun);
 

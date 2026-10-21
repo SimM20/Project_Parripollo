@@ -125,6 +125,15 @@
 > El frasco (`ToppingDraggable`) la lee en `Start` y la guarda al terminar cada vertida. Agarrarlo vacío avisa con
 > `sauce.empty`. En la tienda la compra es de a 1, se bloquea con el frasco lleno y la celda dice `FRASCO: N%`. Los
 > frascos de `TutorialScene` llevan `ignoreStock`. Secciones 2.4, 3.6, 3.7 y nota 39.
+> Última actualización parcial: **2026-10-20** (rama `Fede`) — **pasada de game feel (solo presentación)**. Carpeta nueva
+> `Feel/` (easing, golpe de escala, fantasmas de sprite, asentado visual, entrada de paneles, fundido de escena). Las piezas
+> que se sueltan en la parrilla se ven llegar al bloque (y volver al origen si no entran) con el collider quieto en su
+> lugar real; los clientes suben al mostrador, caminan al correrse de lugar y se van en un fantasma; el plato hace pop/eco
+> al recibir cosas y lo limpiado se desvanece; tacho, cenizas, celdas de stock, pestañas, capa de la parrilla, HUD, pausa,
+> opciones, popups de `EndScene` y compras de la tienda tienen respuesta visual. Paneles laterales opacos. Pausa con Bungee
+> y texto claro. Botones de los popups de `EndScene` con las chapas del proyecto. El cartel de resultado de la entrega
+> (pago y propina) pasó al diseño de las burbujas de pedido y de carne, y los montos usan una paleta común legible sobre
+> crema. Ninguna regla, tiempo ni hitbox cambió. Secciones 3.5, 3.12 y nota 40.
 > Última actualización parcial: **2026-10-14** (rama `Coccion-Update`) — **cartel "!" de carne por quemarse**
 > (`Grill/MeatBurnAlert.cs`, prefab `Prefabs/UI/MeatBurnAlert.prefab`, arte `Sprites/Arte Aseprite/UI y Botones/Alerta Quemado`).
 > Burbuja pixel art (16x17, Point, 32 PPU, pivote en la colita) que aparece sobre la pieza **1 s antes** de que la cara
@@ -188,6 +197,7 @@ Assets/Scripts/
 │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
 │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
 ├── Radio/          La radio de la mejora: objeto clickeable del mostrador + emisora DDOL que nunca se corta
+├── Feel/           Game feel: easing, golpes de escala, fantasmas de sprite, asentado visual, entrada de paneles y de escena
 └── Editor/         Solo editor: reseteo de mejoras al salir de Play
 ```
 
@@ -215,6 +225,7 @@ Assets/Scripts/
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
 | **Radio/** | `Radio` (el objeto del mostrador que activa la mejora `RadioUpgrade`: prender/apagar, lista de canciones, salto al ritmo) y `RadioStation` (emisora DDOL creada en runtime: elige, encadena y funde las canciones) | `Radio.cs`, `RadioStation.cs` |
+| **Feel/** | Solo presentación, sin lógica de juego. `FeelEase` (curvas), `ScalePunch` (golpe/pop de escala para transforms **sin collider**), `SpriteGhost` (copia pooleada de un sprite que se anima y desaparece), `SettleOffset` (corrimiento visual que se apaga solo, para piezas con collider compensado), `UIPopIn` (entrada de ventanas de UI), `SceneFadeIn` (fundido de entrada de escena, se crea solo) | `SpriteGhost.cs`, `SettleOffset.cs`, `ScalePunch.cs`, `UIPopIn.cs` |
 | **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO` | `UpgradeStateResetter.cs` |
 
 ### Assets de datos
@@ -1389,16 +1400,28 @@ Implementa el spec "Sistema Feedback de Entrega y Reacción del Cliente" (2026-0
 | `NoPagaSeVa` (6) | NegativeSevere · rojo fuerte | paciencia 0 → `TriggerAngryLeaveFeedback` |
 | `EntregaCrudaOQuemada` (7) | NegativeSevere · rojo fuerte | le entregaron una cara `Crudo`/`Quemado` → `TriggerBadCookingLeaveFeedback` |
 
-`CustomerFeedbackBubble.Show(...)` corre una corrutina en 4 etapas: **reacción** (sprite o emoji fallback + frase al
-azar, con rebote) → tras `economicFeedbackDelay` (0.35 s) **resultado económico** (`Pedido: $X` / `Propina: $Y`, o
-"pendiente"/"anulada" en el cambio por faltante) → **permanencia** hasta completar `feedbackDuration` (4 s) →
+`CustomerFeedbackBubble.Show(...)` corre una corrutina en 4 etapas: **reacción** (ícono + frase al azar, con
+rebote) → tras `economicFeedbackDelay` (0.35 s) **resultado económico** (`Pedido: $X` / `Propina: $Y` en dos renglones,
+o "pendiente"/"anulada" en el cambio por faltante) → **permanencia** hasta completar `feedbackDuration` (4 s) →
 **salida** (`exitAnimationDuration` 0.25 s) y callback. El callback de entrega/abandono es `RemoveCustomer`; el de
 cambio por faltante deja al cliente en su slot con el pedido nuevo. Los dos estados `NegativeSevere` muestran
 `Pedido: $0` / `Propina: $0` en rojo (la rama la elige la **categoría**, no el estado, así un estado severo nuevo
 entra solo). Durante el feedback el slot **sigue ocupado**
 (cuenta para `MaxSimultaneousCustomers`) y el cliente no responde a hover/click/arrastre. Todo usa
-`WaitForSeconds` → se congela con la pausa. Jerarquía visual autogenerada si el prefab no la trae
-(`EnsureVisualHierarchy`). Config única en `ScriptableObjects/CustomerFeedbackSO.asset`
+`WaitForSeconds` → se congela con la pausa.
+
+**Diseño del cartel (desde 2026-10-20).** Es una burbuja más de la familia de `WorldBubbleStyle`, igual que la de
+pedido y la de la carne: panel crema 9-sliced con borde, ícono a la izquierda (el sprite del estado si Arte lo carga en
+la config; si no, el plato del pedido, `CustomerView.GetDishSprite`), frase en negrita y abajo los dos renglones de
+montos alineados en columna (`<pos=48%>`). Aparece **en el lugar de la burbuja de pedido** (que se apaga durante el
+feedback; mismo borde de arriba, `cardOffset` desde el `OrderBubble`), así que no tapa la cara ni se pisa con los
+vecinos (`cardSize` 2.25 × 1.3, en unidades de mundo: normaliza la escala x2 del cliente). El color de la categoría tiñe
+el **borde** (`borderCategoryTint`) y apenas el panel; los montos usan la **paleta de montos** de `WorldBubbleStyle`
+(`MoneyGood/Warn/Half/Bad`, oscuros para leerse sobre crema), la misma que la línea de preview del arrastre
+(`CustomerSystem.BuildDeliveryPreviewLine`). Se arma por código en `EnsureVisualHierarchy`; la jerarquía vieja del
+prefab `FeedbackBubble 1` (fondo oscuro, LiberationSans, que cada prefab de cliente pisaba distinto) queda referenciada
+en `legacyRoot` y se oculta. Entrada con rebote y fundido, salida achicándose y desvaneciéndose; los tiempos de la
+secuencia no cambiaron. Config única en `ScriptableObjects/CustomerFeedbackSO.asset`
 (`CustomerFeedbackConfigSO.Instance` con fallback a `Resources`): tiempos, colores por categoría, sprites por estado
 (opcionales). **Las frases viven en `Customers.csv`** como pools numerados `feedback.phrase.<estado>.1..N`
 (`GetPhrasePoolKey` da el prefijo, `Loc.GetPool` los junta): cada idioma puede tener su propia cantidad.
@@ -2255,6 +2278,55 @@ sus caracteres (nota 30).
 | `InputPrompts` — `Input/InputPrompts.cs` | Resuelve `[[Accion]]` (nombres de `GameAction` + `PointerPrimary`/`PointerSecondary`) con la tecla o botón **del binding real** en el control activo: teclado (`input.key.<control>`, o la tecla en mayúsculas), Xbox/genérico (`input.xbox.<control>`) o PlayStation (`input.ps.<control>`). Devuelve en negrita. Al cambiar de esquema o de familia de gamepad llama `Loc.RefreshTexts`, así el tutorial pasa de "Q" a "LB"/"L1" en vivo. `GetControl(acción, esquema)` da el control físico del binding ("q", "leftShoulder") y `GetLabel(acción, esquema, familia)` el nombre para un control que no es el activo: los usa `InputGlyphSetSO` para los íconos de los carteles |
 | `LocalizationTools` — `Editor/` | Menú `Tools/Localización/`: **Validar tablas** (celdas vacías, `{n}` o `[[tokens]]` que no coinciden con el español, tokens inexistentes, claves usadas en código o assets que no están), **Recargar tablas**, **Siguiente idioma (Play)** (solo la sesión) y abrir la carpeta. Inspector de `LocalizedText` con el texto de cada idioma |
 
+### 3.12 Game feel — `Feel/` (solo presentación)
+
+Regla de la carpeta: **el feedback acompaña al resultado lógico, nunca lo demora ni lo cambia**. Nada de esperas, bloqueos de
+input, hit-stop ni `Time.timeScale`. Un objeto con collider (algo que se agarra, se clickea o recibe drops) **no se escala ni
+se mueve** para un efecto: o se corre solo el dibujo con el collider compensado (`SettleOffset`), o se anima un fantasma
+(`SpriteGhost`), o se usa otro canal (color).
+
+| Pieza | Qué hace | Dónde se usa |
+|---|---|---|
+| `FeelEase` | `OutCubic`, `InCubic`, `InQuad`, `OutBack`, `Bump` (campana 0→1→0). Puras, sin allocations | Todo lo de abajo, `SlidingPanel`, `GrillLayerToggle`, `StockPanelSlot` |
+| `ScalePunch` | `Punch(t, amount, dur, unscaled)` / `PopIn(t, from, dur, unscaled)`. Se agrega solo al transform. Reiniciable sin acumular; si otro script reescribe la escala en el medio (un layout), esa pasa a ser la base. Se apaga solo al terminar | Visuales de sides/toppings del plato (`BuildFoodDropZone.SpawnPlateVisual`), contador de la celda de stock, contenedores de clientes y hora del HUD, ícono y stock de la tarjeta de tienda, cantidad −/+ |
+| `SpriteGhost` | `Spawn(SpriteRenderer, Motion)`: copia sprite, color, flip, orden, material y tamaño en mundo; sin collider. `Motion.Echo` (onda detrás de algo apoyado), `Vanish` (se achica, sube y se apaga), `Into(punto)` (viaja y se apaga). Pool estático (se vacía solo al cambiar de escena); tiempo escalado por defecto (la pausa lo congela) | Corte que entra al plato (eco) y pan que lo vuelve sándwich (`MeatTransferBuffer`), plato limpiado o entregado (desvanecido), undo de side/topping, tacho (`TrashZone`: lo tirado cae por la boca + eco del tacho), cenizas (`GameManager.CleanAshes`), cliente que se va (`CustomerView.PlayLeave`), fantasma del stock que vuelve a la celda, eco del botón de capa |
+| `SettleOffset` | POCO: corrimiento que arranca en *dónde se ve − dónde quedó* y se apaga (OutCubic + saltito opcional). El dueño lo suma a la posición y le resta lo mismo al `offset` del collider | `Meat` (mismo canal que el flote: `floatOffset`, así `RestPosition`, burbuja, humo y aviso quedan en el lugar real), `Coal`, `BuildDraggableFoodItem` (vuelta al panel), `CustomerView` (llegada y cambio de lugar, sobre la raíz visual) |
+| `UIPopIn` | En cada `OnEnable`: fundido (CanvasGroup, se agrega solo) + crecimiento con rebote, tiempo sin escalar. Nunca bloquea raycasts. `Ensure(window)` lo suma por código | `PauseCanvas/Panel/VerticalContainer`, `OptionsPanel/Window` (en los prefabs); popups de `EndScene` (`StrikeEndPopup` y `RunDefeatScreen` lo agregan en `Awake`) |
+| `SceneFadeIn` | DDOL creado en `BeforeSceneLoad`: cada escena nueva entra desde negro en 0.35 s (sin raycaster, debajo del cursor del gamepad, orden 31000). No hay fundido de salida: la carga no se demora | Todas las escenas |
+
+**Comportamientos por sistema** (todos con valores en el inspector, header *Feedback* / *Drop Settle* / *Arrival…*):
+
+- **Parrilla.** `Meat.OnWorldPointerUp`: la lógica coloca la pieza igual que antes y el dibujo llega desde donde se soltó
+  (`settleSeconds` 0.12, `settleHop` 0.06) y larga el puff del flip al apoyarse; si no entra, vuelve deslizando al origen
+  (`rejectReturnSeconds`). Agarrarla a mitad de un asentado lo corta y toma su lugar real como origen; el flip también lo
+  corta. `Meat.PlayDropSettle(desde)` lo usan el stock, la bandeja y el plato al devolverla a la grilla. `Coal` igual
+  (`PlayDropSettle`). ⚠️ Soltar carne en cualquier lado la sigue llevando al bloque libre más cercano (regla existente).
+- **Capas.** `GrillLayerToggle`: los colliders cambian al instante; el alfa de cada capa se funde en `layerFadeSeconds` (0.12,
+  sin escalar) y el botón larga un eco. Buffers reusados, sin `GetComponentsInChildren` con array.
+- **Stock.** `StockPanelSlot`: el ícono (hijo sin collider) crece con el puntero encima, se atenúa mientras una unidad va en la
+  mano, el fantasma aparece con pop, y si el drop se rechaza un fantasma vuelve a la celda (el stock no se tocó). El contador
+  da un golpe cuando cambia la cantidad de la misma variedad y se tiñe (`lowCountColor`) con `lowCountThreshold` (3) o menos.
+  `StockPanelTab`: aclara al hover y destella solo si el panel realmente cambió (un rechazo del tutorial no destella).
+- **Paneles.** `SlidingPanel`: ease-out (responde en el mismo frame) con rebote leve al abrir (`openOvershoot`), cerrar sin
+  rebote; `opaqueBackground` fuerza alfa 1 en el fondo (con espacio de color lineal el 0.96 dejaba ver nubes y autos).
+- **Plato.** Side/topping nuevo con pop; corte que entra con eco; limpiar (C) o entregar desvanece lo que había (en el plato o
+  sobre el cliente). `BuildDraggableFoodItem` crece al agarrarlo (collider compensado en tamaño y offset) y, si el plato no lo
+  acepta, vuelve deslizando; aceptado vuelve al toque porque el plato ya lo muestra.
+- **Clientes.** `CustomerView.Awake` pasa todos los hijos a una raíz `Visual` (posiciones locales intactas): el collider de
+  pick queda en la raíz. Llegada: sube `arrivalRise` y el cuerpo aparece. `CompactSlots` llama `MoveToSlot`: la posición real
+  cambia al instante y el dibujo camina con un paso. `RemoveCustomer` llama `PlayLeave` antes del `Destroy` (fantasma del
+  cuerpo hacia la izquierda, `leaveDrift`). Reacción de rechazo y feedback terminan la llegada antes de tocar el color.
+- **HUD.** Golpe del contador de clientes al llegar uno; la hora se tiñe (`closedTimeColor`) y golpea al cerrar el local.
+  Pausa y deshacer usan `MenuButtonHover` (agregado por código: `MenuButtonHover.Ensure`).
+- **Menús.** Botones de la pausa con `MenuButtonHover`, Bungee y texto claro (antes LiberationSans gris oscuro sobre chapa
+  oscura). Botones de los popups de `EndScene`: chapa dorada (acción principal) / oscura (secundaria) en `Sliced` con
+  `pixelsPerUnitMultiplier` 1.333 (antes usaban el riel de un slider, `Barra Sin Bolita`, que tachaba el texto).
+- **Tienda.** Compra concretada: golpe del ícono y del stock de la tarjeta; −/+ golpean la cantidad.
+- **Cartel de resultado (propinas).** `CustomerFeedbackBubble` pasó al diseño de las burbujas de pedido y de carne (ver
+  3.5 → *Feedback de entrega*). `WorldBubbleStyle` suma la paleta común (`PanelColor`, `BorderColor`, `TitleColor`,
+  `DetailColor`) y la de montos (`MoneyGood/Warn/Half/Bad` + `*Hex`), que también usa la preview del arrastre: antes
+  era verde y amarillo claros (`#4ADE80`, `#FACC15`) sobre el panel crema y casi no se leía.
+
 ## 4. Puntos de entrada e inicialización
 
 ### 4.1 Arranque de la aplicación
@@ -2431,3 +2503,4 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 37 | **Localización: ningún texto visible en literales** (3.11). En código, `Loc.Get("clave")` / `Loc.Format("clave", args)`; en un texto fijo de escena o prefab, el componente `LocalizedText`. La clave nueva va en la tabla que corresponda de `Resources/Localization/` **con todas las columnas llenas**, y después *Tools/Localización/Validar tablas*. Un texto que puede quedar en pantalla mientras cambia el idioma (la pausa tiene Opciones) o el control escucha `Loc.OnTextsChanged`. Para mostrar un ítem: `DisplayName` / `DisplayDescription` del SO, **nunca** `itemName` / `breadName` / `sideName` / `description`. **Cortes y toppings no se traducen**: no llevan `nameKey`. Para nombrar una tecla o botón: token `[[GameAction]]`, nunca la letra escrita. Cambiar un binding en `GameControls.inputactions` actualiza los textos solo; un control físico nuevo necesita su fila `input.*`. `ShopRoot` (tienda 2D deshabilitada, nota 8) y los 6 paneles de tutorial sin uso (`CanvaPanelCoolerInfo`, `DragCarbon`, `DragCarne`, `Panel`, `Pasar a Cooler`, `Volver al Grill`) **no** están traducidos |
 | 38 | **La radio es una emisora que no se corta** (3.8 → *Radio*). La música vive en `RadioStation` (DDOL), no en la `Radio` de la escena: no le pongas un `AudioSource` a la radio ni la pares al apagarla, porque al prenderla tiene que seguir por donde iba. Para cambiar las canciones, el array `songs` del componente `Radio` en `GameScene` (cualquier cantidad, incluso ninguna); temas largos con *Load Type = Streaming*. Una mejora o cartel que necesite saber si suena: `RadioStation.IsOn` |
 | 39 | **Un topping se compra para rellenar el frasco, no se acumula.** `ToppingStock` (DDOL) guarda la salsa que queda en cada frasco (`GetSauceAmount` / `GetFillRatio` / `IsFull` / `SetSauceAmount` / `Refill`). Un topping que todavía no tiene entrada cuenta como **lleno**: es el frasco con el que arranca la run, así que no hace falta stock inicial en escena. Lo que sobra en el frasco **pasa al día siguiente**. `ToppingDraggable` lee el valor en **`Start`** (no en `Awake`: en la primera escena el `Awake` del `ToppingStock` puede correr después) y lo guarda **una vez por vertida**, en `StopPouring` (soltar, cancelar o frasco vacío) y en `SetSauceAmount` (undo). Nunca por frame. `RefillSauce()` sigue sin llamadores. **El tutorial no gasta salsa**: sus frascos llevan `ignoreStock` (tabla de 3.7). Un frasco nuevo en `GameScene` no necesita nada; en `TutorialScene` hay que marcarle `ignoreStock`. Los clientes **siguen pidiendo salsas aunque el frasco esté vacío**: es una decisión de diseño, no un olvido |
+| 40 | **Game feel sin tocar interacción** (3.12). Para animar algo que se agarra o recibe drops: nunca escalar ni mover su transform con el collider adentro. Correr solo el dibujo con `SettleOffset` + compensar `Collider2D.offset` (ver `Coal.ApplyVisualOffset`), o usar un fantasma (`SpriteGhost`), o cambiar color. `ScalePunch` es solo para transforms sin collider. Un efecto nunca demora el resultado: el estado lógico se aplica primero y el dibujo lo alcanza. En `CustomerView` los hijos cuelgan de la raíz `Visual` creada en runtime: un hijo nuevo del prefab también se mueve con ella. |

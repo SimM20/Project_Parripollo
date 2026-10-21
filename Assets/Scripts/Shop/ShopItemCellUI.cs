@@ -166,27 +166,43 @@ public class ShopItemCellUI : MonoBehaviour
 
     private void OnMinus()
     {
+        int before = pendingQty;
         pendingQty = Mathf.Max(1, pendingQty - 1);
         RefreshVisuals();
+        PunchIfChanged(qtyText, before != pendingQty, 0.18f);
     }
 
     private void OnPlus()
     {
+        int before = pendingQty;
         pendingQty = Mathf.Min(pendingQty + 1, MaxQty);
         RefreshVisuals();
+        PunchIfChanged(qtyText, before != pendingQty, 0.18f);
     }
 
     private void OnBuy()
     {
         if (shop == null) return;
 
+        bool bought = false;
         if (toppingItem != null)
-            shop.TryBuyToppingNow(toppingItem, pendingQty, out _);
+            bought = shop.TryBuyToppingNow(toppingItem, pendingQty, out _);
         else if (item != null)
-            shop.TryBuyNow(item, pendingQty, out _);
+            bought = shop.TryBuyNow(item, pendingQty, out _);
 
         pendingQty = 1;
         RefreshVisuals();
+
+        // Solo si la compra se concretó: el ícono salta y lo que tenés se actualiza con un golpe.
+        PunchIfChanged(iconImage, bought, 0.16f);
+        PunchIfChanged(stockText, bought, 0.22f);
+    }
+
+    /// <summary>Golpe de escala de presentación (tiempo sin escalar). Textos e íconos sin raycast propio.</summary>
+    private static void PunchIfChanged(Component target, bool changed, float amount)
+    {
+        if (changed && target != null)
+            ScalePunch.Punch(target.transform, amount, 0.2f, true);
     }
 
     private static Sprite ResolveIcon(ItemDataSO item)
