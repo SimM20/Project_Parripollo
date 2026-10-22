@@ -44,6 +44,7 @@ public class BuildStationSystem : MonoBehaviour
     public IReadOnlyList<ToppingSO> AssembledToppings => assembledToppings;
     public bool HasAnyCut => assembledCuts.Count > 0;
     public bool HasBread => assembledBread != null;
+    public bool IsEmpty => assembledCuts.Count == 0 && assembledBread == null && assembledSides.Count == 0 && assembledToppings.Count == 0;
 
 
     public void AddCut(MeatCutSO cut, MeatStates state = MeatStates.Crudo)

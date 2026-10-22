@@ -89,6 +89,7 @@ public class TrashZone : MonoBehaviour
         }
 
         PlaySwallowFeedback(item);
+        GamepadHaptics.Play(HapticEvent.Trashed);
         Destroy(item.gameObject);
 
         Debug.Log("Objeto tirado a la basura: " + itemName);

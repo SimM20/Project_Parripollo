@@ -95,6 +95,9 @@ public sealed class SceneFadeIn : MonoBehaviour
     {
         if (phase == Phase.Out) return;
 
+        // Toda carga pasa por acá (botones de menú, pausa, tienda, fin de la noche): un solo enganche.
+        GamepadHaptics.Play(HapticEvent.SceneTransition);
+
         // Si la entrada todavía no terminó, se oscurece desde donde quedó y en proporción.
         outFrom = phase == Phase.In ? veil.color.a : 0f;
         outSeconds = Mathf.Max(FadeOutSeconds * (1f - outFrom), 0.01f);

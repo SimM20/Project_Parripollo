@@ -119,6 +119,7 @@ MonoBehaviour:
       gapAfter: 0
       repeat: 1
       repeatFalloff: 1
+    playsDuringPause: 0
     flashSeconds: 0
     flashColor: {r: 1, g: 1, b: 1, a: 1}
   - id: 1
@@ -136,6 +137,7 @@ MonoBehaviour:
       gapAfter: 0.04
       repeat: 5
       repeatFalloff: 0.8
+    playsDuringPause: 0
     flashSeconds: 0.6
     flashColor: {r: 1, g: 1, b: 0.85, a: 1}
   - id: 2
@@ -153,6 +155,7 @@ MonoBehaviour:
       gapAfter: 0
       repeat: 1
       repeatFalloff: 1
+    playsDuringPause: 0
     flashSeconds: 0.5
     flashColor: {r: 1, g: 0, b: 0, a: 1}
   - id: 3
@@ -170,18 +173,26 @@ MonoBehaviour:
       gapAfter: 0
       repeat: 1
       repeatFalloff: 1
+    playsDuringPause: 0
     flashSeconds: 0.9
     flashColor: {r: 1, g: 0, b: 0, a: 1}
   - id: 4
     enabled: 1
     pulses:
-    - low: 0.4
-      high: 0.5
-      seconds: 0.12
-      gapAfter: 0
+    - low: 0.65
+      high: 0.55
+      seconds: 0.1
+      gapAfter: 0.04
       repeat: 1
       repeatFalloff: 1
-    flashSeconds: 0.4
+    - low: 0.35
+      high: 0.2
+      seconds: 0.05
+      gapAfter: 0.03
+      repeat: 3
+      repeatFalloff: 0.75
+    playsDuringPause: 0
+    flashSeconds: 0.6
     flashColor: {r: 0.6, g: 0.05, b: 0, a: 1}
   - id: 5
     enabled: 1
@@ -198,5 +209,336 @@ MonoBehaviour:
       gapAfter: 0
       repeat: 6
       repeatFalloff: 0.8
+    playsDuringPause: 0
     flashSeconds: 0.7
     flashColor: {r: 1, g: 0, b: 0, a: 1}
+  - id: 6
+    enabled: 1
+    pulses:
+    - low: 0.05
+      high: 0.22
+      seconds: 0.03
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 7
+    enabled: 1
+    pulses:
+    - low: 0.3
+      high: 0.25
+      seconds: 0.05
+      gapAfter: 0.03
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0
+      high: 0.18
+      seconds: 0.02
+      gapAfter: 0.035
+      repeat: 4
+      repeatFalloff: 0.75
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 8
+    enabled: 1
+    pulses:
+    - low: 0.45
+      high: 0.1
+      seconds: 0.07
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 9
+    enabled: 1
+    pulses:
+    - low: 0.12
+      high: 0.3
+      seconds: 0.03
+      gapAfter: 0.06
+      repeat: 2
+      repeatFalloff: 0.8
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 10
+    enabled: 1
+    pulses:
+    - low: 0
+      high: 0.3
+      seconds: 0.03
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 11
+    enabled: 1
+    pulses:
+    - low: 0
+      high: 0.2
+      seconds: 0.02
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 12
+    enabled: 1
+    pulses:
+    - low: 0.25
+      high: 0.35
+      seconds: 0.06
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 13
+    enabled: 1
+    pulses:
+    - low: 0.1
+      high: 0.28
+      seconds: 0.04
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 14
+    enabled: 1
+    pulses:
+    - low: 0.06
+      high: 0.12
+      seconds: 0.03
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 15
+    enabled: 1
+    pulses:
+    - low: 0.15
+      high: 0.35
+      seconds: 0.04
+      gapAfter: 0.02
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0.05
+      high: 0.25
+      seconds: 0.03
+      gapAfter: 0.02
+      repeat: 3
+      repeatFalloff: 0.7
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 16
+    enabled: 1
+    pulses:
+    - low: 0
+      high: 0.3
+      seconds: 0.025
+      gapAfter: 0.05
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0.1
+      high: 0.2
+      seconds: 0.03
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 17
+    enabled: 1
+    pulses:
+    - low: 0.5
+      high: 0.25
+      seconds: 0.08
+      gapAfter: 0.04
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0.2
+      high: 0.1
+      seconds: 0.05
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 18
+    enabled: 1
+    pulses:
+    - low: 0.2
+      high: 0.15
+      seconds: 0.04
+      gapAfter: 0.03
+      repeat: 3
+      repeatFalloff: 0.8
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 19
+    enabled: 1
+    pulses:
+    - low: 0.08
+      high: 0.35
+      seconds: 0.03
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 20
+    enabled: 1
+    pulses:
+    - low: 0.08
+      high: 0.15
+      seconds: 0.05
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 21
+    enabled: 1
+    pulses:
+    - low: 0
+      high: 0.2
+      seconds: 0.025
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 22
+    enabled: 1
+    pulses:
+    - low: 0.05
+      high: 0
+      seconds: 0.05
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0.1
+      high: 0
+      seconds: 0.05
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0.16
+      high: 0.05
+      seconds: 0.06
+      gapAfter: 0.05
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0
+      high: 0.25
+      seconds: 0.025
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 23
+    enabled: 1
+    pulses:
+    - low: 0.15
+      high: 0.3
+      seconds: 0.05
+      gapAfter: 0.05
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0
+      high: 0.25
+      seconds: 0.03
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 24
+    enabled: 1
+    pulses:
+    - low: 0.55
+      high: 0.5
+      seconds: 0.12
+      gapAfter: 0.06
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0.3
+      high: 0.25
+      seconds: 0.08
+      gapAfter: 0.05
+      repeat: 3
+      repeatFalloff: 0.7
+    playsDuringPause: 0
+    flashSeconds: 0.8
+    flashColor: {r: 1, g: 0.55, b: 0.05, a: 1}
+  - id: 25
+    enabled: 1
+    pulses:
+    - low: 0
+      high: 0.45
+      seconds: 0.025
+      gapAfter: 0.05
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0.35
+      high: 0.6
+      seconds: 0.07
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 0
+    flashSeconds: 0.4
+    flashColor: {r: 0.2, g: 1, b: 0.3, a: 1}
+  - id: 26
+    enabled: 1
+    pulses:
+    - low: 0.3
+      high: 0.4
+      seconds: 0.08
+      gapAfter: 0.04
+      repeat: 1
+      repeatFalloff: 1
+    - low: 0.12
+      high: 0.15
+      seconds: 0.1
+      gapAfter: 0
+      repeat: 1
+      repeatFalloff: 1
+    playsDuringPause: 1
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}
+  - id: 27
+    enabled: 1
+    pulses:
+    - low: 0.12
+      high: 0.22
+      seconds: 0.035
+      gapAfter: 0.08
+      repeat: 2
+      repeatFalloff: 0.85
+    playsDuringPause: 0
+    flashSeconds: 0
+    flashColor: {r: 1, g: 1, b: 1, a: 1}

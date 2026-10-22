@@ -392,6 +392,7 @@ public class Meat : Item
     public void PlayDropSettle(Vector3 visualFrom)
     {
         BeginSettle(visualFrom, settleSeconds, settleHop, landingPuff);
+        GamepadHaptics.Play(HapticEvent.MeatOnGrill);
     }
 
     // ── Cambio de punto ──────────────────────────────────────────────────────
@@ -407,6 +408,11 @@ public class Meat : Item
 
         if (smoke != null && !burnedNow)
             smoke.Puff(Mathf.InverseLerp((int)MeatStates.Jugoso, (int)MeatStates.Pasado, (int)newState));
+
+        // Tuc tuc solo para la pieza seleccionada (burbuja abierta sobre ella): con varias en la
+        // parrilla, que avisen todas seria ruido. Quemado no: MeatBurned vibra siempre, desde Cook.
+        if (!burnedNow && MeatHoverBubble.Instance != null && MeatHoverBubble.Instance.IsShowing(this))
+            GamepadHaptics.Play(HapticEvent.MeatStateChanged);
 
         statePulseAmount = statePulseScale * (burnedNow ? burnedPulseMultiplier : 1f);
         if (!isFlipping && !isHeldByMouse)
@@ -706,6 +712,7 @@ public class Meat : Item
         {
             transform.position = startPosition;
             BeginSettle(releaseVisual, rejectReturnSeconds, 0f, false);
+            GamepadHaptics.Play(HapticEvent.ActionRefused);
             RestoreHoverIfPointerOver();
             return;
         }
@@ -728,6 +735,7 @@ public class Meat : Item
             Vector3 rotatedOffset = transform.rotation * rawOffset;
             transform.position = CalcCenter(slotsEncontrados) + rotatedOffset;
             BeginSettle(releaseVisual, settleSeconds, settleHop, landingPuff);
+            GamepadHaptics.Play(HapticEvent.MeatOnGrill);
 
             RestoreHoverIfPointerOver();
             return;
@@ -736,6 +744,7 @@ public class Meat : Item
         // No entra: vuelve a donde estaba, y se la ve volver (no aparece de golpe en el origen).
         transform.position = startPosition;
         BeginSettle(releaseVisual, rejectReturnSeconds, 0f, false);
+        GamepadHaptics.Play(HapticEvent.ActionRefused);
         RestoreHoverIfPointerOver();
     }
 
@@ -862,6 +871,7 @@ public class Meat : Item
 
         // Arranque del giro: el corte recien se despega de la parrilla.
         EmitFlipPuff();
+        GamepadHaptics.Play(HapticEvent.MeatFlipped);
 
         float elapsed = 0f;
         bool logicFlipped = false;
@@ -912,6 +922,7 @@ public class Meat : Item
             spriteRenderer.sortingOrder = origSortingOrder;
 
         // Landing bounce / impact juice
+        GamepadHaptics.Play(HapticEvent.MeatOnGrill, 0.6f);   // cae de poco: más suave que apoyarla a mano
         yield return StartCoroutine(LandingBounce(initialLocalScale));
 
         isFlipping = false;
@@ -984,6 +995,7 @@ public class Meat : Item
 
         SetGridRotation(!isGridRotated);
         if (isHeldByMouse) UpdateHoverPreview();
+        GamepadHaptics.Play(HapticEvent.PieceRotated);
         TutorialSignals.Raise(TutorialSignal.PieceRotated, meat: this);
     }
 

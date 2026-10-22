@@ -103,7 +103,11 @@ public class Coal : Item
     }
 
     /// <summary>Asentado de un carbón recién puesto desde el stock: el dibujo llega desde donde se soltó.</summary>
-    public void PlayDropSettle(Vector3 visualFrom) => BeginSettle(visualFrom, settleSeconds, settleHop);
+    public void PlayDropSettle(Vector3 visualFrom)
+    {
+        BeginSettle(visualFrom, settleSeconds, settleHop);
+        GamepadHaptics.Play(HapticEvent.CoalOnGrill);
+    }
 
     public float GetCurrentHeatOutput()
     {
@@ -139,12 +143,14 @@ public class Coal : Item
             transform.position = CalcCenter(slotsEncontrados) + offset;
             startPosition = transform.position;
             BeginSettle(releaseVisual, settleSeconds, settleHop);
+            GamepadHaptics.Play(HapticEvent.CoalOnGrill);
             return;
         }
 
         // No entra: vuelve a donde estaba, y se lo ve volver.
         transform.position = startPosition;
         BeginSettle(releaseVisual, rejectReturnSeconds, 0f);
+        GamepadHaptics.Play(HapticEvent.ActionRefused);
     }
 
     protected override void OnPickedUp()

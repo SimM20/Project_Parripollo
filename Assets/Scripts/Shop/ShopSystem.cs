@@ -45,6 +45,9 @@ public class ShopSystem : MonoBehaviour
     }
     private void Start()
     {
+        // Todas las compras (y sus rechazos) pasan por este evento: la vibración se engancha una sola vez.
+        OnPurchaseResult += (ok, _) => GamepadHaptics.Play(ok ? HapticEvent.PurchaseDone : HapticEvent.ActionRefused);
+
         // Primera llamada gana: guarda la combustión original de los carbones antes de que
         // cualquier mejora la pise. Lo consume el reinicio de run desde la pantalla de derrota.
         RunStateReset.CaptureBaseline(catalog);

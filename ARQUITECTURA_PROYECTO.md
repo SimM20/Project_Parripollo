@@ -622,7 +622,12 @@ cuando se adapten esas pantallas (ver nota 35).
 `GamepadHaptics` (singleton, componente del prefab `Resources/InputManager.prefab`, `[DefaultExecutionOrder(1000)]`) es la
 única que hace vibrar. Vibra **solo `InputManager.ActiveGamepad`** (el último gamepad usado) y solo con
 `InputManager.UsingGamepad`: jugando con mouse no vibra nada. Se calla en pausa (`GamePause.IsPaused`: descarta lo que
-estaba sonando), al perder el foco y al cambiar de escena; al salir resetea los motores.
+estaba sonando, salvo los patrones con `playsDuringPause`, hoy solo `SceneTransition`), al perder el foco y al cambiar de
+escena; al salir resetea los motores.
+
+Patrones: los del prefab mandan. Un `HapticEvent` que el prefab no tiene suena con su patrón de fábrica
+(`DefaultPatterns`), así que agregar un evento no rompe nada; para poder editarlo, menú contextual del componente →
+*Agregar patrones que faltan*. ⚠️ Los eventos nuevos van **al final** del enum: el prefab guarda el número.
 
 ```csharp
 static void Play(HapticEvent id, float strength = 1f)   // evento suelto
@@ -636,8 +641,32 @@ static bool Enabled                                     // prender/apagar todo (
 | `MoneyLanded` | `HudManager.OnMoneyPopupArrived` (≈1 s después: pop + hold + vuelo del popup) | golpe seco + 5 tics que se apagan durante el conteo · destello verde |
 | `DeliveryRejected` | `TryDeliverToCustomer` con `rejectedByCustomer` (corte equivocado o plato inválido) | dos golpes pesados · destello rojo |
 | `BadCookingDelivered` | `TryDeliverToCustomer` con `causesStrike` (crudo/quemado) | golpe largo que se apaga · destello rojo |
-| `MeatBurned` | `Meat.Cook`, cuando la cara apoyada cruza el umbral de Quemado | "pff" corto |
+| `MeatBurned` | `Meat.Cook`, cuando cualquier cara cruza el umbral de Quemado (esté seleccionada o no) | golpe + chamuscado que se apaga · destello |
 | `CustomerLeftAngry` | `CustomerSystem.TriggerAngryLeaveFeedback` (paciencia en 0) | un golpe y un rumor que se apaga · destello rojo |
+| `PieceGrabbed` | `Item.OnWorldPointerDown` (carne/carbón), `StockPanelSlot`, `ToBuildDraggableMeat`, `PlateDeliveryDraggable` (plato y solo-carne), `BuildDraggableFoodItem`, `ToppingDraggable` | clic apenas perceptible |
+| `MeatOnGrill` | `Meat.OnWorldPointerUp` (entra) y `Meat.PlayDropSettle` (stock, bandeja, plato); aterrizaje del flip con fuerza 0.6 | apoyo + chisporroteo |
+| `CoalOnGrill` | `Coal.OnWorldPointerUp` (entra) y `Coal.PlayDropSettle` | golpe seco y pesado |
+| `ActionRefused` | Pieza que no entra y vuelve (carne, carbón, stock fuera del panel, bandeja, pan/side, carne del plato), corte faltante sin sustituto, compra rechazada | dos tics suaves |
+| `MeatFlipped` | `Meat.FlipRoutine` al despegar | tic |
+| `PieceRotated` | Rotar footprint (`Meat`, `StockPanelSlot`, `ToBuildDraggableMeat`, `PlateDeliveryDraggable`) | tic mínimo |
+| `MeatOnPlate` | `MeatTransferBuffer.AdoptVisualIntoPlate` (desde parrilla o bandeja) | golpe medio |
+| `PiecePlaced` | Pan/side/topping aceptado (`BuildDraggableFoodItem`), carne del plato a la bandeja | toque |
+| `SaucePouring` | `ToppingDraggable`, con cada salpicadura (0.05 s) | zumbido fino |
+| `PlateCleared` | `GameManager` (C / LT) si el plato tenía algo (`BuildStationSystem.IsEmpty`) | barrido |
+| `UndoDone` | `BuildUndoHistory.UndoLast` | tic-toc |
+| `Trashed` | `TrashZone.Consume` | golpe sordo + rebote |
+| `AshesCleaned` | `GameManager.CleanAshes` si limpió algo | tres pasadas |
+| `GrillLayerToggled` | `GrillLayerToggle.Toggle` (botón y Y / △) | clic |
+| `PanelToggled` | `SlidingPanel.Open` (aceptado) y cierre por `Toggle` (fuerza 0.6) | roce |
+| `DeliveryTargetHover` | `PlateDeliveryDraggable.SetHoveredView` al entrar sobre un cliente | tic mínimo |
+| `CustomerArrived` | `CustomerSystem.SpawnCustomer` | rumor grave que crece + campanita (sin golpe doble: no confundir con `MeatStateChanged`) |
+| `OrderChanged` | `GameManager`, corte faltante con sustituto | toque doble |
+| `ClosingTime` | `DayClock.Close` (hora de cierre o límite de strikes) | campanazo · destello ámbar |
+| `PurchaseDone` | `ShopSystem.OnPurchaseResult(true)` (se suscribe en su `Start`) | tic + golpe · destello verde |
+| `MeatStateChanged` | `Meat.PlayStateAdvanceFeedback`, solo si `MeatHoverBubble.IsShowing(this)` (la pieza seleccionada); no en Quemado | tuc tuc suave |
+| `SceneTransition` | `SceneFadeIn.BeginOut`: toda carga de escena (botones de menú/pausa/tienda/fin, y el fin de noche automático) | golpe firme y cola corta · suena en pausa |
+
+Sin vibración a propósito: botones de menú que no cambian de escena (opciones, −/+ y pestañas de la tienda, volver).
 
 **Aviso de quemado.** `Meat.SecondsToBurn` = calor que le falta a la cara apoyada ÷ calor por segundo que recibe
 (infinito si no se cocina, si esa cara ya está quemada o con `TutorialManager.IsCookingPaused`). Con menos de
@@ -2401,17 +2430,18 @@ asset, no código. Gamepad en notación Xbox / PlayStation.
 | `ToggleToppingsPanel` | `E` | RB / R1 | Parrilla | Abre / cierra el **ToppingsPanel** |
 | `ToggleGrillLayer` | `Space` | Y / △ | Parrilla | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; funciona también arrastrando una pieza) |
 | `CleanAshes` | `R` | RT / R2 | Parrilla | `CleanAshes()` — destruye carbones en `Ceniza` (gateado por el tutorial) |
-| `Rotate` | `R` | B / ○ | mientras se arrastra carne | Rotar footprint del corte (parrilla, StockPanel, bandeja, plato) |
-| `ClearPlate` | `C` | LT / L2 | Parrilla | Limpiar el plato entero: armado + visuales de carne + sides/toppings + salpicaduras |
+| `Rotate` | `R` | LT / L2 | mientras se arrastra carne | Rotar footprint del corte (parrilla, StockPanel, bandeja, plato) |
+| `ClearPlate` | `C` | LT / L2 | Parrilla, con las manos libres | Limpiar el plato entero: armado + visuales de carne + sides/toppings + salpicaduras. `GameManager` lo ignora con `InputManager.PrimaryHeld` (pieza en la mano): ahí LT es `Rotate` |
 | `MissingCut` | `M` | View / Share | Parrilla | Informar corte faltante → sustituye el pedido por un corte con stock (`TriggerMissingCutChange`, propina anulada) |
-| `Back` | `Esc` | B / ○ | Menús | Volver / cerrar. Hoy lo usa solo el menú de opciones (menú principal y pausa). Comparte tecla con `Pause` (Esc: `GameManager` no alterna la pausa si `OptionsMenuPanel.AnyOpen`) y botón con `Rotate` (B: con el juego en pausa no se rota nada) |
+| `Back` | `Esc` | B / ○ | Menús | Volver / cerrar. Hoy lo usa solo el menú de opciones (menú principal y pausa). Comparte tecla con `Pause` (Esc: `GameManager` no alterna la pausa si `OptionsMenuPanel.AnyOpen`) |
 | Arrastrar carne a `ToBuild` | | | Parrilla | Monta el corte en el plato (uno solo) |
 | Arrastrar el plato | | | Parrilla | Entrega por **drag & drop**: soltar sobre un cliente entrega; rechazo → vuelve al plato; soltar sobre la bandeja / un hueco de la grilla → la carne se va ahí |
 | Botón RollBack | | | Parrilla | `BuildUndoHistory.UndoLast()` (pan / side / topping / **carne → bandeja**) |
 | Pestañas laterales | | | Parrilla | `StockPanelTab.OnWorldPointerDown` → `Toggle()` |
 
 En el teclado `R` sigue haciendo las dos cosas a la vez (limpiar cenizas y rotar), como antes; en el gamepad son dos
-botones. El panel de toppings va en `E` (antes era una tecla configurable del `GameManager` que `GameScene` y
+botones. En el gamepad LT rota con una pieza en la mano y limpia el plato con las manos libres (también `C` deja de
+limpiar mientras se arrastra con el mouse). El panel de toppings va en `E` (antes era una tecla configurable del `GameManager` que `GameScene` y
 `TutorialScene` pisaban con `E`).
 
 Ya **no existen**: `W`/`E`, `←`/`→` (cambio de vista), `A`/`D` (selección de cliente), `Space` en Build, `X` (descartar quemados).

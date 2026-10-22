@@ -15,6 +15,7 @@ public class Item : MonoBehaviour
         startPosition = transform.position;
         isHeldByMouse = true;
         GamePause.OnPaused += CancelDrag;
+        GamepadHaptics.Play(HapticEvent.PieceGrabbed);
         OnPickedUp();
         UpdateHoverPreview();
     }

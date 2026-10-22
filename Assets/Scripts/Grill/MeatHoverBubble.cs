@@ -190,6 +190,9 @@ public class MeatHoverBubble : MonoBehaviour
         gameObject.SetActive(false);
     }
 
+    /// <summary>True si la burbuja esta a la vista sobre esta pieza: es la que el jugador tiene seleccionada.</summary>
+    public bool IsShowing(Meat meat) => meat != null && source == meat && gameObject.activeInHierarchy;
+
     /// <summary>Oculta solo si la burbuja esta mostrando esta pieza.</summary>
     public void HideIfTarget(Meat meat)
     {

@@ -262,6 +262,7 @@ public class StockPanelSlot : MonoBehaviour
 
         owner.NotifyDragStarted(this);
         UpdateHoverPreview(mouseWorld);
+        GamepadHaptics.Play(HapticEvent.PieceGrabbed);
 
         if (draggingItem is MeatCutSO cut)
             TutorialSignals.Raise(TutorialSignal.PieceGrabbed, cut: cut, target: ghost.transform);
@@ -300,7 +301,13 @@ public class StockPanelSlot : MonoBehaviour
         // Colocado: la pieza real sigue desde donde estaba el fantasma (asentado propio).
         // Rechazado: el fantasma vuelve a la celda, así se lee que no se usó nada del stock.
         if (!placed)
+        {
             PlayGhostReturn();
+
+            // Soltar sobre el propio panel es cancelar, no un error: ahí no vibra.
+            if (owner != null && !owner.IsPointOverPanel(dropWorldPoint))
+                GamepadHaptics.Play(HapticEvent.ActionRefused);
+        }
 
         DestroyGhost();
 
@@ -412,6 +419,7 @@ public class StockPanelSlot : MonoBehaviour
         isGridRotated = !isGridRotated;
         ApplyGhostRotation();
         UpdateHoverPreview(GetMouseWorldPosition());
+        GamepadHaptics.Play(HapticEvent.PieceRotated);
         TutorialSignals.Raise(TutorialSignal.PieceRotated, cut: draggingItem as MeatCutSO);
     }
 

@@ -213,6 +213,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
         if (InputManager.WasPressed(GameAction.Rotate) && draggedCut != null && draggedCut.CanRotate)
         {
             draggedCutRotated = !draggedCutRotated;
+            GamepadHaptics.Play(HapticEvent.PieceRotated);
             TutorialSignals.Raise(TutorialSignal.PieceRotated, cut: draggedCut);
         }
 
@@ -375,6 +376,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
         // Los clientes apagan su collider mientras hay un panel desplegado; durante el
         // arrastre hay que devolvérselo o FindCustomerViewAt no encuentra a nadie.
         CustomerView.SetDeliveryDragActive(true);
+        GamepadHaptics.Play(HapticEvent.PieceGrabbed);
 
         // Equivalente por mouse de entrar en modo selección: mantiene vivo el paso del tutorial.
         TutorialSignals.Raise(TutorialSignal.DeliverySelectionBegun);
@@ -397,6 +399,7 @@ public class PlateDeliveryDraggable : MonoBehaviour
         activeDragger = this;
         activeMode = DragMode.MeatOnly;
         GamePause.OnPaused += CancelDrag;
+        GamepadHaptics.Play(HapticEvent.PieceGrabbed);
 
         transferBuffer.UpdateMeatHolderHover(draggedCut, transform.position, draggedCutRotated);
     }
@@ -463,14 +466,22 @@ public class PlateDeliveryDraggable : MonoBehaviour
         // de la parrilla, así que sin este gate el corte terminaba cocinándose bajo el cliente.
         RestorePositions();
 
+        // La vuelta a la parrilla vibra sola al apoyarse (Meat.PlayDropSettle); la bandeja y el rechazo, acá.
         bool overCustomer = FindCustomerViewAt(dropPoint) != null;
+        bool moved = false;
         if (!overCustomer && transferBuffer != null)
         {
             if (transferBuffer.IsOverMeatTray(dropPoint))
-                transferBuffer.TryReturnPlateMeatToTray(gameObject);
+            {
+                moved = transferBuffer.TryReturnPlateMeatToTray(gameObject);
+                if (moved) GamepadHaptics.Play(HapticEvent.PiecePlaced);
+            }
             else
-                transferBuffer.TryReturnPlateMeatToGrill(gameObject, dropPoint, draggedCutRotated);
+                moved = transferBuffer.TryReturnPlateMeatToGrill(gameObject, dropPoint, draggedCutRotated);
         }
+
+        if (!moved)
+            GamepadHaptics.Play(HapticEvent.ActionRefused);
 
         DraggedVisuals.Clear();
     }
@@ -601,6 +612,8 @@ public class PlateDeliveryDraggable : MonoBehaviour
             return;
 
         hoveredView = view;
+        if (view != null)
+            GamepadHaptics.Play(HapticEvent.DeliveryTargetHover);
 
         CustomerSystem customers = GameManager.Instance != null ? GameManager.Instance.Customers : null;
         if (customers != null)

@@ -106,8 +106,12 @@ public class GameManager : MonoBehaviour
             CleanAshes();
 
         // ── Armado y entrega (todo dentro de la vista Parrilla) ──
-        if (InputManager.WasPressed(GameAction.ClearPlate) && TutorialManager.CheckClearBuildPlateAllowed())
+        // LT es también Rotate: con una pieza en la mano (botón principal apretado) gira la pieza y no toca el plato.
+        if (InputManager.WasPressed(GameAction.ClearPlate) && !InputManager.PrimaryHeld && TutorialManager.CheckClearBuildPlateAllowed())
         {
+            if (!buildStationSystem.IsEmpty)
+                GamepadHaptics.Play(HapticEvent.PlateCleared);
+
             ClearBuildAssembly();
             meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
             BuildFoodDropZone.ClearActivePlateVisuals();
@@ -150,10 +154,12 @@ public class GameManager : MonoBehaviour
                 {
                     customerSystem.TriggerMissingCutChange(targetCustomer, substituteCut);
                     DeliveryFeedbackText.Instance?.Show(Loc.Format("delivery.missing_cut.changed", substituteCut.cutName));
+                    GamepadHaptics.Play(HapticEvent.OrderChanged);
                 }
                 else
                 {
                     DeliveryFeedbackText.Instance?.Show(Loc.Get("delivery.missing_cut.none"));
+                    GamepadHaptics.Play(HapticEvent.ActionRefused);
                 }
 
                 TutorialSignals.Raise(TutorialSignal.MissingCutUsed, cut: missingCut);
@@ -205,6 +211,7 @@ public class GameManager : MonoBehaviour
         if (cleanedCount > 0)
         {
             Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
+            GamepadHaptics.Play(HapticEvent.AshesCleaned);
             TutorialSignals.Raise(TutorialSignal.AshesCleaned);
         }
     }

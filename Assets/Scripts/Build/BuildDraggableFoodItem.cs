@@ -104,6 +104,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
         GamePause.OnPaused += CancelDrag;
         startPosition = transform.position;
         AudioManager.Instance?.PlayOnUseTopping();
+        GamepadHaptics.Play(HapticEvent.PieceGrabbed);
 
         if (selfRenderer != null)
         {
@@ -131,6 +132,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
         }
         Vector3 releaseVisual = transform.position;
         bool accepted = HasExactlyOneData() && BuildFoodDropZone.TryAcceptAt(GetFoodItemMouseWorldPos(), this);
+        GamepadHaptics.Play(accepted ? HapticEvent.PiecePlaced : HapticEvent.ActionRefused);
 
         // Always return to source position — item is reusable, not consumed
         transform.position = startPosition;

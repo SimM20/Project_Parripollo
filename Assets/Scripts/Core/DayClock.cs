@@ -173,6 +173,7 @@ public class DayClock : MonoBehaviour
         CurrentHour = closingHour;
 
         PushLabel();
+        GamepadHaptics.Play(HapticEvent.ClosingTime);
 
         Debug.Log(
             "[DayClock] Cerró el local a las " + FormatHour(closingHour) +

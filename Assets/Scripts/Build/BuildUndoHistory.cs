@@ -73,6 +73,7 @@ public class BuildUndoHistory : MonoBehaviour
         IBuildUndoAction action = undoStack[last];
         undoStack.RemoveAt(last);
         action.Undo();
+        GamepadHaptics.Play(HapticEvent.UndoDone);
         OnHistoryChanged?.Invoke();
         Debug.Log("[BuildUndo] Acción deshecha. Restantes: " + undoStack.Count);
         TutorialSignals.Raise(TutorialSignal.UndoUsed);

@@ -181,6 +181,7 @@ public class ToppingDraggable : MonoBehaviour
 
         startPosition = transform.position;
         startRotation = transform.rotation;
+        GamepadHaptics.Play(HapticEvent.PieceGrabbed);
 
         if (selfRenderer != null)
         {
@@ -231,6 +232,7 @@ public class ToppingDraggable : MonoBehaviour
             {
                 SpawnSplatter();
                 lastSplatterTime = Time.time;
+                GamepadHaptics.Play(HapticEvent.SaucePouring);
             }
         }
 

@@ -102,6 +102,7 @@ public class GrillLayerToggle : MonoBehaviour
 
         ShowLayer(nextLayer);
         ToggleSprite();
+        GamepadHaptics.Play(HapticEvent.GrillLayerToggled);
 
         if (buttonEcho && targetToggleRenderer != null)
             SpriteGhost.Spawn(targetToggleRenderer, SpriteGhost.Motion.Echo(1.12f, 0.4f, 0.2f));

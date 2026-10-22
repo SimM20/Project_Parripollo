@@ -262,7 +262,10 @@ public abstract class SlidingPanel : MonoBehaviour
     public void Toggle()
     {
         if (IsOpen)
+        {
             Close();
+            GamepadHaptics.Play(HapticEvent.PanelToggled, 0.6f);
+        }
         else
             Open();
     }
@@ -282,6 +285,7 @@ public abstract class SlidingPanel : MonoBehaviour
         // Suena aca y no en GameManager: la pestana lateral tambien abre el panel, y solo
         // en este punto sabemos que la apertura fue aceptada (CanOpen no la rechazo).
         AudioManager.Instance?.PlayTableSlide();
+        GamepadHaptics.Play(HapticEvent.PanelToggled);
 
         OnPanelOpened();
     }

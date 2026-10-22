@@ -702,6 +702,7 @@ public class CustomerSystem : MonoBehaviour
             SelectCustomer(customer);
 
         AudioManager.Instance?.PlayNewClientBell();
+        GamepadHaptics.Play(HapticEvent.CustomerArrived);
 
         DayStats.SetCustomersToday(spawnedTonight);
 

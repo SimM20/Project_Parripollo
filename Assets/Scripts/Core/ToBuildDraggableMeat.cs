@@ -66,6 +66,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
 
         ApplyGridRotationPreview();
         buffer.UpdateMeatHolderHover(cut, transform.position, isGridRotated);
+        GamepadHaptics.Play(HapticEvent.PieceGrabbed);
     }
 
     void OnWorldPointerDrag()
@@ -107,7 +108,10 @@ public class ToBuildDraggableMeat : MonoBehaviour
                            && buffer.TryDropFromTrayById(entryId, dropPoint, isGridRotated));
 
         if (!dropped)
+        {
             RestoreStartTransform();
+            GamepadHaptics.Play(HapticEvent.ActionRefused);
+        }
     }
 
     private void Update()
@@ -119,6 +123,7 @@ public class ToBuildDraggableMeat : MonoBehaviour
             isGridRotated = !isGridRotated;
             ApplyGridRotationPreview();
             buffer.UpdateMeatHolderHover(cut, transform.position, isGridRotated);
+            GamepadHaptics.Play(HapticEvent.PieceRotated);
             TutorialSignals.Raise(TutorialSignal.PieceRotated, cut: cut);
         }
     }

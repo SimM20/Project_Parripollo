@@ -19,6 +19,53 @@ public enum HapticEvent
     MeatBurned,
     /// <summary>Un cliente se fue porque se le acabó la paciencia (suma strike).</summary>
     CustomerLeftAngry,
+
+    // Los nuevos van siempre al final: el prefab guarda el evento como número.
+
+    /// <summary>Se agarra una pieza: carne, carbón, plato, pan/guarnición, frasco o una unidad del stock.</summary>
+    PieceGrabbed,
+    /// <summary>Un corte se apoya en la parrilla (desde la grilla, el stock, la bandeja o el plato, o al caer de un flip).</summary>
+    MeatOnGrill,
+    /// <summary>Un carbón se apoya en la parrilla.</summary>
+    CoalOnGrill,
+    /// <summary>Algo no se pudo hacer: la pieza vuelve a su lugar, no hay corte sustituto, no alcanza la plata.</summary>
+    ActionRefused,
+    /// <summary>Arranca el flip de un corte (el aterrizaje es un <see cref="MeatOnGrill"/> más suave).</summary>
+    MeatFlipped,
+    /// <summary>Se rota el footprint de un corte mientras se arrastra.</summary>
+    PieceRotated,
+    /// <summary>Un corte entra al plato.</summary>
+    MeatOnPlate,
+    /// <summary>Pan, guarnición o topping al plato, o un corte que va a la bandeja.</summary>
+    PiecePlaced,
+    /// <summary>Cada salpicadura mientras se vierte una salsa (≈20 por segundo): un zumbido fino.</summary>
+    SaucePouring,
+    /// <summary>Se limpia el plato con comida encima.</summary>
+    PlateCleared,
+    /// <summary>Deshacer.</summary>
+    UndoDone,
+    /// <summary>Algo cae al tacho.</summary>
+    Trashed,
+    /// <summary>Se limpian cenizas (solo si había alguna).</summary>
+    AshesCleaned,
+    /// <summary>Cambio de capa de la parrilla (carne ↔ carbón).</summary>
+    GrillLayerToggled,
+    /// <summary>Se abre o cierra un panel lateral (stock / toppings).</summary>
+    PanelToggled,
+    /// <summary>Arrastrando el plato, el puntero entra sobre un cliente.</summary>
+    DeliveryTargetHover,
+    /// <summary>Llega un cliente.</summary>
+    CustomerArrived,
+    /// <summary>Se informó un corte faltante y el cliente cambió el pedido.</summary>
+    OrderChanged,
+    /// <summary>Cierra el local (hora de cierre o límite de strikes).</summary>
+    ClosingTime,
+    /// <summary>Compra concretada en la tienda.</summary>
+    PurchaseDone,
+    /// <summary>Se pidió un cambio de escena (botones del menú, pausa, fin de la noche, tienda). Suena también en pausa.</summary>
+    SceneTransition,
+    /// <summary>La cara apoyada de la carne seleccionada (burbuja abierta) pasa al punto siguiente. Quemado va por <see cref="MeatBurned"/>.</summary>
+    MeatStateChanged,
 }
 
 /// <summary>Un golpe de vibración. Intensidades 0..1 por motor: <c>low</c> = peso (motor grande), <c>high</c> = golpecito (motor chico).</summary>
@@ -49,6 +96,8 @@ public class HapticPattern
     public HapticEvent id;
     public bool enabled = true;
     public HapticPulse[] pulses = Array.Empty<HapticPulse>();
+    [Tooltip("Sigue sonando con el juego en pausa (p. ej. un botón del menú de pausa que cambia de escena).")]
+    public bool playsDuringPause;
 
     [Tooltip("Barra de luz (DualSense / DualShock 4): destello que vuelve al color base. 0 = sin destello.")]
     [Min(0f)] public float flashSeconds;
@@ -74,7 +123,7 @@ public class HapticPattern
 ///    naranja → rojo que respira al llegar al máximo), con destellos por evento encima.
 ///
 /// Vibra solo el último gamepad usado y solo mientras se juega con él (con mouse no vibra nada).
-/// Se calla en pausa, al perder el foco y al cambiar de escena. El DualSense va por
+/// Se calla en pausa (salvo los patrones con <c>playsDuringPause</c>), al perder el foco y al cambiar de escena. El DualSense va por
 /// <see cref="DualSenseOutput"/> (anda también por Bluetooth y no apaga la barra de luz); el resto,
 /// por el <c>SetMotorSpeeds</c> del Input System.
 /// </summary>
@@ -141,6 +190,7 @@ public class GamepadHaptics : MonoBehaviour
         public float flashSeconds;
         public Color flashColor;
         public float strength;
+        public bool playsDuringPause;
     }
 
     private readonly List<ActivePlay> playing = new List<ActivePlay>();
@@ -261,9 +311,11 @@ public class GamepadHaptics : MonoBehaviour
         }
 
         // En pausa no se acumula nada: al volver no tiene que sonar lo que quedó a medias.
+        // Solo sigue lo que se disparó desde la pausa misma (cambio de escena del menú de pausa).
         if (GamePause.IsPaused)
         {
-            playing.Clear();
+            for (int i = playing.Count - 1; i >= 0; i--)
+                if (!playing[i].playsDuringPause) playing.RemoveAt(i);
             burnPhase = -1f;
             urgency = 0f;
         }
@@ -298,6 +350,7 @@ public class GamepadHaptics : MonoBehaviour
             flashSeconds = pattern.flashSeconds,
             flashColor = pattern.flashColor,
             strength = Mathf.Max(0f, strength),
+            playsDuringPause = pattern.playsDuringPause,
         });
     }
 
@@ -419,33 +472,53 @@ public class GamepadHaptics : MonoBehaviour
     {
         compiled.Clear();
         byId.Clear();
-        if (patterns == null) return;
 
         var list = new List<Segment>();
-        foreach (HapticPattern pattern in patterns)
-        {
-            if (pattern == null || !pattern.enabled || byId.ContainsKey(pattern.id)) continue;
+        var declared = new HashSet<HapticEvent>();
+        if (patterns != null)
+            foreach (HapticPattern pattern in patterns)
+                if (pattern != null && declared.Add(pattern.id) && pattern.enabled)
+                    CompilePattern(pattern, list);
 
-            list.Clear();
-            float t = 0f;
-            if (pattern.pulses != null)
+        // Un evento que el prefab todavía no tiene suena con su patrón de fábrica: agregar uno nuevo
+        // no obliga a tocar el prefab (para editarlo, menú contextual "Agregar patrones que faltan").
+        foreach (HapticPattern pattern in DefaultPatterns())
+            if (declared.Add(pattern.id))
+                CompilePattern(pattern, list);
+    }
+
+    [ContextMenu("Agregar patrones que faltan")]
+    private void AddMissingDefaultPatterns()
+    {
+        patterns ??= new List<HapticPattern>();
+        foreach (HapticPattern pattern in DefaultPatterns())
+            if (!patterns.Exists(p => p != null && p.id == pattern.id))
+                patterns.Add(pattern);
+
+        if (Application.isPlaying) Compile();
+    }
+
+    private void CompilePattern(HapticPattern pattern, List<Segment> list)
+    {
+        list.Clear();
+        float t = 0f;
+        if (pattern.pulses != null)
+        {
+            foreach (HapticPulse pulse in pattern.pulses)
             {
-                foreach (HapticPulse pulse in pattern.pulses)
+                if (pulse == null) continue;
+                float scale = 1f;
+                for (int r = 0; r < Mathf.Max(1, pulse.repeat); r++)
                 {
-                    if (pulse == null) continue;
-                    float scale = 1f;
-                    for (int r = 0; r < Mathf.Max(1, pulse.repeat); r++)
-                    {
-                        list.Add(new Segment { start = t, end = t + pulse.seconds, low = pulse.low * scale, high = pulse.high * scale });
-                        t += pulse.seconds + pulse.gapAfter;
-                        scale *= pulse.repeatFalloff;
-                    }
+                    list.Add(new Segment { start = t, end = t + pulse.seconds, low = pulse.low * scale, high = pulse.high * scale });
+                    t += pulse.seconds + pulse.gapAfter;
+                    scale *= pulse.repeatFalloff;
                 }
             }
-
-            byId[pattern.id] = pattern;
-            compiled[pattern.id] = list.ToArray();
         }
+
+        byId[pattern.id] = pattern;
+        compiled[pattern.id] = list.ToArray();
     }
 
     // ── Salida ──
@@ -542,14 +615,117 @@ public class GamepadHaptics : MonoBehaviour
             new HapticPulse(1f, 0.6f, 0.18f, gapAfter: 0.04f),
             new HapticPulse(0.6f, 0.25f, 0.25f)),
 
-        // Se quemó: un "pff" corto que corta el latido del aviso.
-        new HapticPattern(HapticEvent.MeatBurned, 0.4f, new Color(0.6f, 0.05f, 0f),
-            new HapticPulse(0.4f, 0.5f, 0.12f)),
+        // Se quemó (cualquier pieza, seleccionada o no): golpe que corta el latido del aviso y un
+        // chamuscado que se apaga. Más fuerte que el tuc tuc de cambio de punto.
+        new HapticPattern(HapticEvent.MeatBurned, 0.6f, new Color(0.6f, 0.05f, 0f),
+            new HapticPulse(0.65f, 0.55f, 0.1f, gapAfter: 0.04f),
+            new HapticPulse(0.35f, 0.2f, 0.05f, gapAfter: 0.03f, repeat: 3, repeatFalloff: 0.75f)),
 
         // Se fue sin que lo atiendan: un golpe y un rumor que se apaga (se distingue del rechazo,
         // que son dos golpes secos). La barra cambia de color sola con el strike.
         new HapticPattern(HapticEvent.CustomerLeftAngry, 0.7f, new Color(1f, 0f, 0f),
             new HapticPulse(0.8f, 0.3f, 0.12f, gapAfter: 0.06f),
             new HapticPulse(0.45f, 0.1f, 0.06f, repeat: 6, repeatFalloff: 0.8f)),
+
+        // ── Manos: acciones frecuentes. Casi todo en el motor chico y corto, para no tapar lo importante ──
+
+        // Agarrar: un clic apenas perceptible, confirma que la pieza está en la mano.
+        new HapticPattern(HapticEvent.PieceGrabbed, 0f, Color.white,
+            new HapticPulse(0.05f, 0.22f, 0.03f)),
+
+        // Carne a la parrilla: apoyo + chisporroteo que se apaga.
+        new HapticPattern(HapticEvent.MeatOnGrill, 0f, Color.white,
+            new HapticPulse(0.3f, 0.25f, 0.05f, gapAfter: 0.03f),
+            new HapticPulse(0f, 0.18f, 0.02f, gapAfter: 0.035f, repeat: 4, repeatFalloff: 0.75f)),
+
+        // Carbón: más pesado y seco que la carne, sin chisporroteo.
+        new HapticPattern(HapticEvent.CoalOnGrill, 0f, Color.white,
+            new HapticPulse(0.45f, 0.1f, 0.07f)),
+
+        // "Nop": dos tics suaves. Se distingue del rechazo del cliente, que son dos golpes pesados.
+        new HapticPattern(HapticEvent.ActionRefused, 0f, Color.white,
+            new HapticPulse(0.12f, 0.3f, 0.03f, gapAfter: 0.06f, repeat: 2, repeatFalloff: 0.8f)),
+
+        // Despegue del flip; el aterrizaje lo pone MeatOnGrill.
+        new HapticPattern(HapticEvent.MeatFlipped, 0f, Color.white,
+            new HapticPulse(0f, 0.3f, 0.03f)),
+
+        new HapticPattern(HapticEvent.PieceRotated, 0f, Color.white,
+            new HapticPulse(0f, 0.2f, 0.02f)),
+
+        // Corte al plato: golpe medio, más presente que un pan o una guarnición.
+        new HapticPattern(HapticEvent.MeatOnPlate, 0f, Color.white,
+            new HapticPulse(0.25f, 0.35f, 0.06f)),
+
+        new HapticPattern(HapticEvent.PiecePlaced, 0f, Color.white,
+            new HapticPulse(0.1f, 0.28f, 0.04f)),
+
+        // Se dispara con cada salpicadura (cada 0.05 s): pulsos casi pegados = zumbido fino del chorro.
+        new HapticPattern(HapticEvent.SaucePouring, 0f, Color.white,
+            new HapticPulse(0.06f, 0.12f, 0.03f)),
+
+        // Barrido: golpe y tics que se apagan.
+        new HapticPattern(HapticEvent.PlateCleared, 0f, Color.white,
+            new HapticPulse(0.15f, 0.35f, 0.04f, gapAfter: 0.02f),
+            new HapticPulse(0.05f, 0.25f, 0.03f, gapAfter: 0.02f, repeat: 3, repeatFalloff: 0.7f)),
+
+        // "Tic-toc" hacia atrás.
+        new HapticPattern(HapticEvent.UndoDone, 0f, Color.white,
+            new HapticPulse(0f, 0.3f, 0.025f, gapAfter: 0.05f),
+            new HapticPulse(0.1f, 0.2f, 0.03f)),
+
+        // Cae al tacho: golpe sordo + rebote.
+        new HapticPattern(HapticEvent.Trashed, 0f, Color.white,
+            new HapticPulse(0.5f, 0.25f, 0.08f, gapAfter: 0.04f),
+            new HapticPulse(0.2f, 0.1f, 0.05f)),
+
+        // Cepillado: tres pasadas que se apagan.
+        new HapticPattern(HapticEvent.AshesCleaned, 0f, Color.white,
+            new HapticPulse(0.2f, 0.15f, 0.04f, gapAfter: 0.03f, repeat: 3, repeatFalloff: 0.8f)),
+
+        new HapticPattern(HapticEvent.GrillLayerToggled, 0f, Color.white,
+            new HapticPulse(0.08f, 0.35f, 0.03f)),
+
+        // Panel que se desliza: un roce. Al cerrar suena más suave (strength).
+        new HapticPattern(HapticEvent.PanelToggled, 0f, Color.white,
+            new HapticPulse(0.08f, 0.15f, 0.05f)),
+
+        // Plato sobre un cliente: con gamepad el cursor salta entre clientes y esto marca cada uno.
+        new HapticPattern(HapticEvent.DeliveryTargetHover, 0f, Color.white,
+            new HapticPulse(0f, 0.2f, 0.025f)),
+
+        // ── Mundo ──
+
+        // Llega un cliente: rumor grave que crece (se acerca) y una campanita. Sin golpes dobles,
+        // para no confundirse con el tuc tuc del cambio de punto.
+        new HapticPattern(HapticEvent.CustomerArrived, 0f, Color.white,
+            new HapticPulse(0.05f, 0f, 0.05f),
+            new HapticPulse(0.1f, 0f, 0.05f),
+            new HapticPulse(0.16f, 0.05f, 0.06f, gapAfter: 0.05f),
+            new HapticPulse(0f, 0.25f, 0.025f)),
+
+        new HapticPattern(HapticEvent.OrderChanged, 0f, Color.white,
+            new HapticPulse(0.15f, 0.3f, 0.05f, gapAfter: 0.05f),
+            new HapticPulse(0f, 0.25f, 0.03f)),
+
+        // Cierra el local: campanazo que se apaga. Destello ámbar (el rojo/verde ya son strikes).
+        new HapticPattern(HapticEvent.ClosingTime, 0.8f, new Color(1f, 0.55f, 0.05f),
+            new HapticPulse(0.55f, 0.5f, 0.12f, gapAfter: 0.06f),
+            new HapticPulse(0.3f, 0.25f, 0.08f, gapAfter: 0.05f, repeat: 3, repeatFalloff: 0.7f)),
+
+        // Caja registradora: tic + golpe. Destello verde (fuera de la noche la barra es blanca).
+        new HapticPattern(HapticEvent.PurchaseDone, 0.4f, new Color(0.2f, 1f, 0.3f),
+            new HapticPulse(0f, 0.45f, 0.025f, gapAfter: 0.05f),
+            new HapticPulse(0.35f, 0.6f, 0.07f)),
+
+        // Cambio de escena: golpe firme y cola corta. Entra en el fundido a negro (0.35 s) y
+        // suena también desde el menú de pausa.
+        new HapticPattern(HapticEvent.SceneTransition, 0f, Color.white,
+            new HapticPulse(0.3f, 0.4f, 0.08f, gapAfter: 0.04f),
+            new HapticPulse(0.12f, 0.15f, 0.1f)) { playsDuringPause = true },
+
+        // Cambio de punto de la carne seleccionada: "tuc tuc" suave.
+        new HapticPattern(HapticEvent.MeatStateChanged, 0f, Color.white,
+            new HapticPulse(0.12f, 0.22f, 0.035f, gapAfter: 0.08f, repeat: 2, repeatFalloff: 0.85f)),
     };
 }

@@ -463,6 +463,7 @@ public class MeatTransferBuffer : MonoBehaviour
         // Onda detras del corte recien apoyado: "quedo en el plato". Es un fantasma, el visual
         // real (y su collider de agarre) no se escala.
         SpriteGhost.Spawn(renderer, SpriteGhost.Motion.Echo());
+        GamepadHaptics.Play(HapticEvent.MeatOnPlate);
 
         plateMeatCuts.Add(entry);
         plateMeatVisuals.Add(visual);
