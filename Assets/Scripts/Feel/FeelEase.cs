@@ -22,6 +22,15 @@ public static class FeelEase
         return t * t * t;
     }
 
+    /// <summary>Lento en los dos extremos, rápido en el medio: transiciones que tienen que notarse enteras.</summary>
+    public static float InOutCubic(float t)
+    {
+        t = Mathf.Clamp01(t);
+        if (t < 0.5f) return 4f * t * t * t;
+        float u = 2f - 2f * t;
+        return 1f - u * u * u * 0.5f;
+    }
+
     public static float InQuad(float t)
     {
         t = Mathf.Clamp01(t);

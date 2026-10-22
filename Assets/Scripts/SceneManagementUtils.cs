@@ -15,13 +15,12 @@ public static class SceneManagementUtils
 
     private static void OnInternalSceneLoaded(Scene scene, LoadSceneMode mode) => OnSceneLoaded?.Invoke();
 
+    // Todas las cargas pasan por el fundido de salida de SceneFadeIn: la carga real (y cualquier
+    // limpieza que la acompañe) corre recién cuando la pantalla quedó en negro.
     public static void LoadSceneByName(string sceneName)
     {
         if (Application.CanStreamedLevelBeLoaded(sceneName))
-        {
-            GamePause.Reset(); // timeScale / AudioListener.pause persisten entre escenas
-            SceneManager.LoadScene(sceneName);
-        }
+            SceneFadeIn.FadeOutThenLoad(() => LoadNow(sceneName));
         else
             Debug.LogError($"scene: '{sceneName}' its not avaiable. Check Build settings.");
     }
@@ -29,18 +28,27 @@ public static class SceneManagementUtils
     public static void LoadSceneByIndex(int index)
     {
         if (index >= 0 && index < SceneManager.sceneCountInBuildSettings)
-        {
-            GamePause.Reset();
-            SceneManager.LoadScene(index);
-        }
+            SceneFadeIn.FadeOutThenLoad(() => LoadNow(index));
         else
             Debug.LogError($"scene {index} out of range.");
     }
 
     public static void ReLoadScene()
     {
+        int index = SceneManager.GetActiveScene().buildIndex;
+        SceneFadeIn.FadeOutThenLoad(() => LoadNow(index));
+    }
+
+    private static void LoadNow(string sceneName)
+    {
+        GamePause.Reset(); // timeScale / AudioListener.pause persisten entre escenas
+        SceneManager.LoadScene(sceneName);
+    }
+
+    private static void LoadNow(int index)
+    {
         GamePause.Reset();
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        SceneManager.LoadScene(index);
     }
 
     public static string GetCurrentName() => SceneManager.GetActiveScene().name;
@@ -52,7 +60,12 @@ public static class SceneManagementUtils
     /// Hace lo mismo que <see cref="ReturnToMainMenu"/> con los DDOL, y además limpia lo que
     /// ese camino no limpia: la racha de strikes y los ScriptableObject de mejoras.
     /// </summary>
-    public static void RestartRun(FoodCatalogSO catalog)
+    public static void RestartRun(FoodCatalogSO catalog) =>
+        SceneFadeIn.FadeOutThenLoad(() => RestartRunNow(catalog));
+
+    // La limpieza va al final del fundido, junto con la carga: la escena vieja sigue viva mientras
+    // se oscurece y no puede quedarse sin sus singletons.
+    private static void RestartRunNow(FoodCatalogSO catalog)
     {
         CoolerSystem.PrepareForNewGame();
 
@@ -72,10 +85,12 @@ public static class SceneManagementUtils
         RunStateReset.ResetRunState(catalog);
         RadioStation.Shutdown();
 
-        LoadSceneByName("GameScene");
+        LoadNow("GameScene");
     }
 
-    public static void ReturnToMainMenu()
+    public static void ReturnToMainMenu() => SceneFadeIn.FadeOutThenLoad(ReturnToMainMenuNow);
+
+    private static void ReturnToMainMenuNow()
     {
         CoolerSystem.PrepareForNewGame(); // clears backup so next new game starts clean
         if (PlayerWallet.Instance != null) UnityEngine.Object.Destroy(PlayerWallet.Instance.gameObject);
@@ -90,6 +105,6 @@ public static class SceneManagementUtils
         DayStats.ResetDay();
         RadioStation.Shutdown(); // DDOL: sin esto la canción seguiría (muda) en la run siguiente
 
-        LoadSceneByName("MainMenuScene");
+        LoadNow("MainMenuScene");
     }
 }

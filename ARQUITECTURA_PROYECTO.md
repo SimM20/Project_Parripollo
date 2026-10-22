@@ -225,7 +225,7 @@ Assets/Scripts/
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
 | **Radio/** | `Radio` (el objeto del mostrador que activa la mejora `RadioUpgrade`: prender/apagar, lista de canciones, salto al ritmo) y `RadioStation` (emisora DDOL creada en runtime: elige, encadena y funde las canciones) | `Radio.cs`, `RadioStation.cs` |
-| **Feel/** | Solo presentación, sin lógica de juego. `FeelEase` (curvas), `ScalePunch` (golpe/pop de escala para transforms **sin collider**), `SpriteGhost` (copia pooleada de un sprite que se anima y desaparece), `SettleOffset` (corrimiento visual que se apaga solo, para piezas con collider compensado), `UIPopIn` (entrada de ventanas de UI), `SceneFadeIn` (fundido de entrada de escena, se crea solo) | `SpriteGhost.cs`, `SettleOffset.cs`, `ScalePunch.cs`, `UIPopIn.cs` |
+| **Feel/** | Solo presentación, sin lógica de juego. `FeelEase` (curvas), `ScalePunch` (golpe/pop de escala para transforms **sin collider**), `SpriteGhost` (copia pooleada de un sprite que se anima y desaparece), `SettleOffset` (corrimiento visual que se apaga solo, para piezas con collider compensado), `UIPopIn` (entrada de ventanas de UI), `SceneFadeIn` (fundido de salida y entrada de escena, se crea solo) | `SpriteGhost.cs`, `SettleOffset.cs`, `ScalePunch.cs`, `UIPopIn.cs` |
 | **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO` | `UpgradeStateResetter.cs` |
 
 ### Assets de datos
@@ -2159,7 +2159,9 @@ Vehículos que pasan cada tanto por la ruta dibujada en el `Paisaje`. Implementa
   (hijo `Luces`, order del carril + 1) **no se tiñen**: solo cambian de alfa con `lightsByHour`.
 - **Orden de dibujo.** Dentro del `SortingGroup` (-3): carril de atrás 0/1, adelante 10/11, `CartelRuta` 100. El grupo
   entero queda sobre el `Paisaje` (-5) y su fundido (-4), y debajo de la parrilla (-2) y los clientes (10/11). Comparte el
-  -3 con `Grill`/`ToBuild` de `GrillView`, que no se tocan con la ruta.
+  -3 con `Grill`/`ToBuild` de `GrillView`, que no se tocan con la ruta. El cuerpo del cliente (`Personaje`) va en 0
+  y lo tapa `MostradorFrente/MostradorBorde` (12, solo el borde superior recortado de `Mostrador Parrilla Frente`, en
+  `GameScene`): las piernas quedan detrás del mostrador. La `Radio` va en 13 para seguir apoyada delante del borde.
 - **`CartelRuta`.** El poste del cartel RUTA 40 cruza la ruta por delante, así que se recortó del `Paisaje` (los 3 colores
   del cartel, que no aparecen en ningún otro lado del dibujo) a `Sprites/FondoCicloDia/CartelRuta.png` (68×258 px, PPU 100,
   pivote al centro) y se ubicó **pixel exacto** sobre el original (`x = -7.38, y = 1.25`). Toma el mismo tinte que el
@@ -2292,7 +2294,7 @@ se mueve** para un efecto: o se corre solo el dibujo con el collider compensado 
 | `SpriteGhost` | `Spawn(SpriteRenderer, Motion)`: copia sprite, color, flip, orden, material y tamaño en mundo; sin collider. `Motion.Echo` (onda detrás de algo apoyado), `Vanish` (se achica, sube y se apaga), `Into(punto)` (viaja y se apaga). Pool estático (se vacía solo al cambiar de escena); tiempo escalado por defecto (la pausa lo congela) | Corte que entra al plato (eco) y pan que lo vuelve sándwich (`MeatTransferBuffer`), plato limpiado o entregado (desvanecido), undo de side/topping, tacho (`TrashZone`: lo tirado cae por la boca + eco del tacho), cenizas (`GameManager.CleanAshes`), cliente que se va (`CustomerView.PlayLeave`), fantasma del stock que vuelve a la celda, eco del botón de capa |
 | `SettleOffset` | POCO: corrimiento que arranca en *dónde se ve − dónde quedó* y se apaga (OutCubic + saltito opcional). El dueño lo suma a la posición y le resta lo mismo al `offset` del collider | `Meat` (mismo canal que el flote: `floatOffset`, así `RestPosition`, burbuja, humo y aviso quedan en el lugar real), `Coal`, `BuildDraggableFoodItem` (vuelta al panel), `CustomerView` (llegada y cambio de lugar, sobre la raíz visual) |
 | `UIPopIn` | En cada `OnEnable`: fundido (CanvasGroup, se agrega solo) + crecimiento con rebote, tiempo sin escalar. Nunca bloquea raycasts. `Ensure(window)` lo suma por código | `PauseCanvas/Panel/VerticalContainer`, `OptionsPanel/Window` (en los prefabs); popups de `EndScene` (`StrikeEndPopup` y `RunDefeatScreen` lo agregan en `Awake`) |
-| `SceneFadeIn` | DDOL creado en `BeforeSceneLoad`: cada escena nueva entra desde negro en 0.35 s (sin raycaster, debajo del cursor del gamepad, orden 31000). No hay fundido de salida: la carga no se demora | Todas las escenas |
+| `SceneFadeIn` | DDOL creado en `BeforeSceneLoad`: toda carga de `SceneManagementUtils` funde a negro en 1 s (`FadeOutThenLoad`; la carga real y la limpieza de `RestartRun`/`ReturnToMainMenu` corren recién en negro) y cada escena nueva entra desde negro en 1.35 s, ambas con `InOutCubic`. En la salida bloquea clicks de UI y descarta cargas repetidas (gana la primera); en la entrada no bloquea. Debajo del cursor del gamepad, orden 31000. ⚠️ Toda carga se demora 1 s: no llamar `SceneManager.LoadScene` directo | Todas las escenas |
 
 **Comportamientos por sistema** (todos con valores en el inspector, header *Feedback* / *Drop Settle* / *Arrival…*):
 
