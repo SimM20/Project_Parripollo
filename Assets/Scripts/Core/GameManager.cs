@@ -255,6 +255,11 @@ public class GameManager : MonoBehaviour
         public CookingDeliveryEvaluator.ExtrasResult extras;
         public string extrasNote;
 
+        /// <summary>Por qué la propina salió reducida o con bonus de racha; null si no hay nada que contar.</summary>
+        public string tipNote;
+        /// <summary>Nivel de la propina, para el popup y el sonido.</summary>
+        public TipTier tipTier;
+
         /// <summary>
         /// Desfase por corte del plato, alineado con <c>BuildStationSystem.AssembledCuts</c>:
         /// 0 exacto, 1 aceptable, >=2 mitad de precio; <see cref="CutBlocked"/> si ese corte
@@ -396,7 +401,7 @@ public class GameManager : MonoBehaviour
             return result;
         }
 
-        // Evaluar propina y estado de satisfacción general según spec doc
+        // Propina y estado de satisfacción: reglas en TipRulesSO.
         float primaryBasePrice = cuts.Count > 0 && cuts[0] != null
             ? (isSandwich ? cuts[0].sellPriceSandwich : cuts[0].sellPricePlate)
             : result.payment;
@@ -404,9 +409,11 @@ public class GameManager : MonoBehaviour
         float tipMultiplier = catalog != null ? catalog.GetTipMultiplier() : 1f;
 
         var feedbackEval = CookingDeliveryEvaluator.EvaluateDeliveryFeedback(
-            customer, primaryBasePrice, result.worstOffset, tipMultiplier);
+            customer, primaryBasePrice, result.worstOffset, tipMultiplier, DayStats.PerfectStreak);
 
         result.tip = feedbackEval.tipAmount;
+        result.tipNote = CookingDeliveryEvaluator.BuildTipMessage(feedbackEval, result.worstOffset, customer.IsTipAnulada);
+        result.tipTier = feedbackEval.tier;
         result.feedbackState = feedbackEval.state;
         result.accepted = true;
         return result;
@@ -508,9 +515,13 @@ public class GameManager : MonoBehaviour
             return false;
         }
 
-        // La entrega se acepta igual, pero el jugador tiene que saber por qué cobró menos.
-        if (!string.IsNullOrEmpty(eval.extrasNote))
-            DeliveryFeedbackText.Instance?.Show(eval.extrasNote);
+        // La entrega se acepta igual, pero el jugador tiene que saber por qué cobró menos
+        // (o por qué la propina vino con bonus de racha).
+        string note = string.IsNullOrEmpty(eval.extrasNote) ? eval.tipNote
+                    : string.IsNullOrEmpty(eval.tipNote) ? eval.extrasNote
+                    : eval.extrasNote + "\n" + eval.tipNote;
+        if (!eval.causesStrike && !string.IsNullOrEmpty(note))
+            DeliveryFeedbackText.Instance?.Show(note);
 
         ClearBuildAssembly();
         meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
@@ -530,13 +541,17 @@ public class GameManager : MonoBehaviour
             return true;
         }
 
-        // El popup se crea ANTES de sumar: así HudManager sabe que hay plata "en vuelo" y
-        // recién actualiza el contador cuando aterriza.
+        // Los popups se crean ANTES de sumar: así HudManager sabe que hay plata "en vuelo" y
+        // recién actualiza el contador cuando aterriza. La propina va aparte, un instante después.
         CustomerView paidView = customerSystem.GetViewForCustomer(customer);
         if (paidView != null)
-            MoneyPopup.Spawn(paidView.transform.position, eval.payment + eval.tip);
+        {
+            MoneyPopup.Spawn(paidView.transform.position, eval.payment);
+            MoneyPopup.SpawnTip(paidView.transform.position, eval.tip, eval.tipTier);
+        }
 
         PlayerWallet.Instance?.Add(eval.payment + eval.tip);
+        DayStats.RegisterDelivery(eval.payment, eval.tip, eval.worstOffset == 0 && !customer.IsTipAnulada);
 
         // Un toque al entregar; la vibración fuerte llega con la plata al contador (HudManager).
         GamepadHaptics.Play(HapticEvent.DeliveryAccepted);

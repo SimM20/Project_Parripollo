@@ -22,6 +22,16 @@ sauce.empty,Sin {0}. Rellená el frasco en la tienda.,Out of {0}. Refill the jar
 delivery.extras.missing,Falta {0},Missing {0}
 delivery.extras.extra,Sobra {0},Extra {0}
 delivery.extras.extra_bread,Sobra el pan,Bread not needed
+# Entrega: por qué la propina salió así (CookingDeliveryEvaluator.BuildTipMessage)
+delivery.tip.almost,Propina reducida: casi en su punto,Smaller tip: almost right
+delivery.tip.slow,Propina reducida: tardó,Smaller tip: too slow
+delivery.tip.streak,¡Racha perfecta! {0} extra de propina,Perfect streak! {0} extra tip
+delivery.tip.none,Sin propina: el pedido llegó mal,No tip: the order was wrong
+delivery.tip.voided,Sin propina: cambio por faltante,No tip: order swapped for a missing cut
+# Popup de propina (MoneyPopup.SpawnTip), por nivel
+popup.tip,+${0} propina,+${0} tip
+popup.tip.good,+${0} ¡buena propina!,+${0} nice tip!
+popup.tip.great,+${0} ¡propinón!,+${0} huge tip!
 "# Armado del plato (DishValidator, BuildStationSystem)"
 dish.no_cuts,No hay cortes en el armado.,There's no cut on the plate.
 dish.no_bread,No hay pan en el armado.,There's no bread on the plate.

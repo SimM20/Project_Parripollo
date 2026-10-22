@@ -72,5 +72,8 @@ defeat.retry,Reintentar,Try again
 endscreen.day,DÍA,DAY
 endscreen.money,PLATA,MONEY
 endscreen.customers,CLIENTES,CUSTOMERS
+endscreen.sales,VENTAS,SALES
+endscreen.tips,PROPINAS,TIPS
+endscreen.tips.detail,${0} ({1}% de lo cobrado),${0} ({1}% of income)
 endscreen.shop,TIENDA,SHOP
 endscreen.main_menu,MENÚ PRINCIPAL,MAIN MENU

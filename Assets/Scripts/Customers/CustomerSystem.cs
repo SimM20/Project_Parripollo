@@ -1053,6 +1053,7 @@ public class CustomerSystem : MonoBehaviour
         if (customer == null || customer.IsInFeedback) return;
 
         customer.StartFeedback();
+        DayStats.BreakStreak();
 
         // El guard de IsInFeedback de arriba garantiza una sola suma por cliente. Con el
         // contador saturado el cliente se retira igual, pero no suma. El SFX es distinto

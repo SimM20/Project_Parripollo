@@ -9,16 +9,13 @@ using UnityEngine;
 /// </summary>
 public static class CookingDeliveryEvaluator
 {
-    // ── Configuración de balance (TBD doc: multiplicadores fijos, propina pendiente) ──
+    // ── Configuración de balance. La propina vive en TipRulesSO. ──
     private const float ReducedPriceMultiplier = 0.5f;
-    private const float TipPercentOfPrice = 0.2f;
-    private const float MinimumPerfectTip = 1f;
 
     public struct CutResult
     {
         public int worstOffset;
         public float price;
-        public bool tipEligible;
     }
 
     public struct DeliveryValidation
@@ -91,7 +88,7 @@ public static class CookingDeliveryEvaluator
 
     /// <summary>
     /// Evalúa una pieza entregable contra su punto solicitado.
-    /// Desfase 0: 100% + propina. Desfase 1: 100% sin propina. Desfase >=2: 50% con floor, sin propina.
+    /// Desfase 0 y 1: 100%. Desfase >=2: 50% con floor. La propina se decide aparte (EvaluateDeliveryFeedback).
     /// </summary>
     public static CutResult EvaluateCut(MeatStates sideA, MeatStates sideB, MeatStates requested, float basePrice)
     {
@@ -101,21 +98,7 @@ public static class CookingDeliveryEvaluator
 
         var result = new CutResult { worstOffset = worst };
 
-        if (worst == 0)
-        {
-            result.price = basePrice;
-            result.tipEligible = true;
-        }
-        else if (worst == 1)
-        {
-            result.price = basePrice;
-            result.tipEligible = false;
-        }
-        else
-        {
-            result.price = Mathf.Floor(basePrice * ReducedPriceMultiplier);
-            result.tipEligible = false;
-        }
+        result.price = worst < 2 ? basePrice : Mathf.Floor(basePrice * ReducedPriceMultiplier);
 
         return result;
     }
@@ -237,84 +220,87 @@ public static class CookingDeliveryEvaluator
     }
 
     /// <summary>
-    /// Propina de una pieza perfecta. Siempre mayor que cero; escala con la paciencia restante.
-    /// Fórmula TBD de balance.
-    /// </summary>
-    public static float CalculateTip(float basePrice, float patience01)
-    {
-        float tip = Mathf.Floor(basePrice * TipPercentOfPrice * Mathf.Clamp01(patience01));
-        return Mathf.Max(MinimumPerfectTip, tip);
-    }
-
-    /// <summary>
     /// Estructura con el desglose económico y el estado de feedback correspondiente a la entrega.
     /// </summary>
     public struct DeliveryFeedbackEvaluation
     {
         public CustomerFeedbackState state;
         public float tipAmount;
+        /// <summary>Fracción del precio que terminó siendo propina, antes de mejoras.</summary>
+        public float tipPercent;
+        /// <summary>Parte de <c>tipAmount</c> que aportó la racha de entregas perfectas.</summary>
+        public float streakBonusAmount;
+        /// <summary>Multiplicador de velocidad aplicado (1 = a tiempo, &lt;1 = tardó).</summary>
+        public float speedFactor;
+        /// <summary>Nivel de la propina para el feedback (None si no dejó nada).</summary>
+        public TipTier tier;
     }
 
     /// <summary>
-    /// Evalúa la satisfacción del cliente y la propina según las reglas del documento:
-    /// - Turista feliz: corte en punto exacto + cliente Turista -> 20% propina.
-    /// - Entrega excelente: corte en punto exacto + paciencia alta (>= 50%) -> 10% propina.
-    /// - Entrega aceptable: corte con desfase 1 o paciencia media/baja -> 3% a 7% (5% promedio).
-    /// - Sin propina: desfase >= 2, o propina anulada por faltante, o propina evaluada en 0 -> $0.
-    /// `tipMultiplier` es el bonus aditivo de las mejoras de tienda (`UpgradeEffectType.TipPercent`);
-    /// `1` = sin mejoras. Se aplica antes del redondeo y del piso de $1.
+    /// Evalúa la satisfacción del cliente y la propina con <see cref="TipRulesSO"/>:
+    /// propina = precio × (base del tipo de cliente × calidad × velocidad + complejidad + racha) × mejoras.
+    /// Calidad: desfase 0 entero, desfase 1 parcial, desfase 2+ o propina anulada = $0.
+    /// Complejidad y racha solo suman con entrega perfecta. `tipMultiplier` es el bonus de las
+    /// mejoras de tienda (`UpgradeEffectType.TipPercent`), `1` = sin mejoras.
+    /// `perfectStreak` = entregas perfectas seguidas ANTES de esta (ver <see cref="DayStats"/>).
     /// </summary>
-    public static DeliveryFeedbackEvaluation EvaluateDeliveryFeedback(Customer customer, float basePrice, int worstOffset, float tipMultiplier = 1f)
+    public static DeliveryFeedbackEvaluation EvaluateDeliveryFeedback(
+        Customer customer, float basePrice, int worstOffset, float tipMultiplier = 1f, int perfectStreak = 0)
     {
-        var result = new DeliveryFeedbackEvaluation();
-
-        tipMultiplier = Mathf.Max(0f, tipMultiplier);
+        var result = new DeliveryFeedbackEvaluation { state = CustomerFeedbackState.SinPropina };
+        TipRulesSO rules = TipRulesSO.Instance;
 
         if (customer == null || customer.IsTipAnulada)
-        {
-            result.state = CustomerFeedbackState.SinPropina;
-            result.tipAmount = 0f;
             return result;
-        }
 
-        if (worstOffset == 0)
-        {
-            if (customer.type == CustomerType.Turista)
-            {
-                result.state = CustomerFeedbackState.TuristaFeliz;
-                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.20f * tipMultiplier));
-            }
-            else if (customer.Patience01 >= 0.5f)
-            {
-                result.state = CustomerFeedbackState.EntregaExcelente;
-                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.10f * tipMultiplier));
-            }
-            else
-            {
-                result.state = CustomerFeedbackState.EntregaAceptable;
-                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.05f * tipMultiplier));
-            }
-        }
-        else if (worstOffset == 1)
-        {
-            if (customer.Patience01 >= 0.3f)
-            {
-                result.state = CustomerFeedbackState.EntregaAceptable;
-                result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * 0.05f * tipMultiplier));
-            }
-            else
-            {
-                result.state = CustomerFeedbackState.SinPropina;
-                result.tipAmount = 0f;
-            }
-        }
+        float quality = rules.GetQualityFactor(worstOffset);
+        if (quality <= 0f)
+            return result;
+
+        bool perfect = worstOffset <= 0;
+        int toppings = customer.order != null && customer.order.toppings != null ? customer.order.toppings.Count : 0;
+
+        result.speedFactor = rules.GetSpeedFactor(customer.Patience01);
+        float streakPercent = perfect ? rules.GetStreakBonus(perfectStreak) : 0f;
+        result.tipPercent = rules.GetBaseTip(customer.type) * quality * result.speedFactor
+                          + (perfect ? rules.GetComplexityBonus(toppings) : 0f)
+                          + streakPercent;
+
+        float multiplier = Mathf.Max(0f, tipMultiplier);
+        result.tipAmount = Mathf.Max(1f, Mathf.Round(basePrice * result.tipPercent * multiplier));
+        result.streakBonusAmount = Mathf.Min(result.tipAmount, Mathf.Round(basePrice * streakPercent * multiplier));
+        result.tier = rules.GetTier(result.tipAmount, basePrice);
+
+        if (perfect && customer.Patience01 >= rules.ExcellentPatience)
+            result.state = customer.type == CustomerType.Turista
+                ? CustomerFeedbackState.TuristaFeliz
+                : CustomerFeedbackState.EntregaExcelente;
         else
-        {
-            result.state = CustomerFeedbackState.SinPropina;
-            result.tipAmount = 0f;
-        }
+            result.state = CustomerFeedbackState.EntregaAceptable;
 
         return result;
+    }
+
+    /// <summary>
+    /// Explicación corta de por qué la propina salió así, para el texto de feedback de entrega.
+    /// Null cuando no hay nada que explicar (propina completa sin racha).
+    /// </summary>
+    public static string BuildTipMessage(DeliveryFeedbackEvaluation eval, int worstOffset, bool tipVoided)
+    {
+        if (tipVoided)
+            return Loc.Get("delivery.tip.voided");
+        if (eval.tipAmount <= 0f)
+            return worstOffset >= 2 ? Loc.Get("delivery.tip.none") : null;
+
+        var parts = new List<string>();
+        if (worstOffset == 1)
+            parts.Add(Loc.Get("delivery.tip.almost"));
+        if (eval.speedFactor < 0.8f)
+            parts.Add(Loc.Get("delivery.tip.slow"));
+        if (eval.streakBonusAmount > 0f)
+            parts.Add(Loc.Format("delivery.tip.streak", "$" + (int)eval.streakBonusAmount));
+
+        return parts.Count > 0 ? string.Join(" · ", parts) : null;
     }
 
     /// <summary>

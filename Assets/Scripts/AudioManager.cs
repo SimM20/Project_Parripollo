@@ -29,7 +29,20 @@ public class AudioManager : MonoBehaviour
     [Tooltip("Suena al sumar un strike (cliente perdido por paciencia). Debe distinguirse del feedback negativo. TBD por Audio: vacio = no suena.")]
     [SerializeField] private AudioClip strikeClip;
 
+    [Header("Propinas")]
+    [Tooltip("Suena cuando la propina aterriza en el contador. Vacio = taskCompleted más agudo.")]
+    [SerializeField] private AudioClip tipClip;
+    [Tooltip("Pitch por nivel de propina: normal, buena, excepcional.")]
+    [SerializeField] private Vector3 tipPitchByTier = new Vector3(1.25f, 1.4f, 1.6f);
+    [Tooltip("Volumen por nivel de propina: normal, buena, excepcional.")]
+    [SerializeField] private Vector3 tipVolumeByTier = new Vector3(0.45f, 0.6f, 0.8f);
+    [Tooltip("Separación mínima entre dos sonidos de propina, para que no se amontonen.")]
+    [SerializeField] private float tipSoundCooldown = 0.15f;
+
     private AudioSource audioSource;
+    // Fuente aparte para la propina: cambia el pitch sin afectar al resto de los sonidos.
+    private AudioSource tipSource;
+    private float lastTipSoundTime = -1f;
 
     // Ultimo indice reproducido de cada grupo, para no repetir el mismo clip dos veces seguidas.
     private int lastPositiveIndex = -1;
@@ -54,6 +67,24 @@ public class AudioManager : MonoBehaviour
         if (!audioSource) return;
         audioSource.playOnAwake = false;
         audioSource.loop = false;
+
+        tipSource = gameObject.AddComponent<AudioSource>();
+        tipSource.playOnAwake = false;
+        tipSource.outputAudioMixerGroup = audioSource.outputAudioMixerGroup;
+        tipSource.volume = audioSource.volume;
+    }
+
+    /// <summary>Tintineo de la propina: más agudo y fuerte cuanto mejor fue.</summary>
+    public void PlayTip(TipTier tier)
+    {
+        AudioClip clip = tipClip != null ? tipClip : taskCompleted;
+        if (tipSource == null || clip == null || tier == TipTier.None) return;
+        if (Time.unscaledTime - lastTipSoundTime < tipSoundCooldown) return;
+        lastTipSoundTime = Time.unscaledTime;
+
+        int i = tier == TipTier.Great ? 2 : tier == TipTier.Good ? 1 : 0;
+        tipSource.pitch = tipPitchByTier[i];
+        tipSource.PlayOneShot(clip, tipVolumeByTier[i]);
     }
 
     public void PlayTaskCompleted() => audioSource?.PlayOneShot(taskCompleted);
