@@ -1181,6 +1181,12 @@ sin rotación al azar (solo espejo), repartidas en una elipse (`perspectiveSquas
 saltan en arco (`dropletChance`). El chorro tiene un contorno oscuro (segundo `LineRenderer`) y la botella se aprieta
 a pulsos mientras vierte (`squeezeAmount`); la barra de salsa compensa esa escala.
 
+**Barra de salsa.** Pixel art procedural (`CreateSauceBar`): marco de madera con la paleta de `Barra Coccion v4`,
+`barWidthPixels` (44) de ancho y `barPixelSize` (0.12 = un pixel del arte del frasco). El relleno avanza de a pixel
+entero y cambia por tramos: verde ≥ `barHighThreshold` (0.6), amarillo ≥ `barLowThreshold` (0.3), rojo debajo.
+Mientras vierte se agranda a `barPouringScale` (3×) con rebote (`FeelEase.OutBack`, `barGrowDuration` / `barShrinkDuration`,
+tiempo sin escala) creciendo hacia arriba; `LateUpdate` solo trabaja durante esa animación.
+
 #### `SpriteColliderFitter` — `Build/SpriteColliderFitter.cs` · **static**
 Ajusta el `Collider2D` de un visual a la **silueta real del sprite que está mostrando**.
 
