@@ -124,15 +124,15 @@ ScriptedImporter:
   animatedSpriteImportData:
   - name: Corte Carne Pre  Alpha 1
     originalName: 
-    pivot: {x: 0.5, y: -0.04597701}
+    pivot: {x: 0.52100843, y: -1.5384617}
     alignment: 9
     border: {x: 0, y: 0, z: 0, w: 0}
     rect:
       serializedVersion: 2
       x: 4
       y: 4
-      width: 82
-      height: 87
+      width: 119
+      height: 117
     spriteID: f3f8bf1cc46052944b116711f6df368e
     spriteBone: []
     spriteOutline: []
@@ -160,10 +160,10 @@ ScriptedImporter:
       frameIndex: 0
       additiveSortOrder: 0
       cellRect:
-        x: 9
-        y: 4
-        width: 82
-        height: 87
+        x: 73
+        y: 180
+        width: 119
+        height: 117
       spriteId: f3f8bf1cc46052944b116711f6df368e
     linkedCells: []
     parentIndex: -1
@@ -183,5 +183,5 @@ ScriptedImporter:
   generatePhysicsShape: 0
   secondarySpriteTextures: []
   spritePackingTag: 
-  canvasSize: {x: 100, y: 100}
+  canvasSize: {x: 270, y: 480}
   previousTextureSize: {x: 128, y: 128}

@@ -98,6 +98,12 @@ public class CustomerView : MonoBehaviour
     private Color skinBaseColor = Color.white;
     private Coroutine rejectRoutine;
 
+    // Alto del dibujo que trae el prefab: la burbuja y la barra estan ubicadas para el.
+    // Con otra imagen se corren lo mismo que cambia la cabeza (ver AlignOverlaysToSkin).
+    private float skinBaseTop;
+    private bool hasSkinBaseTop;
+    private Vector3 orderBubbleBasePosition;
+
     // Raiz visual: todos los hijos (cuerpo, barra, burbujas) cuelgan de aca. El collider de pick
     // vive en la raiz del cliente, asi que mover el dibujo nunca mueve el area de interaccion.
     private Transform visualRoot;
@@ -314,6 +320,46 @@ public class CustomerView : MonoBehaviour
         }
 
         skinRenderer.sprite = skin;
+        AlignOverlaysToSkin();
+    }
+
+    /// <summary>
+    /// Los dibujos no miden todos lo mismo (todos tienen los pies abajo del lienzo, pero el
+    /// enano tiene la cabeza mucho mas baja): la burbuja de pedido y la barra de paciencia
+    /// bajan lo que baja el borde de arriba del dibujo respecto del del prefab. Nunca suben:
+    /// un dibujo mas alto suele serlo por el pelo, el pecho queda donde estaba y la barra
+    /// chocaria con el HUD. El cartel de feedback se apoya en la burbuja, asi que la sigue solo.
+    /// </summary>
+    private void AlignOverlaysToSkin()
+    {
+        if (!hasSkinBaseTop || skinRenderer == null || skinRenderer.sprite == null) return;
+
+        float deltaLocal = Mathf.Min(0f, SpriteContentTop(skinRenderer.sprite) - skinBaseTop);
+        Vector3 worldDelta = skinRenderer.transform.TransformVector(new Vector3(0f, deltaLocal, 0f));
+        worldDelta.x = worldDelta.z = 0f;
+
+        if (orderBubble != null && orderBubble.transform.parent != null)
+            orderBubble.transform.localPosition = orderBubbleBasePosition +
+                orderBubble.transform.parent.InverseTransformVector(worldDelta);
+
+        if (patienceBar != null && patienceFill != null && patienceFill.parent != null &&
+            patienceFill.parent.parent != null)
+            patienceBar.SetBaseOffset(patienceFill.parent.parent.InverseTransformVector(worldDelta));
+    }
+
+    /// <summary>
+    /// Borde de arriba de lo pintado, en unidades locales del sprite. Sale de los vertices de
+    /// la malla, que con Mesh Type Tight abrazan el dibujo; con Full Rect da el borde del lienzo.
+    /// </summary>
+    private static float SpriteContentTop(Sprite sprite)
+    {
+        Vector2[] vertices = sprite.vertices;
+        if (vertices == null || vertices.Length == 0) return sprite.bounds.max.y;
+
+        float top = float.MinValue;
+        for (int i = 0; i < vertices.Length; i++)
+            top = Mathf.Max(top, vertices[i].y);
+        return top;
     }
 
     /// <summary>
@@ -355,6 +401,12 @@ public class CustomerView : MonoBehaviour
             skinBaseScale = skinRenderer.transform.localScale;
             skinBasePosition = skinRenderer.transform.localPosition;
             skinBaseColor = skinRenderer.color;
+
+            if (skinRenderer.sprite != null)
+            {
+                skinBaseTop = SpriteContentTop(skinRenderer.sprite);
+                hasSkinBaseTop = true;
+            }
         }
 
         if (patienceFill != null && patienceFill.parent != null &&
@@ -393,6 +445,8 @@ public class CustomerView : MonoBehaviour
             orderGo.transform.SetParent(transform, false);
             orderBubble = orderGo.AddComponent<CustomerOrderBubble>();
         }
+
+        orderBubbleBasePosition = orderBubble.transform.localPosition;
 
         // Al final: incluye las burbujas creadas arriba.
         BuildVisualRoot();

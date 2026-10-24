@@ -19,7 +19,8 @@ public class PatienceBar
 
     readonly Transform root, fill, shine;
     readonly SpriteRenderer fillSr, shineSr;
-    readonly Vector3 rootBasePos, rootBaseScale;
+    readonly Vector3 rootOriginPos, rootBaseScale;
+    Vector3 rootBasePos;
     readonly float fullW, fillH, fillLeft, shineH;
 
     float display, lastP = -1f;
@@ -31,7 +32,7 @@ public class PatienceBar
         fill = fillTransform;
         root = fill.parent;
         fillSr = fill.GetComponent<SpriteRenderer>();
-        rootBasePos = root.localPosition;
+        rootOriginPos = rootBasePos = root.localPosition;
         rootBaseScale = root.localScale;
 
         Vector3 fillPos = fill.localPosition;
@@ -74,6 +75,16 @@ public class PatienceBar
         display = 0f;
         lastP = -1f;
         punch = flash = 0f;
+    }
+
+    /// <summary>
+    /// Corre la barra respecto de donde la puso el prefab (espacio local de su padre). Lo usa
+    /// el cliente para dejarla sobre la cabeza de su dibujo, que no todos miden lo mismo.
+    /// </summary>
+    public void SetBaseOffset(Vector3 localOffset)
+    {
+        rootBasePos = rootOriginPos + localOffset;
+        root.localPosition = rootBasePos;
     }
 
     /// <summary>Se encoge y se apaga. Llamar al entrar en feedback.</summary>

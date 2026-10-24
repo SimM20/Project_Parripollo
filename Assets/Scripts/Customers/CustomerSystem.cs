@@ -99,6 +99,23 @@ public class CustomerSystem : MonoBehaviour
              "clientes simultaneos que imagenes en el pool, se repite igual.")]
     [SerializeField] private bool avoidRepeatedSkinsOnScreen = true;
 
+    [Header("Cliente especial")]
+    [Tooltip("Imagen del cliente que viene cada tanto, como evento (el enano bostero). No va en " +
+             "Customer Skins: aparece a lo sumo una vez por día y solo los días que sale el sorteo.")]
+    [SerializeField] private Sprite specialSkin;
+
+    [Tooltip("Probabilidad de que el cliente especial venga en una jornada.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float specialSkinDayChance = 0.3f;
+
+    [Tooltip("Tramo de la jornada (0 apertura, 1 cierre) en el que se sortea su llegada. Entra el " +
+             "primer cliente que llegue después del momento sorteado.")]
+    [SerializeField] private Vector2 specialSkinArrivalWindow = new Vector2(0.1f, 0.8f);
+
+    // Momento de la jornada (Normalized01) desde el que el próximo cliente es el especial.
+    // Negativo = hoy no viene, o ya vino.
+    private float specialSkinArrivalPoint = -1f;
+
     // Buffer reusable del sorteo de imagen, para no generar basura en cada spawn.
     private readonly List<Sprite> skinCandidates = new List<Sprite>();
 
@@ -383,6 +400,7 @@ public class CustomerSystem : MonoBehaviour
         servedToday = 0;
         nightEnded = false;
         warnedEmptySkinPool = false;
+        RollSpecialSkinVisit();
 
         DayStats.ResetDay();
         UIManager.Instance?.SetServedCustomers(0);
@@ -1313,6 +1331,12 @@ public class CustomerSystem : MonoBehaviour
     /// </summary>
     private Sprite PickCustomerSkin()
     {
+        if (IsSpecialSkinDue())
+        {
+            specialSkinArrivalPoint = -1f;
+            return specialSkin;
+        }
+
         skinCandidates.Clear();
 
         if (customerSkins != null)
@@ -1358,6 +1382,40 @@ public class CustomerSystem : MonoBehaviour
         }
 
         return skinCandidates[UnityEngine.Random.Range(0, skinCandidates.Count)];
+    }
+
+    /// <summary>
+    /// Sortea, al abrir, si hoy viene el cliente especial y en qué momento de la jornada. Sin
+    /// <see cref="DayClock"/> (tutorial) no viene nunca.
+    /// </summary>
+    private void RollSpecialSkinVisit()
+    {
+        specialSkinArrivalPoint = -1f;
+
+        if (specialSkin == null || DayClock.Instance == null)
+            return;
+
+        if (UnityEngine.Random.value >= specialSkinDayChance)
+            return;
+
+        float from = Mathf.Clamp01(Mathf.Min(specialSkinArrivalWindow.x, specialSkinArrivalWindow.y));
+        float to = Mathf.Clamp01(Mathf.Max(specialSkinArrivalWindow.x, specialSkinArrivalWindow.y));
+        specialSkinArrivalPoint = UnityEngine.Random.Range(from, to);
+
+        Debug.Log("[CustomerSystem] Hoy viene el cliente especial, después de las " +
+                  DayClock.FormatHour(Mathf.Lerp(DayClock.Instance.OpeningHour,
+                                                 DayClock.Instance.ClosingHour,
+                                                 specialSkinArrivalPoint)));
+    }
+
+    /// <summary>True si el cliente que entra ahora tiene que ser el especial.</summary>
+    private bool IsSpecialSkinDue()
+    {
+        if (specialSkin == null || specialSkinArrivalPoint < 0f)
+            return false;
+
+        DayClock clock = DayClock.Instance;
+        return clock != null && clock.Normalized01 >= specialSkinArrivalPoint;
     }
 
     /// <summary>True si alguno de los clientes que están en pantalla ya tiene puesta esa imagen.</summary>

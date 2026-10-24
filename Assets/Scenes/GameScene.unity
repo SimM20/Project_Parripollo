@@ -7994,6 +7994,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: specialSkin
+      value: 
+      objectReference: {fileID: 21300000, guid: 30d32be7a30a92941a55fd3f799cea40, type: 3}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: autoStartNight
       value: 1
       objectReference: {fileID: 0}
@@ -8031,7 +8035,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customerSkins.Array.size
-      value: 3
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: maxSimultaneousCustomers
@@ -8064,7 +8068,11 @@ PrefabInstance:
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customerSkins.Array.data[4]
       value: 
-      objectReference: {fileID: 21300000, guid: 33a0ddbbbb947064eab3b3c6edae4de2, type: 3}
+      objectReference: {fileID: 21300000, guid: f2e7a78b6a0753f418d63e0997c01def, type: 3}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: customerSkins.Array.data[5]
+      value: 
+      objectReference: {fileID: 21300000, guid: f2e7a78b6a0753f418d63e0997c01def, type: 3}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: nightTwoVariants.Array.size
       value: 1

@@ -146,6 +146,22 @@
 > y apagan todos los `SpriteRenderer` hijos de cada pieza (y `GamepadNavTargets` los suma al área de selección); el cartel
 > sigue la visibilidad del sprite de la pieza con `Meat.IsVisualShown`. Nuevos en `Meat`: `IsPointerOver` (entre el Enter y
 > el Exit del dispatcher, los mismos que abren y cierran la burbuja), `IsVisualShown` e `IsCooking`. Sección 3.8 → *VFX de parrilla*.
+> Última actualización parcial: **2026-10-23** (rama `development`) — **arte nuevo de chorizo, paty, tira, choripán y
+> clientes**. Las fuentes vienen en lienzos de 270x480; los PNG del juego se **reencuadraron** al lienzo del sprite viejo
+> (mismo archivo y GUID, así no cambió ninguna referencia) para conservar el tamaño en pantalla: chorizo y tira 100x100 a
+> PPU 100 (mismo tamaño en píxeles que antes), paty 140x140 a PPU 140, choripán 130x130 a PPU 130 (un solo dibujo,
+> horizontal, en los cinco puntos), clientes 300x500 a PPU 100 con los pies abajo. Todos `Point`, sin compresión.
+> El chorizo nuevo viene solo horizontal: los `* 90.png` de la parrilla son ese dibujo rotado 90°. Chorizo, paty y tira
+> tienen sprite de **Quemado** (antes caía al de Pasado). `CustomerSystem.customerSkins` en `GameScene` pasó a los 6
+> personajes (`Personaje POV 1-6`). `Personaje 1.aseprite` no se tocó: es el prefab anidado de los clientes.
+> Mismo día: **cliente especial** (el enano bostero, `Personaje POV 4`), fuera de `customerSkins`, en
+> `CustomerSystem.specialSkin`. Al abrir (`StartNight`) se sortea si viene hoy (`specialSkinDayChance`, 30%) y en qué
+> punto de la jornada (`specialSkinArrivalWindow`, 0.1–0.8 de `DayClock.Normalized01`); el primer cliente que entra
+> después de ese punto lleva su imagen. Una vez por día como máximo; sin `DayClock` (tutorial) no viene.
+> Como el enano es más bajo, `CustomerView.ApplySkin` **baja la burbuja de pedido y la barra de paciencia** lo que baja
+> el borde de arriba del dibujo respecto del que trae el prefab (lo lee de los vértices del sprite, Mesh Type Tight).
+> Nunca las sube: un dibujo más alto lo es por el pelo. El cartel de feedback se apoya en la burbuja y la sigue solo.
+> `PatienceBar.SetBaseOffset` corre la barra sin romper su sacudón.
 
 ---
 
