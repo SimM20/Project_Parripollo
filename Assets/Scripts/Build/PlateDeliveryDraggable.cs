@@ -354,6 +354,8 @@ public class PlateDeliveryDraggable : MonoBehaviour
 
         PlateItemVisuals.Clear();
         BuildFoodDropZone.CollectActivePlateVisuals(PlateItemVisuals);
+        // La salsa que cayó sobre el plato viaja con él; la derramada en la tabla se queda.
+        ToppingDraggable.CollectPlateSplatters(PlateItemVisuals);
 
         for (int i = 0; i < PlateItemVisuals.Count; i++)
             AddDraggedVisual(PlateItemVisuals[i]);

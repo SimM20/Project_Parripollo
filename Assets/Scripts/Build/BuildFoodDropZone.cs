@@ -164,8 +164,10 @@ public class BuildFoodDropZone : MonoBehaviour
             else if (item.sideData != null)
             {
                 zone.buildStationSystem.AddSide(item.sideData);
-                bool sideVisualSpawned = zone.SpawnPlateVisual(
-                    item.GetComponent<SpriteRenderer>()?.sprite, PlateVisualKind.Side);
+                Sprite sidePlateSprite = item.sideData.plateSprite != null
+                    ? item.sideData.plateSprite
+                    : item.GetComponent<SpriteRenderer>()?.sprite;
+                bool sideVisualSpawned = zone.SpawnPlateVisual(sidePlateSprite, PlateVisualKind.Side);
                 BuildUndoHistory.Instance?.Push(new AddSideUndoAction(
                     zone.buildStationSystem, zone, item.sideData, sideVisualSpawned));
                 Debug.Log("[Build] Acompañamiento arrastrado: " + item.sideData.sideName);
@@ -264,6 +266,31 @@ public class BuildFoodDropZone : MonoBehaviour
         {
             BuildFoodDropZone zone = ActiveZones[i];
             if (zone != null && zone.isActiveAndEnabled && zone.ContainsPoint(worldPoint))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// True si el punto cae sobre la superficie del plato: el óvalo inscripto en el collider (igual
+    /// que <see cref="RowWidthAt"/>), no la caja entera, cuyas esquinas ya son la tabla.
+    /// </summary>
+    public static bool IsOnPlateSurface(Vector3 worldPoint)
+    {
+        for (int i = 0; i < ActiveZones.Count; i++)
+        {
+            BuildFoodDropZone zone = ActiveZones[i];
+            if (zone == null || !zone.isActiveAndEnabled || zone.zoneCollider == null)
+                continue;
+
+            Bounds b = zone.zoneCollider.bounds;
+            if (b.extents.x <= 0f || b.extents.y <= 0f)
+                continue;
+
+            float nx = (worldPoint.x - b.center.x) / b.extents.x;
+            float ny = (worldPoint.y - b.center.y) / b.extents.y;
+            if (nx * nx + ny * ny <= 1f)
                 return true;
         }
 

@@ -15,4 +15,5 @@ MonoBehaviour:
   sideName: Ensalada verde
   nameKey: item.side.green_salad
   sideSprite: {fileID: 21300000, guid: f78c6921ff4d4504288075363cf946b8, type: 3}
+  plateSprite: {fileID: 21300000, guid: b298e7539da14feca0a61bb4ebc032ef, type: 3}
   purchasePrice: 100
