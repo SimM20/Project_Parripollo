@@ -6552,7 +6552,7 @@ Transform:
   m_GameObject: {fileID: 355625163}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.58, z: 0}
+  m_LocalPosition: {x: 0, y: 6.72, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -9198,7 +9198,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 100
-  m_Sprite: {fileID: 21300000, guid: 6dd34467404701b41b5f42d519f40c82, type: 3}
+  m_Sprite: {fileID: 21300000, guid: a403cda83a6e4d359a6bb2126d5a333c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -9225,8 +9225,8 @@ MonoBehaviour:
   ignoreStock: 0
   rotationZone: {fileID: 1533875616}
   rotationSpeed: 360
-  sauceColor: {r: 0.18, g: 0.54, b: 0.14, a: 1}
-  sauceWidth: 0.2
+  sauceColor: {r: 0.251, g: 0.416, b: 0.141, a: 1}
+  sauceWidth: 0.07
   sauceLength: 2
   pourOrigin: {fileID: 355625164}
   streamSegments: 10
@@ -9238,9 +9238,18 @@ MonoBehaviour:
   splatterSize: 0.1
   splatterSizeVariation: 0.1
   splatterSpread: 0.3
-  splatterSprite: {fileID: 0}
+  splatterSprites:
+  - {fileID: 21300000, guid: b64a7c878f624614a54833dc145357ad, type: 3}
+  - {fileID: 21300000, guid: 9c1a46fee7bd4c59a42528733b55441c, type: 3}
+  - {fileID: 21300000, guid: 8d9aac33047f44d4a636f66eee8f4cf7, type: 3}
+  - {fileID: 21300000, guid: c78c5c6cf8174ba3aeeee1330f921a36, type: 3}
+  perspectiveSquash: 0.6
+  dropletChance: 0.3
+  dropletDistance: 0.18
   splatterSortingOrder: 5500
   splatterParent: {fileID: 1865235213}
+  squeezeAmount: 0.06
+  squeezeFrequency: 6
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
   barHeight: 0.5
   barWidth: 5
@@ -13177,7 +13186,7 @@ Transform:
   m_GameObject: {fileID: 1826849857}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.06, z: 0}
+  m_LocalPosition: {x: 0, y: 6.72, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -13263,7 +13272,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 100
-  m_Sprite: {fileID: 21300000, guid: c91d1162ae34176488ed7d0431b95386, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 5511e375f9a64ec2b5b5094e4e529918, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -13290,8 +13299,8 @@ MonoBehaviour:
   ignoreStock: 0
   rotationZone: {fileID: 1533875616}
   rotationSpeed: 360
-  sauceColor: {r: 0.5411765, g: 0.16202848, b: 0.14117648, a: 1}
-  sauceWidth: 0.2
+  sauceColor: {r: 0.69, g: 0.204, b: 0.118, a: 1}
+  sauceWidth: 0.07
   sauceLength: 2
   pourOrigin: {fileID: 1826849858}
   streamSegments: 10
@@ -13303,9 +13312,18 @@ MonoBehaviour:
   splatterSize: 0.1
   splatterSizeVariation: 0.1
   splatterSpread: 0.2
-  splatterSprite: {fileID: 0}
+  splatterSprites:
+  - {fileID: 21300000, guid: 02a1bc1ceddf4fd088650632c1e2b07f, type: 3}
+  - {fileID: 21300000, guid: f176f39a22214e1c8783ec622ef4d00b, type: 3}
+  - {fileID: 21300000, guid: f1eee5e4bb6948a1a7ac2857dd17192e, type: 3}
+  - {fileID: 21300000, guid: 2701dcb84ea44979ad28e9a4e464a74e, type: 3}
+  perspectiveSquash: 0.6
+  dropletChance: 0.3
+  dropletDistance: 0.18
   splatterSortingOrder: 5500
   splatterParent: {fileID: 404794324}
+  squeezeAmount: 0.06
+  squeezeFrequency: 6
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
   barHeight: 0.5
   barWidth: 5

@@ -15,4 +15,5 @@ MonoBehaviour:
   sideName: Fritas
   nameKey: item.side.fries
   sideSprite: {fileID: 21300000, guid: c1837d0cb6c17f743ab3895c4407e15a, type: 3}
+  plateSprite: {fileID: 21300000, guid: 26e372e48df546929868d362c86fc745, type: 3}
   purchasePrice: 100

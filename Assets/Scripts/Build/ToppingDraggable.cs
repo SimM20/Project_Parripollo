@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -67,8 +68,20 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("± horizontal spread from the impact point.")]
     [SerializeField] private float splatterSpread = 0.1f;
 
-    [Tooltip("Optional custom sprite for splatters. If null, a circle is generated.")]
-    [SerializeField] private Sprite splatterSprite;
+    [Tooltip("Optional splatter sprites, already drawn in the table's perspective and colored. " +
+             "One is picked at random per splatter. If empty, a circle is generated and tinted with sauceColor.")]
+    [SerializeField] private Sprite[] splatterSprites;
+
+    [Tooltip("Vertical squash of the 2.5D table: splatters spread in an ellipse instead of a line.")]
+    [Range(0.2f, 1f)]
+    [SerializeField] private float perspectiveSquash = 0.6f;
+
+    [Tooltip("Chance per splatter of a tiny droplet bouncing out of the impact.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float dropletChance = 0.3f;
+
+    [Tooltip("How far (world units) a bouncing droplet lands from the impact.")]
+    [SerializeField] private float dropletDistance = 0.18f;
 
     [Tooltip("Sorting order for splatters (should be above the food sprite).")]
     [SerializeField] private int splatterSortingOrder = 5500;
@@ -76,6 +89,13 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Parent transform for splatters (e.g. the food GameObject). " +
              "If null, splatters are spawned in world space.")]
     [SerializeField] private Transform splatterParent;
+
+    [Header("Squeeze")]
+    [Tooltip("How much the bottle is squeezed while pouring (0 = off).")]
+    [SerializeField] private float squeezeAmount = 0.06f;
+
+    [Tooltip("Squeezes per second while pouring.")]
+    [SerializeField] private float squeezeFrequency = 6f;
 
     [Header("Fallback Visual")]
     [Tooltip("Color used to render a square placeholder when no sprite is assigned.")]
@@ -88,8 +108,8 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Width of the sauce bar in world units.")]
     [SerializeField] private float barWidth = 0.6f;
 
-    [Tooltip("Vertical offset of the bar above the container's center.")]
-    [SerializeField] private float barOffsetY = 0.55f;
+    [Tooltip("Gap (world units) between the top of the container sprite (the cap) and the bar.")]
+    [SerializeField] private float barGapAboveTop = 0.04f;
 
     [Tooltip("Background color of the sauce bar.")]
     [SerializeField] private Color barBackgroundColor = new Color(0.15f, 0.15f, 0.15f, 0.85f);
@@ -105,6 +125,8 @@ public class ToppingDraggable : MonoBehaviour
 
     private Vector3 startPosition;
     private Quaternion startRotation;
+    private Vector3 startScale;
+    private Vector2 squeezeFactor = Vector2.one;
     private int startSortingOrder;
     private SpriteRenderer selfRenderer;
 
@@ -113,6 +135,8 @@ public class ToppingDraggable : MonoBehaviour
     private bool toppingRegistered; 
 
     private LineRenderer sauceThread;
+    private LineRenderer sauceThreadOutline;
+    private static Material sauceThreadMaterial;
     private Vector3[] streamPoints;
     private float streamCurrentLength;
     private float perlinSeed;
@@ -150,6 +174,7 @@ public class ToppingDraggable : MonoBehaviour
         EnsurePlaceholderVisual();
         InitializeSauceAmount();
         CreateSauceBar();
+        UpdateSauceBar();
     }
 
     // En Start y no en Awake: en la primera escena el Awake del ToppingStock puede correr después.
@@ -159,6 +184,7 @@ public class ToppingDraggable : MonoBehaviour
 
         currentSauceAmount = ToppingStock.Instance.GetSauceAmount(toppingData);
         sauceEmpty = currentSauceAmount <= 0f;
+        UpdateSauceBar();
     }
 
     private bool UsesStock => !ignoreStock && toppingData != null && ToppingStock.Instance != null;
@@ -181,6 +207,8 @@ public class ToppingDraggable : MonoBehaviour
 
         startPosition = transform.position;
         startRotation = transform.rotation;
+        startScale = transform.localScale;
+        squeezeFactor = Vector2.one;
         GamepadHaptics.Play(HapticEvent.PieceGrabbed);
 
         if (selfRenderer != null)
@@ -236,7 +264,18 @@ public class ToppingDraggable : MonoBehaviour
             }
         }
 
+        UpdateSqueeze();
         UpdateSauceBar();
+    }
+
+    /// <summary>Mientras vierte, la botella se aprieta a pulsos (más angosta y apenas más alta).</summary>
+    private void UpdateSqueeze()
+    {
+        float pulse = isPouring
+            ? (Mathf.Sin(Time.time * squeezeFrequency * 2f * Mathf.PI) * 0.5f + 0.5f) * squeezeAmount
+            : 0f;
+        squeezeFactor = new Vector2(1f - pulse, 1f + pulse * 0.5f);
+        transform.localScale = new Vector3(startScale.x * squeezeFactor.x, startScale.y * squeezeFactor.y, startScale.z);
     }
 
     void OnWorldPointerUp()
@@ -255,9 +294,18 @@ public class ToppingDraggable : MonoBehaviour
 
         transform.position = startPosition;
         transform.rotation = startRotation;
+        RestoreScale();
 
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
+
+        UpdateSauceBar();
+    }
+
+    private void RestoreScale()
+    {
+        transform.localScale = startScale;
+        squeezeFactor = Vector2.one;
     }
 
     /// <summary>
@@ -276,6 +324,7 @@ public class ToppingDraggable : MonoBehaviour
 
         transform.position = startPosition;
         transform.rotation = startRotation;
+        RestoreScale();
 
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
@@ -303,6 +352,12 @@ public class ToppingDraggable : MonoBehaviour
         {
             Destroy(sauceThread.gameObject);
             sauceThread = null;
+        }
+
+        if (sauceThreadOutline != null)
+        {
+            Destroy(sauceThreadOutline.gameObject);
+            sauceThreadOutline = null;
         }
 
         // Toda vertida termina acá (soltar, cancelar, frasco vacío): se guarda una vez y no por frame.
@@ -343,13 +398,13 @@ public class ToppingDraggable : MonoBehaviour
         float max = (toppingData != null) ? toppingData.maxSauceAmount : 100f;
         currentSauceAmount = max;
         sauceEmpty = false;
+        UpdateSauceBar();
     }
 
     private void CreateSauceBar()
     {
         barRoot = new GameObject("SauceBar");
         barRoot.transform.SetParent(transform, false);
-        barRoot.transform.localPosition = new Vector3(0f, barOffsetY, 0f);
         barRoot.transform.localRotation = Quaternion.identity;
         barRoot.transform.localScale = Vector3.one;
 
@@ -372,24 +427,22 @@ public class ToppingDraggable : MonoBehaviour
         barFill.sprite = pixel;
         barFill.color = barFullColor;
         barFill.sortingOrder = barSortingOrder + 1;
-
-        barRoot.SetActive(false);
     }
 
+    /// <summary>
+    /// Siempre visible: en el panel muestra cuánta salsa queda y al arrastrar acompaña a la botella.
+    /// Va apenas por encima de la tapa (o de la base, con la botella dada vuelta).
+    /// </summary>
     private void UpdateSauceBar()
     {
         if (barRoot == null || barFill == null) return;
 
-        bool shouldShow = isDragging;
-        if (barRoot.activeSelf != shouldShow)
-            barRoot.SetActive(shouldShow);
-
-        if (!shouldShow) return;
-
         float ratio = GetSauceRatio();
 
         barRoot.transform.rotation = Quaternion.identity;
-        barRoot.transform.position = transform.position + new Vector3(0f, barOffsetY, 0f);
+        barRoot.transform.position = transform.position + new Vector3(0f, GetContainerHalfHeight() + barGapAboveTop, 0f);
+        // La barra no se aprieta con la botella.
+        barRoot.transform.localScale = new Vector3(1f / squeezeFactor.x, 1f / squeezeFactor.y, 1f);
 
         Vector3 fillScale = barFill.transform.localScale;
         fillScale.x = barWidth * ratio;
@@ -399,6 +452,16 @@ public class ToppingDraggable : MonoBehaviour
         barFill.transform.localPosition = new Vector3(fillOffsetX, 0f, 0f);
 
         barFill.color = Color.Lerp(barEmptyColor, barFullColor, ratio);
+    }
+
+    /// <summary>Media altura del sprite en mundo, sin contar la rotación ni el apretón.</summary>
+    private float GetContainerHalfHeight()
+    {
+        if (selfRenderer == null || selfRenderer.sprite == null)
+            return 0f;
+
+        Bounds b = selfRenderer.sprite.bounds;
+        return (b.center.y + b.extents.y) * Mathf.Abs(transform.lossyScale.y) / squeezeFactor.y;
     }
 
     private static Sprite GetPixelSprite()
@@ -426,21 +489,10 @@ public class ToppingDraggable : MonoBehaviour
 
         int segments = Mathf.Max(streamSegments, 2);
 
-        GameObject go = new GameObject("SauceThread");
-        sauceThread = go.AddComponent<LineRenderer>();
-
-        sauceThread.positionCount = segments;
-        sauceThread.startWidth = sauceWidth;
-        sauceThread.endWidth = sauceWidth * 0.5f;
-
-        sauceThread.material = new Material(Shader.Find("Sprites/Default"));
-        sauceThread.startColor = sauceColor;
-        sauceThread.endColor = new Color(sauceColor.r, sauceColor.g, sauceColor.b, sauceColor.a * 0.7f);
-
-        sauceThread.sortingOrder = 5999;
-        sauceThread.useWorldSpace = true;
-        sauceThread.numCapVertices = 4;
-        sauceThread.numCornerVertices = 4;
+        // Contorno oscuro detrás del chorro, como el borde del resto del arte.
+        Color outlineColor = new Color(sauceColor.r * 0.45f, sauceColor.g * 0.45f, sauceColor.b * 0.45f, sauceColor.a);
+        sauceThreadOutline = CreateStreamLine("SauceThreadOutline", sauceWidth * 1.35f, outlineColor, 5998, segments);
+        sauceThread = CreateStreamLine("SauceThread", sauceWidth, sauceColor, 5999, segments);
 
         streamPoints = new Vector3[segments];
         Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
@@ -448,6 +500,26 @@ public class ToppingDraggable : MonoBehaviour
             streamPoints[i] = origin;
 
         sauceThread.SetPositions(streamPoints);
+        sauceThreadOutline.SetPositions(streamPoints);
+    }
+
+    private static LineRenderer CreateStreamLine(string name, float width, Color color, int sortingOrder, int segments)
+    {
+        if (sauceThreadMaterial == null)
+            sauceThreadMaterial = new Material(Shader.Find("Sprites/Default"));
+
+        LineRenderer line = new GameObject(name).AddComponent<LineRenderer>();
+        line.positionCount = segments;
+        line.startWidth = width;
+        line.endWidth = width * 0.5f;
+        line.sharedMaterial = sauceThreadMaterial;
+        line.startColor = color;
+        line.endColor = new Color(color.r, color.g, color.b, color.a * 0.7f);
+        line.sortingOrder = sortingOrder;
+        line.useWorldSpace = true;
+        line.numCapVertices = 4;
+        line.numCornerVertices = 4;
+        return line;
     }
 
     private void UpdateSauceThread()
@@ -484,43 +556,96 @@ public class ToppingDraggable : MonoBehaviour
         }
 
         sauceThread.SetPositions(streamPoints);
+        if (sauceThreadOutline != null)
+            sauceThreadOutline.SetPositions(streamPoints);
     }
 
     private void SpawnSplatter()
     {
         Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
         Vector3 impactPoint = origin + Vector3.down * sauceLength;
-        float offsetX = Random.Range(-splatterSpread, splatterSpread);
-        impactPoint.x += offsetX;
 
+        // La tabla es 2.5D: la salsa se reparte en una elipse aplastada, no en una línea.
+        Vector2 spread = Random.insideUnitCircle * splatterSpread;
+        impactPoint.x += spread.x;
+        impactPoint.y += spread.y * perspectiveSquash;
+
+        float size = Mathf.Max(splatterSize + Random.Range(-splatterSizeVariation, splatterSizeVariation), 0.01f);
+        GameObject splatterGo = CreateSplatter(impactPoint, size);
+        ScalePunch.PopIn(splatterGo.transform, 0.3f, 0.12f);
+
+        if (Random.value < dropletChance)
+            SpawnDroplet(impactPoint, size);
+    }
+
+    private GameObject CreateSplatter(Vector3 position, float size)
+    {
         GameObject splatterGo = new GameObject("SauceSplatter");
-        splatterGo.transform.position = impactPoint;
+        splatterGo.transform.position = position;
 
-        float size = splatterSize + Random.Range(-splatterSizeVariation, splatterSizeVariation);
-        size = Mathf.Max(size, 0.01f);
-        splatterGo.transform.localScale = new Vector3(size, size, 1f);
+        SpriteRenderer sr = splatterGo.AddComponent<SpriteRenderer>();
+        bool customSprite = splatterSprites != null && splatterSprites.Length > 0;
+        sr.sprite = customSprite ? splatterSprites[Random.Range(0, splatterSprites.Length)] : GetSplatterSprite();
+        sr.sortingOrder = splatterSortingOrder;
 
-        splatterGo.transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+        if (customSprite)
+        {
+            // Los sprites ya traen color, perspectiva y brillo: solo se varía apenas el tono.
+            float tone = Random.Range(0.88f, 1f);
+            sr.color = new Color(tone, tone, tone, 1f);
+        }
+        else
+        {
+            Color c = sauceColor;
+            c.a = Random.Range(0.7f, 1f);
+            sr.color = c;
+        }
+
+        // Sin rotación al azar (rompería la perspectiva de la tabla): solo espejo horizontal.
+        float scale = size / Mathf.Max(sr.sprite.bounds.size.x, 0.0001f);
+        float flip = Random.value < 0.5f ? -1f : 1f;
+        float squash = customSprite ? 1f : perspectiveSquash;
+        splatterGo.transform.localScale = new Vector3(scale * flip, scale * squash, 1f);
 
         if (splatterParent != null)
             splatterGo.transform.SetParent(splatterParent, true);
 
-        SpriteRenderer sr = splatterGo.AddComponent<SpriteRenderer>();
-        sr.sprite = GetSplatterSprite();
-        sr.sortingOrder = splatterSortingOrder;
-
-        Color c = sauceColor;
-        c.a = Random.Range(0.7f, 1f);
-        sr.color = c;
-
         activeSplatters.Add(splatterGo);
+        return splatterGo;
+    }
+
+    /// <summary>Una gotita salta del impacto en un arco corto y queda como salpicadura chica.</summary>
+    private void SpawnDroplet(Vector3 impactPoint, float size)
+    {
+        Vector2 dir = Random.insideUnitCircle.normalized;
+        float distance = dropletDistance * Random.Range(0.6f, 1f);
+        Vector3 target = impactPoint + new Vector3(dir.x, dir.y * perspectiveSquash, 0f) * distance;
+
+        GameObject droplet = CreateSplatter(impactPoint, Mathf.Max(size * 0.35f, 0.01f));
+        StartCoroutine(FlyDroplet(droplet.transform, impactPoint, target));
+    }
+
+    private static IEnumerator FlyDroplet(Transform droplet, Vector3 from, Vector3 to)
+    {
+        const float duration = 0.16f;
+        const float arcHeight = 0.08f;
+
+        for (float t = 0f; t < duration; t += Time.deltaTime)
+        {
+            if (droplet == null)
+                yield break;
+
+            float k = t / duration;
+            droplet.position = Vector3.Lerp(from, to, k) + Vector3.up * (arcHeight * 4f * k * (1f - k));
+            yield return null;
+        }
+
+        if (droplet != null)
+            droplet.position = to;
     }
 
     private Sprite GetSplatterSprite()
     {
-        if (splatterSprite != null)
-            return splatterSprite;
-
         if (generatedCircleSprite != null)
             return generatedCircleSprite;
 
@@ -603,6 +728,32 @@ public class ToppingDraggable : MonoBehaviour
         currentSauceAmount = Mathf.Clamp(amount, 0f, max);
         sauceEmpty = currentSauceAmount <= 0f;
         SaveSauceToStock();
+        UpdateSauceBar();
+    }
+
+    /// <summary>
+    /// Agrega a la lista las salpicaduras que cayeron sobre el plato (las derramadas en la tabla quedan
+    /// afuera). PlateDeliveryDraggable las arrastra con el plato: son el único visual de la salsa.
+    /// </summary>
+    public static void CollectPlateSplatters(List<Transform> into)
+    {
+        if (into == null)
+            return;
+
+        for (int i = 0; i < ActiveInstances.Count; i++)
+        {
+            ToppingDraggable instance = ActiveInstances[i];
+            if (instance == null)
+                continue;
+
+            List<GameObject> splatters = instance.activeSplatters;
+            for (int j = 0; j < splatters.Count; j++)
+            {
+                GameObject splatter = splatters[j];
+                if (splatter != null && BuildFoodDropZone.IsOnPlateSurface(splatter.transform.position))
+                    into.Add(splatter.transform);
+            }
+        }
     }
 
     public static void ClearAllSplatters()
@@ -645,18 +796,24 @@ public class ToppingDraggable : MonoBehaviour
             return;
         }
 
+        // Sin visual extra en el plato: la salsa vertida (las salpicaduras) ya lo muestra.
         zone.BuildStation.AddTopping(toppingData);
-        bool visualSpawned = zone.SpawnPlateVisual(
-            selfRenderer != null ? selfRenderer.sprite : null, BuildFoodDropZone.PlateVisualKind.Topping);
         BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
-            zone.BuildStation, zone, toppingData, visualSpawned, this, activeSplatters.Count, currentSauceAmount));
+            zone.BuildStation, zone, toppingData, false, this, activeSplatters.Count, currentSauceAmount));
         Debug.Log("[ToppingDraggable] Topping registrado: " + toppingData.toppingName);
         TutorialSignals.Raise(TutorialSignal.ToppingAdded, target: transform);
     }
 
-    private BuildFoodDropZone FindDropZone()
+    private static BuildFoodDropZone FindDropZone()
     {
-        return FindFirstObjectByType<BuildFoodDropZone>();
+        IReadOnlyList<BuildFoodDropZone> zones = BuildFoodDropZone.Zones;
+        for (int i = 0; i < zones.Count; i++)
+        {
+            if (zones[i] != null && zones[i].isActiveAndEnabled)
+                return zones[i];
+        }
+
+        return null;
     }
 
     private bool IsInsideRotationZone()

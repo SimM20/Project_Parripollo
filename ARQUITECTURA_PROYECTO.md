@@ -424,9 +424,10 @@ Parrilla ──drag a la zona "ToBuild" (superficie naranja = plato)──► PL
 
 ToppingsPanel [T] ──drag──► plato
    │  BuildDraggableFoodItem (pan / side) → BuildFoodDropZone.TryAcceptAt → SetBread / AddSide + visual + Push(undo)
-   │  ToppingDraggable (frasco)           → verter sobre PouringZone → AddTopping + salpicaduras + Push(undo)
+   │  ToppingDraggable (botella squeeze)  → verter sobre PouringZone → AddTopping + salpicaduras + Push(undo)
    │                                         la salsa sale de ToppingStock (nota 39); vacío → aviso sauce.empty
-   │  Los visuales de side/topping van a SLOTS fijos alrededor de la carne (SpawnPlateVisual(sprite, kind)),
+   │                                         sin visual extra en el plato: las salpicaduras son la salsa
+   │  Los visuales de side/topping sólido van a SLOTS fijos alrededor de la carne (SpawnPlateVisual(sprite, kind)),
    │  con tamaño normalizado y sorting por DEBAJO del corte: acompañan, nunca tapan (ver 3.4 → Layout del plato)
 
 Undo  [RollBackButton → BuildUndoHistory.UndoLast]
@@ -1128,6 +1129,9 @@ la carne (400) y la tapaba. Ahora la zona es dueña de la composición:
   los slots seguían en diagonal hacia la derecha y se salían del plato.
 - La escala se normaliza con `FitScale`: `targetSize / sqrt(ancho × alto)` del sprite. Se usa la **media geométrica**
   y no el lado mayor porque las papas (sprite apaisado 26×16) quedaban enanas al lado de un bol cuadrado.
+- El sprite de un side en el plato sale de `SideSO.plateSprite` (porción servida, sin bowl); si está vacío se usa el
+  sprite del ítem del panel. Desde 2026-10-24 los tres sides lo tienen (`ensalada_plato.png`,
+  `ensaladahuevo_plato.png`, `papas_plato.png`). El panel y el globo del pedido (`sideSprite`) siguen mostrando el bowl.
 - `OnDrawGizmosSelected` dibuja el ancho utilizable de la fila de sides (amarillo) y de toppings (verde) en la Scene view
   para ajustar sin entrar en Play.
 - `SampleScene` conserva las claves viejas serializadas (`plateVisualWorldSpacing`…); Unity las ignora y toman
@@ -1154,7 +1158,7 @@ public void RefreshCollider()   // recalca el collider sobre la silueta del spri
 |---|---|
 | Creación | **Cero setup de escena.** `MeatTransferBuffer.AdoptVisualIntoPlate` lo hace `AddComponent` sobre cada visual de carne que entra al plato |
 | **Agarre (pick)** | **No usa `OnWorldPointerDown`/`Drag`/`Up`.** El pick se resuelve en `Update` (con `InputManager.PrimaryPressed` y `PointerPosition`): `PickUnderPointer(out mode)` recorre las instancias, proyecta el mouse sobre el plano z de **cada candidato** (`GetMouseWorldPos`) y prueba `selfCollider.OverlapPoint`. Gana el de `sortingOrder` más alto → `MeatOnly` (o `WholePlate` si el tutorial lo veta). Si ninguna carne está bajo el mouse, `PickPlateBodyUnderPointer()` prueba **el plato en sí** (`BuildFoodDropZone.Zones` con `HasLoadedPlate` + `ContainsPoint`, proyectando al z del plato) → `WholePlate`, conduce la primera carne viva. Chequea `GamePause.IsPaused`. Ver nota 22 |
-| Qué se arrastra | `WholePlate`: el plato **completo como bloque**: el sprite del plato (`BuildFoodDropZone.CollectActivePlateBodies`) + todas las instancias de `PlateDeliveryDraggable` + los visuales de sides/toppings (`CollectActivePlateVisuals`). El plato conserva su orden relativo: `0 + 5000` queda debajo de sides (`390 + 5000`) y carne (`400 + 5000`). `MeatOnly`: solo el `transform` de la instancia agarrada |
+| Qué se arrastra | `WholePlate`: el plato **completo como bloque**: el sprite del plato (`BuildFoodDropZone.CollectActivePlateBodies`) + todas las instancias de `PlateDeliveryDraggable` + los visuales de sides/toppings (`CollectActivePlateVisuals`) + las salpicaduras de salsa sobre el plato (`ToppingDraggable.CollectPlateSplatters`). El plato conserva su orden relativo: `0 + 5000` queda debajo de sides (`390 + 5000`) y carne (`400 + 5000`). `MeatOnly`: solo el `transform` de la instancia agarrada |
 | Estado del arrastre | `static`: la instancia que conduce (`activeDragger`), el modo (`activeMode`), el frame del último pick y las posiciones + `sortingOrder` de origen de cada visual. El `sortingOrder` sube `+5000` mientras dura y se restaura al soltar. `MeatOnly` guarda además el `MeatTransferBuffer` y `cut` + rotación (`TryGetPlateMeatInfo`) para el preview |
 | Gate de paneles | Si el punto cae sobre un `SlidingPanel` abierto (`StockPanelController` / `ToppingsPanelController` → `IsPointOverPanel`) el pick devuelve `null`: el click es del panel |
 | Al agarrar | `GamePause.OnPaused += CancelDrag`. Solo `WholePlate`: `CustomerView.SetDeliveryDragActive(true)` (los clientes tapados por paneles vuelven a ser detectables) y `TutorialManager.NotifyDeliverySelectionBegun()`. Solo `MeatOnly`: arranca el preview de slots |
@@ -1165,8 +1169,17 @@ public void RefreshCollider()   // recalca el collider sobre la silueta del spri
 | Cancelación | `OnDisable`/`OnDestroy` del visual que conduce llaman `CancelDrag()`: restauran posiciones y `sortingOrder` sin intentar el drop |
 | Collider | `SpriteColliderFitter.Fit(gameObject, selfRenderer, GrabPadding = 0.04)`: un `PolygonCollider2D` calcado sobre la **silueta del corte**, no una caja. Se re-mide en `Awake` y cada vez que el pan cambia sprite/escala/rotación del visual (`MeatTransferBuffer.UpdatePlateMeatSprite` y `RestorePlateMeatVisual` llaman a `RefreshCollider()`). Ver nota 33 |
 
-⚠️ Las salpicaduras de salsa (`SauceSplatter`, creadas por `ToppingDraggable`) **no** siguen al plato
-durante el arrastre: quedan en el mostrador y se limpian con `ToppingDraggable.ClearAllSplatters()` en la entrega.
+Las salpicaduras de salsa (`SauceSplatter`, creadas por `ToppingDraggable`) que cayeron **sobre el plato**
+viajan con él (`ToppingDraggable.CollectPlateSplatters`, filtra con `BuildFoodDropZone.IsOverPlateAt`): desde
+2026-10-24 son el único visual de la salsa (ya no se agrega el sprite del frasco al plato). Las derramadas en la
+tabla quedan donde cayeron. Todas se limpian con `ToppingDraggable.ClearAllSplatters()` en la entrega.
+
+**Verter (desde 2026-10-24).** Los frascos son botellas squeeze (`chimi_botella.png`, `criolla_botella.png`) que
+giran 180° en la `PouringZone`; `PouringOrigin` va en la punta del pico. Las salpicaduras usan `splatterSprites`
+(`Sprites/Salpicaduras/`, 4 por salsa, ya dibujadas en la perspectiva de la tabla: borde inferior oscuro = grosor):
+sin rotación al azar (solo espejo), repartidas en una elipse (`perspectiveSquash`), con pop al caer y gotitas que
+saltan en arco (`dropletChance`). El chorro tiene un contorno oscuro (segundo `LineRenderer`) y la botella se aprieta
+a pulsos mientras vierte (`squeezeAmount`); la barra de salsa compensa esa escala.
 
 #### `SpriteColliderFitter` — `Build/SpriteColliderFitter.cs` · **static**
 Ajusta el `Collider2D` de un visual a la **silueta real del sprite que está mostrando**.
