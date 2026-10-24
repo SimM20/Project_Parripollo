@@ -22,6 +22,12 @@ public sealed class RadioStation : MonoBehaviour
     /// <summary>Segundos que se espera a que una canción empiece a sonar (carga en segundo plano) antes de saltearla.</summary>
     private const float StartTimeout = 10f;
 
+    /// <summary>Margen al final del tema dentro del cual que no suene se toma como que terminó.</summary>
+    private const float EndMarginSeconds = 0.5f;
+
+    /// <summary>Reintentos para retomar un tema cortado a la mitad antes de darlo por perdido y pasar a otro.</summary>
+    private const int MaxResumeTries = 6;
+
     /// <summary>Prendida o apagada. Sobrevive entre noches; arranca prendida.</summary>
     public static bool IsOn { get; private set; } = true;
 
@@ -42,6 +48,8 @@ public sealed class RadioStation : MonoBehaviour
     private float startDeadline;
     private float nextRetry;
     private float pendingSeek = -1f;
+    private int resumeTries;
+    private int lastPlayingSamples;
 
     /// <summary>
     /// Una radio entró a la escena: le pasa las canciones y arranca la emisora si todavía no estaba.
@@ -123,6 +131,9 @@ public sealed class RadioStation : MonoBehaviour
 
         if (source.isPlaying)
         {
+            resumeTries = 0;
+            lastPlayingSamples = source.timeSamples;
+
             if (!started)
             {
                 started = true;
@@ -146,9 +157,45 @@ public sealed class RadioStation : MonoBehaviour
             return;
         }
 
+        // Se cortó a mitad de canción sin que terminara: sin Run In Background, al volver el foco a la
+        // ventana (o al restaurarla minimizada) el audio retoma unos frames después del juego y mientras
+        // tanto isPlaying da false. Una radio no cambia de tema por eso: sigue desde donde estaba.
+        int resumeAt = source.timeSamples > 0 ? source.timeSamples : lastPlayingSamples;
+        if (started && IsMidSong(resumeAt) && resumeTries < MaxResumeTries)
+        {
+            if (Time.unscaledTime >= nextRetry)
+            {
+                nextRetry = Time.unscaledTime + 0.5f;
+                resumeTries++;
+                source.Play();
+                source.timeSamples = resumeAt;
+            }
+            return;
+        }
+
         // No suena: terminó, o no pudo arrancar (clip roto) y se pasa a otra.
         if (started || Time.unscaledTime > startDeadline)
             PlayNext(false);
+    }
+
+    /// <summary>
+    /// True si la posición quedó en el medio del tema. Se mira la posición actual o, si el AudioSource ya
+    /// volvió a 0, la última en que se lo vio sonar: un tema que terminó solo se vio sonar cerca del final.
+    /// </summary>
+    private bool IsMidSong(int samples)
+    {
+        AudioClip clip = source.clip;
+        if (clip == null || clip.samples <= 0) return false;
+
+        int endMargin = Mathf.CeilToInt(clip.frequency * EndMarginSeconds);
+        return samples > 0 && samples < clip.samples - endMargin;
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        // Al volver se le da medio segundo al audio para retomar solo antes de pedirle nada.
+        if (hasFocus)
+            nextRetry = Time.unscaledTime + 0.5f;
     }
 
     private static bool IsAudioPaused()
@@ -176,6 +223,8 @@ public sealed class RadioStation : MonoBehaviour
 
         current = next;
         started = false;
+        resumeTries = 0;
+        lastPlayingSamples = 0;
         startDeadline = Time.unscaledTime + StartTimeout;
         nextRetry = Time.unscaledTime + 0.5f;
         pendingSeek = first ? Random.Range(0f, playlist[next].length * MaxStartFraction) : -1f;
