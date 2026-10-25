@@ -9251,13 +9251,15 @@ MonoBehaviour:
   squeezeAmount: 0.06
   squeezeFrequency: 6
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
-  barHeight: 0.5
-  barWidth: 5
-  barOffsetY: 1
-  barBackgroundColor: {r: 0.15, g: 0.15, b: 0.15, a: 0.85}
-  barFullColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
-  barEmptyColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
+  barWidthPixels: 44
+  barPixelSize: 0.12
+  barGapAboveTop: 0.04
+  barHighThreshold: 0.6
+  barLowThreshold: 0.3
   barSortingOrder: 6100
+  barPouringScale: 3
+  barGrowDuration: 0.3
+  barShrinkDuration: 0.25
 --- !u!1 &697905637
 GameObject:
   m_ObjectHideFlags: 0
@@ -13325,13 +13327,15 @@ MonoBehaviour:
   squeezeAmount: 0.06
   squeezeFrequency: 6
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
-  barHeight: 0.5
-  barWidth: 5
-  barOffsetY: 1
-  barBackgroundColor: {r: 0.15, g: 0.15, b: 0.15, a: 0.85}
-  barFullColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
-  barEmptyColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
+  barWidthPixels: 44
+  barPixelSize: 0.12
+  barGapAboveTop: 0.04
+  barHighThreshold: 0.6
+  barLowThreshold: 0.3
   barSortingOrder: 6100
+  barPouringScale: 3
+  barGrowDuration: 0.3
+  barShrinkDuration: 0.25
 --- !u!1 &1862173983
 GameObject:
   m_ObjectHideFlags: 0
