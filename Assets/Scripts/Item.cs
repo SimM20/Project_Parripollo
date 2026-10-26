@@ -12,6 +12,8 @@ public class Item : MonoBehaviour
 
     protected void OnWorldPointerDown()
     {
+        if (!CanBeginHold()) return;
+
         startPosition = transform.position;
         isHeldByMouse = true;
         GamePause.OnPaused += CancelDrag;
@@ -101,6 +103,9 @@ public class Item : MonoBehaviour
     protected virtual void HandleHeldInput()
     {
     }
+
+    /// <summary>False ignora el click: no arranca el agarre (Drag y Up quedan sin efecto).</summary>
+    protected virtual bool CanBeginHold() => true;
 
     protected virtual void OnPickedUp()
     {

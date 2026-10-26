@@ -153,6 +153,9 @@ public class Coal : Item
         GamepadHaptics.Play(HapticEvent.ActionRefused);
     }
 
+    // Con carbón del stock en la mano, el click sobre un carbón puesto apila otro (CoalPlacementMode): no se agarra.
+    protected override bool CanBeginHold() => !CoalPlacementMode.IsActive;
+
     protected override void OnPickedUp()
     {
         // Agarrado a mitad de un asentado: el origen es su lugar real, sin el corrimiento visual.

@@ -14,6 +14,8 @@ using UnityEngine;
 ///    al rotarla se busca el bloque más cercano con el nuevo footprint.
 ///  • Al soltar A se re-selecciona lo que quedó bajo el puntero (p. ej. la carne recién puesta).
 ///  • Al abrir un panel lateral se selecciona su primer elemento.
+///  • Con carbón del stock en la mano (<see cref="CoalPlacementMode"/>) apretar A no es agarrar:
+///    la selección se queda en el hueco (para poner otro) y se recorren huecos de carbón y lo clickeable.
 /// </summary>
 public sealed class GamepadNavigator
 {
@@ -65,9 +67,13 @@ public sealed class GamepadNavigator
             return false;
         }
 
+        // Con el carbón en la mano, A pone carbón: no hay nada agarrado aunque el botón esté apretado.
+        bool placingCoal = CoalPlacementMode.IsActive;
+        holding = holding && !placingCoal;
+
         GamepadNavTargets.DragKind drag = holding
             ? GamepadNavTargets.DetectDrag(pressed)
-            : GamepadNavTargets.DragKind.None;
+            : placingCoal ? GamepadNavTargets.DragKind.CoalPlacement : GamepadNavTargets.DragKind.None;
 
         if (hasFocus && !GamepadNavTargets.Refresh(ref focus, holding, drag, pressed))
         {

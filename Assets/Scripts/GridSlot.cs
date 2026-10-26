@@ -474,8 +474,9 @@ public class GridSlot : MonoBehaviour
     }
 
     // Área que cubren los slots de ese tipo. Usa el sprite del slot y no el collider: la capa
-    // inactiva tiene los colliders apagados.
-    private static bool IsOverSlotsOfType(IList<GridSlot> allSlots, ItemType type, Vector3 worldPoint)
+    // inactiva tiene los colliders apagados. CoalPlacementMode la usa para que solo un click sobre
+    // la parrilla ponga carbón (la búsqueda del hueco más cercano no tiene límite de distancia).
+    public static bool IsOverSlotsOfType(IList<GridSlot> allSlots, ItemType type, Vector3 worldPoint)
     {
         if (allSlots == null) return false;
 

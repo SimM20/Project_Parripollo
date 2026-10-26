@@ -144,6 +144,21 @@ public class InputManager : MonoBehaviour
     /// <summary>Con gamepad, el puntero se está moviendo libre (stick derecho) y hay que dibujar la flecha.</summary>
     public static bool FreeCursorActive => Instance != null && Instance.scheme == InputScheme.Gamepad && Instance.freeCursor;
 
+    /// <summary>Objeto del mundo que recibió el Down del botón principal en curso (null si no hay nada apretado).</summary>
+    public static GameObject PressedObject => Instance != null ? Instance.worldPointer.PressedObject : null;
+
+    /// <summary>Un modo dibuja su propio ícono en el puntero (carbón en la mano): sin cursor del sistema ni flecha del gamepad.</summary>
+    public static bool PointerIconHidden => Instance != null && Instance.pointerIconHidden;
+
+    /// <summary>Oculta o vuelve a mostrar el cursor del sistema y la flecha del gamepad. Quien lo oculta lo tiene que devolver.</summary>
+    public static void SetPointerIconHidden(bool hidden)
+    {
+        if (Instance == null) return;
+
+        Instance.pointerIconHidden = hidden;
+        Instance.ApplyCursorVisibility();
+    }
+
     /// <summary>La acción se apretó este frame (flanco, como Input.GetKeyDown).</summary>
     public static bool WasPressed(GameAction action)
     {
@@ -177,6 +192,7 @@ public class InputManager : MonoBehaviour
     private readonly WorldPointerDispatcher worldPointer = new WorldPointerDispatcher();
     private readonly GamepadNavigator navigator = new GamepadNavigator();
     private bool freeCursor;
+    private bool pointerIconHidden;
     private EventSystem configuredEventSystem;
     private IDisposable anyButtonListener;
 
@@ -349,9 +365,12 @@ public class InputManager : MonoBehaviour
         }
 
         scheme = next;
-        Cursor.visible = next == InputScheme.KeyboardMouse;
+        ApplyCursorVisibility();
         OnSchemeChanged?.Invoke(next);
     }
+
+    /// <summary>El cursor del sistema solo se ve con mouse y sin un ícono propio en el puntero.</summary>
+    private void ApplyCursorVisibility() => Cursor.visible = scheme == InputScheme.KeyboardMouse && !pointerIconHidden;
 
     private bool IsSchemeAllowed(InputScheme next)
     {

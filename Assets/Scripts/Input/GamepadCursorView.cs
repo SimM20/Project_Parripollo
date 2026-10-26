@@ -5,7 +5,8 @@ using UnityEngine.UI;
 /// Lo que se ve del puntero mientras se juega con gamepad (el cursor del sistema se oculta):
 ///  • Un recuadro de esquinas alrededor del elemento seleccionado con la navegación
 ///    (amarillo = algo para agarrar o clickear, verde = lugar donde soltar lo agarrado).
-///  • La flecha, solo cuando se mueve el cursor libre (stick derecho) o no hay nada seleccionado.
+///  • La flecha, solo cuando se mueve el cursor libre (stick derecho) o no hay nada seleccionado,
+///    y nunca si un modo dibuja su propio ícono (<see cref="InputManager.PointerIconHidden"/>).
 /// Va en el prefab de <see cref="InputManager"/>: arma su propio Canvas overlay por encima
 /// de todo, así funciona igual en todas las escenas y con el juego en pausa.
 /// Sin sprite asignado, genera la flecha en runtime.
@@ -57,7 +58,9 @@ public class GamepadCursorView : MonoBehaviour
 
         bool pad = InputManager.UsingGamepad;
         bool focused = pad && InputManager.HasNavFocus;
-        bool arrow = pad && (InputManager.FreeCursorActive || (!focused && !InputManager.PrimaryHeld));
+        // Con un ícono propio en el puntero (carbón en la mano) la flecha no se dibuja.
+        bool arrow = pad && !InputManager.PointerIconHidden
+                         && (InputManager.FreeCursorActive || (!focused && !InputManager.PrimaryHeld));
 
         SetEnabled(cursorImage, arrow);
         for (int i = 0; i < frameBars.Length; i++)

@@ -3,9 +3,11 @@ using UnityEngine;
 
 /// <summary>
 /// Celda del panel de stock: un ícono + un contador numérico por variedad.
-/// Es dueña de todo el arrastre (WorldPointerDispatcher nunca transfiere Drag/Up a otro collider):
-/// crea un ghost visual, muestra el preview sobre la grilla y al soltar descuenta del cooler
-/// y spawnea en la parrilla, con rollback si el spawn falla.
+/// Carne: es dueña de todo el arrastre (WorldPointerDispatcher nunca transfiere Drag/Up a otro
+/// collider): crea un ghost visual, muestra el preview sobre la grilla y al soltar descuenta del
+/// cooler y spawnea en la parrilla, con rollback si el spawn falla.
+/// Carbón: no se arrastra. La celda es un interruptor del <see cref="CoalPlacementMode"/> (click =
+/// carbón en la mano, otro click = soltarlo) y late mientras está seleccionado.
 /// </summary>
 public class StockPanelSlot : MonoBehaviour
 {
@@ -35,6 +37,9 @@ public class StockPanelSlot : MonoBehaviour
     [SerializeField] [Min(0.01f)] private float ghostReturnSeconds = 0.16f;
     [Tooltip("Golpe del contador cuando cambia la cantidad (0.25 = 25 %).")]
     [SerializeField] private float countPunch = 0.25f;
+    [Tooltip("Latido del icono de carbón mientras está en la mano (0.06 = 6 %), sobre iconHoverScale.")]
+    [SerializeField] private float iconArmedPulse = 0.06f;
+    [SerializeField] [Min(0f)] private float iconArmedPulseSpeed = 7f;
 
     [Header("Drag Ghost")]
     [SerializeField] private int ghostSortingOrder = 6000;
@@ -51,6 +56,11 @@ public class StockPanelSlot : MonoBehaviour
 
     /// <summary>El corte que se está arrastrando desde esta celda va rotado (R / B).</summary>
     public bool IsDragRotated => isGridRotated;
+
+    /// <summary>Icono de la celda (destino de la vuelta del carbón al soltarlo).</summary>
+    public SpriteRenderer IconRenderer => iconRenderer;
+
+    private bool IsCoalArmedHere => item is CoalSO && owner != null && owner.CoalPlacement != null && owner.CoalPlacement.IsArmed;
 
     private ItemDataSO item;
     private StockPanelController owner;
@@ -118,14 +128,17 @@ public class StockPanelSlot : MonoBehaviour
     void OnWorldPointerExit() => pointerOver = false;
 
     /// <summary>
-    /// El icono crece con el puntero encima (si hay algo para agarrar) y vuelve al soltar. Tiempo
-    /// sin escalar: es respuesta al puntero. El collider es de la celda y no se toca.
+    /// El icono crece con el puntero encima (si hay algo para agarrar) y vuelve al soltar; con el
+    /// carbón en la mano late. Tiempo sin escalar: es respuesta al puntero. El collider es de la
+    /// celda y no se toca.
     /// </summary>
     private void UpdateIconFeedback()
     {
         if (iconRenderer == null) return;
 
-        float target = pointerOver && isInteractable && !isDragging ? iconHoverScale : 1f;
+        float target = IsCoalArmedHere
+            ? iconHoverScale + Mathf.Sin(Time.unscaledTime * iconArmedPulseSpeed) * iconArmedPulse
+            : pointerOver && isInteractable && !isDragging ? iconHoverScale : 1f;
         if (Mathf.Abs(iconScale - target) < 0.0005f && Mathf.Abs(iconScaleVelocity) < 0.0005f)
             return;
 
@@ -236,6 +249,15 @@ public class StockPanelSlot : MonoBehaviour
 
     void OnWorldPointerDown()
     {
+        CoalPlacementMode placement = owner != null ? owner.CoalPlacement : null;
+
+        // Carbón: la celda es un interruptor. Con el carbón en la mano, este click lo suelta.
+        if (item is CoalSO && placement != null && placement.IsArmed)
+        {
+            placement.Disarm(true);
+            return;
+        }
+
         if (!isInteractable || item == null || owner == null)
             return;
 
@@ -250,6 +272,22 @@ public class StockPanelSlot : MonoBehaviour
             Debug.Log($"[StockPanelSlot] Arrastre de {item.itemName} bloqueado por el tutorial.");
             return;
         }
+
+        if (item is CoalSO coal)
+        {
+            if (placement != null)
+                placement.Arm(coal, this);
+            return;
+        }
+
+        // Agarrar carne suelta el carbón que estuviera en la mano; el arrastre sigue igual.
+        if (placement != null)
+            placement.Disarm(true);
+
+        // Y muestra la capa de carne, por el mismo camino que el botón (tutorial, ícono, eco).
+        GrillLayerToggle toggle = GrillLayerToggle.Current;
+        if (toggle != null && toggle.CurrentLayer != GrillLayerToggle.GrillLayer.Meat)
+            toggle.Toggle();
 
         draggingItem = item;
         isDragging = true;
@@ -389,22 +427,7 @@ public class StockPanelSlot : MonoBehaviour
             return true;
         }
 
-        if (droppedItem is CoalSO coal)
-        {
-            if (!grill.TrySpawnCoalAtPoint(coal, dropWorldPoint, out Coal spawnedCoal) || spawnedCoal == null)
-            {
-                cooler.Add(droppedItem, 1);
-                return false;
-            }
-
-            spawnedCoal.PlayDropSettle(ghost != null ? ghost.transform.position : dropWorldPoint);
-
-            TutorialSignals.Raise(TutorialSignal.CoalDraggedToGrill, coal: coal, target: spawnedCoal.transform);
-            TutorialSignals.Raise(TutorialSignal.CoalPlacedOnGrill, coal: coal, target: spawnedCoal.transform);
-            return true;
-        }
-
-        // Tipo desconocido: se devuelve el stock retirado.
+        // Tipo desconocido (el carbón no se arrastra: va por CoalPlacementMode): se devuelve el stock retirado.
         cooler.Add(droppedItem, 1);
         return false;
     }
@@ -430,21 +453,12 @@ public class StockPanelSlot : MonoBehaviour
         if (owner == null || draggingItem == null)
             return;
 
-        // Con la capa equivocada los buffers pintan el bloque en rojo: no se puede soltar ahí.
+        // Con la capa equivocada el buffer pinta el bloque en rojo: no se puede soltar ahí.
         if (draggingItem is MeatCutSO cut)
         {
             MeatTransferBuffer meatBuffer = owner.MeatBuffer;
             if (meatBuffer != null)
                 meatBuffer.UpdateMeatHolderHover(cut, worldPoint, isGridRotated);
-
-            return;
-        }
-
-        if (draggingItem is CoalSO coal)
-        {
-            CoalTransferBuffer coalBuffer = owner.CoalBuffer;
-            if (coalBuffer != null)
-                coalBuffer.UpdateCoalHolderHover(coal, worldPoint);
         }
     }
 
@@ -456,10 +470,6 @@ public class StockPanelSlot : MonoBehaviour
         MeatTransferBuffer meatBuffer = owner.MeatBuffer;
         if (meatBuffer != null)
             meatBuffer.ClearMeatHolderHover();
-
-        CoalTransferBuffer coalBuffer = owner.CoalBuffer;
-        if (coalBuffer != null)
-            coalBuffer.ClearCoalHolderHover();
     }
 
     // ── Ghost ───────────────────────────────────────────────────────────────
