@@ -25,6 +25,8 @@ public class StockPanelController : SlidingPanel
     [SerializeField] private GrillSystem grillSystem;
     [SerializeField] private MeatTransferBuffer meatTransferBuffer;
     [SerializeField] private CoalTransferBuffer coalTransferBuffer;
+    [Tooltip("Carbón en la mano (click en la celda de carbón). Vacío = se busca o se agrega en este mismo GameObject.")]
+    [SerializeField] private CoalPlacementMode coalPlacement;
 
     [Header("Drop Gating")]
     [Tooltip("Área válida de drop. Solo se aplica si requireDropAreaHit está activo.")]
@@ -50,6 +52,9 @@ public class StockPanelController : SlidingPanel
     /// <summary>Buffer de carbón usado solo para el preview de hover sobre la grilla.</summary>
     public CoalTransferBuffer CoalBuffer => coalTransferBuffer;
 
+    /// <summary>Modo "carbón en la mano" de la celda de carbón.</summary>
+    public CoalPlacementMode CoalPlacement => coalPlacement;
+
     private readonly List<StockPanelSlot> pooledSlots = new List<StockPanelSlot>();
     private readonly List<ItemDataSO> orderedItems = new List<ItemDataSO>();
     private readonly List<MeatCutSO> extraCuts = new List<MeatCutSO>();
@@ -68,6 +73,10 @@ public class StockPanelController : SlidingPanel
         }
 
         Instance = this;
+
+        if (coalPlacement == null && !TryGetComponent(out coalPlacement))
+            coalPlacement = gameObject.AddComponent<CoalPlacementMode>();
+        coalPlacement.Bind(this);
     }
 
     protected override void OnEnable()
@@ -101,7 +110,12 @@ public class StockPanelController : SlidingPanel
 
     protected override void OnEnteredGrillView() => RefreshSlots();
 
-    protected override void OnPanelClosing() => CancelActiveDrag();
+    protected override void OnPanelClosing()
+    {
+        CancelActiveDrag();
+        if (coalPlacement != null)
+            coalPlacement.Disarm(true);
+    }
 
     protected override void OnPanelOpened() => TutorialSignals.Raise(TutorialSignal.StockPanelOpened);
 
