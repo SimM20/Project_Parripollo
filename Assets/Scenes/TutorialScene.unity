@@ -466,6 +466,9 @@ MonoBehaviour:
   breadData: {fileID: 0}
   sideData: {fileID: 11400000, guid: 58dec6c585543d440b533202a3fb9f83, type: 2}
   toppingData: {fileID: 0}
+  dragScale: 1.12
+  liftSeconds: 0.08
+  rejectReturnSeconds: 0.16
 --- !u!212 &170925202
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -6992,6 +6995,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controller: {fileID: 1715773303}
+  hoverLighten: 0.22
+  clickLighten: 0.45
+  clickFlashSeconds: 0.18
+  colorSmoothTime: 0.05
 --- !u!61 &486339418
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -7795,12 +7802,12 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: dd74f019187152940a5589cb8c5b392e, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
-      propertyPath: autoSlotRowCenter.y
-      value: 1.94
-      objectReference: {fileID: 0}
-    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: toppingOrderChance
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: autoSlotRowCenter.y
+      value: 1.94
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: availabilityService
@@ -9016,13 +9023,15 @@ MonoBehaviour:
   squeezeAmount: 0.06
   squeezeFrequency: 6
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
-  barHeight: 0.5
-  barWidth: 5
-  barOffsetY: 1
-  barBackgroundColor: {r: 0.15, g: 0.15, b: 0.15, a: 0.85}
-  barFullColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
-  barEmptyColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
+  barWidthPixels: 44
+  barPixelSize: 0.12
+  barGapAboveTop: 0.04
+  barHighThreshold: 0.6
+  barLowThreshold: 0.3
   barSortingOrder: 6100
+  barPouringScale: 3
+  barGrowDuration: 0.3
+  barShrinkDuration: 0.25
 --- !u!1 &697905637
 GameObject:
   m_ObjectHideFlags: 0
@@ -9280,6 +9289,9 @@ MonoBehaviour:
   breadData: {fileID: 11400000, guid: 829722caacc1e9745856c2faeb47f743, type: 2}
   sideData: {fileID: 0}
   toppingData: {fileID: 0}
+  dragScale: 1.12
+  liftSeconds: 0.08
+  rejectReturnSeconds: 0.16
 --- !u!212 &841334105
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -9418,6 +9430,9 @@ MonoBehaviour:
   breadData: {fileID: 0}
   sideData: {fileID: 11400000, guid: da3ad8a5b5e46e942aeb55f3196950da, type: 2}
   toppingData: {fileID: 0}
+  dragScale: 1.12
+  liftSeconds: 0.08
+  rejectReturnSeconds: 0.16
 --- !u!212 &938380006
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -9529,6 +9544,9 @@ MonoBehaviour:
   breadData: {fileID: 11400000, guid: ad1426bab9d987d409a72bbbe745f760, type: 2}
   sideData: {fileID: 0}
   toppingData: {fileID: 0}
+  dragScale: 1.12
+  liftSeconds: 0.08
+  rejectReturnSeconds: 0.16
 --- !u!212 &955980796
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -10426,6 +10444,17 @@ MonoBehaviour:
   moneyPunchScale: 1.25
   moneyPunchSeconds: 0.25
   moneyCountSeconds: 0.35
+  customersPunch: 0.18
+  closedPunch: 0.25
+  closedTimeColor: {r: 1, g: 0.62, b: 0.42, a: 1}
+  tipPopupStyle:
+    color: {r: 0.98, g: 0.75, b: 0.14, a: 1}
+    greatColor: {r: 1, g: 0.87, b: 0.35, a: 1}
+    tierScale: {x: 0.65, y: 0.75, z: 0.85}
+    delaySeconds: 0.5
+    offsetFromPayment: {x: 0, y: 0.1, z: 0}
+    greatExtraHoldSeconds: 0.25
+    maxOnScreen: 3
 --- !u!114 &1228276919 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6338182058511020721, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -12483,6 +12512,8 @@ MonoBehaviour:
   openLocalX: 0
   closedLocalX: 4.6
   slideDuration: 0.2
+  openOvershoot: 0.8
+  opaqueBackground: 1
   itemsParent: {fileID: 1074514181}
   autoLayoutItems: 1
   itemSortingOrder: 100
@@ -12661,6 +12692,9 @@ MonoBehaviour:
   breadData: {fileID: 0}
   sideData: {fileID: 11400000, guid: 17ba11f30c190ab4a88577531933d6a4, type: 2}
   toppingData: {fileID: 0}
+  dragScale: 1.12
+  liftSeconds: 0.08
+  rejectReturnSeconds: 0.16
 --- !u!212 &1808131766
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -12877,13 +12911,15 @@ MonoBehaviour:
   squeezeAmount: 0.06
   squeezeFrequency: 6
   placeholderColor: {r: 0.25, g: 0.6, b: 0.2, a: 1}
-  barHeight: 0.5
-  barWidth: 5
-  barOffsetY: 1
-  barBackgroundColor: {r: 0.15, g: 0.15, b: 0.15, a: 0.85}
-  barFullColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
-  barEmptyColor: {r: 0.9, g: 0.2, b: 0.15, a: 1}
+  barWidthPixels: 44
+  barPixelSize: 0.12
+  barGapAboveTop: 0.04
+  barHighThreshold: 0.6
+  barLowThreshold: 0.3
   barSortingOrder: 6100
+  barPouringScale: 3
+  barGrowDuration: 0.3
+  barShrinkDuration: 0.25
 --- !u!1 &1862173983
 GameObject:
   m_ObjectHideFlags: 0
@@ -13076,6 +13112,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1959339324}
   - component: {fileID: 1959339325}
+  - component: {fileID: 1959339326}
   m_Layer: 0
   m_Name: Tabla
   m_TagString: Untagged
@@ -13150,6 +13187,19 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &1959339326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1959339323}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78cb9b958f1beaa4392d4c0351f43ba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  skin: 4
 --- !u!114 &1999034582 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4953675367217624768, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -13221,6 +13271,10 @@ MonoBehaviour:
   - {fileID: 8300000, guid: fa5425907cbe29744a414b0fc6c41bf9, type: 3}
   deliveryRejectedClip: {fileID: 0}
   strikeClip: {fileID: 0}
+  tipClip: {fileID: 0}
+  tipPitchByTier: {x: 1.25, y: 1.4, z: 1.6}
+  tipVolumeByTier: {x: 0.45, y: 0.6, z: 0.8}
+  tipSoundCooldown: 0.15
 --- !u!82 &2004183797
 AudioSource:
   m_ObjectHideFlags: 0
@@ -13577,6 +13631,11 @@ MonoBehaviour:
   minWidth: 1.6
   maxWidth: 2.8
   popDuration: 0.1
+  stateFlashDuration: 0.18
+  stateFlashPunch: 0.06
+  stateFlashBubblePunch: 0.01
+  stateFlashColor: {r: 0.98, g: 0.62, b: 0.18, a: 1}
+  burnedFlashColor: {r: 0.86, g: 0.16, b: 0.1, a: 1}
   panelColor: {r: 0.97, g: 0.94, b: 0.86, a: 0.97}
   borderColor: {r: 0.29, g: 0.19, b: 0.13, a: 1}
   titleColor: {r: 0.16, g: 0.12, b: 0.09, a: 1}

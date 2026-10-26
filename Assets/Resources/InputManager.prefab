@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5414344323932162187}
   - component: {fileID: 629816785239957068}
   - component: {fileID: 938259471384969102}
+  - component: {fileID: 3761013942399601701}
   m_Layer: 0
   m_Name: InputManager
   m_TagString: Untagged
@@ -542,3 +543,27 @@ MonoBehaviour:
     playsDuringPause: 0
     flashSeconds: 0
     flashColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &3761013942399601701
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7259191654463017508}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1978a77853cd904ba9578164f8ae488, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  arrow:
+    texture: {fileID: 2800000, guid: 73ed7a7c879f7864eb00165ffb858920, type: 3}
+    hotspot: {x: 2, y: 2}
+  tongs:
+    texture: {fileID: 2800000, guid: e1bc8209c0fa3964986314dca705aaf5, type: 3}
+    hotspot: {x: 7, y: 7}
+  shovel:
+    texture: {fileID: 2800000, guid: 2bd361fee3b1aad428a07d702dbd2882, type: 3}
+    hotspot: {x: 5, y: 5}
+  fork:
+    texture: {fileID: 2800000, guid: 0e059f9c79d1cd445a69be2c75f795bb, type: 3}
+    hotspot: {x: 5, y: 5}

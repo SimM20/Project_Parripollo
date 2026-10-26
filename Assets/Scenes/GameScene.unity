@@ -13528,6 +13528,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1959339324}
   - component: {fileID: 1959339325}
+  - component: {fileID: 1959339326}
   m_Layer: 0
   m_Name: Tabla
   m_TagString: Untagged
@@ -13602,6 +13603,19 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &1959339326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1959339323}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78cb9b958f1beaa4392d4c0351f43ba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  skin: 4
 --- !u!114 &1999034582 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4953675367217624768, guid: 9491b763193b0954487dedc1580658d3, type: 3}

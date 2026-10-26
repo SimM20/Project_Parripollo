@@ -30,6 +30,9 @@ public class GrillLayerToggle : MonoBehaviour
 
     public GrillLayer CurrentLayer { get; private set; }
 
+    /// <summary>Parrilla cuyas capas alterna este toggle.</summary>
+    public GrillSystem Grill => grillSystem;
+
     /// <summary>Toggle de la escena: el StockPanel pasa solo a la capa de lo que se toma (carbon o carne).</summary>
     public static GrillLayerToggle Current => instance;
 
