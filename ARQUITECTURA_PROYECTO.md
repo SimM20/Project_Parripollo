@@ -171,6 +171,10 @@
 > Simétrico: agarrar una carne del StockPanel pasa sola la parrilla a la **capa de carne** (`GrillLayerToggle.Toggle`).
 > Gamepad: con el carbón en la mano A no "agarra": se recorren los huecos de carbón con lugar (verde) junto a lo
 > clickeable. Secciones 3.1 (Input), 3.2 (`Coal`) y 3.3 (`StockPanelSlot`, `CoalPlacementMode`).
+> Última actualización parcial: **2026-10-27** (rama `UI-Redesing`) — **limpieza de `GameScene`**: salieron la instancia de
+> `CoolerView` (apagada; el prefab queda porque lo usan `TutorialScene` y `SampleScene`) y el par `GrillNotificationManager` +
+> `UIBubble` (nunca mostraba nada con vista única). Quedaron en null `ViewManager.coolerRoot` y el `toGrillAnchor` de
+> `MeatTransferBuffer` / `CoalTransferBuffer`: los dos toleran el null y solo los alimentaban los scripts deprecados de la heladera.
 
 ---
 
@@ -287,7 +291,7 @@ Prefabs relevantes: `Prefabs/GrillView.prefab` (contiene `StockPanel`, `MeatTray
 `Prefabs/UI/PauseCanvas.prefab`, `Prefabs/FeedbackBubble.prefab`, `Prefabs/Cliente*.prefab`, `Prefabs/FondoCicloDia.prefab`
 (fondo de `GameScene`, ver 3.9), `Prefabs/UI/MeatCookHoverBar.prefab` (barra de cocción por hover, hija de `MeatHoverBubble`
 en `GameScene` y `TutorialScene`). `BuildView.prefab` y
-`CoolerView.prefab` siguen en el proyecto pero **no se alcanzan**.
+`CoolerView.prefab` siguen en el proyecto pero **no se alcanzan** (`GameScene` ya no tiene instancia de `CoolerView`).
 
 ---
 
@@ -2487,7 +2491,7 @@ MainMenuScene (build index 0)
 | `PlateDeliveryDraggable` (×cortes en plato) | Pick propio + drag + hover de cliente + drop |
 | `CustomerSystem` | Descuenta paciencia (salvo `IsInFeedback`) y dispara `TriggerAngryLeaveFeedback` a los `IsAngry` |
 | `CustomerView` | `RefreshPatience` (color + temblor) |
-| `GrillNotificationManager` | Si la vista ≠ `Grill`: reagrupa carnes y refresca burbujas. **Nunca ocurre** con vista única |
+| `GrillNotificationManager` | Si la vista ≠ `Grill`: reagrupa carnes y refresca burbujas. **Nunca ocurre** con vista única. Ya no está en `GameScene`: solo existe el que crea `AutoInitialize` en la primera escena cargada |
 | `DayClock` | Avanza la hora con `Time.deltaTime`; al llegar al cierre se detiene y emite `OnClosingTime`. Escribe el HUD solo cuando cambia el texto |
 | `DayCycleBackground` | Lee `DayClock.CurrentHour` (o la hora fija / el override), la acerca con tope `catchUpHoursPerSecond` y, **solo si cambió**, se la pasa a las capas (`DayCycleLayer` → color/sprite, `DayCycleArc` → posición). Ver 3.9 |
 | `ParallaxLayer` (×2) | Desliza las nubes con `Time.deltaTime` y da la vuelta cada 19,2 u |
