@@ -1058,7 +1058,10 @@ Panel derecho (espejo del StockPanel, arriba a la derecha). Reemplaza al `FoodIt
 lógica (`BuildDraggableFoodItem`, `ToppingDraggable`). Solo aporta deslizamiento, layout en grilla
 (`itemsParent`, `columns`, `cellSpacing`, `firstCellLocalOffset`, `itemSortingOrder = 100` para quedar sobre el
 fondo del panel) y `OnPanelClosing` → `ToppingDraggable.CancelDrag()` de cada frasco. `autoLayoutItems` apagado
-respeta las posiciones puestas a mano. No tiene prefab: vive como override de instancia en `GameScene`.
+respeta las posiciones puestas a mano. Casillas de fondo: `slotsParent` (hermano de `itemsParent`, mismo origen)
+con un `SpriteRenderer` sliced `HUD Casilla` (orden 99) por item; `LayoutItems` alinea el hijo i al item i. Misma
+grilla que el StockPanel (4 col, paso 1.05×1.15) y mismo sprite que `StockPanelSlot.prefab`.
+No tiene prefab: vive como override de instancia en `GameScene`.
 `GameManager` lo abre con `T`.
 
 #### `MeatTransferBuffer` — `Core/MeatTransferBuffer.cs` (1145 líneas, el archivo más grande)

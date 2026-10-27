@@ -17,6 +17,8 @@ public class ToppingsPanelController : SlidingPanel
     [SerializeField] private Transform itemsParent;
     [Tooltip("Si está activo, el panel reacomoda los items en grilla al arrancar. Apagado respeta las posiciones puestas a mano.")]
     [SerializeField] private bool autoLayoutItems = true;
+    [Tooltip("Contenedor de las casillas de fondo, hermano de itemsParent y en el mismo origen. El hijo i se alinea al item i.")]
+    [SerializeField] private Transform slotsParent;
 
     [Header("Grid Layout")]
     [Tooltip("Orden de dibujo de los items. Debe superar al del fondo del panel o quedan tapados.")]
@@ -119,6 +121,9 @@ public class ToppingsPanelController : SlidingPanel
                 firstCellLocalOffset.x + col * cellSpacing.x,
                 firstCellLocalOffset.y - row * cellSpacing.y,
                 0f);
+
+            if (slotsParent != null && i < slotsParent.childCount)
+                slotsParent.GetChild(i).localPosition = layoutItems[i].localPosition;
 
             // El fondo del panel se dibuja por encima de los sprites de escena: sin esto los items quedan tapados.
             SpriteRenderer renderer = layoutItems[i].GetComponent<SpriteRenderer>();
