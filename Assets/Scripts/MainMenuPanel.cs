@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// Menú principal: botones (Jugar / Opciones / Salir), fade-in al cargar y número de versión.
@@ -22,6 +23,8 @@ public class MainMenuPanel : MonoBehaviour
     [SerializeField] private OptionsMenuPanel optionsPanel;
     [Tooltip("Lo que se oculta mientras el panel de opciones está abierto (botones, subtítulo...).")]
     [SerializeField] private GameObject[] hideWhileOptionsOpen;
+
+    private GameObject focusBeforeOptions;
 
     private void Start()
     {
@@ -50,11 +53,19 @@ public class MainMenuPanel : MonoBehaviour
     {
         if (optionsPanel == null) return;
 
+        focusBeforeOptions = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
         SetMenuVisible(false);
         optionsPanel.Open();
     }
 
-    private void HandleOptionsClosed() => SetMenuVisible(true);
+    private void HandleOptionsClosed()
+    {
+        SetMenuVisible(true);
+
+        // El cursor vuelve al botón desde el que se entró (Opciones), no al primero del menú.
+        if (focusBeforeOptions != null && focusBeforeOptions.activeInHierarchy && EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(focusBeforeOptions);
+    }
 
     private void SetMenuVisible(bool visible)
     {

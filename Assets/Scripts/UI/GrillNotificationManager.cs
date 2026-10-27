@@ -36,16 +36,6 @@ public class GrillNotificationManager : MonoBehaviour
         }
     }
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void AutoInitialize()
-    {
-        if (Instance == null && FindFirstObjectByType<GrillNotificationManager>() == null)
-        {
-            GameObject go = new GameObject("GrillNotificationManager");
-            go.AddComponent<GrillNotificationManager>();
-        }
-    }
-
     private void Awake()
     {
         if (Instance != null && Instance != this)

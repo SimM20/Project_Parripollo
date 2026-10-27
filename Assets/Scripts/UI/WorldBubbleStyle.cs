@@ -59,12 +59,18 @@ public static class WorldBubbleStyle
         return sr;
     }
 
+    // Fuente pixel del juego. Vive en Assets/Fonts/Resources porque las burbujas se crean por codigo.
+    private static TMP_FontAsset font;
+    private static TMP_FontAsset Font => font != null ? font : (font = Resources.Load<TMP_FontAsset>("ParripolloPixel SDF"));
+
     public static TextMeshPro CreateText(Transform parent, string textName, float fontSize, FontStyles style, TextAlignmentOptions align)
     {
         var go = new GameObject(textName);
         go.transform.SetParent(parent, false);
 
         var tmp = go.AddComponent<TextMeshPro>();
+        if (Font != null)
+            tmp.font = Font;
         tmp.fontSize = fontSize;
         tmp.fontStyle = style;
         tmp.alignment = align;

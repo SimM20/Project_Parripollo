@@ -44,9 +44,13 @@ public class PauseMenuHandler : MonoBehaviour
             optionsPanel.Close();
     }
 
+    // El menú sigue visible un instante mientras sale (PauseMenuTransition): un Submit de
+    // teclado/gamepad en ese lapso no tiene que disparar nada.
+    private static bool Closing => !GamePause.IsMenuPaused;
+
     private void OpenOptions()
     {
-        if (optionsPanel == null) return;
+        if (optionsPanel == null || Closing) return;
 
         SetMenuVisible(false);
         optionsPanel.Open();
@@ -76,7 +80,7 @@ public class PauseMenuHandler : MonoBehaviour
 
     private void EndGame()
     {
-        if (!endGameButtton) return;
+        if (!endGameButtton || Closing) return;
 
         // Cierre anticipado a pedido del jugador: suma a la racha de noches de la run.
         GameManager.Instance?.EndNightEarly();
@@ -84,13 +88,13 @@ public class PauseMenuHandler : MonoBehaviour
 
     private void BackToMenu()
     {
-        if (!backToMenuButtton) return;
+        if (!backToMenuButtton || Closing) return;
         SceneManagementUtils.ReturnToMainMenu();
     }
 
     private void RestartDay()
     {
-        if (!restartButtton) return;
+        if (!restartButtton || Closing) return;
         UIManager.Instance?.UnPauseGame();
     }
 }

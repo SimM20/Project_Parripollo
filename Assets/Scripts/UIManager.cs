@@ -9,6 +9,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private HudManager hudManager;
     [SerializeField] private GameObject pauseCanvasPrefab;
     private GameObject pauseCanvasInstance;
+    private PauseMenuTransition pauseTransition;
 
     private int servedCustomers;
     private int arrivedCustomers;
@@ -47,9 +48,13 @@ public class UIManager : MonoBehaviour
     public void PauseGame()
     {
         if (!pauseCanvasInstance)
+        {
             pauseCanvasInstance = Instantiate(pauseCanvasPrefab);
+            pauseTransition = pauseCanvasInstance.GetComponent<PauseMenuTransition>();
+        }
 
-        pauseCanvasInstance.SetActive(true);
+        if (pauseTransition != null) pauseTransition.Show();
+        else pauseCanvasInstance.SetActive(true);
         GamePause.SetMenuPaused(true);
     }
 
@@ -59,7 +64,10 @@ public class UIManager : MonoBehaviour
         {
             // Sin cerrarlas, la próxima pausa abriría directo en Opciones con los botones ocultos.
             pauseCanvasInstance.GetComponent<PauseMenuHandler>()?.CloseOptions();
-            pauseCanvasInstance.SetActive(false);
+
+            // El juego se despausa ya; el menú sale animado encima sin bloquear el input.
+            if (pauseTransition != null) pauseTransition.Hide();
+            else pauseCanvasInstance.SetActive(false);
         }
 
         GamePause.SetMenuPaused(false);

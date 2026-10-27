@@ -79,7 +79,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   customerSystem: {fileID: 0}
   grillSystem: {fileID: 0}
-  coolerSystem: {fileID: 0}
   viewManager: {fileID: 1699864827656576789}
   meatTransferBuffer: {fileID: 0}
 --- !u!1 &7517273547778581377

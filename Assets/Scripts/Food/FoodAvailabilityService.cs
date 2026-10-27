@@ -10,17 +10,20 @@ public class FoodAvailabilityService : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private FoodCatalogSO catalog;
-    [SerializeField] private CoolerSystem coolerSystem;
 
     public FoodCatalogSO Catalog => catalog;
+
+    // CoolerSystem is DontDestroyOnLoad: from the second night on, a scene reference would point
+    // to the duplicate that destroys itself in Awake, so the live stock is read from the singleton.
+    private static CoolerSystem Cooler => CoolerSystem.Instance;
 
     // ── Stock queries ───────────────────────────────────────────────────────
 
     /// <summary>Returns the current stock count for a given cut.</summary>
     public int GetCutStock(MeatCutSO cut)
     {
-        if (coolerSystem == null || cut == null) return 0;
-        return coolerSystem.GetCount(cut);
+        if (Cooler == null || cut == null) return 0;
+        return Cooler.GetCount(cut);
     }
 
     /// <summary>Returns true if the given cut has at least 1 unit in stock.</summary>
@@ -74,8 +77,8 @@ public class FoodAvailabilityService : MonoBehaviour
     /// </summary>
     public void InformMissingCut(MeatCutSO cut)
     {
-        if (coolerSystem == null || cut == null) return;
-        coolerSystem.InformMissingItem(cut);
+        if (Cooler == null || cut == null) return;
+        Cooler.InformMissingItem(cut);
     }
 
     // ── Debug ───────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -5,9 +6,10 @@ using UnityEngine;
 /// apenas más chico con un rebote leve. Va en la ventana del panel (no en el fondo oscuro).
 ///
 /// No demora nada: los botones responden desde el primer frame (el CanvasGroup nunca bloquea
-/// raycasts ni apaga la interacción) y cerrar sigue siendo instantáneo. Corre en tiempo sin escalar
-/// porque estos paneles se abren con el juego en pausa. Al apagarse vuelve a escala y alfa base,
-/// así que abrir y cerrar rápido no acumula nada.
+/// raycasts ni apaga la interacción). Cerrar es instantáneo salvo que quien lo cierra pida
+/// <see cref="PlayOut"/>, que encoge y desvanece la ventana y avisa al terminar. Corre en tiempo
+/// sin escalar porque estos paneles se abren con el juego en pausa. Al apagarse vuelve a escala y
+/// alfa base, así que abrir y cerrar rápido no acumula nada.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(RectTransform))]
@@ -21,6 +23,8 @@ public class UIPopIn : MonoBehaviour
     [SerializeField] [Range(0f, 3f)] private float overshoot = 1.2f;
     [Tooltip("Fundido de alfa con un CanvasGroup (se agrega solo si falta).")]
     [SerializeField] private bool fade = true;
+    [Tooltip("Segundos de la salida (solo si se pide con PlayOut).")]
+    [SerializeField] [Min(0.01f)] private float outDuration = 0.12f;
 
     /// <summary>
     /// Suma la entrada a una ventana armada en escena sin ella. Si la ventana está apagada, la
@@ -38,6 +42,8 @@ public class UIPopIn : MonoBehaviour
     private float baseAlpha = 1f;
     private float elapsed;
     private bool playing;
+    private bool leaving;
+    private Action onOutComplete;
 
     private void Awake()
     {
@@ -53,11 +59,29 @@ public class UIPopIn : MonoBehaviour
         }
     }
 
-    private void OnEnable()
+    private void OnEnable() => PlayIn();
+
+    /// <summary>Repite la entrada. Sirve para volver a abrir un panel que estaba saliendo sin haberse apagado.</summary>
+    public void PlayIn()
     {
+        leaving = false;
+        onOutComplete = null;
         elapsed = 0f;
         playing = true;
         Apply(0f);
+    }
+
+    /// <summary>
+    /// Encoge y desvanece la ventana; al terminar la deja oculta y llama a
+    /// <paramref name="onComplete"/> (quien la llamó decide si apaga el panel; al apagarse
+    /// vuelve a escala y alfa base).
+    /// </summary>
+    public void PlayOut(Action onComplete)
+    {
+        leaving = true;
+        onOutComplete = onComplete;
+        elapsed = 0f;
+        playing = true;
     }
 
     private void Update()
@@ -65,15 +89,37 @@ public class UIPopIn : MonoBehaviour
         if (!playing) return;
 
         elapsed += Time.unscaledDeltaTime;
-        float t = elapsed / duration;
+        float t = elapsed / (leaving ? outDuration : duration);
 
         if (t >= 1f)
         {
+            if (leaving)
+            {
+                // Queda oculta hasta que la apaguen (OnDisable restaura) o vuelva a entrar: restaurar
+                // acá la mostraría entera un par de frames antes de que se apague el panel.
+                ApplyOut(1f);
+                playing = false;
+                leaving = false;
+                Action done = onOutComplete;
+                onOutComplete = null;
+                done?.Invoke();
+                return;
+            }
+
             Restore();
             return;
         }
 
-        Apply(t);
+        if (leaving) ApplyOut(t);
+        else Apply(t);
+    }
+
+    private void ApplyOut(float t)
+    {
+        rect.localScale = baseScale * Mathf.Lerp(1f, fromScale, FeelEase.InCubic(t));
+
+        if (group != null)
+            group.alpha = baseAlpha * (1f - FeelEase.InQuad(t));
     }
 
     private void Apply(float t)
@@ -88,6 +134,8 @@ public class UIPopIn : MonoBehaviour
     private void Restore()
     {
         playing = false;
+        leaving = false;
+        onOutComplete = null;
 
         if (rect != null)
             rect.localScale = baseScale;
