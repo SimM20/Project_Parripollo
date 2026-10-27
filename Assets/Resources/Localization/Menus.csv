@@ -29,6 +29,7 @@ menu.play,JUGAR,PLAY
 menu.options,OPCIONES,OPTIONS
 menu.quit,SALIR,QUIT
 # Menú de pausa (PauseCanvas)
+pause.title,PAUSA,PAUSED
 pause.sfx,SONIDO (SFX),SOUND (SFX)
 pause.music,MÚSICA,MUSIC
 pause.resume,VOLVER A JUGAR,RESUME
