@@ -134,6 +134,12 @@ public class CustomerSystem : MonoBehaviour
     [Tooltip("Máximo de toppings distintos por pedido. El pool sale de FoodCatalog.availableToppings.")]
     [SerializeField] [Min(1)] private int maxToppingsPerOrder = 2;
 
+    [Header("Order Sides")]
+    [Tooltip("Probabilidad de que un pedido al plato lleve guarniciones. Se tira aparte de los toppings. Los pedidos con pan nunca llevan.")]
+    [SerializeField] [Range(0f, 1f)] private float sideOrderChance = 0.4f;
+    [Tooltip("Máximo de guarniciones distintas por pedido. El pool sale de FoodCatalog.availableSides.")]
+    [SerializeField] [Min(1)] private int maxSidesPerOrder = 1;
+
     [Header("Night Progression")]
     [SerializeField] private MeatCutSO nightTwoCut;
     [SerializeField]
@@ -295,11 +301,25 @@ public class CustomerSystem : MonoBehaviour
             );
         }
 
+        IReadOnlyList<SideSO> orderSides =
+            Catalog != null ? Catalog.GetAvailableSides() : null;
+
+        if (orderSides == null || orderSides.Count == 0)
+        {
+            Debug.LogWarning(
+                "[CustomerSystem] El catálogo no tiene guarniciones: " +
+                "ningún pedido llevará guarniciones."
+            );
+        }
+
         orderSystem = new OrderSystem(
             cuts,
             orderToppings,
             toppingOrderChance,
-            maxToppingsPerOrder
+            maxToppingsPerOrder,
+            orderSides,
+            sideOrderChance,
+            maxSidesPerOrder
         );
 
         slotViews = new CustomerView[
@@ -738,6 +758,9 @@ public class CustomerSystem : MonoBehaviour
             (order.IsSandwich
                 ? " (" + order.bread.breadName + ")"
                 : " al plato") +
+            (order.sides.Count > 0
+                ? " + " + string.Join(", ", order.sides.Select(s => s.sideName))
+                : "") +
             (order.toppings.Count > 0
                 ? " + " + string.Join(", ", order.toppings.Select(t => t.toppingName))
                 : "") +
@@ -1134,7 +1157,7 @@ public class CustomerSystem : MonoBehaviour
         order.SetSingleCut(newCut, order.GetRequestedState(0));
 
         // El sustituto puede cambiar el modo de servicio: lleva pan solo si el corte lo admite
-        // (y el pan que ese corte exige), y con pan no queda ningún topping.
+        // (y el pan que ese corte exige), y con pan no queda ningún topping ni guarnición.
         bool wantsSandwich =
             newCut.servingMode == ServingMode.SandwichOnly ||
             (newCut.servingMode == ServingMode.Both && order.IsSandwich);
@@ -1142,7 +1165,10 @@ public class CustomerSystem : MonoBehaviour
         order.bread = wantsSandwich ? newCut.requiredBread : null;
 
         if (order.IsSandwich)
+        {
             order.toppings.Clear();
+            order.sides.Clear();
+        }
 
         customer.IsTipAnulada = true;
 

@@ -109,10 +109,10 @@ public static class CookingDeliveryEvaluator
         return Mathf.Floor(price * ReducedPriceMultiplier);
     }
 
-    // ── Extras: toppings y pan ──────────────────────────────────────────────
+    // ── Extras: toppings, guarniciones y pan ────────────────────────────────
 
     /// <summary>
-    /// Resultado de comparar lo pedido contra lo armado en toppings y pan.
+    /// Resultado de comparar lo pedido contra lo armado en toppings, guarniciones y pan.
     /// Cada faltante o sobrante cuenta como un punto de desfase, en la misma escala
     /// que el punto de cocción: 1 tolera (sin propina), >= 2 mitad de precio.
     /// </summary>
@@ -121,69 +121,85 @@ public static class CookingDeliveryEvaluator
         public int offset;
         public List<ToppingSO> missingToppings;
         public List<ToppingSO> extraToppings;
+        public List<SideSO> missingSides;
+        public List<SideSO> extraSides;
         /// <summary>Pidieron al plato y el armado tiene pan.</summary>
         public bool extraBread;
 
         public bool HasIssues => offset > 0;
     }
 
-    /// <summary>
-    /// Compara toppings pedidos vs armados como conjuntos (verter dos veces la misma salsa
-    /// no es error) y detecta pan de más. La falta de pan no entra acá: bloquea antes en
-    /// BuildStationSystem.TryBuildSandwich.
-    /// </summary>
+    /// <summary>Igual que la versión completa, sin mirar guarniciones.</summary>
     public static ExtrasResult EvaluateExtras(
         IReadOnlyList<ToppingSO> requestedToppings,
         IReadOnlyList<ToppingSO> assembledToppings,
         bool breadRequested,
         bool breadAssembled)
     {
+        return EvaluateExtras(requestedToppings, assembledToppings, null, null, breadRequested, breadAssembled);
+    }
+
+    /// <summary>
+    /// Compara toppings y guarniciones pedidos vs armados como conjuntos (verter dos veces
+    /// la misma salsa no es error) y detecta pan de más. La falta de pan no entra acá:
+    /// bloquea antes en BuildStationSystem.TryBuildSandwich. Un pedido con pan no lleva
+    /// extras, así que cualquier salsa o guarnición sobre el sándwich cuenta como sobrante.
+    /// </summary>
+    public static ExtrasResult EvaluateExtras(
+        IReadOnlyList<ToppingSO> requestedToppings,
+        IReadOnlyList<ToppingSO> assembledToppings,
+        IReadOnlyList<SideSO> requestedSides,
+        IReadOnlyList<SideSO> assembledSides,
+        bool breadRequested,
+        bool breadAssembled)
+    {
         var result = new ExtrasResult
         {
             missingToppings = new List<ToppingSO>(),
-            extraToppings = new List<ToppingSO>()
+            extraToppings = new List<ToppingSO>(),
+            missingSides = new List<SideSO>(),
+            extraSides = new List<SideSO>()
         };
 
-        if (requestedToppings != null)
-        {
-            for (int i = 0; i < requestedToppings.Count; i++)
-            {
-                ToppingSO topping = requestedToppings[i];
-                if (topping == null || result.missingToppings.Contains(topping)) continue;
-
-                if (!Contains(assembledToppings, topping))
-                    result.missingToppings.Add(topping);
-            }
-        }
-
-        if (assembledToppings != null)
-        {
-            for (int i = 0; i < assembledToppings.Count; i++)
-            {
-                ToppingSO topping = assembledToppings[i];
-                if (topping == null || result.extraToppings.Contains(topping)) continue;
-
-                if (!Contains(requestedToppings, topping))
-                    result.extraToppings.Add(topping);
-            }
-        }
+        CollectDifference(requestedToppings, assembledToppings, result.missingToppings);
+        CollectDifference(assembledToppings, requestedToppings, result.extraToppings);
+        CollectDifference(requestedSides, assembledSides, result.missingSides);
+        CollectDifference(assembledSides, requestedSides, result.extraSides);
 
         result.extraBread = !breadRequested && breadAssembled;
 
         result.offset = result.missingToppings.Count
                       + result.extraToppings.Count
+                      + result.missingSides.Count
+                      + result.extraSides.Count
                       + (result.extraBread ? 1 : 0);
 
         return result;
     }
 
-    private static bool Contains(IReadOnlyList<ToppingSO> list, ToppingSO topping)
+    /// <summary>Agrega a <c>result</c> cada elemento de <c>source</c> (sin repetir) que no está en <c>other</c>.</summary>
+    private static void CollectDifference<T>(IReadOnlyList<T> source, IReadOnlyList<T> other, List<T> result)
+        where T : Object
+    {
+        if (source == null) return;
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            T item = source[i];
+            if (item == null || result.Contains(item)) continue;
+
+            if (!Contains(other, item))
+                result.Add(item);
+        }
+    }
+
+    private static bool Contains<T>(IReadOnlyList<T> list, T item) where T : Object
     {
         if (list == null) return false;
 
         for (int i = 0; i < list.Count; i++)
         {
-            if (list[i] == topping)
+            if (list[i] == item)
                 return true;
         }
 
@@ -192,7 +208,7 @@ public static class CookingDeliveryEvaluator
 
     /// <summary>
     /// Resumen corto de los extras mal entregados, por ejemplo
-    /// "Falta Chimichurri · Sobra Salsa criolla · Sobra el pan". Null si no hay errores.
+    /// "Falta Chimichurri · Falta Fritas · Sobra Salsa criolla · Sobra el pan". Null si no hay errores.
     /// </summary>
     public static string BuildExtrasMessage(ExtrasResult extras)
     {
@@ -207,10 +223,22 @@ public static class CookingDeliveryEvaluator
                 parts.Add(Loc.Format("delivery.extras.missing", extras.missingToppings[i].toppingName));
         }
 
+        if (extras.missingSides != null)
+        {
+            for (int i = 0; i < extras.missingSides.Count; i++)
+                parts.Add(Loc.Format("delivery.extras.missing", extras.missingSides[i].DisplayName));
+        }
+
         if (extras.extraToppings != null)
         {
             for (int i = 0; i < extras.extraToppings.Count; i++)
                 parts.Add(Loc.Format("delivery.extras.extra", extras.extraToppings[i].toppingName));
+        }
+
+        if (extras.extraSides != null)
+        {
+            for (int i = 0; i < extras.extraSides.Count; i++)
+                parts.Add(Loc.Format("delivery.extras.extra", extras.extraSides[i].DisplayName));
         }
 
         if (extras.extraBread)
@@ -258,7 +286,10 @@ public static class CookingDeliveryEvaluator
             return result;
 
         bool perfect = worstOffset <= 0;
+        // Complejidad: cada salsa o guarnición pedida suma lo mismo.
         int toppings = customer.order != null && customer.order.toppings != null ? customer.order.toppings.Count : 0;
+        if (customer.order != null && customer.order.sides != null)
+            toppings += customer.order.sides.Count;
 
         result.speedFactor = rules.GetSpeedFactor(customer.Patience01);
         float streakPercent = perfect ? rules.GetStreakBonus(perfectStreak) : 0f;

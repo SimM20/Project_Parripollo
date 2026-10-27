@@ -249,12 +249,12 @@ public class GameManager : MonoBehaviour
 
         public float payment;
         public float tip;
-        /// <summary>Peor desfase de toda la entrega: cocción de cada corte y extras (toppings/pan).</summary>
+        /// <summary>Peor desfase de toda la entrega: cocción de cada corte y extras (toppings/guarniciones/pan).</summary>
         public int worstOffset;
         public CustomerFeedbackState feedbackState;
 
         /// <summary>
-        /// Toppings faltantes/sobrantes y pan de más, medidos en la misma escala de desfase
+        /// Toppings y guarniciones faltantes/sobrantes y pan de más, medidos en la misma escala de desfase
         /// que la cocción. <c>extrasNote</c> lo resume para el jugador; null si no hay errores.
         /// </summary>
         public CookingDeliveryEvaluator.ExtrasResult extras;
@@ -372,11 +372,13 @@ public class GameManager : MonoBehaviour
                 result.worstOffset = cutResult.worstOffset;
         }
 
-        // ── Extras: toppings faltantes/sobrantes y pan de más, misma escala que la cocción ──
+        // ── Extras: toppings/guarniciones faltantes o sobrantes y pan de más, misma escala que la cocción ──
         // Cada error suma 1 de desfase: uno solo cuesta la propina, dos o más parten el precio.
         result.extras = CookingDeliveryEvaluator.EvaluateExtras(
             customer.order.toppings,
             buildStationSystem.AssembledToppings,
+            customer.order.sides,
+            buildStationSystem.AssembledSides,
             isSandwich,
             buildStationSystem.HasBread);
         result.extrasNote = CookingDeliveryEvaluator.BuildExtrasMessage(result.extras);

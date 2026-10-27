@@ -7,39 +7,67 @@ public class OrderSystem
     private readonly List<ToppingSO> availableToppings;
     private readonly float toppingChance;
     private readonly int maxToppingsPerOrder;
+    private readonly List<SideSO> availableSides;
+    private readonly float sideChance;
+    private readonly int maxSidesPerOrder;
 
     public OrderSystem(List<WeightedOrderCut> cuts)
         : this(cuts, null, 0f, 0)
     {
     }
 
-    /// <param name="toppings">Toppings que un cliente puede pedir. Null o vacío: nunca pide toppings.</param>
-    /// <param name="toppingChance">Probabilidad [0..1] de que un pedido al plato lleve toppings.</param>
-    /// <param name="maxToppingsPerOrder">Máximo de toppings distintos por pedido.</param>
     public OrderSystem(
         List<WeightedOrderCut> cuts,
         IReadOnlyList<ToppingSO> toppings,
         float toppingChance,
         int maxToppingsPerOrder)
+        : this(cuts, toppings, toppingChance, maxToppingsPerOrder, null, 0f, 0)
+    {
+    }
+
+    /// <param name="toppings">Toppings (salsas) que un cliente puede pedir. Null o vacío: nunca pide toppings.</param>
+    /// <param name="toppingChance">Probabilidad [0..1] de que un pedido al plato lleve toppings.</param>
+    /// <param name="maxToppingsPerOrder">Máximo de toppings distintos por pedido.</param>
+    /// <param name="sides">Guarniciones que un cliente puede pedir. Null o vacío: nunca pide guarniciones.</param>
+    /// <param name="sideChance">Probabilidad [0..1] de que un pedido al plato lleve guarniciones.</param>
+    /// <param name="maxSidesPerOrder">Máximo de guarniciones distintas por pedido.</param>
+    public OrderSystem(
+        List<WeightedOrderCut> cuts,
+        IReadOnlyList<ToppingSO> toppings,
+        float toppingChance,
+        int maxToppingsPerOrder,
+        IReadOnlyList<SideSO> sides,
+        float sideChance,
+        int maxSidesPerOrder)
     {
         availableCuts =
             cuts != null
                 ? new List<WeightedOrderCut>(cuts)
                 : new List<WeightedOrderCut>();
 
-        availableToppings = new List<ToppingSO>();
-
-        if (toppings != null)
-        {
-            for (int i = 0; i < toppings.Count; i++)
-            {
-                if (toppings[i] != null)
-                    availableToppings.Add(toppings[i]);
-            }
-        }
-
+        availableToppings = CopyNonNull(toppings);
         this.toppingChance = Mathf.Clamp01(toppingChance);
         this.maxToppingsPerOrder = Mathf.Max(0, maxToppingsPerOrder);
+
+        availableSides = CopyNonNull(sides);
+        this.sideChance = Mathf.Clamp01(sideChance);
+        this.maxSidesPerOrder = Mathf.Max(0, maxSidesPerOrder);
+    }
+
+    private static List<T> CopyNonNull<T>(IReadOnlyList<T> source) where T : Object
+    {
+        var result = new List<T>();
+
+        if (source == null)
+            return result;
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            if (source[i] != null)
+                result.Add(source[i]);
+        }
+
+        return result;
     }
 
     public Order GenerateOrder()
@@ -66,40 +94,44 @@ public class OrderSystem
         if (makeSandwich && cut.requiredBread != null)
             order.bread = cut.requiredBread;
 
-        // El pan bloquea cualquier topping: solo los pedidos al plato pueden llevarlos.
+        // El pan bloquea salsas y guarniciones: solo los pedidos al plato pueden llevarlas.
+        // Cada tipo se tira por separado, así un plato puede salir solo, solo con salsa,
+        // solo con guarnición o con las dos.
         if (!order.IsSandwich)
-            AddRandomToppings(order);
+        {
+            AddRandomDistinct(availableToppings, toppingChance, maxToppingsPerOrder, order.toppings);
+            AddRandomDistinct(availableSides, sideChance, maxSidesPerOrder, order.sides);
+        }
 
         return order;
     }
 
     /// <summary>
-    /// Con probabilidad <c>toppingChance</c>, agrega entre 1 y <c>maxToppingsPerOrder</c>
-    /// toppings distintos elegidos al azar del pool disponible.
+    /// Con probabilidad <c>chance</c>, agrega a <c>target</c> entre 1 y <c>maxCount</c>
+    /// elementos distintos elegidos al azar de <c>pool</c>.
     /// </summary>
-    private void AddRandomToppings(Order order)
+    private static void AddRandomDistinct<T>(List<T> pool, float chance, int maxCount, List<T> target)
     {
-        if (availableToppings.Count == 0 ||
-            maxToppingsPerOrder <= 0 ||
-            Random.value >= toppingChance)
+        if (pool.Count == 0 ||
+            maxCount <= 0 ||
+            Random.value >= chance)
         {
             return;
         }
 
-        int maxCount = Mathf.Min(maxToppingsPerOrder, availableToppings.Count);
-        int count = Random.Range(1, maxCount + 1);
+        int count = Random.Range(1, Mathf.Min(maxCount, pool.Count) + 1);
 
-        // Fisher-Yates parcial sobre una copia: garantiza toppings distintos sin repetir tiradas.
-        List<ToppingSO> pool = new List<ToppingSO>(availableToppings);
+        // Fisher-Yates parcial sobre una copia: garantiza elementos distintos sin repetir tiradas.
+        List<T> shuffled = new List<T>(pool);
 
         for (int i = 0; i < count; i++)
         {
-            int j = Random.Range(i, pool.Count);
-            ToppingSO picked = pool[j];
-            pool[j] = pool[i];
-            pool[i] = picked;
+            int j = Random.Range(i, shuffled.Count);
+            T picked = shuffled[j];
+            shuffled[j] = shuffled[i];
+            shuffled[i] = picked;
 
-            order.toppings.Add(picked);
+            target.Add(picked);
         }
     }
 

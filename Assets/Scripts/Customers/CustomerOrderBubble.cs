@@ -228,8 +228,8 @@ public class CustomerOrderBubble : MonoBehaviour
     // ── Contenido ────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Junta los acompaniamientos del pedido. Hoy <c>OrderSystem</c> solo genera toppings,
-    /// pero el modelo ya tiene guarniciones: las dos entran por la misma fila de iconos.
+    /// Junta los acompaniamientos del pedido: guarniciones y toppings entran por la misma
+    /// fila de iconos.
     /// </summary>
     private void CollectExtras(Order order)
     {
@@ -492,6 +492,14 @@ public class CustomerOrderBubble : MonoBehaviour
 
         const float iconSize = 0.3f;
 
+        // El paso contempla el ancho maximo de FitSprite, no el nominal. Si la fila no entra
+        // en el ancho de la burbuja (dos salsas + una guarnicion) los iconos se juntan.
+        float maxIconWidth = iconSize * 1.3f;
+        float step = maxIconWidth + 0.08f;
+        float available = size.x * 0.5f - 0.1f - textLeft;
+        if (count > 1)
+            step = Mathf.Min(step, (available - maxIconWidth) / (count - 1));
+
         for (int i = 0; i < extraIcons.Count; i++)
         {
             SpriteRenderer sr = extraIcons[i];
@@ -513,8 +521,7 @@ public class CustomerOrderBubble : MonoBehaviour
                 sprite,
                 iconSize,
                 new Vector3(
-                    // El paso contempla el ancho maximo de FitSprite, no el nominal.
-                    textLeft + iconSize * 0.65f + i * (iconSize * 1.3f + 0.08f),
+                    textLeft + maxIconWidth * 0.5f + i * step,
                     -halfH + 0.14f + iconSize * 0.5f,
                     -0.01f));
         }

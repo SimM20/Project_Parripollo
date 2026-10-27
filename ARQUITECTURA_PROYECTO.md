@@ -1298,8 +1298,11 @@ static DeliveryFeedbackEvaluation EvaluateDeliveryFeedback(Customer, float baseP
 | `1` | 100 % | ✅ solo con paciencia `>= 30 %` |
 | `>= 2` | `floor(base × 0.5)` | ❌ |
 
-**Extras (toppings y pan).** `EvaluateExtras` compara pedido vs. armado **como conjuntos** (verter dos veces la
-misma salsa no es error) y detecta pan de más (pidieron al plato y hay pan). La falta de pan no entra acá: la
+**Extras (toppings, guarniciones y pan).** `EvaluateExtras` compara pedido vs. armado **como conjuntos**, toppings y
+guarniciones por separado (verter dos veces la misma salsa no es error), y detecta pan de más (pidieron al plato y
+hay pan). Como un sándwich nunca pide extras, cualquier salsa o guarnición puesta sobre el pan cuenta como sobrante.
+La sobrecarga de 4 argumentos (sin guarniciones) queda para `EconomySimulator`. El bonus de complejidad de la
+propina cuenta salsas + guarniciones pedidas. La falta de pan no entra acá: la
 bloquea antes `TryBuildSandwich`. Cada faltante/sobrante suma **1 de desfase en la misma escala que la cocción**:
 `worstOffset = max(cocción, extras.offset)`. Con `extras.offset >= 2` se aplica `ApplyReducedPrice` **solo sobre la
 parte del pago que todavía cobraba precio completo** (lo ya recortado por cocción no se vuelve a partir). El
@@ -1554,12 +1557,19 @@ mismo que quejarse de un carbón. `GameManager` lo saca de `validation.burnedCou
 
 #### `OrderSystem` / `Order` — `Orders/`
 ```csharp
-OrderSystem(List<WeightedOrderCut> cuts, IReadOnlyList<ToppingSO> toppings, float toppingChance, int maxToppingsPerOrder);
+OrderSystem(List<WeightedOrderCut> cuts, IReadOnlyList<ToppingSO> toppings, float toppingChance, int maxToppingsPerOrder,
+            IReadOnlyList<SideSO> sides, float sideChance, int maxSidesPerOrder);
 Order GenerateOrder();
 // punto pedido aleatorio en [Jugoso .. Pasado] — nunca Crudo ni Quemado
 // sándwich si servingMode == SandwichOnly, o Both con 50 % de probabilidad → bread = cut.requiredBread
-// toppings: SOLO pedidos al plato (el pan bloquea toppings); 0..maxToppingsPerOrder distintos (Fisher-Yates parcial)
+// toppings y guarniciones: SOLO pedidos al plato (el pan bloquea los dos); cada tipo se tira por separado
+// (AddRandomDistinct, Fisher-Yates parcial): 0..maxToppingsPerOrder salsas y 0..maxSidesPerOrder guarniciones
 ```
+Pools: `FoodCatalog.availableToppings` (chimichurri, criolla) y `FoodCatalog.availableSides` (fritas, ensalada verde,
+ensalada de papa y huevo). Inspector de `CustomerSystem` (prefab `[SYSTEMS]`): `toppingOrderChance` 0.4 /
+`maxToppingsPerOrder` 2 y `sideOrderChance` 0.4 / `maxSidesPerOrder` 1. Un plato puede salir solo (~37 % de los
+pedidos al plato con esos valores), con salsa, con guarnición o con las dos. `TutorialScene` pisa las dos
+probabilidades en `0`. Hasta 2026-10-27 `OrderSystem` ignoraba `availableSides`: solo se pedían salsas.
 `Order`: `meat` (legacy) + `cuts`, `requestedStates`, `bread`, `sides`, `toppings`; `IsSandwich`, `PrimaryCut`,
 `SetSingleCut(cut, state)`, `GetRequestedState(int)`. `TriggerMissingCutChange` reescribe `cuts`/`bread`/`toppings`
 respetando el `servingMode` del sustituto.
@@ -2085,7 +2095,8 @@ si cambia `StrikeSystem.maxStrikes`, cambiarlo también.
 Ubicación probada a 1920×1080 con clientes: al costado de la pestaña izquierda el cartel le tapa la cara al primer cliente;
 debajo de cada pestaña no tapa nada. En el panel derecho (grilla de 3 columnas: los dos panes y las fritas arriba, las
 ensaladas y la criolla en el medio, el chimichurri abajo) el pan va abajo y la salsa arriba: así cada cartel tapa solo
-guarniciones, que los pedidos no llevan. Si se reordena el panel, revisar esos dos lados.
+guarniciones. ⚠️ Desde 2026-10-27 los pedidos de `GameScene` **sí** llevan guarniciones: un cartel puede tapar la que
+pide el cliente. Si se reordena el panel, revisar esos dos lados.
 
 **Carteles de la tienda** (`CartelesTienda`, en `ScriptableObjects/TutorialHints/Tienda/`; director en `EndScene`). Todos
 piden `ShopReady`: mientras el popup de cierre por strikes tapa la tienda, esperan.
