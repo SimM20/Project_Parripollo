@@ -6,6 +6,13 @@ public class PlayerWallet : MonoBehaviour
 {
     [SerializeField] private float startingMoney = 1000f;
     public float Money { get; private set; }
+
+    /// <summary>
+    /// Toda la plata cobrada en la run, sin restar lo gastado. No incluye el dinero inicial.
+    /// Es el puntaje del leaderboard del evento (<see cref="EventRun"/>).
+    /// </summary>
+    public float TotalEarned { get; private set; }
+
     public event Action<float> OnMoneyChanged;
     
     public static PlayerWallet Instance { get; private set; }
@@ -39,6 +46,7 @@ public class PlayerWallet : MonoBehaviour
     public void Add(float amount)
     {
         Money += amount;
+        if (amount > 0f) TotalEarned += amount;
         OnMoneyChanged?.Invoke(Money);
     }
     

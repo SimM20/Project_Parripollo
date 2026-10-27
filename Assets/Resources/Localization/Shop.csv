@@ -77,3 +77,7 @@ endscreen.tips,PROPINAS,TIPS
 endscreen.tips.detail,${0} ({1}% de lo cobrado),${0} ({1}% of income)
 endscreen.shop,TIENDA,SHOP
 endscreen.main_menu,MENÚ PRINCIPAL,MAIN MENU
+# Evento: final de la run por días (RunDefeatScreen) y puntaje del ranking
+event.end.title,¡SE TERMINÓ LA RUN!,THE RUN IS OVER!
+event.end.reason,Jugaste los {0} días del evento. Tu puntaje ya está en el ranking.,You played all {0} days of the event. Your score is on the leaderboard.
+event.end.total_earned,Total ganado (ranking): ${0:N0},Total earned (leaderboard): ${0:N0}

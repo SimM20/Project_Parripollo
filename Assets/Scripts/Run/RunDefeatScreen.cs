@@ -35,6 +35,8 @@ public class RunDefeatScreen : MonoBehaviour
     [SerializeField] private TMP_Text reasonText;
     [SerializeField] private TMP_Text dayText;
     [SerializeField] private TMP_Text moneyText;
+    [Tooltip("Evento: plata total cobrada en la run, el puntaje del ranking (PlayerWallet.TotalEarned).")]
+    [SerializeField] private TMP_Text totalEarnedText;
     [SerializeField] private TMP_Text meatLineText;
     [SerializeField] private TMP_Text coalLineText;
     [SerializeField] private TMP_Text deficitText;
@@ -86,6 +88,14 @@ public class RunDefeatScreen : MonoBehaviour
     {
         status = default;
 
+        // Evento: completar los días de la run la termina, aunque se pudiera seguir.
+        CoalConsumptionTracker tracker = CoalConsumptionTracker.Instance;
+        if (tracker != null && tracker.DaysPlayed >= EventRun.MaxDays)
+        {
+            if (CanEvaluateEconomy()) status = shop.GetRunStatus();
+            return RunDefeatReason.EventDaysLimit;
+        }
+
         // La racha manda: si se perdió por el cartel, ese es el motivo aunque la plata alcance.
         if (StrikeSystem.IsStrikeStreakDefeat)
         {
@@ -114,6 +124,9 @@ public class RunDefeatScreen : MonoBehaviour
 
         root.SetActive(true);
 
+        // Evento: la run terminó, su puntaje va al leaderboard.
+        EventRun.Finish();
+
         Paint(status);
 
         Debug.Log("[RunDefeat] Run terminada. Motivo: " + Reason);
@@ -121,13 +134,18 @@ public class RunDefeatScreen : MonoBehaviour
 
     private void Paint(RunEconomyStatus status)
     {
-        if (titleText != null) titleText.text = Loc.Get("defeat.title");
+        bool eventEnd = Reason == RunDefeatReason.EventDaysLimit;
+
+        if (titleText != null) titleText.text = Loc.Get(eventEnd ? "event.end.title" : "defeat.title");
 
         if (reasonText != null)
         {
-            reasonText.text = Reason == RunDefeatReason.StrikeStreak
-                ? Loc.Format("defeat.reason.strike_streak", StrikeSystem.ConsecutiveStrikeNights)
-                : Loc.Get("defeat.reason.resources");
+            if (eventEnd)
+                reasonText.text = Loc.Format("event.end.reason", EventRun.MaxDays);
+            else
+                reasonText.text = Reason == RunDefeatReason.StrikeStreak
+                    ? Loc.Format("defeat.reason.strike_streak", StrikeSystem.ConsecutiveStrikeNights)
+                    : Loc.Get("defeat.reason.resources");
         }
 
         // Día alcanzado = jornadas completadas. CurrentNight ya apunta a la que no se va a jugar.
@@ -139,6 +157,18 @@ public class RunDefeatScreen : MonoBehaviour
 
         float money = shop != null && shop.Wallet != null ? shop.Wallet.Money : status.money;
         if (moneyText != null) moneyText.text = Loc.Format("defeat.money", money);
+
+        float totalEarned = shop != null && shop.Wallet != null ? shop.Wallet.TotalEarned : 0f;
+        if (totalEarnedText != null) totalEarnedText.text = Loc.Format("event.end.total_earned", totalEarned);
+
+        // Al final del evento no faltó nada: las líneas de recursos no aplican.
+        if (meatLineText != null) meatLineText.gameObject.SetActive(!eventEnd);
+        if (coalLineText != null) coalLineText.gameObject.SetActive(!eventEnd);
+        if (eventEnd)
+        {
+            if (deficitText != null) deficitText.gameObject.SetActive(false);
+            return;
+        }
 
         if (meatLineText != null)
             meatLineText.text = Loc.Format("defeat.meat", status.meatStock, status.meatRequired, status.meatDeficit);
@@ -165,8 +195,12 @@ public class RunDefeatScreen : MonoBehaviour
 
     public void GoToMainMenu() => SceneManagementUtils.ReturnToMainMenu();
 
-    public void RestartRun()
-        => SceneManagementUtils.RestartRun(shop != null ? shop.Catalog : null);
+    // Evento: la run nueva puede ser de otra persona, así que vuelve a pedir el nombre.
+    public void RestartRun() => EventNamePrompt.Show(playerName =>
+    {
+        EventRun.Begin(playerName);
+        SceneManagementUtils.RestartRun(shop != null ? shop.Catalog : null);
+    });
 
     // ---- QA: forzar cada pantalla desde el inspector en Play Mode ----
 
@@ -174,6 +208,13 @@ public class RunDefeatScreen : MonoBehaviour
     private void DebugForceResourceDefeat()
     {
         Reason = RunDefeatReason.InsufficientResources;
+        Show(shop != null ? shop.GetRunStatus() : default);
+    }
+
+    [ContextMenu("QA/Forzar final del evento (días completos)")]
+    private void DebugForceEventEnd()
+    {
+        Reason = RunDefeatReason.EventDaysLimit;
         Show(shop != null ? shop.GetRunStatus() : default);
     }
 

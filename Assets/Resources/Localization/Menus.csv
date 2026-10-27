@@ -41,3 +41,10 @@ tutorial_offer.title,Tutorial,Tutorial
 tutorial_offer.body,Tal vez sea conveniente ver los controles si es tu primera vez jugando,"If it's your first time playing, it might be worth checking out the controls"
 tutorial_offer.start,Comenzar tutorial,Start tutorial
 tutorial_offer.skip,Saltar tutorial,Skip tutorial
+# Evento: cartel del nombre al empezar cada run (EventNamePrompt)
+event.name.title,¿CÓMO TE LLAMÁS?,WHAT'S YOUR NAME?
+event.name.body,Tenés {0} días para juntar toda la plata que puedas. Tu nombre va a aparecer en el ranking del evento.,You have {0} days to earn as much money as you can. Your name will show up on the event leaderboard.
+event.name.placeholder,Tu nombre,Your name
+event.name.confirm,JUGAR,PLAY
+event.name.cancel,VOLVER,BACK
+event.name.empty,Escribí un nombre para jugar.,Type a name to play.

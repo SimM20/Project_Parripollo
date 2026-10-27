@@ -48,3 +48,5 @@ hud.closed,CERRADO,CLOSED
 # Aviso de strikes en gameplay (StrikeLimitNotice)
 strike.notice.title,¡Te clavaron el cartel!,They left you hanging!
 strike.notice.body,Se te fueron tres clientes con una calentura bárbara y corrieron la voz.\nPor hoy no para nadie más. Cerrá la parrilla y mañana será otro día.,"Three customers stormed off furious and spread the word.\nNobody else is stopping by today. Close up the grill, tomorrow's another day."
+# Evento: el HUD muestra cuántos días quedan de la run (HudManager.FormatDay)
+event.hud.day,DÍA {0}/{1},DAY {0}/{1}

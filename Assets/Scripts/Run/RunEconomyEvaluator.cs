@@ -10,6 +10,9 @@ public enum RunDefeatReason
 
     /// <summary>Se llegó al tope de noches seguidas cerradas por el límite de strikes.</summary>
     StrikeStreak = 2,
+
+    /// <summary>Evento: se jugaron los <see cref="EventRun.MaxDays"/> días de la run. No es derrota, es el final.</summary>
+    EventDaysLimit = 3,
 }
 
 /// <summary>

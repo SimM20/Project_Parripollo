@@ -92,6 +92,9 @@ public static class SceneManagementUtils
 
     private static void ReturnToMainMenuNow()
     {
+        // Evento: abandonar la run a mitad también guarda lo ganado (antes de destruir la billetera).
+        EventRun.Finish();
+
         CoolerSystem.PrepareForNewGame(); // clears backup so next new game starts clean
         if (PlayerWallet.Instance != null) UnityEngine.Object.Destroy(PlayerWallet.Instance.gameObject);
         if (CoalConsumptionTracker.Instance != null) UnityEngine.Object.Destroy(CoalConsumptionTracker.Instance.gameObject);

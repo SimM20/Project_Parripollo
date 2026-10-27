@@ -47,7 +47,12 @@ public class MainMenuPanel : MonoBehaviour
             optionsPanel.OnClosed -= HandleOptionsClosed;
     }
 
-    public void StartNewGame() => SceneManagementUtils.LoadSceneByName("GameScene");
+    // Evento: cada run arranca a nombre de alguien (ver EventRun).
+    public void StartNewGame() => EventNamePrompt.Show(playerName =>
+    {
+        EventRun.Begin(playerName);
+        SceneManagementUtils.LoadSceneByName("GameScene");
+    });
 
     public void OpenOptions()
     {

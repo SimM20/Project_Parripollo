@@ -269,7 +269,8 @@ public class HudManager : MonoBehaviour
         }
     }
 
-    private static string FormatDay(int value) => Loc.Format("hud.day", value);
+    // Evento: "DÍA 2/3", para que se vea cuánto falta para el final de la run.
+    private static string FormatDay(int value) => Loc.Format("event.hud.day", value, EventRun.MaxDays);
 
     private static string FormatMoney(int value) => value.ToString() + " $";
 
