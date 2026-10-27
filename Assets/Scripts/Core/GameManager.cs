@@ -6,7 +6,6 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private CustomerSystem customerSystem;
     [SerializeField] private GrillSystem grillSystem;
-    [SerializeField] private CoolerSystem coolerSystem;
     [SerializeField] private ViewManager viewManager;
     [SerializeField] private MonoBehaviour meatTransferBuffer;
     [SerializeField] private MonoBehaviour coalTransferBuffer;
@@ -14,7 +13,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private FoodCatalogSO catalog;
     [SerializeField] private FoodAvailabilityService foodAvailabilityService;
     [SerializeField] private ShopSystem shopSystem;
-    [SerializeField] private PlayerWallet wallet;
     [SerializeField] private GrillLayerToggle grillLayerToggle;
 
     [Header("Delivery Preview Tints")]
@@ -131,7 +129,7 @@ public class GameManager : MonoBehaviour
                 if (foodAvailabilityService != null)
                     foodAvailabilityService.InformMissingCut(missingCut);
                 else
-                    coolerSystem?.InformMissingItem(missingCut);
+                    CoolerSystem.Instance?.InformMissingItem(missingCut);
 
                 Debug.Log("[Plato] Corte faltante informado: " + missingCut.cutName);
 

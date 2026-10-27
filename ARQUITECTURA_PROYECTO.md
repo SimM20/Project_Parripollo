@@ -175,6 +175,10 @@
 > `CoolerView` (apagada; el prefab queda porque lo usan `TutorialScene` y `SampleScene`) y el par `GrillNotificationManager` +
 > `UIBubble` (nunca mostraba nada con vista única). Quedaron en null `ViewManager.coolerRoot` y el `toGrillAnchor` de
 > `MeatTransferBuffer` / `CoalTransferBuffer`: los dos toleran el null y solo los alimentaban los scripts deprecados de la heladera.
+> Mismo día: salió `GrillNotificationManager.AutoInitialize` (sin el manager de escena colgaba su contenedor del primer
+> `Canvas` que encontraba, el del `InputManager` en DDOL). `FoodAvailabilityService` y `GameManager` dejaron de serializar
+> `CoolerSystem` / `PlayerWallet` y usan `.Instance`: desde la segunda noche la referencia de escena apuntaba al duplicado que
+> se destruye en `Awake` y `GetAvailableCuts()` devolvía vacío (la M nunca encontraba sustituto). Nota 41.
 
 ---
 
@@ -2464,7 +2468,6 @@ MainMenuScene (build index 0)
   SlidingPanel.ResetStaticState()            SubsystemRegistration  → limpia OpenPanels / OnAnyPanelOpenChanged
   Loc.ResetStatics() / GameSettings          SubsystemRegistration  → tablas e idioma se releen en el primer acceso
   InputPrompts.Install()                     BeforeSceneLoad        → Loc.TokenResolver + refresco al cambiar de control
-  GrillNotificationManager.AutoInitialize()  AfterSceneLoad         → crea el manager si no existe
   CustomerFeedbackSelfCheck                  AfterSceneLoad         → asserts de la tabla de propinas
 ```
 
@@ -2491,7 +2494,7 @@ MainMenuScene (build index 0)
 | `PlateDeliveryDraggable` (×cortes en plato) | Pick propio + drag + hover de cliente + drop |
 | `CustomerSystem` | Descuenta paciencia (salvo `IsInFeedback`) y dispara `TriggerAngryLeaveFeedback` a los `IsAngry` |
 | `CustomerView` | `RefreshPatience` (color + temblor) |
-| `GrillNotificationManager` | Si la vista ≠ `Grill`: reagrupa carnes y refresca burbujas. **Nunca ocurre** con vista única. Ya no está en `GameScene`: solo existe el que crea `AutoInitialize` en la primera escena cargada |
+| `GrillNotificationManager` | Si la vista ≠ `Grill`: reagrupa carnes y refresca burbujas. **Nunca ocurre** con vista única. Ya no está en `GameScene` y no se crea solo (solo queda la instancia de `TutorialScene`) |
 | `DayClock` | Avanza la hora con `Time.deltaTime`; al llegar al cierre se detiene y emite `OnClosingTime`. Escribe el HUD solo cuando cambia el texto |
 | `DayCycleBackground` | Lee `DayClock.CurrentHour` (o la hora fija / el override), la acerca con tope `catchUpHoursPerSecond` y, **solo si cambió**, se la pasa a las capas (`DayCycleLayer` → color/sprite, `DayCycleArc` → posición). Ver 3.9 |
 | `ParallaxLayer` (×2) | Desliza las nubes con `Time.deltaTime` y da la vuelta cada 19,2 u |
@@ -2621,3 +2624,4 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 38 | **La radio es una emisora que no se corta** (3.8 → *Radio*). La música vive en `RadioStation` (DDOL), no en la `Radio` de la escena: no le pongas un `AudioSource` a la radio ni la pares al apagarla, porque al prenderla tiene que seguir por donde iba. Para cambiar las canciones, el array `songs` del componente `Radio` en `GameScene` (cualquier cantidad, incluso ninguna); temas largos con *Load Type = Streaming*. Una mejora o cartel que necesite saber si suena: `RadioStation.IsOn` |
 | 39 | **Un topping se compra para rellenar el frasco, no se acumula.** `ToppingStock` (DDOL) guarda la salsa que queda en cada frasco (`GetSauceAmount` / `GetFillRatio` / `IsFull` / `SetSauceAmount` / `Refill`). Un topping que todavía no tiene entrada cuenta como **lleno**: es el frasco con el que arranca la run, así que no hace falta stock inicial en escena. Lo que sobra en el frasco **pasa al día siguiente**. `ToppingDraggable` lee el valor en **`Start`** (no en `Awake`: en la primera escena el `Awake` del `ToppingStock` puede correr después) y lo guarda **una vez por vertida**, en `StopPouring` (soltar, cancelar o frasco vacío) y en `SetSauceAmount` (undo). Nunca por frame. `RefillSauce()` sigue sin llamadores. **El tutorial no gasta salsa**: sus frascos llevan `ignoreStock` (tabla de 3.7). Un frasco nuevo en `GameScene` no necesita nada; en `TutorialScene` hay que marcarle `ignoreStock`. Los clientes **siguen pidiendo salsas aunque el frasco esté vacío**: es una decisión de diseño, no un olvido |
 | 40 | **Game feel sin tocar interacción** (3.12). Para animar algo que se agarra o recibe drops: nunca escalar ni mover su transform con el collider adentro. Correr solo el dibujo con `SettleOffset` + compensar `Collider2D.offset` (ver `Coal.ApplyVisualOffset`), o usar un fantasma (`SpriteGhost`), o cambiar color. `ScalePunch` es solo para transforms sin collider. Un efecto nunca demora el resultado: el estado lógico se aplica primero y el dibujo lo alcanza. En `CustomerView` los hijos cuelgan de la raíz `Visual` creada en runtime: un hijo nuevo del prefab también se mueve con ella. |
+| 41 | **No serializar referencias a singletons DDOL** (`CoolerSystem`, `PlayerWallet`, `ToppingStock`, `CoalConsumptionTracker`). Viven en `GameScene` y se mudan a DontDestroyOnLoad en `Awake`: en Play, Unity avisa *Cross scene references are not supported*, y desde la segunda noche el campo apunta al duplicado de la escena recargada, que se destruye solo. Leerlos con `.Instance` |

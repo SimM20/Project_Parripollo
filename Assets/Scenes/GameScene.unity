@@ -10235,7 +10235,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   catalog: {fileID: 11400000, guid: c47218184b1c40747b898decc4e587c8, type: 2}
-  coolerSystem: {fileID: 2035808171}
 --- !u!114 &1165417049 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4490236548667569002, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -13309,10 +13308,6 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
-      propertyPath: wallet
-      value: 
-      objectReference: {fileID: 52085496}
-    - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
       propertyPath: catalog
       value: 
       objectReference: {fileID: 11400000, guid: c47218184b1c40747b898decc4e587c8, type: 2}
@@ -13324,10 +13319,6 @@ PrefabInstance:
       propertyPath: grillSystem
       value: 
       objectReference: {fileID: 1141140570}
-    - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
-      propertyPath: coolerSystem
-      value: 
-      objectReference: {fileID: 2035808171}
     - target: {fileID: 5259611207415183284, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
       propertyPath: customerSystem
       value: 
