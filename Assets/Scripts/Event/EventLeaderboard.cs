@@ -16,12 +16,13 @@ using UnityEngine.Networking;
 /// mientras el juego esté abierto, y otra vez al próximo arranque. Cada entrada lleva su
 /// propio id, así que un reintento de algo que ya había llegado no la duplica (409).
 ///
-/// La clave es la publicable del proyecto (la misma de la web): solo permite insertar.
+/// La clave es la publicable del proyecto (la misma que usa la página del ranking): solo permite insertar.
 /// </summary>
 public class EventLeaderboard : MonoBehaviour
 {
-    private const string SupabaseUrl = "https://nyrkyrycfabytctgaewz.supabase.co";
-    private const string SupabasePublicKey = "sb_publishable_K7poH6eDJNPpcxeeJ6NbLg_bjT9D0jU";
+    // Proyecto propio del ranking, separado del de la encuesta de la web (ranking-evento-config.js en Parrilla40-Web).
+    private const string SupabaseUrl = "https://qbaktsjyetnyvmfegwxu.supabase.co";
+    private const string SupabasePublicKey = "sb_publishable_cSxHPxODM1I6edbuNpSqdw_Lw3wLf0P";
     private const string Endpoint = SupabaseUrl + "/rest/v1/event_leaderboard";
 
     private const string FileName = "event_leaderboard.json";

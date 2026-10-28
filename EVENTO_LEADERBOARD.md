@@ -45,7 +45,8 @@ Ojo en el Editor: salir de Play con una run abierta también la guarda.
 1. **Local**: `event_leaderboard.json` en `Application.persistentDataPath`
    (en Windows: `%USERPROFILE%\AppData\LocalLow\Placeholder Studios\Ruta 40\`). Tiene **todas** las runs jugadas en esa
    máquina, subidas o no: es el respaldo si algo falla.
-2. **Supabase**: tabla `event_leaderboard` del mismo proyecto que usa la encuesta de la web. Si no hay internet, la run
+2. **Supabase**: tabla `event_leaderboard` del proyecto `qbaktsjyetnyvmfegwxu`, propio del ranking (la encuesta de la web
+   usa otro proyecto, de otra cuenta). Si no hay internet, la run
    queda pendiente y se reintenta cada 30 s mientras el juego esté abierto, y otra vez al abrirlo. Cada run lleva su
    propio id, así que un reintento nunca la duplica.
 
@@ -63,7 +64,7 @@ Repo `Parrilla40-Web`, rama `event/leaderboard`:
 - `supabase/event-leaderboard.sql` crea la tabla y la función de lectura. **Hay que correrlo una vez** en el SQL
   Editor de Supabase antes del primer evento.
 
-La clave de Supabase del juego es la publicable (la misma de la web): solo permite insertar, no leer ni borrar. Alguien
+La clave de Supabase del juego es la publicable (la misma de `ranking-evento-config.js`): solo permite insertar, no leer ni borrar. Alguien
 con conocimientos podría cargar un puntaje falso; la base limita nombres a 20 caracteres y puntajes a 100 millones.
 Para borrar runs (pruebas, nombres ofensivos) se hace desde el panel de Supabase → Table Editor → `event_leaderboard`.
 
