@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class CoalConsumptionTracker : MonoBehaviour
@@ -5,8 +6,8 @@ public class CoalConsumptionTracker : MonoBehaviour
     public static CoalConsumptionTracker Instance { get; private set; }
 
     [Header("Night Unlocks")]
-    [Tooltip("Corte que se desbloquea al comenzar la segunda noche.")]
-    [SerializeField] private MeatCutSO nightTwoCut;
+    [Tooltip("Cortes que se desbloquean a partir de cierta noche.")]
+    [SerializeField] private List<NightCutUnlock> cutUnlocks = new List<NightCutUnlock>();
 
     public int TotalCoalConsumed { get; private set; } = 0;
     public int DaysPlayed { get; private set; } = 0;
@@ -29,15 +30,15 @@ public class CoalConsumptionTracker : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            // Si el tracker persistente no tenía el corte configurado,
-            // toma la referencia configurada en esta copia antes de destruirla.
-            if (Instance.nightTwoCut == null && nightTwoCut != null)
+            // Si el tracker persistente no tenía cortes configurados,
+            // toma los configurados en esta copia antes de destruirla.
+            if (Instance.cutUnlocks.Count == 0 && cutUnlocks.Count > 0)
             {
-                Instance.nightTwoCut = nightTwoCut;
+                Instance.cutUnlocks = new List<NightCutUnlock>(cutUnlocks);
 
                 Debug.Log(
-                    "[NightProgression] Se copió el corte de desbloqueo al " +
-                    "tracker persistente: " + nightTwoCut.cutName
+                    "[NightProgression] Se copiaron los cortes de desbloqueo al " +
+                    "tracker persistente: " + UnlockNames(cutUnlocks)
                 );
 
                 Instance.ApplyProgressionUnlocks();
@@ -64,8 +65,7 @@ public class CoalConsumptionTracker : MonoBehaviour
             "[NightProgression] Tracker iniciado. " +
             "Noches completadas: " + DaysPlayed +
             " | Noche actual: " + CurrentNight +
-            " | Corte noche 2: " +
-            (nightTwoCut != null ? nightTwoCut.cutName : "SIN ASIGNAR")
+            " | Cortes desbloqueables: " + UnlockNames(cutUnlocks)
         );
     }
 
@@ -103,21 +103,21 @@ public class CoalConsumptionTracker : MonoBehaviour
 
         ApplyProgressionUnlocks();
     }
-    public void ConfigureNightTwoCut(MeatCutSO cut)
+    public void ConfigureCutUnlocks(IReadOnlyList<NightCutUnlock> unlocks)
     {
-        if (cut == null)
+        if (unlocks == null || unlocks.Count == 0)
         {
             Debug.LogWarning(
-                "[NightProgression] Se intentó configurar el corte de noche 2 con null."
+                "[NightProgression] Se intentó configurar los desbloqueos sin cortes."
             );
             return;
         }
 
-        nightTwoCut = cut;
+        cutUnlocks = new List<NightCutUnlock>(unlocks);
 
         Debug.Log(
-            "[NightProgression] Corte de noche 2 configurado: " +
-            nightTwoCut.cutName +
+            "[NightProgression] Cortes desbloqueables configurados: " +
+            UnlockNames(cutUnlocks) +
             " | Noche actual: " + CurrentNight
         );
 
@@ -126,24 +126,42 @@ public class CoalConsumptionTracker : MonoBehaviour
 
     private void ApplyProgressionUnlocks()
     {
-        if (nightTwoCut == null)
+        if (cutUnlocks.Count == 0)
         {
             Debug.LogWarning(
-                "[NightProgression] No se asignó el corte de la noche 2 " +
+                "[NightProgression] No se asignaron cortes desbloqueables " +
                 "en CoalConsumptionTracker."
             );
             return;
         }
 
-        bool shouldBeUnlocked = CurrentNight >= 2;
+        for (int i = 0; i < cutUnlocks.Count; i++)
+        {
+            NightCutUnlock entry = cutUnlocks[i];
 
-        nightTwoCut.isUnlocked = shouldBeUnlocked;
+            if (entry != null && entry.cut != null)
+                entry.cut.isUnlocked = CurrentNight >= entry.night;
+        }
 
         Debug.Log(
             "[NightProgression] Noche actual: " + CurrentNight +
-            " | Corte: " + nightTwoCut.cutName +
-            " | Desbloqueado: " + nightTwoCut.isUnlocked
+            " | Cortes: " + UnlockNames(cutUnlocks)
         );
+    }
+
+    private static string UnlockNames(List<NightCutUnlock> unlocks)
+    {
+        var names = new List<string>();
+
+        for (int i = 0; i < unlocks.Count; i++)
+        {
+            NightCutUnlock entry = unlocks[i];
+
+            if (entry != null && entry.cut != null)
+                names.Add(entry.cut.cutName + " (noche " + entry.night + ")");
+        }
+
+        return names.Count > 0 ? string.Join(", ", names) : "SIN ASIGNAR";
     }
 
     /// <summary>

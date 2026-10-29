@@ -141,10 +141,14 @@ public class CustomerSystem : MonoBehaviour
     [SerializeField] [Min(1)] private int maxSidesPerOrder = 1;
 
     [Header("Night Progression")]
-    [SerializeField] private MeatCutSO nightTwoCut;
+    [Tooltip("Cortes que se desbloquean (tienda y pedidos) a partir de cierta noche.")]
     [SerializeField]
-    private List<ProductVariantSO> nightTwoVariants =
-        new List<ProductVariantSO>();
+    private List<NightCutUnlock> cutUnlocks =
+        new List<NightCutUnlock>();
+    [Tooltip("Variantes que se desbloquean a partir de cierta noche. Conviene que coincidan con la noche de su corte.")]
+    [SerializeField]
+    private List<NightVariantUnlock> variantUnlocks =
+        new List<NightVariantUnlock>();
    
     [Header("Patience")]
     [SerializeField] private float basePatienceSeconds = 30f;
@@ -243,11 +247,11 @@ public class CustomerSystem : MonoBehaviour
             " | Paciencia x" + resolvedPatienceMultiplier
         );
 
-        // Comunica al tracker cuál es el corte desbloqueable.
+        // Comunica al tracker cuáles son los cortes desbloqueables.
         if (CoalConsumptionTracker.Instance != null)
         {
-            CoalConsumptionTracker.Instance.ConfigureNightTwoCut(
-                nightTwoCut
+            CoalConsumptionTracker.Instance.ConfigureCutUnlocks(
+                cutUnlocks
             );
         }
         else
@@ -258,14 +262,12 @@ public class CustomerSystem : MonoBehaviour
         }
 
         // Desbloqueo de variantes.
-        bool variantsUnlocked = currentNight >= 2;
-
-        for (int i = 0; i < nightTwoVariants.Count; i++)
+        for (int i = 0; i < variantUnlocks.Count; i++)
         {
-            ProductVariantSO variant = nightTwoVariants[i];
+            NightVariantUnlock entry = variantUnlocks[i];
 
-            if (variant != null)
-                variant.isUnlocked = variantsUnlocked;
+            if (entry != null && entry.variant != null)
+                entry.variant.isUnlocked = currentNight >= entry.night;
         }
 
         List<WeightedOrderCut> cuts =
@@ -1480,30 +1482,6 @@ public class CustomerSystem : MonoBehaviour
         CollapseAllOrderBubbles();
     }
   
-    private void ApplyNightUnlocks()
-    {
-        int currentNight =
-            (CoalConsumptionTracker.Instance?.DaysPlayed ?? 0) + 1;
-
-        bool patyUnlocked = currentNight >= 2;
-
-        if (nightTwoCut != null)
-        {
-            nightTwoCut.isUnlocked = patyUnlocked;
-
-            Debug.Log(
-                "[Progression] Noche actual: " + currentNight +
-                " | Paty desbloqueado: " + patyUnlocked
-            );
-        }
-        else
-        {
-            Debug.LogWarning(
-                "[Progression] No se asignó el corte de la noche 2 en CustomerSystem."
-            );
-        }
-    }
-
     private List<WeightedOrderCut> GetUnlockedOrderCuts()
     {
         var result = new List<WeightedOrderCut>();

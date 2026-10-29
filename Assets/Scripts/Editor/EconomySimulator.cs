@@ -86,7 +86,7 @@ public static class EconomySimulator
     {
         public MeatCutSO so;
         public float weight;
-        public bool unlockNightTwo;
+        public int unlockNight = 1;
         public int slots;
     }
 
@@ -122,7 +122,14 @@ public static class EconomySimulator
         d.toppingChance = so.FindProperty("toppingOrderChance").floatValue;
         d.maxToppings = so.FindProperty("maxToppingsPerOrder").intValue;
         d.affluence = so.FindProperty("affluenceCurve").animationCurveValue;
-        var nightTwoCut = so.FindProperty("nightTwoCut").objectReferenceValue as MeatCutSO;
+        var unlockNights = new Dictionary<MeatCutSO, int>();
+        var unlocksProp = so.FindProperty("cutUnlocks");
+        for (int i = 0; i < unlocksProp.arraySize; i++)
+        {
+            var e = unlocksProp.GetArrayElementAtIndex(i);
+            var c = e.FindPropertyRelative("cut").objectReferenceValue as MeatCutSO;
+            if (c != null) unlockNights[c] = e.FindPropertyRelative("night").intValue;
+        }
 
         var cutsProp = so.FindProperty("availableOrderCuts");
         for (int i = 0; i < cutsProp.arraySize; i++)
@@ -131,7 +138,7 @@ public static class EconomySimulator
             var cut = e.FindPropertyRelative("cut").objectReferenceValue as MeatCutSO;
             float w = e.FindPropertyRelative("weight").floatValue;
             if (cut == null || w <= 0f) continue;
-            d.cuts.Add(new CutData { so = cut, weight = w, unlockNightTwo = cut == nightTwoCut,
+            d.cuts.Add(new CutData { so = cut, weight = w, unlockNight = unlockNights.TryGetValue(cut, out int un) ? un : 1,
                 slots = Mathf.Max(1, cut.GrillSpace.x * cut.GrillSpace.y) });
         }
 
@@ -246,7 +253,7 @@ public static class EconomySimulator
             if (u.effectType == UpgradeEffectType.CoalBurnTime && s.Level(u) > 0 && u.upgradedMaxBurnTime > 0f)
                 burnTime = u.upgradedMaxBurnTime;
 
-        var unlocked = d.cuts.Where(c => !c.unlockNightTwo || s.night >= 2).ToList();
+        var unlocked = d.cuts.Where(c => s.night >= c.unlockNight).ToList();
         float interval = Mathf.Max(0.1f, d.dayDuration / Mathf.Max(1, target));
 
         const float dt = 0.5f;
@@ -481,7 +488,7 @@ public static class EconomySimulator
     static void Shop(GameData d, Profile p, RunState s, NightResult r)
     {
         int nextNight = s.night + 1;
-        var unlocked = d.cuts.Where(c => !c.unlockNightTwo || nextNight >= 2).ToList();
+        var unlocked = d.cuts.Where(c => nextNight >= c.unlockNight).ToList();
         float totalW = unlocked.Sum(c => c.weight);
         float before = s.money;
 
@@ -581,7 +588,7 @@ public static class EconomySimulator
                 sum.nights[n - 1].Add(r);
 
                 // Derrota total: misma regla que ShopSystem.BuildRunStatus / RunEconomyEvaluator.
-                var cheapest = d.cuts.Where(c => !c.unlockNightTwo || n + 1 >= 2).Min(c => c.so.basePrice);
+                var cheapest = d.cuts.Where(c => n + 1 >= c.unlockNight).Min(c => c.so.basePrice);
                 var status = RunEconomyEvaluator.Evaluate(n + 1, d.defeat, s.stock.Values.Sum(), s.coal, s.money,
                     cheapest, true, true, d.coal.basePrice, d.coal.unitsPerBag, d.coalStorageCap);
                 bool strikeDefeat = d.defeat != null && d.defeat.strikeStreakDefeatEnabled
@@ -624,7 +631,7 @@ public static class EconomySimulator
         sb.AppendLine();
         sb.AppendLine($"Datos leídos: {d.firstNight} clientes la noche 1 (+{d.perNight}/noche, tope {d.maxNight}), {d.maxSim} lugares, jornada {d.dayDuration}s, paciencia base {d.basePatience}s, dinero inicial ${d.startMoney}.");
         sb.AppendLine();
-        sb.AppendLine("Cortes: " + string.Join(" · ", d.cuts.Select(c => $"{c.so.itemName} costo ${c.so.basePrice} / plato ${c.so.sellPricePlate} / sándwich ${c.so.sellPriceSandwich} (peso {c.weight}{(c.unlockNightTwo ? ", noche 2+" : "")})")));
+        sb.AppendLine("Cortes: " + string.Join(" · ", d.cuts.Select(c => $"{c.so.itemName} costo ${c.so.basePrice} / plato ${c.so.sellPricePlate} / sándwich ${c.so.sellPriceSandwich} (peso {c.weight}{(c.unlockNight > 1 ? $", noche {c.unlockNight}+" : "")})")));
         sb.AppendLine();
         sb.AppendLine("Mejoras: " + string.Join(" · ", d.upgrades.Select(u => $"{u.itemName} ${u.basePrice} x{u.MaxLevel} ({u.effectType})")));
         sb.AppendLine();

@@ -14,31 +14,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: Costillita de cerdo
   nameKey: 
-  basePrice: 0
+  basePrice: 120
   category: 0
   _visualOffset: {x: 0, y: 0, z: 0}
-  meatSpriteA: {fileID: 0}
-  meatSpriteB: {fileID: 0}
+  meatSpriteA: {fileID: 21300000, guid: b2c3024f15e7a9442b2d349a5ea2277d, type: 3}
+  meatSpriteB: {fileID: 21300000, guid: b2c3024f15e7a9442b2d349a5ea2277d, type: 3}
   cookingSpritesA:
-    crudo: {fileID: 0}
-    jugoso: {fileID: 0}
-    hecho: {fileID: 0}
-    muyHecho: {fileID: 0}
-    pasado: {fileID: 0}
-    quemado: {fileID: 0}
+    crudo: {fileID: 21300000, guid: b2c3024f15e7a9442b2d349a5ea2277d, type: 3}
+    jugoso: {fileID: 21300000, guid: 948a3bb29fe1f5843962d1564d21ee48, type: 3}
+    hecho: {fileID: 21300000, guid: f32c6621329b3274a8a3e2be3f21694d, type: 3}
+    muyHecho: {fileID: 21300000, guid: d3e84ce9a38fd6c4ea9c9f19588a8197, type: 3}
+    pasado: {fileID: 21300000, guid: 8eb67ee5c53db2142ad460b040cb63bd, type: 3}
+    quemado: {fileID: 21300000, guid: 4445c6d57c9a23f46b1959bab01d3445, type: 3}
   cookingSpritesB:
-    crudo: {fileID: 0}
-    jugoso: {fileID: 0}
-    hecho: {fileID: 0}
-    muyHecho: {fileID: 0}
-    pasado: {fileID: 0}
-    quemado: {fileID: 0}
-  timeHeatA: 0
-  timeHeatB: 0
+    crudo: {fileID: 21300000, guid: b2c3024f15e7a9442b2d349a5ea2277d, type: 3}
+    jugoso: {fileID: 21300000, guid: 948a3bb29fe1f5843962d1564d21ee48, type: 3}
+    hecho: {fileID: 21300000, guid: f32c6621329b3274a8a3e2be3f21694d, type: 3}
+    muyHecho: {fileID: 21300000, guid: d3e84ce9a38fd6c4ea9c9f19588a8197, type: 3}
+    pasado: {fileID: 21300000, guid: 8eb67ee5c53db2142ad460b040cb63bd, type: 3}
+    quemado: {fileID: 21300000, guid: 4445c6d57c9a23f46b1959bab01d3445, type: 3}
+  timeHeatA: 200
+  timeHeatB: 150
   heatScale: 0
-  grillSpace: {x: 1, y: 1}
+  grillSpace: {x: 2, y: 2}
   servingMode: 0
   requiredBread: {fileID: 0}
   isUnlocked: 0
-  sellPricePlate: 100
+  sellPricePlate: 240
   sellPriceSandwich: 0

@@ -7790,10 +7790,6 @@ PrefabInstance:
       value: '[SYSTEMS]'
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
-      propertyPath: nightTwoCut
-      value: 
-      objectReference: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
-    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: autoStartNight
       value: 1
       objectReference: {fileID: 0}
@@ -7802,11 +7798,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: dd74f019187152940a5589cb8c5b392e, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
-      propertyPath: toppingOrderChance
+      propertyPath: sideOrderChance
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
-      propertyPath: sideOrderChance
+      propertyPath: toppingOrderChance
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
@@ -7834,6 +7830,10 @@ PrefabInstance:
       value: 9999
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: cutUnlocks.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customersAddedPerNight
       value: 4
       objectReference: {fileID: 0}
@@ -7846,24 +7846,24 @@ PrefabInstance:
       value: 63
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: variantUnlocks.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customerPrefabs.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
-      propertyPath: nightTwoVariants.Array.size
-      value: 1
-      objectReference: {fileID: 0}
+      propertyPath: cutUnlocks.Array.data[0].cut
+      value: 
+      objectReference: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: availableOrderCuts.Array.size
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
-      propertyPath: nightTwoVariants.Array.data[0]
-      value: 
-      objectReference: {fileID: 11400000, guid: d672dfcc2a1c38f428f291309cb7cc45, type: 2}
-    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
-      propertyPath: nightTwoVariants.Array.data[1]
-      value: 
+      propertyPath: cutUnlocks.Array.data[0].night
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: availableOrderCuts.Array.data[2]
@@ -7888,6 +7888,10 @@ PrefabInstance:
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: customerPrefabs.Array.data[3].type
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: variantUnlocks.Array.data[0].night
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: availableOrderCuts.Array.data[0].cut
@@ -7917,6 +7921,10 @@ PrefabInstance:
       propertyPath: customerPrefabs.Array.data[3].prefab
       value: 
       objectReference: {fileID: 7158870331883855464, guid: a57824b259a03e44a95f77f9a46f84ec, type: 3}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: variantUnlocks.Array.data[0].variant
+      value: 
+      objectReference: {fileID: 11400000, guid: d672dfcc2a1c38f428f291309cb7cc45, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: availableOrderCuts.Array.data[0].weight
       value: 1
@@ -10279,7 +10287,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   catalog: {fileID: 11400000, guid: 14da2995d18d2b34981b3f2137a28e51, type: 2}
-  coolerSystem: {fileID: 2035808171}
 --- !u!114 &1165417049 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4490236548667569002, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -12520,6 +12527,7 @@ MonoBehaviour:
   opaqueBackground: 1
   itemsParent: {fileID: 1074514181}
   autoLayoutItems: 1
+  slotsParent: {fileID: 0}
   itemSortingOrder: 100
   columns: 3
   cellSpacing: {x: 1.45, y: 0.9}
@@ -12968,7 +12976,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bcda3f1737e7f9499df733de17adcef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  nightTwoCut: {fileID: 0}
+  cutUnlocks: []
 --- !u!1 &1865235212
 GameObject:
   m_ObjectHideFlags: 0
