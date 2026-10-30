@@ -179,6 +179,16 @@
 > `Canvas` que encontraba, el del `InputManager` en DDOL). `FoodAvailabilityService` y `GameManager` dejaron de serializar
 > `CoolerSystem` / `PlayerWallet` y usan `.Instance`: desde la segunda noche la referencia de escena apuntaba al duplicado que
 > se destruye en `Awake` y `GetAvailableCuts()` devolvía vacío (la M nunca encontraba sustituto). Nota 41.
+> Última actualización parcial: **2026-10-30** (rama `Gameplay-Store`) — **carne "en la mano"**, igual que el carbón: las
+> celdas de carne del StockPanel **ya no se arrastran**. `CoalPlacementMode` pasó a ser **`StockPlacementMode`**
+> (`UI/StockPanel/StockPlacementMode.cs`, mismo `.meta`) y atiende las dos cosas: click en la celda = la pieza en el
+> puntero (cursor oculto, vaivén, preview verde/rojo), click en la parrilla de su capa = se pone. Diferencia: el carbón
+> queda en la mano (cada click pone otro), de la carne va **una sola unidad** — al ponerla la mano queda vacía y para otra
+> hay que volver a la celda. R / B rota el corte en la mano. Mientras hay algo en la mano, la carne y el carbón ya puestos
+> no se agarran (`CanBeginHold`) y el click derecho suelta sin dar vuelta la carne de abajo (`MeatClickable`).
+> `StockPanelSlot` quedó como interruptor (sin fantasma, sin `IsDragRotated`); `StockPanelController` perdió
+> `NotifyDragStarted/Ended`, `CancelActiveDrag`, `IsPointInDropArea` y los campos `dropArea` / `requireDropAreaHit`
+> (estaban sin usar). Gamepad: `DragKind.StockMeat` → `DragKind.MeatPlacement`. Secciones 2.4, 3.1, 3.3.
 
 ---
 
@@ -255,7 +265,7 @@ Assets/Scripts/
 | **Tutorial/** | Tutorial nuevo (ver 3.7 → *Carteles contextuales*). `TutorialSignals`: hub estático por donde el juego avisa lo que hace el jugador (reemplaza a los `TutorialManager.Notify*`). Director: `TutorialHintDirector` (qué cartel, cuándo), `TutorialHintContext` (foto de la partida), `TutorialHintSO` / `TutorialHintSetSO` (datos), `TutorialProgress` (lo aprendido). Cartel: `TutorialHintLayer` (canvas y pool), `TutorialHintView`, `InputGlyphSetSO` (íconos de controles). `TutorialHintDebug` (QA) | `TutorialSignals.cs`, `TutorialHintDirector.cs`, `TutorialHintContext.cs`, `TutorialHintView.cs`, `InputGlyphSetSO.cs` |
 | **Localization/** | `Loc` (estática): carga las tablas `Resources/Localization/*.csv`, idioma activo, `Get`/`Format`/`GetPool`, tokens `[[...]]`, evento `OnTextsChanged`. `LocalizedText`: componente para los textos fijos de escenas y prefabs. Herramientas de editor en `Editor/LocalizationTools.cs` | `Loc.cs`, `LocalizedText.cs` |
 | **UI/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
-| **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda + arrastre directo a la parrilla (`StockPanelSlot`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPanelTab.cs` |
+| **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda-interruptor (`StockPanelSlot`), stock en la mano → parrilla (`StockPlacementMode`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPlacementMode.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
 | **Radio/** | `Radio` (el objeto del mostrador que activa la mejora `RadioUpgrade`: prender/apagar, lista de canciones, salto al ritmo) y `RadioStation` (emisora DDOL creada en runtime: elige, encadena y funde las canciones) | `Radio.cs`, `RadioStation.cs` |
 | **Feel/** | Solo presentación, sin lógica de juego. `FeelEase` (curvas), `ScalePunch` (golpe/pop de escala para transforms **sin collider**), `SpriteGhost` (copia pooleada de un sprite que se anima y desaparece), `SettleOffset` (corrimiento visual que se apaga solo, para piezas con collider compensado), `UIPopIn` (entrada de ventanas de UI), `SceneFadeIn` (fundido de salida y entrada de escena, se crea solo) | `SpriteGhost.cs`, `SettleOffset.cs`, `ScalePunch.cs`, `UIPopIn.cs` |
@@ -347,7 +357,7 @@ graph TD
 
     SP -->|static OnAnyPanelOpenChanged| CV
     CS_ -->|event OnInventoryChanged| SP
-    SP -->|StockPanelSlot: TryTake + TrySpawn*AtPoint| GS
+    SP -->|StockPlacementMode: TryTake + TrySpawn*AtPoint| GS
     SP -.->|hover preview| MTB & CTB
 
     GS --> GRID[GridSlot ×N]
@@ -417,13 +427,15 @@ graph TD
 ### 2.4 Secuencia: del stock al cliente (todo dentro de `GrillView`)
 
 ```
-StockPanel [Q] ──drag directo──► GridSlot de la parrilla
-   │  StockPanelSlot.OnWorldPointerDown → spawnea un "fantasma" sin collider que sigue al mouse
-   │                              → hover preview vía MeatTransferBuffer.UpdateMeatHolderHover / CoalTransferBuffer.UpdateCoalHolderHover
-   │  StockPanelSlot.OnWorldPointerUp   → CoolerSystem.TryTake(item,1)
+StockPanel [Q] ──click (en la mano) + click──► GridSlot de la parrilla
+   │  StockPanelSlot.OnWorldPointerDown → StockPlacementMode.Arm(item, celda): la pieza sigue al puntero
+   │                              → pasa la parrilla a la capa del ítem; hover preview vía
+   │                                MeatTransferBuffer.UpdateMeatHolderHover / CoalTransferBuffer.UpdateCoalHolderHover
+   │  Click sobre la parrilla de esa capa → CoolerSystem.TryTake(item,1)
    │                              → GrillSystem.TrySpawnMeatAtPoint / TrySpawnCoalAtPoint
-   │                              → si el spawn falla: CoolerSystem.Add(item,1)  [rollback]
-   │  Soltar sobre el propio panel cancela. Sin buffer intermedio.
+   │                              → si el spawn falla: CoolerSystem.Add(item,1)  [rollback], la pieza sigue en la mano
+   │  Carbón: sigue en la mano (otro click, otro carbón). Carne: una sola unidad, la mano queda vacía.
+   │  Otro click en la celda / click derecho / otra cosa interactiva suelta sin tocar el stock. Sin buffer intermedio.
 
 Parrilla (cocción por frame)
    │  GrillSystem.Update      → UpdateHeatPropagation() reparte calor entre slots
@@ -604,7 +616,7 @@ pausado mientras cualquiera esté activa.
 - `OnPaused` cancela los arrastres en curso: cada draggable se suscribe al agarrar y se desuscribe al
   soltar/cancelar, y al pausar vuelve a su origen (`Item`, `MeatHolderDraggableMeat`,
   `CoalHolderDraggableCoal`, `ToBuildDraggableMeat`, `BuildDraggableFoodItem`, `ToppingDraggable`,
-  `StockPanelSlot`, `PlateDeliveryDraggable`).
+  `PlateDeliveryDraggable`). `StockPlacementMode` suelta lo que hay en la mano (sin animación).
 - `SceneManagementUtils` llama `Reset()` antes de cada carga: `timeScale` y `AudioListener.pause`
   persisten entre escenas.
 
@@ -640,8 +652,8 @@ void ConfigureUIModule(InputSystemUIInputModule)
 | **Esquema activo** | Pasa a `Gamepad` al mover el stick o apretar un botón del gamepad; vuelve a `KeyboardMouse` al mover el mouse (≥ 3 px), scrollear o clickear. **El teclado no cambia el esquema** (se puede apretar una tecla con el cursor del gamepad). Si se desconecta el último gamepad, vuelve al mouse |
 | **Tipo de control** (`InputMode`) | `Auto` = lo de arriba. `KeyboardMouse` **deshabilita** (`InputSystem.DisableDevice`) todos los `Gamepad`/`Joystick`; `Gamepad` deshabilita los mouse reales (no el virtual) y fija el esquema en `Gamepad`. El teclado queda siempre prendido. Deshabilitar el dispositivo (y no solo ignorarlo) hace que la UI tampoco lo vea. **Solo joystick sin ningún joystick conectado deja el mouse andando** (se reevalúa al conectar/desconectar, `HandleDeviceChange`), para no dejar el juego sin control. `SetScheme` además rechaza el esquema no permitido. `OnDestroy` vuelve a prender todo: si no, el Editor quedaría con el mouse o el joystick apagados al salir de Play |
 | **Navegación por saltos** (`GamepadNavigator`) | Con gamepad el puntero es virtual y **se apoya sobre el elemento seleccionado**: el stick izquierdo / la cruceta saltan al elemento más cercano en esa dirección (en pantalla: avance + desvío lateral × 2.5, cono de ~65°; repite a los 0.32 s y cada 0.12 s manteniendo). Agarrar, soltar y clickear siguen pasando por el mismo puntero, así que no hay lógica de juego duplicada. Al apretar A la selección se suelta y el puntero queda quieto (lo agarrado lo sigue); **arrastrando, los saltos recorren solo destinos**; al soltar se re-selecciona lo que quedó bajo el puntero (radio 8 % de la pantalla). Al abrirse un panel lateral se selecciona su primer elemento (arriba a la izquierda). Si lo seleccionado deja de valer (panel cerrado, cliente que se va), busca lo más cercano |
-| **Qué se puede seleccionar** (`GamepadNavTargets`) | **Sin nada agarrado:** botones de UI (`Selectable` interactuable, visible y que sea lo primero que toca el raycast de UI en su centro: descarta los tapados por un popup o recortados por máscara) y, en el mundo, celdas del stock con unidades (panel abierto), panes/guarniciones/frascos (panel de toppings abierto), pestañas de los paneles, botón de capa, carne y carbón de la capa activa, carne de la bandeja, carne del plato, **el plato** (punto del plato fuera de la carne, preferentemente el borde de abajo: ahí el agarre lleva el plato entero) y clientes (hover = ver el pedido). **Arrastrando** (`DragKind` según lo que recibió el Down): carne del stock/bandeja → bloques de la parrilla y plato; carne de la parrilla → bloques, plato, tacho; carbón → huecos de carbón (`CanPlaceItem`), tacho; carne del plato → bandeja, bloques, plato; plato entero → clientes; pan/guarnición → plato; frasco → su zona de vertido. **Carbón del stock en la mano** (`DragKind.CoalPlacement`, sin botón apretado): lo de "sin nada agarrado" menos los carbones puestos, más los huecos de carbón con lugar como destinos (verde); A pone carbón y la selección se queda en el hueco (`GamepadNavigator` trata `holding` como false). La celda de carbón ya no es un arrastre (`DetectDrag` → `None`). Nada tapado por un panel abierto (salvo lo del propio panel). Con el juego en pausa, solo UI |
-| **Bloques de carne** | La carne no recorre huecos sueltos: sus destinos en la parrilla son **todos los bloques libres del tamaño real del corte** (`GrillSpace`, rotado si corresponde), enumerados con `GridSlot.CollectContiguousPlacements` — la misma búsqueda que usa `TryFindContiguousPlacement` para decidir dónde cae, así que el bloque seleccionado es exactamente donde queda. Cada salto corre el bloque un slot; el recuadro cubre el bloque entero. El footprint sale de `GamepadNavTargets.TryGetMeatFootprint` (stock: `StockPanelSlot.IsDragRotated`; parrilla: `Meat.IsGridRotated`; bandeja: `ToBuildDraggableMeat.IsGridRotated`; plato: `PlateDeliveryDraggable.TryGetDraggedCut`). Al empezar a arrastrar carne de la parrilla se selecciona su propio bloque; al rotar (B) el bloque deja de valer y se elige el más cercano con el footprint nuevo. `InputManager.TryGetGridSnap` da el centro del bloque: la bandeja y la carne del plato, que se arrastran con agarre desplazado, lo usan para dibujar el corte justo sobre los slots (la carne de la parrilla y el fantasma del stock ya siguen al puntero, que está en ese centro). Con `visualOffset` distinto de cero habría que sumarlo ahí |
+| **Qué se puede seleccionar** (`GamepadNavTargets`) | **Sin nada agarrado:** botones de UI (`Selectable` interactuable, visible y que sea lo primero que toca el raycast de UI en su centro: descarta los tapados por un popup o recortados por máscara) y, en el mundo, celdas del stock con unidades (panel abierto), panes/guarniciones/frascos (panel de toppings abierto), pestañas de los paneles, botón de capa, carne y carbón de la capa activa, carne de la bandeja, carne del plato, **el plato** (punto del plato fuera de la carne, preferentemente el borde de abajo: ahí el agarre lleva el plato entero) y clientes (hover = ver el pedido). **Arrastrando** (`DragKind` según lo que recibió el Down): carne de la bandeja → bloques de la parrilla y plato; carne de la parrilla → bloques, plato, tacho; carbón → huecos de carbón (`CanPlaceItem`), tacho; carne del plato → bandeja, bloques, plato; plato entero → clientes; pan/guarnición → plato; frasco → su zona de vertido. **Stock en la mano** (`DragKind.CoalPlacement` / `MeatPlacement`, sin botón apretado): lo de "sin nada agarrado" menos la carne y el carbón puestos, más los destinos — huecos de carbón con lugar (verde), o los bloques libres del corte en la mano; A pone la pieza (con carbón la selección se queda en el hueco; con carne la mano queda vacía) y `GamepadNavigator` trata `holding` como false. Al rotar (B) la carne en la mano se busca el bloque más cercano con el footprint nuevo. Las celdas del stock ya no son un arrastre (`DetectDrag` → `None`). Nada tapado por un panel abierto (salvo lo del propio panel). Con el juego en pausa, solo UI |
+| **Bloques de carne** | La carne no recorre huecos sueltos: sus destinos en la parrilla son **todos los bloques libres del tamaño real del corte** (`GrillSpace`, rotado si corresponde), enumerados con `GridSlot.CollectContiguousPlacements` — la misma búsqueda que usa `TryFindContiguousPlacement` para decidir dónde cae, así que el bloque seleccionado es exactamente donde queda. Cada salto corre el bloque un slot; el recuadro cubre el bloque entero. El footprint sale de `GamepadNavTargets.TryGetMeatFootprint` (stock en la mano: `StockPlacementMode.HeldCut` / `HeldCutRotated`; parrilla: `Meat.IsGridRotated`; bandeja: `ToBuildDraggableMeat.IsGridRotated`; plato: `PlateDeliveryDraggable.TryGetDraggedCut`). Al empezar a arrastrar carne de la parrilla se selecciona su propio bloque; al rotar (B) el bloque deja de valer y se elige el más cercano con el footprint nuevo. `InputManager.TryGetGridSnap` da el centro del bloque: la bandeja y la carne del plato, que se arrastran con agarre desplazado, lo usan para dibujar el corte justo sobre los slots (la carne de la parrilla y la del stock en la mano ya siguen al puntero, que está en ese centro). Con `visualOffset` distinto de cero habría que sumarlo ahí |
 | **Cursor libre** | El stick derecho mueve el puntero libre (velocidad `cursorSpeed` = 0.8 alturas de pantalla/s, curva `cursorResponseExponent`, `unscaledDeltaTime` para que ande en pausa): suelta la selección y muestra la flecha. Sirve para apuntar fino (ubicar la carne en un punto del plato, mover el frasco mientras vierte) |
 | **Visual** (`GamepadCursorView`) | Canvas overlay propio, por encima de todo. **Recuadro de esquinas con latido** alrededor de lo seleccionado: amarillo = algo para agarrar/clickear, verde = destino. **Flecha** solo con el cursor libre o sin nada seleccionado (sprite asignable; si no hay, la genera en runtime; se achica mientras se mantiene A). El cursor del sistema se oculta con gamepad |
 | **UI (uGUI)** | El gamepad maneja un `Mouse` **virtual** (`VirtualCursorMouse`, `InputSystem.QueueStateEvent`): para el `InputSystemUIInputModule` es un mouse más, así que botones, hovers (`MenuButtonHover`) y scroll de Canvas andan con el cursor sin código extra. Los `EventSystem` de las 5 escenas usan `InputSystemUIInputModule` con el mapa `UI`; si aparece un `StandaloneInputModule` (o un módulo sin configurar, como el que crea `TutorialManager`) `InputManager` lo reemplaza/configura en runtime con un warning |
@@ -680,12 +692,12 @@ static bool Enabled                                     // prender/apagar todo (
 | `BadCookingDelivered` | `TryDeliverToCustomer` con `causesStrike` (crudo/quemado) | golpe largo que se apaga · destello rojo |
 | `MeatBurned` | `Meat.Cook`, cuando cualquier cara cruza el umbral de Quemado (esté seleccionada o no) | golpe + chamuscado que se apaga · destello |
 | `CustomerLeftAngry` | `CustomerSystem.TriggerAngryLeaveFeedback` (paciencia en 0) | un golpe y un rumor que se apaga · destello rojo |
-| `PieceGrabbed` | `Item.OnWorldPointerDown` (carne/carbón), `StockPanelSlot`, `ToBuildDraggableMeat`, `PlateDeliveryDraggable` (plato y solo-carne), `BuildDraggableFoodItem`, `ToppingDraggable` | clic apenas perceptible |
+| `PieceGrabbed` | `Item.OnWorldPointerDown` (carne/carbón), `StockPlacementMode` (al tomar del stock), `ToBuildDraggableMeat`, `PlateDeliveryDraggable` (plato y solo-carne), `BuildDraggableFoodItem`, `ToppingDraggable` | clic apenas perceptible |
 | `MeatOnGrill` | `Meat.OnWorldPointerUp` (entra) y `Meat.PlayDropSettle` (stock, bandeja, plato); aterrizaje del flip con fuerza 0.6 | apoyo + chisporroteo |
 | `CoalOnGrill` | `Coal.OnWorldPointerUp` (entra) y `Coal.PlayDropSettle` | golpe seco y pesado |
 | `ActionRefused` | Pieza que no entra y vuelve (carne, carbón, stock fuera del panel, bandeja, pan/side, carne del plato), corte faltante sin sustituto, compra rechazada | dos tics suaves |
 | `MeatFlipped` | `Meat.FlipRoutine` al despegar | tic |
-| `PieceRotated` | Rotar footprint (`Meat`, `StockPanelSlot`, `ToBuildDraggableMeat`, `PlateDeliveryDraggable`) | tic mínimo |
+| `PieceRotated` | Rotar footprint (`Meat`, `StockPlacementMode`, `ToBuildDraggableMeat`, `PlateDeliveryDraggable`) | tic mínimo |
 | `MeatOnPlate` | `MeatTransferBuffer.AdoptVisualIntoPlate` (desde parrilla o bandeja) | golpe medio |
 | `PiecePlaced` | Pan/side/topping aceptado (`BuildDraggableFoodItem`), carne del plato a la bandeja | toque |
 | `SaucePouring` | `ToppingDraggable`, con cada salpicadura (0.05 s) | zumbido fino |
@@ -868,8 +880,9 @@ Mientras está `Encendido` el sprite pasa por **Prendido Fase 1 → 2 → 3** se
 (`CoalSO.GetSpriteForBurn`, umbrales `_phase2At` = 1/3 y `_phase3At` = 2/3, editables en `CoalData.asset`). Las fases son
 **solo visuales**: el estado sigue siendo `Encendido` y el calor no cambia (ya decae linealmente con el tiempo quemado).
 `CoalSO._maxBurnTime` es el valor real (60 por defecto; la mejora `CoalBurnTime` lo sube a 200 vía `SetMaxBurnTime`).
-Con carbón del stock en la mano (`CoalPlacementMode.IsActive`) un carbón puesto **no se agarra** (`CanBeginHold`, hook
-virtual de `Item` que solo `Coal` sobreescribe; `Meat` no cambia): el click sobre él apila otro.
+Con carbón del stock en la mano (`StockPlacementMode.IsActive`) un carbón puesto **no se agarra** (`CanBeginHold`, hook
+virtual de `Item` que sobreescriben `Coal` y `Meat`): el click sobre él apila otro. Lo mismo con una carne del stock en
+la mano: la carne puesta no se agarra y el click pone la de la mano en el bloque libre más cercano.
 
 #### `GrillLayerToggle` — `Grill/GrillLayerToggle.cs`
 ```csharp
@@ -992,62 +1005,62 @@ Panel izquierdo de stock. Reemplaza a la Cooler View. Vive anidado en `Prefabs/G
 
 ```csharp
 static StockPanelController Instance;
-GrillSystem Grill; MeatTransferBuffer MeatBuffer; CoalTransferBuffer CoalBuffer;   // para los slots
-CoalPlacementMode CoalPlacement;   // serializado; vacío = GetComponent / AddComponent en el mismo GameObject (Awake)
+GrillSystem Grill; MeatTransferBuffer MeatBuffer; CoalTransferBuffer CoalBuffer;   // para StockPlacementMode
+StockPlacementMode Placement;   // serializado; vacío = GetComponent / AddComponent en el mismo GameObject (Awake)
 void RefreshSlots()
-void NotifyDragStarted(StockPanelSlot), NotifyDragEnded(StockPanelSlot), CancelActiveDrag()
-bool IsPointInDropArea(Vector3)
-// hooks: OnPanelStarted → RefreshSlots · OnEnteredGrillView → RefreshSlots · OnPanelClosing → CancelActiveDrag + CoalPlacement.Disarm
+// hooks: OnPanelStarted → RefreshSlots · OnEnteredGrillView → RefreshSlots · OnPanelClosing → Placement.Disarm
 //        OnPanelOpened → TutorialManager.NotifyStockPanelOpened · CanOpen → TutorialManager.CheckStockPanelOpenAllowed
 ```
 
 - **No duplica stock**: se suscribe a `CoolerSystem.OnInventoryChanged` y repinta. Las cantidades salen siempre de `GetCount`.
 - **Orden de slots determinista**: `FoodCatalogSO.GetAllCuts()` filtrado por `stock > 0`, después los cortes con stock que no estén en el catálogo (ordenados por `itemName` — así aparece `ChorizoTutorial`), y el carbón **siempre último y siempre visible**, gris cuando está en 0. Nunca usar `EnumerateStock()` directo: el orden del `Dictionary` no es determinista.
 - Layout de grilla manual (`columns`, `cellSpacing`, `firstCellLocalOffset`), slots pooleados, sin scroll.
+- Un refresh que cambia el ítem de la celda de lo que está en la mano (p. ej. se terminó ese corte) lo suelta solo
+  (`StockPlacementMode.StillArmed`): ya no hay refresh diferido.
 - `GameManager` lo abre con `Q` solo si ya está abierto o `TutorialManager.CheckStockPanelOpenAllowed()`.
 
 #### `StockPanelSlot` — `UI/StockPanel/StockPanelSlot.cs`
-Una celda = una variedad. `Bind(ItemDataSO, count, owner)`, `SetSortingOrder(int)`, `CancelDrag()`.
-Maneja el arrastre completo desde `OnWorldPointerDown` hasta `OnWorldPointerUp` **en el mismo componente**: el
-dispatcher no transfiere `Drag`/`Up` a otro collider, así que el fantasma que sigue al mouse no
-puede hacerse cargo del drag. El preview de colocación lo dibujan los buffers (`MeatBuffer.UpdateMeatHolderHover`,
-`CoalBuffer.UpdateCoalHolderHover`) — es el único uso vivo de esas APIs. `FitIconToSlot()` escala el ícono por
-`sprite.bounds`. `GameAction.Rotate` rota el footprint (solo carne). El arrastre pide permiso a `TutorialManager.CheckStockDragAllowed(item)`.
+Una celda = una variedad. `Bind(ItemDataSO, count, owner)`, `SetSortingOrder(int)`, `IconRenderer`. `FitIconToSlot()`
+escala el ícono por `sprite.bounds`. **No se arrastra**: es un interruptor de `StockPlacementMode` para carne y carbón
+(click = su ítem en la mano, otro click = soltarlo; mientras está en la mano el ícono late, `iconArmedPulse`). Tomar
+otra celda devuelve a la suya lo que hubiera en la mano. Antes de `Arm` valida panel (`CanBeginDrag`), stock > 0 y
+`TutorialManager.CheckStockDragAllowed(item)`.
 
-Gates del drop, **antes** de cualquier `TryTake`:
-1. Soltar sobre el propio panel cancela siempre (`IsPointOverPanel`).
-2. `requireDropAreaHit` + `dropArea` (opcional, **off** por defecto) exige soltar dentro de un collider concreto.
-
-**Todo lo anterior es solo para carne.** La celda de carbón es un interruptor de `CoalPlacementMode` (click = carbón en
-la mano, otro click = soltarlo; con el carbón en la mano el ícono late, `iconArmedPulse`). Agarrar una celda de carne
-suelta el carbón y, si la parrilla está en la capa de carbón, la pasa a la de carne (`GrillLayerToggle.Current.Toggle()`,
-con el gate del tutorial) antes de arrancar el arrastre.
-
-#### `CoalPlacementMode` — `UI/StockPanel/CoalPlacementMode.cs`
-Carbón "en la mano". Vive junto a `StockPanelController` (que lo crea si falta y lo cancela al cerrar el panel). El
-componente queda **apagado** mientras no hay carbón seleccionado (sin `Update` ocioso).
+#### `StockPlacementMode` — `UI/StockPanel/StockPlacementMode.cs`
+Stock "en la mano" (antes `CoalPlacementMode`, mismo `.meta`). Vive junto a `StockPanelController` (que lo crea si falta y
+lo suelta al cerrar el panel). El componente queda **apagado** mientras no hay nada seleccionado (sin `Update` ocioso).
 
 ```csharp
-static bool IsActive;                       // lo leen Coal.CanBeginHold y GamepadNavigator
-bool IsArmed;
-void Arm(CoalSO, StockPanelSlot)            // la celda ya validó stock, panel y TutorialManager.CheckStockDragAllowed
-void Disarm(bool animateReturn)             // sin tocar el stock; con animación el carbón vuelve volando a la celda
+static bool IsActive;                       // lo leen Coal/Meat.CanBeginHold, MeatClickable y GamepadNavigator
+static bool IsCoalActive, IsMeatActive;
+static MeatCutSO HeldCut; static bool HeldCutRotated;   // footprint para los bloques del gamepad
+bool IsArmed; StockPanelSlot SourceCell;
+void Arm(ItemDataSO, StockPanelSlot)        // carbón o carne; la celda ya validó stock, panel y tutorial
+void Disarm(bool animateReturn)             // sin tocar el stock; con animación la pieza vuelve volando a la celda
 ```
 
-- `Arm`: si la capa es carne llama a `GrillLayerToggle.Current.Toggle()` (mismo camino que el botón: gate del tutorial,
-  ícono, eco). Oculta el cursor (`InputManager.SetPointerIconHidden(true)`), muestra el fantasma y vibra `PieceGrabbed`.
+- `Arm`: pasa la parrilla a la capa del ítem con `GrillLayerToggle.Current.Toggle()` (mismo camino que el botón: gate del
+  tutorial, ícono, eco). Oculta el cursor (`InputManager.SetPointerIconHidden(true)`), muestra la pieza y vibra
+  `PieceGrabbed`; con carne además señal `PieceGrabbed` (`Target` = la pieza del puntero, para el cartel de rotar).
 - Click (`InputManager.PrimaryPressed`, después del dispatcher): si lo apretado es una celda del panel, ya resolvió ella;
-  sobre el panel, nada; si lo apretado es nada / `GridSlot` / `Coal` **y** el punto cae sobre la parrilla de carbón
-  (`GridSlot.IsOverSlotsOfType`), pone un carbón: `TryTake` → `GrillSystem.TrySpawnCoalAtPoint` (rollback si falla) →
-  `Coal.PlayDropSettle` desde el fantasma + eco en el hueco + señales `CoalDraggedToGrill` / `CoalPlacedOnGrill`. Si no
-  entra: sacudida rojiza + `ActionRefused`. Cualquier otro objeto apretado (plato, cliente, toppings…) hace lo suyo y
-  el carbón se suelta. El gate de la parrilla es necesario: `TryFindContiguousPlacement` busca el hueco libre más
-  cercano **sin límite de distancia**, así que sin él un click en un cliente ponía carbón.
-- Se suelta solo: click derecho / X-□, stock en 0, salir de la capa de carbón, `GamePause.OnPaused` (sin animación),
-  `OnDisable`.
-- Fantasma: un `SpriteRenderer` reusado (`CoalPlacementGhost`, `sortingOrder` 6000) con pop de entrada, vaivén y
-  balanceo, aplastado al poner y sacudida al rechazar; tiempo sin escalar. Preview con `CoalTransferBuffer.UpdateCoalHolderHover`
-  solo sobre la parrilla, rehecho al mover el puntero o cada `previewRefreshSeconds`.
+  sobre el panel, nada; si lo apretado es nada / `GridSlot` / una pieza de esa capa (`Coal` o `Meat`, que no se agarran)
+  **y** el punto cae sobre la parrilla de esa capa (`GridSlot.IsOverSlotsOfType`), pone la pieza: `TryTake` →
+  `TrySpawnCoalAtPoint` / `TrySpawnMeatAtPoint` (rollback si falla) → `PlayDropSettle` desde la pieza del puntero.
+  - **Carbón**: eco en el hueco, aplastado, señales `CoalDraggedToGrill` / `CoalPlacedOnGrill`, y **sigue en la mano**.
+  - **Carne**: **una sola unidad** — se suelta sola (`Disarm(false)`, sin vuelta: ya está en la parrilla) y después
+    señales `MeatDraggedToGrill` / `MeatPlacedOnGrill`. Para otra hay que volver a la celda.
+  - Si no entra: sacudida rojiza + `ActionRefused`, la pieza sigue en la mano. Cualquier otro objeto apretado (plato,
+    cliente, toppings…) hace lo suyo y la pieza se suelta. El gate de la parrilla es necesario:
+    `TryFindContiguousPlacement` busca el hueco libre más cercano **sin límite de distancia**, así que sin él un click
+    en un cliente ponía la pieza.
+- `GameAction.Rotate` (R / B) rota el footprint de la carne en la mano (cortes con `CanRotate`): la pieza gira
+  `rotatedAngleZ`, el preview se rehace, `PieceRotated` (vibración y señal). R sigue disparando también `CleanAshes`.
+- Se suelta solo: click derecho / X-□ (que no da vuelta la carne de abajo: `MeatClickable` lo ignora con algo en la
+  mano), stock en 0, salir de la capa de la pieza, la celda pasa a otro ítem, `GamePause.OnPaused` (sin animación), `OnDisable`.
+- Pieza del puntero: un `SpriteRenderer` reusado (`StockPlacementGhost`, `sortingOrder` 6000, escala del prefab que se
+  va a spawnear) con pop de entrada, vaivén y balanceo, aplastado al poner y sacudida al rechazar; tiempo sin escalar.
+  Preview con `CoalTransferBuffer.UpdateCoalHolderHover` / `MeatTransferBuffer.UpdateMeatHolderHover` solo sobre la
+  parrilla de su capa, rehecho al mover el puntero, al rotar o cada `previewRefreshSeconds`.
 
 #### `StockPanelTab` — `UI/StockPanel/StockPanelTab.cs`
 Pestaña lateral con `BoxCollider2D` + `OnWorldPointerDown` → `controller.Toggle()`.
@@ -1117,7 +1130,7 @@ Draggable de los cortes de la **bandeja** (el nombre es histórico). `Setup(cut,
 #### `CoalTransferBuffer` — `CoalTransferBuffer.cs`
 Dos colas (`ToGrill` → `CoalHolder`) heredadas de la Cooler View: `EnqueueToGrill[AtPoint]`, `MoveToCoalHolder()`,
 `TryDropFromCoalHolderById(int, Vector3)`, `UpdateCoalHolderHover`, `ClearCoalHolderHover`, `RefreshVisuals`.
-Hoy solo se usa el **hover preview** desde `CoalPlacementMode`; el carbón va del panel a la grilla sin pasar por acá.
+Hoy solo se usa el **hover preview** desde `StockPlacementMode`; el carbón va del panel a la grilla sin pasar por acá.
 
 ---
 
@@ -2012,15 +2025,15 @@ siendo la carne y no la burbuja: si cambiara con cada hover, el director retirar
 | Señal (`TutorialSignal`) | La dispara |
 |---|---|
 | `StockPanelOpened` / `ToppingsPanelOpened` | `StockPanelController` / `ToppingsPanelController` → `OnPanelOpened` (Q/E, LB/RB o la pestaña) |
-| `MeatDraggedToGrill` + `MeatPlacedOnGrill` | `StockPanelSlot` (con la carne creada); `MeatPlacedOnGrill` también desde la bandeja y el plato (`MeatTransferBuffer`) |
-| `CoalDraggedToGrill` + `CoalPlacedOnGrill` | `StockPanelSlot` (con el carbón creado) |
+| `MeatDraggedToGrill` + `MeatPlacedOnGrill` | `StockPlacementMode` (con la carne creada); `MeatPlacedOnGrill` también desde la bandeja y el plato (`MeatTransferBuffer`) |
+| `CoalDraggedToGrill` + `CoalPlacedOnGrill` | `StockPlacementMode` (con el carbón creado) |
 | `GrillLayerChanged` | `GrillLayerToggle.ShowLayer` (también en su `Start`) |
 | `MeatFlipped` / `MeatStateChanged` | `Meat.Flip` / `Meat.RefreshState` |
 | `MeatDraggedToBuild` + `MeatPlacedOnBuildZone` | `MeatTransferBuffer` (parrilla → plato; bandeja → plato solo la segunda). `Target` = la carne ya en el plato |
 | `DeliverySelectionBegun` / `ProductDelivered` | `PlateDeliveryDraggable` al agarrar el plato / `GameManager.TryDeliverToCustomer` (entrega cobrada, no la cruda/quemada) |
 | `CustomerHovered` | `CustomerView.OnWorldPointerEnter` (se agranda la burbuja; con joystick, al seleccionarlo) |
 | `AshesCleaned` | `GameManager.CleanAshes` (R), si limpió algo |
-| `PieceGrabbed` / `PieceRotated` | Agarrar un corte: `StockPanelSlot` (`Target` = el fantasma) y `Meat.OnPickedUp`. Rotar (R): las cinco piezas que se arrastran (`StockPanelSlot`, `Meat`, `ToBuildDraggableMeat`, `MeatHolderDraggableMeat`, carne del plato en `PlateDeliveryDraggable`) |
+| `PieceGrabbed` / `PieceRotated` | Agarrar un corte: `StockPlacementMode.Arm` (`Target` = la pieza del puntero; el cartel de rotar vale con ella en la mano aunque no haya botón apretado) y `Meat.OnPickedUp`. Rotar (R): las cinco piezas que se mueven (`StockPlacementMode`, `Meat`, `ToBuildDraggableMeat`, `MeatHolderDraggableMeat`, carne del plato en `PlateDeliveryDraggable`) |
 | `BreadAdded` / `ToppingAdded` | `BuildFoodDropZone.TryAcceptAt` (pan o topping sólido soltado en el plato) / también `ToppingDraggable.RegisterTopping` (salsa vertida) |
 | `MissingCutUsed` | `GameManager`, acción `MissingCut` (M) sobre el cliente elegido, haya o no otro corte para ofrecerle |
 | `CustomerClicked` | `CustomerView.OnWorldPointerDown` (el jugador elige al cliente; el `SelectCustomer` automático no la dispara) |
@@ -2423,7 +2436,7 @@ se mueve** para un efecto: o se corre solo el dibujo con el collider compensado 
 |---|---|---|
 | `FeelEase` | `OutCubic`, `InCubic`, `InQuad`, `OutBack`, `Bump` (campana 0→1→0). Puras, sin allocations | Todo lo de abajo, `SlidingPanel`, `GrillLayerToggle`, `StockPanelSlot` |
 | `ScalePunch` | `Punch(t, amount, dur, unscaled)` / `PopIn(t, from, dur, unscaled)`. Se agrega solo al transform. Reiniciable sin acumular; si otro script reescribe la escala en el medio (un layout), esa pasa a ser la base. Se apaga solo al terminar | Visuales de sides/toppings del plato (`BuildFoodDropZone.SpawnPlateVisual`), contador de la celda de stock, contenedores de clientes y hora del HUD, ícono y stock de la tarjeta de tienda, cantidad −/+ |
-| `SpriteGhost` | `Spawn(SpriteRenderer, Motion)`: copia sprite, color, flip, orden, material y tamaño en mundo; sin collider. `Motion.Echo` (onda detrás de algo apoyado), `Vanish` (se achica, sube y se apaga), `Into(punto)` (viaja y se apaga). Pool estático (se vacía solo al cambiar de escena); tiempo escalado por defecto (la pausa lo congela) | Corte que entra al plato (eco) y pan que lo vuelve sándwich (`MeatTransferBuffer`), plato limpiado o entregado (desvanecido), undo de side/topping, tacho (`TrashZone`: lo tirado cae por la boca + eco del tacho), cenizas (`GameManager.CleanAshes`), cliente que se va (`CustomerView.PlayLeave`), fantasma del stock que vuelve a la celda, eco del botón de capa |
+| `SpriteGhost` | `Spawn(SpriteRenderer, Motion)`: copia sprite, color, flip, orden, material y tamaño en mundo; sin collider. `Motion.Echo` (onda detrás de algo apoyado), `Vanish` (se achica, sube y se apaga), `Into(punto)` (viaja y se apaga). Pool estático (se vacía solo al cambiar de escena); tiempo escalado por defecto (la pausa lo congela) | Corte que entra al plato (eco) y pan que lo vuelve sándwich (`MeatTransferBuffer`), plato limpiado o entregado (desvanecido), undo de side/topping, tacho (`TrashZone`: lo tirado cae por la boca + eco del tacho), cenizas (`GameManager.CleanAshes`), cliente que se va (`CustomerView.PlayLeave`), pieza del stock en la mano que vuelve a la celda, eco del botón de capa |
 | `SettleOffset` | POCO: corrimiento que arranca en *dónde se ve − dónde quedó* y se apaga (OutCubic + saltito opcional). El dueño lo suma a la posición y le resta lo mismo al `offset` del collider | `Meat` (mismo canal que el flote: `floatOffset`, así `RestPosition`, burbuja, humo y aviso quedan en el lugar real), `Coal`, `BuildDraggableFoodItem` (vuelta al panel), `CustomerView` (llegada y cambio de lugar, sobre la raíz visual) |
 | `UIPopIn` | En cada `OnEnable`: fundido (CanvasGroup, se agrega solo) + crecimiento con rebote, tiempo sin escalar. Nunca bloquea raycasts. `Ensure(window)` lo suma por código | `PauseCanvas/Panel/VerticalContainer`, `OptionsPanel/Window` (en los prefabs); popups de `EndScene` (`StrikeEndPopup` y `RunDefeatScreen` lo agregan en `Awake`) |
 | `SceneFadeIn` | DDOL creado en `BeforeSceneLoad`: toda carga de `SceneManagementUtils` funde a negro en 1 s (`FadeOutThenLoad`; la carga real y la limpieza de `RestartRun`/`ReturnToMainMenu` corren recién en negro) y cada escena nueva entra desde negro en 1.35 s, ambas con `InOutCubic`. En la salida bloquea clicks de UI y descarta cargas repetidas (gana la primera); en la entrada no bloquea. Debajo del cursor del gamepad, orden 31000. ⚠️ Toda carga se demora 1 s: no llamar `SceneManager.LoadScene` directo | Todas las escenas |
@@ -2437,8 +2450,9 @@ se mueve** para un efecto: o se corre solo el dibujo con el collider compensado 
   (`PlayDropSettle`). ⚠️ Soltar carne en cualquier lado la sigue llevando al bloque libre más cercano (regla existente).
 - **Capas.** `GrillLayerToggle`: los colliders cambian al instante; el alfa de cada capa se funde en `layerFadeSeconds` (0.12,
   sin escalar) y el botón larga un eco. Buffers reusados, sin `GetComponentsInChildren` con array.
-- **Stock.** `StockPanelSlot`: el ícono (hijo sin collider) crece con el puntero encima, se atenúa mientras una unidad va en la
-  mano, el fantasma aparece con pop, y si el drop se rechaza un fantasma vuelve a la celda (el stock no se tocó). El contador
+- **Stock.** `StockPanelSlot`: el ícono (hijo sin collider) crece con el puntero encima y late mientras su ítem está en la
+  mano. `StockPlacementMode`: la pieza del puntero aparece con pop, se mece, se sacude rojiza si el click no pudo y, al
+  soltarla sin usarla, vuelve volando a la celda (el stock no se tocó). El contador
   da un golpe cuando cambia la cantidad de la misma variedad y se tiñe (`lowCountColor`) con `lowCountThreshold` (3) o menos.
   `StockPanelTab`: aclara al hover y destella solo si el panel realmente cambió (un rechazo del tutorial no destella).
 - **Paneles.** `SlidingPanel`: ease-out (responde en el mismo frame) con rebote leve al abrir (`openOvershoot`), cerrar sin
