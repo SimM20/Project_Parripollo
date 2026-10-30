@@ -38,10 +38,21 @@ public class ShopTabButtonUI : MonoBehaviour
 
     public void SetActiveState(bool isActive)
     {
+        // Con cartel de menú la tab activa es el cartel encendido ("estás acá"), no un botón:
+        // no se selecciona ni titila, y volver a clickearla no reconstruye la grilla.
+        RetroMenuButton retro = GetComponent<RetroMenuButton>();
+        if (retro != null && button != null)
+            button.interactable = !isActive;
+
         if (background != null)
         {
             Sprite sprite = isActive ? activeSprite : inactiveSprite;
-            if (sprite != null)
+            if (sprite != null && retro != null)
+            {
+                retro.SetNormalSprite(sprite);
+                background.color = Color.white;
+            }
+            else if (sprite != null)
             {
                 background.sprite = sprite;
                 background.color = Color.white;
