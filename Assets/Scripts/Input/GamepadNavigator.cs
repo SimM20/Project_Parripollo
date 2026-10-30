@@ -14,8 +14,9 @@ using UnityEngine;
 ///    al rotarla se busca el bloque más cercano con el nuevo footprint.
 ///  • Al soltar A se re-selecciona lo que quedó bajo el puntero (p. ej. la carne recién puesta).
 ///  • Al abrir un panel lateral se selecciona su primer elemento.
-///  • Con carbón del stock en la mano (<see cref="CoalPlacementMode"/>) apretar A no es agarrar:
-///    la selección se queda en el hueco (para poner otro) y se recorren huecos de carbón y lo clickeable.
+///  • Con stock en la mano (<see cref="StockPlacementMode"/>) apretar A no es agarrar: con carbón la
+///    selección se queda en el hueco (para poner otro) y se recorren huecos de carbón y lo clickeable;
+///    con una carne se recorren sus bloques libres y lo clickeable, y al rotarla se busca el bloque nuevo.
 /// </summary>
 public sealed class GamepadNavigator
 {
@@ -67,23 +68,26 @@ public sealed class GamepadNavigator
             return false;
         }
 
-        // Con el carbón en la mano, A pone carbón: no hay nada agarrado aunque el botón esté apretado.
-        bool placingCoal = CoalPlacementMode.IsActive;
-        holding = holding && !placingCoal;
+        // Con stock en la mano, A pone la pieza: no hay nada agarrado aunque el botón esté apretado.
+        bool placing = StockPlacementMode.IsActive;
+        holding = holding && !placing;
 
         GamepadNavTargets.DragKind drag = holding
             ? GamepadNavTargets.DetectDrag(pressed)
-            : placingCoal ? GamepadNavTargets.DragKind.CoalPlacement : GamepadNavTargets.DragKind.None;
+            : StockPlacementMode.IsCoalActive ? GamepadNavTargets.DragKind.CoalPlacement
+            : StockPlacementMode.IsMeatActive ? GamepadNavTargets.DragKind.MeatPlacement
+            : GamepadNavTargets.DragKind.None;
 
         if (hasFocus && !GamepadNavTargets.Refresh(ref focus, holding, drag, pressed))
         {
             bool wasBlock = focus.kind == NavTarget.Kind.GridBlock;
             hasFocus = false;
+            // Se rotó la carne: el bloque viejo ya no es su footprint, buscar el nuevo al lado.
+            if (wasBlock && (holding || drag == GamepadNavTargets.DragKind.MeatPlacement))
+                FocusNearest(pointer, holding, drag, pressed, RotateRefocusRadius);
             // Se fue lo seleccionado sin que se agarrara nada (panel cerrado, cliente que se fue):
             // buscar lo más cercano para no quedar a la deriva.
-            if (!holding) refocusPending = true;
-            // Se rotó la carne: el bloque viejo ya no es su footprint, buscar el nuevo al lado.
-            else if (wasBlock) FocusNearest(pointer, true, drag, pressed, RotateRefocusRadius);
+            else if (!holding) refocusPending = true;
         }
 
         // Arrancó un arrastre: si lo agarrado ya está sobre un destino (la carne en su bloque

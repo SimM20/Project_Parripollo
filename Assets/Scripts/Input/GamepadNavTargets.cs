@@ -38,9 +38,10 @@ public struct NavTarget
 ///    plato, bandeja, tacho, zona de vertido o clientes), según <see cref="DragKind"/>. La carne
 ///    no recorre huecos sueltos sino bloques del tamaño real del corte (con su rotación): cada
 ///    salto corre el bloque un slot, y el corte se dibuja encima del bloque donde va a caer.
-///  • Con carbón del stock en la mano (<see cref="CoalPlacementMode"/>, no hay botón apretado):
-///    lo mismo que sin nada agarrado, pero los carbones puestos no (no se agarran) y en su lugar
-///    los huecos de carbón con lugar, como destinos. A pone un carbón; la celda de carbón lo suelta.
+///  • Con stock en la mano (<see cref="StockPlacementMode"/>, no hay botón apretado):
+///    lo mismo que sin nada agarrado, pero las piezas puestas de esa capa no (no se agarran) y en
+///    su lugar los destinos: huecos de carbón con lugar, o los bloques libres del corte en la mano.
+///    A pone la pieza; su celda la suelta.
 ///  • Con el juego en pausa (eventMask = 0) el mundo no cuenta: solo la UI.
 /// </summary>
 public static class GamepadNavTargets
@@ -48,7 +49,6 @@ public static class GamepadNavTargets
     public enum DragKind
     {
         None,
-        StockMeat,
         GrillMeat,
         GrillCoal,
         TrayMeat,
@@ -58,7 +58,12 @@ public static class GamepadNavTargets
         Sauce,
         /// <summary>Carbón del stock en la mano: no es un arrastre (no hay botón apretado), pero cambia los destinos.</summary>
         CoalPlacement,
+        /// <summary>Una unidad de carne del stock en la mano: como <see cref="CoalPlacement"/>, con bloques del corte como destinos.</summary>
+        MeatPlacement,
     }
+
+    /// <summary>Stock en la mano: conviven destinos y cosas para clickear (no hay botón apretado).</summary>
+    public static bool IsPlacement(DragKind drag) => drag == DragKind.CoalPlacement || drag == DragKind.MeatPlacement;
 
     private const float SlotFallbackSize = 0.5f;
 
@@ -74,9 +79,9 @@ public static class GamepadNavTargets
         if (PlateDeliveryDraggable.IsDraggingPlateMeat) return DragKind.PlateMeat;
         if (pressed == null) return DragKind.None;
 
-        // La celda de carbón no se arrastra: es el interruptor de CoalPlacementMode.
-        if (pressed.TryGetComponent(out StockPanelSlot slot))
-            return slot.Item is MeatCutSO ? DragKind.StockMeat : DragKind.None;
+        // Las celdas del stock no se arrastran: son el interruptor de StockPlacementMode.
+        if (pressed.TryGetComponent(out StockPanelSlot _))
+            return DragKind.None;
 
         if (pressed.TryGetComponent<Meat>(out _)) return DragKind.GrillMeat;
         if (pressed.TryGetComponent<Coal>(out _)) return DragKind.GrillCoal;
@@ -98,10 +103,13 @@ public static class GamepadNavTargets
             CollectUI(into);
             if (WorldAvailable(out _))
             {
-                bool placingCoal = drag == DragKind.CoalPlacement;
-                CollectWorldIdle(into, !placingCoal);
-                if (placingCoal)
+                // Con stock en la mano las piezas puestas no se agarran: en su lugar, los destinos.
+                bool placing = IsPlacement(drag);
+                CollectWorldIdle(into, !placing);
+                if (drag == DragKind.CoalPlacement)
                     AddGridSlots(into, ItemType.Coal, null);
+                else if (drag == DragKind.MeatPlacement)
+                    AddMeatBlocks(into, drag, null);
             }
             return;
         }
@@ -116,7 +124,7 @@ public static class GamepadNavTargets
             Add(into, selectable, NavTarget.Kind.UI, false);
     }
 
-    private static void CollectWorldIdle(List<NavTarget> into, bool includeCoals)
+    private static void CollectWorldIdle(List<NavTarget> into, bool includeGrillPieces)
     {
         StockPanelController stock = StockPanelController.Instance;
         if (stock != null && stock.IsOpen)
@@ -140,8 +148,9 @@ public static class GamepadNavTargets
         AddAllColliders<StockPanelTab>(into);
         AddAllColliders<GrillLayerToggle>(into);
         AddAllColliders<Radio>(into);
-        AddAllColliders<Meat>(into);
-        for (int i = 0; includeCoals && i < Coal.ActiveCoals.Count; i++)
+        if (includeGrillPieces)
+            AddAllColliders<Meat>(into);
+        for (int i = 0; includeGrillPieces && i < Coal.ActiveCoals.Count; i++)
         {
             if (Coal.ActiveCoals[i] != null)
                 Add(into, Coal.ActiveCoals[i].GetComponent<Collider2D>(), NavTarget.Kind.WorldCollider, false);
@@ -171,9 +180,6 @@ public static class GamepadNavTargets
     {
         switch (drag)
         {
-            case DragKind.StockMeat:
-                AddMeatBlocks(into, drag, pressed);
-                break;
             case DragKind.GrillMeat:
                 AddMeatBlocks(into, drag, pressed);
                 AddPlateZones(into);
@@ -255,12 +261,9 @@ public static class GamepadNavTargets
 
         switch (drag)
         {
-            case DragKind.StockMeat:
-                if (pressed != null && pressed.TryGetComponent(out StockPanelSlot slot))
-                {
-                    cut = slot.Item as MeatCutSO;
-                    rotated = slot.IsDragRotated;
-                }
+            case DragKind.MeatPlacement:
+                cut = StockPlacementMode.HeldCut;
+                rotated = StockPlacementMode.HeldCutRotated;
                 break;
             case DragKind.GrillMeat:
                 if (pressed != null && pressed.TryGetComponent(out Meat meat))
@@ -326,7 +329,7 @@ public static class GamepadNavTargets
     public static bool Refresh(ref NavTarget target, bool holding, DragKind drag, GameObject pressed)
     {
         // Con el carbón en la mano conviven destinos (huecos) y cosas para clickear.
-        if (target.key == null || (target.isDropTarget != holding && drag != DragKind.CoalPlacement))
+        if (target.key == null || (target.isDropTarget != holding && !IsPlacement(drag)))
             return false;
 
         if (target.kind == NavTarget.Kind.UI)

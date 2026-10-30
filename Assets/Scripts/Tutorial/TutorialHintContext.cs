@@ -171,7 +171,8 @@ public partial class TutorialHintContext
 
     /// <summary>La pieza que se agarró sigue en la mano: existe, está activa y el botón sigue apretado.</summary>
     private Transform HeldPiece =>
-        heldPiece != null && heldPiece.gameObject.activeInHierarchy && InputManager.PrimaryHeld ? heldPiece : null;
+        heldPiece != null && heldPiece.gameObject.activeInHierarchy
+        && (InputManager.PrimaryHeld || StockPlacementMode.IsMeatActive) ? heldPiece : null;
 
     private static Transform BubbleOf(CustomerView view)
     {

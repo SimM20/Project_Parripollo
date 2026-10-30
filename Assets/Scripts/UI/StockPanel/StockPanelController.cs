@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Panel deslizante de stock dentro de GrillView. Construye una celda por variedad
-/// (con contador numérico) y permite arrastrar directamente a la parrilla.
+/// (con contador numérico); un click en una celda pone su ítem en la mano
+/// (<see cref="StockPlacementMode"/>) y otro click en la parrilla lo coloca.
 /// Vive dentro del prefab de GrillView: el singleton destruye el componente duplicado,
 /// nunca el GameObject.
 ///
@@ -25,14 +26,8 @@ public class StockPanelController : SlidingPanel
     [SerializeField] private GrillSystem grillSystem;
     [SerializeField] private MeatTransferBuffer meatTransferBuffer;
     [SerializeField] private CoalTransferBuffer coalTransferBuffer;
-    [Tooltip("Carbón en la mano (click en la celda de carbón). Vacío = se busca o se agrega en este mismo GameObject.")]
-    [SerializeField] private CoalPlacementMode coalPlacement;
-
-    [Header("Drop Gating")]
-    [Tooltip("Área válida de drop. Solo se aplica si requireDropAreaHit está activo.")]
-    [SerializeField] private Collider2D dropArea;
-    [Tooltip("Si está activo, el drop debe caer dentro de dropArea. Apagado = paridad con MeatHolderDraggableMeat.")]
-    [SerializeField] private bool requireDropAreaHit = false;
+    [Tooltip("Stock en la mano (click en una celda). Vacío = se busca o se agrega en este mismo GameObject.")]
+    [SerializeField] private StockPlacementMode placement;
 
     [Header("Grid Layout")]
     [SerializeField] [Min(1)] private int columns = 4;
@@ -52,16 +47,14 @@ public class StockPanelController : SlidingPanel
     /// <summary>Buffer de carbón usado solo para el preview de hover sobre la grilla.</summary>
     public CoalTransferBuffer CoalBuffer => coalTransferBuffer;
 
-    /// <summary>Modo "carbón en la mano" de la celda de carbón.</summary>
-    public CoalPlacementMode CoalPlacement => coalPlacement;
+    /// <summary>Modo "stock en la mano" de las celdas (carbón o una unidad de carne).</summary>
+    public StockPlacementMode Placement => placement;
 
     private readonly List<StockPanelSlot> pooledSlots = new List<StockPanelSlot>();
     private readonly List<ItemDataSO> orderedItems = new List<ItemDataSO>();
     private readonly List<MeatCutSO> extraCuts = new List<MeatCutSO>();
 
     private CoolerSystem coolerSystem;
-    private StockPanelSlot activeDragSlot;
-    private bool refreshPending;
     private bool startCompleted;
 
     void Awake()
@@ -74,9 +67,9 @@ public class StockPanelController : SlidingPanel
 
         Instance = this;
 
-        if (coalPlacement == null && !TryGetComponent(out coalPlacement))
-            coalPlacement = gameObject.AddComponent<CoalPlacementMode>();
-        coalPlacement.Bind(this);
+        if (placement == null && !TryGetComponent(out placement))
+            placement = gameObject.AddComponent<StockPlacementMode>();
+        placement.Bind(this);
     }
 
     protected override void OnEnable()
@@ -112,9 +105,8 @@ public class StockPanelController : SlidingPanel
 
     protected override void OnPanelClosing()
     {
-        CancelActiveDrag();
-        if (coalPlacement != null)
-            coalPlacement.Disarm(true);
+        if (placement != null)
+            placement.Disarm(true);
     }
 
     protected override void OnPanelOpened() => TutorialSignals.Raise(TutorialSignal.StockPanelOpened);
@@ -145,9 +137,6 @@ public class StockPanelController : SlidingPanel
 
         if (coalTransferBuffer == null)
             Debug.LogWarning("[StockPanelController] Falta la referencia 'coalTransferBuffer'. No habrá preview de hover para carbón.");
-
-        if (requireDropAreaHit && dropArea == null)
-            Debug.LogWarning("[StockPanelController] 'requireDropAreaHit' está activo pero falta la referencia 'dropArea'. El gate queda desactivado.");
     }
 
     // ── Referencias externas ────────────────────────────────────────────────
@@ -169,91 +158,16 @@ public class StockPanelController : SlidingPanel
         }
     }
 
-    // ── Gates de drop ───────────────────────────────────────────────────────
-
-    /// <summary>
-    /// True si el punto está permitido por el área de drop configurable.
-    /// Con requireDropAreaHit apagado (o sin dropArea asignado) siempre devuelve true,
-    /// manteniendo la paridad con los arrastres del MeatHolder.
-    /// </summary>
-    public bool IsPointInDropArea(Vector3 worldPoint)
-    {
-        if (!requireDropAreaHit || dropArea == null)
-            return true;
-
-        Vector3 point = worldPoint;
-        point.z = dropArea.bounds.center.z;
-
-        return dropArea.bounds.Contains(point);
-    }
-
-    // ── Arrastre ────────────────────────────────────────────────────────────
-
-    /// <summary>Una celda avisa que empezó a arrastrar. Congela los refresh del panel.</summary>
-    public void NotifyDragStarted(StockPanelSlot slot)
-    {
-        if (activeDragSlot != null && activeDragSlot != slot)
-            activeDragSlot.CancelDrag();
-
-        activeDragSlot = slot;
-    }
-
-    /// <summary>
-    /// Una celda avisa que terminó (o canceló) su arrastre. Ejecuta el refresh
-    /// que se hubiera diferido mientras el arrastre estaba activo.
-    /// </summary>
-    public void NotifyDragEnded(StockPanelSlot slot)
-    {
-        if (activeDragSlot == slot)
-            activeDragSlot = null;
-
-        if (activeDragSlot != null || !refreshPending)
-            return;
-
-        refreshPending = false;
-        RefreshSlots();
-    }
-
-    /// <summary>Cancela el arrastre en curso, si lo hay, sin tocar el stock.</summary>
-    public void CancelActiveDrag()
-    {
-        StockPanelSlot slot = activeDragSlot;
-        if (slot == null)
-            return;
-
-        // CancelDrag() reingresa por NotifyDragEnded(); esto es la red de seguridad
-        // por si la celda ya no estaba arrastrando.
-        slot.CancelDrag();
-
-        if (activeDragSlot != slot)
-            return;
-
-        activeDragSlot = null;
-
-        if (!refreshPending)
-            return;
-
-        refreshPending = false;
-        RefreshSlots();
-    }
-
     // ── Construcción de celdas ──────────────────────────────────────────────
 
     /// <summary>
-    /// Reconstruye el contenido de las celdas desde el stock actual.
-    /// Si hay un arrastre activo difiere el refresh para no re-bindear la celda
-    /// que el jugador está usando.
+    /// Reconstruye el contenido de las celdas desde el stock actual. Si la celda de lo que está
+    /// en la mano pasa a mostrar otro ítem, <see cref="StockPlacementMode"/> lo suelta solo.
     /// </summary>
     public void RefreshSlots()
     {
         if (!startCompleted)
             return;
-
-        if (activeDragSlot != null)
-        {
-            refreshPending = true;
-            return;
-        }
 
         if (slotsParent == null || slotPrefab == null)
             return;

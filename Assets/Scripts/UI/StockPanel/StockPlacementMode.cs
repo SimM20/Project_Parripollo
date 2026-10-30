@@ -1,27 +1,32 @@
 using UnityEngine;
 
 /// <summary>
-/// Carbón "en la mano": un click en la celda de carbón del panel de stock lo selecciona, el
-/// puntero pasa a mostrar el carbón y cada click sobre la parrilla de carbón pone uno (descuenta
-/// del cooler y spawnea por el mismo camino que tenía el arrastre). Se suelta con otro click en
-/// la celda, click derecho / X-□, al clickear cualquier otra cosa interactiva (que igual hace lo
-/// suyo: el click no se pierde), al volver a la capa de carne, al quedarse sin stock, al cerrar
-/// el panel o al pausar.
+/// Stock "en la mano": un click en una celda del panel de stock la selecciona, el puntero pasa a
+/// mostrar la pieza y un click sobre la parrilla de su capa la pone (descuenta del cooler y
+/// spawnea). Se suelta con otro click en la celda, click derecho / X-□, al clickear cualquier otra
+/// cosa interactiva (que igual hace lo suyo: el click no se pierde), al cambiar de capa, al
+/// quedarse sin stock, al cerrar el panel o al pausar.
 ///
-/// La carne sigue con el arrastre de siempre (<see cref="StockPanelSlot"/>). Mientras está
-/// activo, los carbones ya puestos no se dejan agarrar (<see cref="Coal"/>): clickearlos apila
-/// otro encima. El componente queda apagado mientras no hay carbón en la mano (sin Update ocioso).
+///  • Carbón: queda en la mano y cada click pone uno más (apila hasta 3).
+///  • Carne: en la mano va **una sola unidad** del corte. Al ponerla la mano queda vacía; para otra
+///    hay que volver a la celda. R / B rota el footprint mientras está en la mano.
+///
+/// Mientras está activo, las piezas ya puestas no se dejan agarrar (<see cref="Coal"/>,
+/// <see cref="Meat"/>): clickearlas pone la de la mano (apila el carbón; la carne va al bloque
+/// libre más cercano). El componente queda apagado mientras no hay nada en la mano (sin Update ocioso).
 /// </summary>
-public class CoalPlacementMode : MonoBehaviour
+public class StockPlacementMode : MonoBehaviour
 {
     [Header("Ghost")]
     [SerializeField] private int ghostSortingOrder = 6000;
-    [Tooltip("Multiplicador sobre la escala del prefab de carbón. 1 = mismo tamaño que en la parrilla.")]
+    [Tooltip("Multiplicador sobre la escala del prefab que se va a spawnear. 1 = mismo tamaño que en la parrilla.")]
     [SerializeField] private Vector3 ghostWorldScale = Vector3.one;
-    [Tooltip("Segundos de la aparición del carbón en el puntero al seleccionarlo.")]
+    [Tooltip("Segundos de la aparición de la pieza en el puntero al seleccionarla.")]
     [SerializeField] [Min(0.01f)] private float popSeconds = 0.12f;
-    [Tooltip("Segundos de la vuelta a la celda al soltarlo.")]
+    [Tooltip("Segundos de la vuelta a la celda al soltarla.")]
     [SerializeField] [Min(0.01f)] private float returnSeconds = 0.16f;
+    [Tooltip("Giro del corte en la mano cuando su footprint va rotado (R / B).")]
+    [SerializeField] private float rotatedAngleZ = 90f;
 
     [Header("Idle")]
     [Tooltip("Vaivén vertical mientras está en la mano (unidades de mundo).")]
@@ -45,20 +50,37 @@ public class CoalPlacementMode : MonoBehaviour
     [Tooltip("Cada cuánto se rehace el preview aunque el puntero no se mueva (cenizas que se limpian, carbones que se apagan).")]
     [SerializeField] [Min(0.02f)] private float previewRefreshSeconds = 0.2f;
 
-    /// <summary>Hay un carbón en la mano. Lo consultan <see cref="Coal"/> (no se agarra) y la navegación del gamepad.</summary>
+    /// <summary>Hay algo del stock en la mano. Lo consultan <see cref="Coal"/> y <see cref="Meat"/> (no se agarran).</summary>
     public static bool IsActive => armed != null;
 
-    /// <summary>Este modo tiene el carbón seleccionado.</summary>
+    /// <summary>Hay carbón del stock en la mano.</summary>
+    public static bool IsCoalActive => armed != null && armed.item is CoalSO;
+
+    /// <summary>Hay una unidad de carne del stock en la mano.</summary>
+    public static bool IsMeatActive => armed != null && armed.item is MeatCutSO;
+
+    /// <summary>El corte en la mano, o null. Lo usa la navegación del gamepad para medir los bloques.</summary>
+    public static MeatCutSO HeldCut => armed != null ? armed.item as MeatCutSO : null;
+
+    /// <summary>El corte en la mano va rotado (R / B).</summary>
+    public static bool HeldCutRotated => armed != null && armed.isGridRotated;
+
+    /// <summary>Este modo tiene algo seleccionado.</summary>
     public bool IsArmed => armed == this;
 
-    private static CoalPlacementMode armed;
+    /// <summary>Celda de la que salió lo que está en la mano.</summary>
+    public StockPanelSlot SourceCell => IsArmed ? sourceCell : null;
+
+    private static StockPlacementMode armed;
 
     private StockPanelController owner;
-    private CoalSO coal;
+    private ItemDataSO item;
     private StockPanelSlot sourceCell;
+    private ItemType itemType;
+    private bool isGridRotated;
     private float planeZ;
     private int armedFrame;
-    private bool wasCoalLayer;
+    private bool wasOwnLayer;
 
     private SpriteRenderer ghostRenderer;
     private Vector3 ghostBaseScale = Vector3.one;
@@ -75,7 +97,7 @@ public class CoalPlacementMode : MonoBehaviour
 
     void Awake()
     {
-        // Prendido solo con el carbón en la mano.
+        // Prendido solo con algo en la mano.
         enabled = false;
     }
 
@@ -98,11 +120,15 @@ public class CoalPlacementMode : MonoBehaviour
         if (!StillArmed())
             return;
 
+        // Nota: R también dispara GameManager.CleanAshes; el doble binding ya existía con el arrastre.
+        if (item is MeatCutSO && InputManager.WasPressed(GameAction.Rotate))
+            ToggleGridRotation();
+
         Vector3 point = GetPointerWorldPosition();
         AnimateGhost(point, Time.unscaledDeltaTime);
         UpdatePreview(point);
 
-        // El click que lo seleccionó no pone carbón.
+        // El click que lo seleccionó no pone nada.
         if (Time.frameCount == armedFrame)
             return;
 
@@ -118,35 +144,44 @@ public class CoalPlacementMode : MonoBehaviour
 
     // ── Seleccionar / soltar ────────────────────────────────────────────────
 
-    /// <summary>Pone el carbón en la mano. La celda ya validó stock, panel y tutorial.</summary>
-    public void Arm(CoalSO coalData, StockPanelSlot cell)
+    /// <summary>
+    /// Pone en la mano el ítem de la celda (carbón o una unidad de carne). La celda ya validó
+    /// stock, panel y tutorial. Si había otra cosa en la mano, vuelve a su celda.
+    /// </summary>
+    public void Arm(ItemDataSO stockItem, StockPanelSlot cell)
     {
-        if (coalData == null || cell == null || owner == null)
+        if (!(stockItem is CoalSO || stockItem is MeatCutSO) || cell == null || owner == null)
             return;
 
-        if (armed != null && armed != this)
-            armed.Disarm(false);
+        if (armed != null)
+            armed.Disarm(true);
 
-        coal = coalData;
+        item = stockItem;
+        itemType = stockItem is CoalSO ? ItemType.Coal : ItemType.Meat;
         sourceCell = cell;
+        isGridRotated = false;
         planeZ = cell.transform.position.z;
         armedFrame = Time.frameCount;
         armed = this;
         enabled = true;
         GamePause.OnPaused += DisarmInstant;
 
-        // Seleccionar el carbón ya muestra su capa, por el mismo camino que el botón (tutorial, ícono, eco).
+        // Seleccionar la pieza ya muestra su capa, por el mismo camino que el botón (tutorial, ícono, eco).
+        GrillLayerToggle.GrillLayer layer = itemType == ItemType.Coal ? GrillLayerToggle.GrillLayer.Coal : GrillLayerToggle.GrillLayer.Meat;
         GrillLayerToggle toggle = GrillLayerToggle.Current;
-        if (toggle != null && toggle.CurrentLayer != GrillLayerToggle.GrillLayer.Coal)
+        if (toggle != null && toggle.CurrentLayer != layer)
             toggle.Toggle();
-        wasCoalLayer = GrillLayerToggle.IsItemTypeAllowed(ItemType.Coal);
+        wasOwnLayer = GrillLayerToggle.IsItemTypeAllowed(itemType);
 
         ShowGhost(GetPointerWorldPosition());
         InputManager.SetPointerIconHidden(true);
         GamepadHaptics.Play(HapticEvent.PieceGrabbed);
+
+        if (item is MeatCutSO cut)
+            TutorialSignals.Raise(TutorialSignal.PieceGrabbed, cut: cut, target: ghostRenderer.transform);
     }
 
-    /// <summary>Suelta el carbón sin tocar el stock. Con <paramref name="animateReturn"/> se lo ve volver a la celda.</summary>
+    /// <summary>Suelta lo que hay en la mano sin tocar el stock. Con <paramref name="animateReturn"/> se lo ve volver a la celda.</summary>
     public void Disarm(bool animateReturn)
     {
         if (!IsArmed)
@@ -171,29 +206,29 @@ public class CoalPlacementMode : MonoBehaviour
             ghostRenderer.gameObject.SetActive(false);
 
         InputManager.SetPointerIconHidden(false);
-        coal = null;
+        item = null;
         sourceCell = null;
     }
 
-    /// <summary>Se suelta solo si se terminó el stock, se volvió a la capa de carne o la celda dejó de ser la del carbón.</summary>
+    /// <summary>Se suelta solo si se terminó el stock, se cambió de capa o la celda dejó de ser la de ese ítem.</summary>
     private bool StillArmed()
     {
-        if (sourceCell == null || !sourceCell.isActiveAndEnabled || sourceCell.Item != coal)
+        if (sourceCell == null || !sourceCell.isActiveAndEnabled || sourceCell.Item != item)
         {
             Disarm(false);
             return false;
         }
 
-        if (CoolerSystem.Instance == null || CoolerSystem.Instance.GetCount(coal) <= 0)
+        if (CoolerSystem.Instance == null || CoolerSystem.Instance.GetCount(item) <= 0)
         {
             Disarm(true);
             return false;
         }
 
-        bool coalLayer = GrillLayerToggle.IsItemTypeAllowed(ItemType.Coal);
-        bool leftCoalLayer = wasCoalLayer && !coalLayer;
-        wasCoalLayer = coalLayer;
-        if (leftCoalLayer)
+        bool ownLayer = GrillLayerToggle.IsItemTypeAllowed(itemType);
+        bool leftOwnLayer = wasOwnLayer && !ownLayer;
+        wasOwnLayer = ownLayer;
+        if (leftOwnLayer)
         {
             Disarm(true);
             return false;
@@ -208,38 +243,50 @@ public class CoalPlacementMode : MonoBehaviour
     {
         GameObject pressed = InputManager.PressedObject;
 
-        // Una celda del panel ya resolvió el click (soltar el carbón o arrastrar carne).
+        // Una celda del panel ya resolvió el click (soltar lo de la mano o tomar otra cosa).
         if (pressed != null && pressed.TryGetComponent(out StockPanelSlot _))
             return;
 
         if (owner.IsPointOverPanel(point))
             return;
 
-        if (IsGrillPiece(pressed) && IsOverCoalGrid(point))
+        if (IsGrillPiece(pressed) && IsOverOwnGrid(point))
         {
-            TryPlace(point);
+            if (item is CoalSO)
+                TryPlaceCoal(point);
+            else
+                TryPlaceMeat(point);
             return;
         }
 
-        // Otra cosa interactiva: ya hizo lo suyo (el Down llegó antes que este Update) y el carbón se suelta.
+        // Otra cosa interactiva: ya hizo lo suyo (el Down llegó antes que este Update) y la pieza se suelta.
         if (pressed != null)
             Disarm(true);
     }
 
-    /// <summary>Lo que hay sobre la parrilla de carbón: nada, un hueco o un carbón ya puesto (no se agarra).</summary>
-    private static bool IsGrillPiece(GameObject pressed)
-        => pressed == null || pressed.TryGetComponent(out GridSlot _) || pressed.TryGetComponent(out Coal _);
+    /// <summary>Lo que hay sobre la parrilla de la capa: nada, un hueco o una pieza ya puesta (no se agarra).</summary>
+    private bool IsGrillPiece(GameObject pressed)
+    {
+        if (pressed == null || pressed.TryGetComponent(out GridSlot _))
+            return true;
 
-    private bool IsOverCoalGrid(Vector3 point)
+        return itemType == ItemType.Coal ? pressed.TryGetComponent(out Coal _) : pressed.TryGetComponent(out Meat _);
+    }
+
+    /// <summary>
+    /// El gate de la parrilla es necesario: <c>TryFindContiguousPlacement</c> busca el hueco libre
+    /// más cercano sin límite de distancia, así que sin él un click en un cliente ponía la pieza.
+    /// </summary>
+    private bool IsOverOwnGrid(Vector3 point)
     {
         GrillSystem grill = owner.Grill;
-        return grill != null && GridSlot.IsOverSlotsOfType(grill.slots, ItemType.Coal, point);
+        return grill != null && GridSlot.IsOverSlotsOfType(grill.slots, itemType, point);
     }
 
     /// <summary>Descuenta y spawnea con los mismos gates que el drop del stock: un click rechazado nunca toca el stock.</summary>
-    private void TryPlace(Vector3 point)
+    private void TryPlaceCoal(Vector3 point)
     {
-        CoalSO placed = coal;
+        CoalSO placed = (CoalSO)item;
         GrillSystem grill = owner.Grill;
         CoolerSystem cooler = CoolerSystem.Instance;
 
@@ -269,26 +316,70 @@ public class CoalPlacementMode : MonoBehaviour
         TutorialSignals.Raise(TutorialSignal.CoalPlacedOnGrill, coal: placed, target: spawned.transform);
     }
 
+    /// <summary>
+    /// Pone la única unidad de carne de la mano: descuenta, spawnea (rollback si no entra) y la mano
+    /// queda vacía. Rechazado, el corte sigue en la mano y el stock no se tocó.
+    /// </summary>
+    private void TryPlaceMeat(Vector3 point)
+    {
+        MeatCutSO cut = (MeatCutSO)item;
+        bool rotated = isGridRotated;
+        GrillSystem grill = owner.Grill;
+        CoolerSystem cooler = CoolerSystem.Instance;
+
+        if (grill == null || cooler == null || !GrillLayerToggle.IsItemTypeAllowed(ItemType.Meat)
+            || !TutorialManager.CheckStockDragAllowed(cut) || !cooler.TryTake(cut, 1))
+        {
+            Refuse();
+            return;
+        }
+
+        if (!grill.TrySpawnMeatAtPoint(cut, point, out Meat spawned, rotated) || spawned == null)
+        {
+            cooler.Add(cut, 1);
+            Refuse();
+            return;
+        }
+
+        // Solo visual: el corte real sigue desde donde estaba el de la mano.
+        spawned.PlayDropSettle(ghostRenderer != null ? ghostRenderer.transform.position : point);
+
+        // Una sola unidad: se puso y la mano queda vacía (sin vuelta a la celda, ya está en la parrilla).
+        Disarm(false);
+
+        TutorialSignals.Raise(TutorialSignal.MeatDraggedToGrill, cut: cut, meat: spawned);
+        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: cut, meat: spawned);
+    }
+
     private void Refuse()
     {
         shakeT = 0f;
         GamepadHaptics.Play(HapticEvent.ActionRefused);
     }
 
+    /// <summary>Los cortes de footprint cuadrado no se rotan: quedarían idénticos.</summary>
+    private void ToggleGridRotation()
+    {
+        if (!(item is MeatCutSO cut) || !cut.CanRotate)
+            return;
+
+        isGridRotated = !isGridRotated;
+        nextPreviewTime = 0f;
+        previewShown = false;
+        GamepadHaptics.Play(HapticEvent.PieceRotated);
+        TutorialSignals.Raise(TutorialSignal.PieceRotated, cut: cut);
+    }
+
     // ── Preview de colocación ───────────────────────────────────────────────
 
     /// <summary>
     /// Mismo preview que tenía el arrastre (verde donde cae, rojo si no entra), solo con el puntero
-    /// sobre la parrilla de carbón: afuera un click no pone nada. Se rehace al moverse el puntero o
-    /// cada <see cref="previewRefreshSeconds"/>, no en todos los frames.
+    /// sobre la parrilla de su capa: afuera un click no pone nada. Se rehace al moverse el puntero
+    /// o cada <see cref="previewRefreshSeconds"/>, no en todos los frames.
     /// </summary>
     private void UpdatePreview(Vector3 point)
     {
-        CoalTransferBuffer buffer = owner.CoalBuffer;
-        if (buffer == null)
-            return;
-
-        if (owner.IsPointOverPanel(point) || !IsOverCoalGrid(point))
+        if (owner.IsPointOverPanel(point) || !IsOverOwnGrid(point))
         {
             ClearPreview();
             return;
@@ -298,7 +389,19 @@ public class CoalPlacementMode : MonoBehaviour
         if (previewShown && now < nextPreviewTime && (point - lastPreviewPoint).sqrMagnitude < 0.0001f)
             return;
 
-        buffer.UpdateCoalHolderHover(coal, point);
+        if (item is CoalSO coal)
+        {
+            if (owner.CoalBuffer == null)
+                return;
+            owner.CoalBuffer.UpdateCoalHolderHover(coal, point);
+        }
+        else
+        {
+            if (owner.MeatBuffer == null)
+                return;
+            owner.MeatBuffer.UpdateMeatHolderHover((MeatCutSO)item, point, isGridRotated);
+        }
+
         previewShown = true;
         lastPreviewPoint = point;
         nextPreviewTime = now + previewRefreshSeconds;
@@ -310,19 +413,27 @@ public class CoalPlacementMode : MonoBehaviour
             return;
 
         previewShown = false;
-        if (owner != null && owner.CoalBuffer != null)
-            owner.CoalBuffer.ClearCoalHolderHover();
+        if (owner == null)
+            return;
+
+        if (itemType == ItemType.Coal)
+        {
+            if (owner.CoalBuffer != null)
+                owner.CoalBuffer.ClearCoalHolderHover();
+        }
+        else if (owner.MeatBuffer != null)
+            owner.MeatBuffer.ClearMeatHolderHover();
     }
 
-    // ── Carbón del puntero ──────────────────────────────────────────────────
+    // ── Pieza del puntero ───────────────────────────────────────────────────
 
     private void ShowGhost(Vector3 point)
     {
         if (ghostRenderer == null)
-            ghostRenderer = new GameObject("CoalPlacementGhost").AddComponent<SpriteRenderer>();
+            ghostRenderer = new GameObject("StockPlacementGhost").AddComponent<SpriteRenderer>();
 
         SpriteRenderer icon = sourceCell.IconRenderer;
-        ghostRenderer.sprite = coal.coalSprite;
+        ghostRenderer.sprite = item is CoalSO coal ? coal.coalSprite : ((MeatCutSO)item).GetDefaultSprite();
         ghostRenderer.sortingOrder = ghostSortingOrder;
         if (icon != null)
             ghostRenderer.sortingLayerID = icon.sortingLayerID;
@@ -337,20 +448,20 @@ public class CoalPlacementMode : MonoBehaviour
         AnimateGhost(point, 0f);
     }
 
-    /// <summary>Escala del prefab que se va a spawnear, así el carbón del puntero mide lo mismo que el puesto.</summary>
+    /// <summary>Escala del prefab que se va a spawnear, así la pieza del puntero mide lo mismo que la puesta.</summary>
     private Vector3 ResolveGhostScale()
     {
-        GameObject reference = coal.coalPrefab;
+        GameObject reference = item is CoalSO coal ? coal.coalPrefab : null;
         if (reference == null && owner.Grill != null)
-            reference = owner.Grill.coalPrefab;
+            reference = itemType == ItemType.Coal ? owner.Grill.coalPrefab : owner.Grill.meatPrefab;
 
         Vector3 prefabScale = reference != null ? reference.transform.localScale : Vector3.one;
         return new Vector3(prefabScale.x * ghostWorldScale.x, prefabScale.y * ghostWorldScale.y, 1f);
     }
 
     /// <summary>
-    /// El carbón sigue al puntero con vida propia: aparece con rebote, se mece, se aplasta al poner
-    /// uno y se sacude (rojizo) si el click no pudo. Tiempo sin escalar: es respuesta al puntero.
+    /// La pieza sigue al puntero con vida propia: aparece con rebote, se mece, se aplasta al poner
+    /// un carbón y se sacude (rojiza) si el click no pudo. Tiempo sin escalar: es respuesta al puntero.
     /// </summary>
     private void AnimateGhost(Vector3 point, float dt)
     {
@@ -365,16 +476,17 @@ public class CoalPlacementMode : MonoBehaviour
         float pop = Mathf.LerpUnclamped(0.6f, 1f, FeelEase.OutBack(popT, 1.6f));
         float squash = FeelEase.Bump(stampT) * stampAmount;
         float shake = Mathf.Sin(shakeT * Mathf.PI * 6f) * shakeAmplitude * (1f - shakeT);
+        float baseAngle = isGridRotated ? rotatedAngleZ : 0f;
 
         Transform ghost = ghostRenderer.transform;
         ghost.SetPositionAndRotation(
             point + new Vector3(shake, Mathf.Sin(time * bobSpeed) * bobAmplitude, 0f),
-            Quaternion.Euler(0f, 0f, Mathf.Sin(time * bobSpeed * 0.5f) * swayDegrees));
+            Quaternion.Euler(0f, 0f, baseAngle + Mathf.Sin(time * bobSpeed * 0.5f) * swayDegrees));
         ghost.localScale = new Vector3(ghostBaseScale.x * pop * (1f + squash), ghostBaseScale.y * pop * (1f - squash), 1f);
         ghostRenderer.color = Color.Lerp(refuseTint, Color.white, shakeT);
     }
 
-    /// <summary>El carbón vuelve volando a su celda y se apaga: se lee que se soltó sin gastar nada.</summary>
+    /// <summary>La pieza vuelve volando a su celda y se apaga: se lee que se soltó sin gastar nada.</summary>
     private void PlayReturn()
     {
         if (ghostRenderer == null || sourceCell == null || sourceCell.IconRenderer == null)
