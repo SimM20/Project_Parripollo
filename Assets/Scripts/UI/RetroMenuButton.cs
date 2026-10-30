@@ -76,6 +76,18 @@ public class RetroMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
         if (image != null && normalSprite != null) image.sprite = normalSprite;
     }
 
+    /// <summary>
+    /// Cambia el cartel de reposo, para botones cuyo estado de fondo cambia en runtime (la tab
+    /// activa de la tienda). Escribir image.sprite desde afuera no alcanza: este componente
+    /// vuelve a poner su sprite en el próximo Update.
+    /// </summary>
+    public void SetNormalSprite(Sprite sprite)
+    {
+        if (sprite == null) return;
+        normalSprite = sprite;
+        if (image != null) Apply();
+    }
+
     private void Update() => Apply();
 
     private void Apply()
