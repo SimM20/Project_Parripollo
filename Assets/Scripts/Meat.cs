@@ -781,6 +781,10 @@ public class Meat : Item
         return transferBuffer.TryPlateMeatFromGrill(this, dropWorldPoint);
     }
 
+    // Con carne del stock en la mano, el click sobre una carne puesta pone la de la mano en el
+    // bloque libre más cercano (StockPlacementMode): no se agarra.
+    protected override bool CanBeginHold() => !StockPlacementMode.IsActive;
+
     protected override void HandleHeldInput()
     {
         if (InputManager.WasPressed(GameAction.Rotate))
