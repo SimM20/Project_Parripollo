@@ -13,6 +13,14 @@ MonoBehaviour:
   m_Name: Costillita de cerdo al plato
   m_EditorClassIdentifier: 
   displayName: Costillita de cerdo al plato
+  variantSprite: {fileID: 21300000, guid: f32c6621329b3274a8a3e2be3f21694d, type: 3}
+  cookingSprites:
+    crudo: {fileID: 21300000, guid: b2c3024f15e7a9442b2d349a5ea2277d, type: 3}
+    jugoso: {fileID: 21300000, guid: 948a3bb29fe1f5843962d1564d21ee48, type: 3}
+    hecho: {fileID: 21300000, guid: f32c6621329b3274a8a3e2be3f21694d, type: 3}
+    muyHecho: {fileID: 21300000, guid: d3e84ce9a38fd6c4ea9c9f19588a8197, type: 3}
+    pasado: {fileID: 21300000, guid: 8eb67ee5c53db2142ad460b040cb63bd, type: 3}
+    quemado: {fileID: 21300000, guid: 4445c6d57c9a23f46b1959bab01d3445, type: 3}
   cut: {fileID: 11400000, guid: 653773d762bd72547b1d4628df28fa18, type: 2}
   bread: {fileID: 0}
   sellPrice: 100
