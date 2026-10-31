@@ -1141,7 +1141,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 6, y: -6}
+  m_AnchoredPosition: {x: 16, y: -16}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &912085742
@@ -1166,8 +1166,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: PARRILLA 40
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
-  m_sharedMaterial: {fileID: 2150445919236001146, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
+  m_sharedMaterial: {fileID: 6531084185216290391, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1191,8 +1191,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 150
-  m_fontSizeBase: 150
+  m_fontSize: 128
+  m_fontSizeBase: 128
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -2491,8 +2491,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: PARRILLA 40
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
-  m_sharedMaterial: {fileID: 2150445919236001146, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
+  m_sharedMaterial: {fileID: 6531084185216290391, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2516,8 +2516,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 150
-  m_fontSizeBase: 150
+  m_fontSize: 128
+  m_fontSizeBase: 128
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
