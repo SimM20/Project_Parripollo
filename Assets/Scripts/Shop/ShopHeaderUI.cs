@@ -10,8 +10,6 @@ public class ShopHeaderUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI totalCoalText;   // ← NUEVO
     [Tooltip("Cartel con los clientes que pasaron por el local en la jornada que acaba de terminar.")]
     [SerializeField] private TextMeshProUGUI customersTodayText;
-    [Tooltip("Nombre del local: es la marca, no se traduce.")]
-    [SerializeField] private string shopName = "LA PARRILLA DE DON COCO";
 
     [Header("Compra: animación de la plata")]
     [Tooltip("Lo que late al comprar (el cartel de la plata). Vacío = el texto. Con pivot al centro, crece parejo.")]
@@ -88,7 +86,8 @@ public class ShopHeaderUI : MonoBehaviour
 
     private void Refresh()
     {
-        if (shopNameText != null) shopNameText.text = shopName;
+        // Título de la pantalla ("Tienda"); Bungee lo dibuja en mayúsculas.
+        if (shopNameText != null) shopNameText.text = Loc.Get("shop.header.title");
 
         if (moneyText != null && shop != null && shop.Wallet != null)
         {
