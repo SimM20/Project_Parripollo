@@ -277,7 +277,7 @@ Assets/Scripts/
 | **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda-interruptor (`StockPanelSlot`), stock en la mano → parrilla (`StockPlacementMode`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPlacementMode.cs`, `StockPanelTab.cs` |
 | **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
 | **Radio/** | `Radio` (el objeto del mostrador que activa la mejora `RadioUpgrade`: prender/apagar, lista de canciones, salto al ritmo) y `RadioStation` (emisora DDOL creada en runtime: elige, encadena y funde las canciones) | `Radio.cs`, `RadioStation.cs` |
-| **Feel/** | Solo presentación, sin lógica de juego. `FeelEase` (curvas), `ScalePunch` (golpe/pop de escala para transforms **sin collider**), `SpriteGhost` (copia pooleada de un sprite que se anima y desaparece), `SettleOffset` (corrimiento visual que se apaga solo, para piezas con collider compensado), `UIPopIn` (entrada de ventanas de UI), `SceneFadeIn` (fundido de salida y entrada de escena, se crea solo) | `SpriteGhost.cs`, `SettleOffset.cs`, `ScalePunch.cs`, `UIPopIn.cs` |
+| **Feel/** | Solo presentación, sin lógica de juego. `FeelEase` (curvas), `ScalePunch` (golpe/pop de escala para transforms **sin collider**), `SpriteGhost` (copia pooleada de un sprite que se anima y desaparece), `SettleOffset` (corrimiento visual que se apaga solo, para piezas con collider compensado), `UIPopIn` (entrada de ventanas de UI), `SceneFadeIn` (fundido de salida y entrada de escena, se crea solo), `MainMenuIntro` (amanecer + entrada del menú principal, ver 4.1) | `SpriteGhost.cs`, `SettleOffset.cs`, `ScalePunch.cs`, `UIPopIn.cs` |
 | **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO` | `UpgradeStateResetter.cs` |
 
 ### Assets de datos
@@ -2238,6 +2238,8 @@ de noche — y sigue de noche mientras se atiende a los últimos clientes, porqu
 ```csharp
 interface IDayCycleVisual { void ApplyHour(float hour); }   // lo implementan las capas; se juntan en Awake (hijos, incluso inactivos)
 float VisualHour;                         // hora que muestra el fondo; durante un salto va detrás del reloj
+void SetScriptedHour(float hour);         // hora fijada por código (intro del menú): gana sobre reloj y fallbackHour, sin catchUp
+void ClearScriptedHour();                 // vuelve al reloj / fallbackHour
 ```
 
 | Campo de inspector | Valor | |
@@ -2502,7 +2504,19 @@ MainMenuScene (build index 0)
   ├── Init.Awake() → GameSettings.ApplyCurrent()   ← aplica las opciones del jugador (ver 3.10)
   │     lee %USERPROFILE%/AppData/.../init.cfg  (Application.persistentDataPath)
   │     aplica Screen.SetResolution (si cambió) + vSyncCount/targetFrameRate + InputManager.SetInputMode + Loc.SetLanguage
-  └── MainMenuPanel: fade-in (CanvasGroup) + versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Opciones → OptionsPanel · Salir → Quit (en Editor, sale de Play)
+  ├── MainMenuIntro (en MainMenuPanel, Feel/MainMenuIntro.cs): intro de ~3,1 s cada vez que se abre la escena, saltable
+  │     (cualquier tecla, click, A/B/Start). Todo es función del tiempo transcurrido (Evaluate): saltar = ir al final.
+  │     · Amanecer: DayCycleBackground.SetScriptedHour 05:00 → 06:30 (InOutCubic, 0,3–2,7 s). Se fija en Awake, antes
+  │       del Start del fondo, para que el primer frame ya sea de noche. Al terminar, ClearScriptedHour (fallbackHour = 6.5)
+  │     · HaloSol (objeto de escena, no del prefab; Sprites/FondoCicloDia/HaloSol.png, 160 px a PPU 25, anillos de alfa
+  │       escalonado, order -42: sobre el cielo, detrás de sol, nubes y árboles): sigue al sol, crece 0,25 → 1 y se apaga
+  │     · Título: Text y Shadow caen con OutBack, la sombra 0,05 s después · Subtítulo: letra por letra (maxVisibleCharacters)
+  │     · Botones: sube el contenedor Buttons y cada botón entra por alfa (CanvasGroup agregado en runtime). No se anima
+  │       escala ni posición por botón: RetroMenuButton escribe la escala cada frame y el VerticalLayoutGroup la posición
+  │     · Desplazamientos de UI redondeados a 4 px de referencia (pixelStep). Tiempo unscaled, delta topeado a 1/30
+  │     · El CanvasGroup del menú bloquea clicks y Submit hasta el final; tras un salto se libera 0,15 s después, así la
+  │       misma tecla no aprieta JUGAR. Se bloquea en Start (no Awake): JUGAR ya quedó seleccionado en su OnEnable
+  └── MainMenuPanel: versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Opciones → OptionsPanel · Salir → Quit (en Editor, sale de Play)
         botones con MenuButtonHover (escala al hover/click, unscaled) sobre sprites Boton Comenzar / Boton Continuar
         └── GameScene arranca directo, sin diálogo: si las ayudas están prendidas, los carteles del tutorial aparecen
             solos (TutorialHints, ver 3.7). TutorialScene y ShopTutorial ya no se abren desde el juego (se borran en la fase 7)

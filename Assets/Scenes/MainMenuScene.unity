@@ -552,6 +552,7 @@ GameObject:
   - component: {fileID: 745859595}
   - component: {fileID: 745859596}
   - component: {fileID: 745859597}
+  - component: {fileID: 745859598}
   m_Layer: 5
   m_Name: MainMenuPanel
   m_TagString: Untagged
@@ -602,8 +603,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f936dff9d3f64348aab5ebcc876d084, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fadeGroup: {fileID: 745859597}
-  fadeInSeconds: 0.6
   versionText: {fileID: 1310941363}
   optionsPanel: {fileID: 7230194976102899822}
   hideWhileOptionsOpen:
@@ -621,6 +620,54 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &745859598
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 745859591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35c25d79e9e95e747852c83c98af1029, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  menuGroup: {fileID: 745859597}
+  background: {fileID: 1111576034}
+  sun: {fileID: 1930247011}
+  halo: {fileID: 1869501629}
+  title: {fileID: 426554003}
+  titleLayers:
+  - {fileID: 2125742504}
+  - {fileID: 912085741}
+  subtitleTexts:
+  - {fileID: 703512412}
+  - {fileID: 854357652}
+  buttons: {fileID: 1805156574}
+  version: {fileID: 1310941362}
+  fromHour: 5
+  toHour: 6.5
+  hourStart: 0.3
+  hourSeconds: 2.4
+  haloStart: 1.8
+  haloSeconds: 1.2
+  haloColor: {r: 1, g: 0.78, b: 0.5, a: 0.6}
+  haloFromScale: 0.25
+  haloToScale: 1
+  titleStart: 2.1
+  titleSeconds: 0.45
+  titleDrop: 140
+  titleOvershoot: 1.6
+  layerLag: 0.05
+  subtitleStart: 2.4
+  subtitleSeconds: 0.45
+  buttonsStart: 2.6
+  buttonsSeconds: 0.5
+  buttonsRise: 120
+  buttonStagger: 0.08
+  buttonFadeSeconds: 0.2
+  pixelStep: 4
+  skipUnlockDelay: 0.15
 --- !u!1 &807130122
 GameObject:
   m_ObjectHideFlags: 0
@@ -1342,6 +1389,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   key: menu.options
+--- !u!114 &1111576034 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5886472930094327931, guid: dc258ae671562d44084f431ce0a897f0, type: 3}
+  m_PrefabInstance: {fileID: 2007372806}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 939050c0ef9fbb4438b082045e154b16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1300462172
 GameObject:
   m_ObjectHideFlags: 0
@@ -2138,6 +2196,95 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &1869501628
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1869501630}
+  - component: {fileID: 1869501629}
+  m_Layer: 0
+  m_Name: HaloSol
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!212 &1869501629
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1869501628}
+  m_Enabled: 0
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: -42
+  m_Sprite: {fileID: 21300000, guid: e234b46efe31d5644a7fb52a3bfe446f, type: 3}
+  m_Color: {r: 1, g: 0.78, b: 0.5, a: 0}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 6.4, y: 6.4}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_MaskInteraction: 0
+  m_SpriteSortPoint: 0
+--- !u!4 &1869501630
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1869501628}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.46, y: 4.42, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &1930247011 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1208712669210440344, guid: dc258ae671562d44084f431ce0a897f0, type: 3}
+  m_PrefabInstance: {fileID: 2007372806}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2007372806
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2541,3 +2688,4 @@ SceneRoots:
   - {fileID: 187280837}
   - {fileID: 1300462173}
   - {fileID: 2007372806}
+  - {fileID: 1869501630}
