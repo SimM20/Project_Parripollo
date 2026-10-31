@@ -57,6 +57,22 @@ public class DayCycleBackground : MonoBehaviour
 
     private IDayCycleVisual[] visuals;
     private float lastAppliedHour = float.NaN;
+    private bool hasScriptedHour;
+    private float scriptedHour;
+
+    /// <summary>
+    /// Fija la hora desde código (la intro del menú la recorre de noche al amanecer). Gana sobre el
+    /// reloj y <see cref="fallbackHour"/>, y se aplica tal cual, sin el tope de avance. Llamada antes
+    /// del Start de este componente, la escena arranca directamente en esa hora.
+    /// </summary>
+    public void SetScriptedHour(float hour)
+    {
+        scriptedHour = hour;
+        hasScriptedHour = true;
+    }
+
+    /// <summary>Vuelve a la hora del reloj o a <see cref="fallbackHour"/>.</summary>
+    public void ClearScriptedHour() => hasScriptedHour = false;
 
     private void Awake()
     {
@@ -74,7 +90,7 @@ public class DayCycleBackground : MonoBehaviour
     {
         float target = ReadTargetHour();
 
-        VisualHour = overrideHour || catchUpHoursPerSecond <= 0f
+        VisualHour = overrideHour || hasScriptedHour || catchUpHoursPerSecond <= 0f
             ? target
             : Mathf.MoveTowards(VisualHour, target, catchUpHoursPerSecond * Time.deltaTime);
 
@@ -87,6 +103,9 @@ public class DayCycleBackground : MonoBehaviour
     {
         if (overrideHour)
             return overrideHourValue;
+
+        if (hasScriptedHour)
+            return scriptedHour;
 
         DayClock clock = DayClock.Instance;
         return clock != null ? clock.CurrentHour : fallbackHour;
