@@ -189,6 +189,15 @@
 > `StockPanelSlot` quedó como interruptor (sin fantasma, sin `IsDragRotated`); `StockPanelController` perdió
 > `NotifyDragStarted/Ended`, `CancelActiveDrag`, `IsPointInDropArea` y los campos `dropArea` / `requireDropAreaHit`
 > (estaban sin usar). Gamepad: `DragKind.StockMeat` → `DragKind.MeatPlacement`. Secciones 2.4, 3.1, 3.3.
+>
+> Última actualización parcial: **2026-10-31** (rama `Gameplay-Store`) — **swipe entre tabs de la tienda**:
+> `ShopTabSwipeUI` (en `GridArea` del `ShopCanvas.prefab`) hace entrar el `Content` de la grilla y el `Hint` de la ayuda
+> desde el costado hacia el que se va, con fade. Sale el `ShopSystem` de `ShopGridUI.Shop` (getter nuevo), así que las
+> escenas no necesitan otro override. Además, **los requisitos de la tienda pasaron a 5 carteles** (título, racha,
+> carne, carbón y estado) en vez de un panel único; claves nuevas `shop.req.amount` / `.meat.label` / `.coal.label` /
+> `.status` / `.missing` (salieron `shop.req.meat`, `shop.req.coal` y `shop.req.deficit`). El botón "Siguiente" se
+> agrandó para llenar el hueco hasta la scrollbar de la grilla con el mismo alto que los carteles. Sección 3.6 y tabla
+> de Strikes.
 
 ---
 
@@ -1737,11 +1746,19 @@ Layout (referencia 1920×1080, fondo `PauseMenubg` con la puerta a la derecha):
             [ 1. CARBÓN ][ 2. CARNES ][ 3. MEJORAS ][ 4. TOPPINGS ]                     ← Tabs
             [ línea de ayuda de la tab (Nunito) ]                                        ← SubHeader
             [ tarjeta ][ tarjeta ][ tarjeta ][ tarjeta ]   (4 columnas, scroll vertical)  ← GridArea
-[ Requirements: PARA ARRANCAR MAÑANA ... ]                      [ SIGUIENTE: CARNES ]  ← abajo
+[ PARA ARRANCAR MAÑANA ][ NOCHES SEGUIDAS CON STRIKES ]  (racha solo con strikes)
+[ CARNE ][ CARBÓN ][ ESTADO / FALTA COMPRAR ]   [    SIGUIENTE: CARNES    ]  ← abajo (Requirements + Next Button, mismo alto)
 ```
 
-- Tabs, ayuda y grilla están anclados en `x = 833/1920` (centro de la persiana, sin la puerta) y el botón
-  "Siguiente" en `x = 1610/1920`: siguen al fondo estirado en pantallas que no son 16:9.
+- Tabs, ayuda y grilla están anclados en `x = 833/1920` (centro de la persiana, sin la puerta): siguen al fondo
+  estirado en pantallas que no son 16:9.
+- El botón "Siguiente" (desde 2026-10-31) llena el hueco entre los requisitos y la scrollbar de la grilla:
+  `anchorMin.x = 0` con `offsetMin = (996, 34)` y `anchorMax.x = 0.43385` (el ancla de `GridArea`) con
+  `offsetMax = (750, 194)` → el borde derecho sigue al de la grilla en cualquier aspecto (1583 en 16:9, 587 de ancho)
+  y el alto es el de los carteles (160). Los 32 de aire a la izquierda son a propósito: el `litScale 1.06` de
+  `RetroMenuButton` lo agranda ~18 por lado y no tiene que pisar el cartel de estado. Marco escalado parejo 1.6x
+  (`pixelsPerUnitMultiplier = 0.625`); texto a 80 de cada borde (las flechitas del marco) y auto-size 22–30, así mide
+  casi lo mismo en todas las tabs.
 - **Lenguaje visual:** dos fuentes — **Bungee** (títulos, botones, números) y **Nunito** (texto corrido). Chapas:
   `Boton Continuar.png` (oscura: cartel, plata, tabs inactivas, ayuda, requisitos, tarjetas) y
   `Boton Comenzar.png` (dorada: tab activa, Comprar, Siguiente). Las dos tienen `spriteBorder = 28` para usarse
@@ -1769,6 +1786,7 @@ el flag `started` evita refrescar antes del primer `Start`.
 | `ShopItemCellUI` | Celda: icono, nombre, descripción, precio, **stock actual** (`stockText`, hijo `ItemStock` bajo el precio: `"TENÉS: N"` desde `Cooler.GetCount` / `ToppingStock.GetCount`, `"TENÉS: N U."` en carbón, `"NIVEL X/Y"` en mejoras), `pendingQty`, subtotal. El carbón agrega el tamaño de bolsa al nombre (`"Carbón x10"` / `"Charcoal x10"`) y a la descripción (`"Bolsa de 10 unidades"`) cuando `unitsPerBag > 1`. La descripción (`ItemDesc`) va en **Nunito** con auto-size 11–16, en una caja de 224×50 sin márgenes (no se sale de la tarjeta ni pisa el precio): antes era Bungee Hairline 12 y sus trazos, más finos que un píxel a ese tamaño, se dibujaban cortados. Los textos salen de las claves `shop.cell.*`; el nombre de cada item es `DisplayName` (y `DisplayDescription` en mejoras). Sin `stockText`, el nivel de la mejora vuelve a la descripción. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. **Oculta el −/+ (`stepperRoot`) si el item se compra de a uno** (mejoras) y muestra el total (`shop.cell.subtotal`, `"Total: $N"`) **solo con cantidad > 1**. `lockedOverlay` es un velo oscuro sobre toda la tarjeta (`LockedOverlay`, sin `raycastTarget`) + icono atenuado para lo no comprable (bloqueado o mejora al máximo). Si el item no tiene sprite, el icono se apaga (un `Image` sin sprite dibuja un cuadrado blanco). Tarjeta de 280×480 |
 | `ShopSubtitleUI` | Una línea de ayuda por tab (`detailText`, Nunito). `titleText` es **opcional** y en el prefab está sin asignar: la tab activa ya dice en qué sección estás. En `Coal` el detalle es dinámico: `shop.help.coal` (`"Venís usando {0} unidades de carbón por jornada."`) o `shop.help.coal.first_night` si `DaysPlayed == 0` |
 | `ShopNextButtonUI` | Avanza `Coal → Meat → Upgrades → Toppings` cambiando el label (`"Siguiente: Carnes"`…`"Arrancar el día"`); en `Toppings` el botón carga `GameScene` |
+| `ShopTabSwipeUI` | En `GridArea`. Con `OnTabChanged` hace entrar sus `targets` (`Content` de la grilla, 420 u., recortado por el `Mask` del `Viewport`; `Hint` de la ayuda, 120 u.) desde la derecha si la tab nueva va después en el enum y desde la izquierda si va antes, con fade (`CanvasGroup`, se agrega solo) y ease-out cúbico en `duration` (0.25 s, tiempo unscaled). Solo anima la entrada (la grilla se reconstruye en el mismo evento) y solo toca la `x`: la `y` del `Content` es del `ScrollRect`. El `ShopSystem` lo lee de `ShopGridUI.Shop`, no tiene campo `shop` propio |
 
 Lecturas para los carteles del tutorial (no cambian nada de la tienda): `ShopItemCellUI.CanBuy` y `BlockedByMinimums`
 (separan el Comprar apagado por plata del apagado por los mínimos) y `BuyButton`; `ShopGridUI.Cells` y `Viewport`;
@@ -1857,7 +1875,7 @@ pantalla de derrota es `DaysPlayed`.
 | Costo del faltante | `GetCheapestPurchasableCutPrice()` × cortes faltantes + `ceil(faltante/unitsPerBag)` × precio de bolsa |
 | Bloqueo de compras | `ShopSystem.IsPurchaseAllowedByRunMinimums(...)` simula la compra y exige `CanContinue`. La UI apaga el botón (`ShopItemCellUI`); el guard real está en `TryBuyNow` / `TryBuyToppingNow` |
 | Gate de "arrancar el día" | `ShopNextButtonUI`: en el tab `Toppings` pide `MeetsMinimums`. Ahora escucha además `OnMoneyChanged` / `OnInventoryChanged` y usa `SceneManagementUtils.LoadSceneByName` |
-| Estado visual en tienda | `ShopRequirementsUI` en `ShopCanvas.prefab/.../ShopContent/Requirements` (abajo a la izquierda): encabezado fijo "PARA ARRANCAR MAÑANA", stock/mínimo de carne y carbón, a la derecha "LISTO PARA ARRANCAR" o cuánto falta, y debajo la racha (`"NOCHES SEGUIDAS CON STRIKES: N / M"`), que **solo aparece con racha > 0**. Verde/rojo según se cumpla. Fuente **Bungee** (tiene acentos; ver nota 30) sobre la chapa oscura `Boton Continuar` en `Sliced` |
+| Estado visual en tienda | `ShopRequirementsUI` en `ShopCanvas.prefab/.../ShopContent/Requirements` (abajo a la izquierda, 924×160, termina a 194 del borde = donde termina la grilla). Desde 2026-10-31 son **5 carteles** `Panel_Ruta_Noche` (`Sliced`, `pixelsPerUnitMultiplier = 2`, el marco del "Hoy vinieron") colgados de `Panel` (contenedor sin imagen; `ShopRequirementsUI.Panel` lo sigue devolviendo): arriba, alto 50, `TitlePlate` ("PARA ARRANCAR MAÑANA", `LocalizedText`) y `StreakPlate` (`"NOCHES SEGUIDAS CON STRIKES: N / M"`, `strikeStreakRoot`: se prende entero **solo con racha > 0** y es lo que devuelve `StreakLine`); abajo, alto 100, `MeatCard` y `CoalCard` (etiqueta `shop.req.*.label` por `LocalizedText` + número `shop.req.amount` `"{0} / {1}"`) y `StatusCard` (etiqueta `deficitLabelText`: `shop.req.status` "ESTADO" o `shop.req.missing` "FALTA COMPRAR"; valor "LISTO PARA ARRANCAR" o la lista de faltantes). Verde/rojo según se cumpla. Fuente ParripolloPixel |
 | Pantalla de derrota | `EndScene/RunDefeatCanvas` (order **30**, sobre `StrikeEndPopupCanvas` 20 y `ShopCanvas` 10) + `RunDefeatScreen`. Clon del popup de strikes: hijo `Popup` inactivo con fondo opaco `raycastTarget` |
 | Botones | *Menú principal* → `ReturnToMainMenu()` · *Reintentar* → `SceneManagementUtils.RestartRun(catalog)` |
 | Reset de run | `RunStateReset`: snapshot de `CoalSO.maxBurnTime` (lo toma `ShopSystem.Start`, primera llamada gana) y vuelta de `UpgradeSO.currentLevel` a 0. `MeatCutSO.isUnlocked` se corrige solo vía `CoalConsumptionTracker` |

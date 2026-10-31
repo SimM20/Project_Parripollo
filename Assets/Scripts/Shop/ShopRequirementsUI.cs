@@ -21,9 +21,15 @@ public class ShopRequirementsUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI meatText;
     [SerializeField] private TextMeshProUGUI coalText;
     [SerializeField] private TextMeshProUGUI deficitText;
+    [Tooltip("Etiqueta de la tarjeta de estado: \"ESTADO\" o \"FALTA COMPRAR\".")]
+    [SerializeField] private TextMeshProUGUI deficitLabelText;
     [SerializeField] private TextMeshProUGUI strikeStreakText;
 
+    [Tooltip("Opcional: cartel de la racha. Se prende y apaga entero; sin él, solo el texto.")]
+    [SerializeField] private GameObject strikeStreakRoot;
+
     // Textos: claves shop.req.* de las tablas de Loc (en mayúsculas: la tienda usa Bungee).
+    // Las etiquetas CARNE / CARBÓN de las tarjetas son LocalizedText; acá solo van los números.
 
     [Header("Colors")]
     [SerializeField] private Color metColor = new Color(0.45f, 0.85f, 0.4f);
@@ -35,7 +41,8 @@ public class ShopRequirementsUI : MonoBehaviour
     public Transform Panel => root != null ? root.transform : transform;
 
     /// <summary>La línea de la racha de strikes: solo está activa con racha > 0.</summary>
-    public Transform StreakLine => strikeStreakText != null ? strikeStreakText.transform : null;
+    public Transform StreakLine =>
+        strikeStreakRoot != null ? strikeStreakRoot.transform : strikeStreakText != null ? strikeStreakText.transform : null;
 
     void OnEnable()
     {
@@ -83,13 +90,13 @@ public class ShopRequirementsUI : MonoBehaviour
 
         if (meatText != null)
         {
-            meatText.text = Loc.Format("shop.req.meat", status.meatStock, status.meatRequired);
+            meatText.text = Loc.Format("shop.req.amount", status.meatStock, status.meatRequired);
             meatText.color = status.meatDeficit <= 0 ? metColor : unmetColor;
         }
 
         if (coalText != null)
         {
-            coalText.text = Loc.Format("shop.req.coal", status.coalStock, status.coalRequired);
+            coalText.text = Loc.Format("shop.req.amount", status.coalStock, status.coalRequired);
             coalText.color = status.coalDeficit <= 0 ? metColor : unmetColor;
         }
 
@@ -102,10 +109,13 @@ public class ShopRequirementsUI : MonoBehaviour
             }
             else
             {
-                deficitText.text = Loc.Format("shop.req.deficit", BuildDeficitText(status));
+                deficitText.text = BuildDeficitText(status);
                 deficitText.color = unmetColor;
             }
         }
+
+        if (deficitLabelText != null)
+            deficitLabelText.text = Loc.Get(status.MeetsMinimums ? "shop.req.status" : "shop.req.missing");
 
         if (strikeStreakText != null)
         {
@@ -113,7 +123,8 @@ public class ShopRequirementsUI : MonoBehaviour
             int max = StrikeSystem.MaxConsecutiveStrikeNights;
 
             // Sin racha no hay nada que avisar: la línea aparece recién con la primera noche de strikes.
-            strikeStreakText.gameObject.SetActive(streak > 0);
+            if (strikeStreakRoot != null) strikeStreakRoot.SetActive(streak > 0);
+            else strikeStreakText.gameObject.SetActive(streak > 0);
             strikeStreakText.text = Loc.Format("shop.req.streak", streak, max);
             strikeStreakText.color = unmetColor;
         }
