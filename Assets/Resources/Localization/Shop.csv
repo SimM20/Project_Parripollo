@@ -9,6 +9,7 @@ shop.cell.level,NIVEL {0}/{1},LEVEL {0}/{1}
 shop.cell.subtotal,Total: ${0:N0},Total: ${0:N0}
 shop.cell.buy,Comprar,Buy
 # Header de la tienda (ShopHeaderUI)
+shop.header.title,Tienda,Shop
 shop.header.customers,Hoy vinieron {0} clientes,{0} customers came by today
 shop.header.customers.one,Hoy vino {0} cliente,{0} customer came by today
 shop.header.coal,Carbón: {0} u.,Charcoal: {0} u.

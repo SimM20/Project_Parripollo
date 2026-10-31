@@ -129,7 +129,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
   m_AnchoredPosition: {x: 40, y: 2}
-  m_SizeDelta: {x: 400, y: 80}
+  m_SizeDelta: {x: 241, y: 80}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &2229989018985333283
 CanvasRenderer:
@@ -234,9 +234,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Parrilla 40
-
-'
+  m_text: TIENDA
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: 818b2a26e0562ab47a4b41f30214d99b, type: 2}
@@ -245,7 +243,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4284078591
   m_fontColor: {r: 1, g: 0.8509804, b: 0.34901962, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -270,8 +268,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 2
-  m_VerticalAlignment: 512
+  m_HorizontalAlignment: 1
+  m_VerticalAlignment: 4096
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -467,8 +465,8 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: bb146706fec63d84aaba58c5c6ffab89, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: 818b2a26e0562ab47a4b41f30214d99b, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
+  m_sharedMaterial: {fileID: 6531084185216290391, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -571,7 +569,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 458, y: 2}
+  m_AnchoredPosition: {x: 305, y: 2}
   m_SizeDelta: {x: 300, y: 50}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &8370584878633264333
@@ -2013,7 +2011,6 @@ MonoBehaviour:
   moneyText: {fileID: 3564040688715838785}
   totalCoalText: {fileID: 0}
   customersTodayText: {fileID: 3198374330543725355}
-  shopName: Parrilla 40
   moneyPulseTarget: {fileID: 8340741494643902818}
   spendCountSeconds: 0.6
   spendTint: {r: 1, g: 0.48, b: 0.32, a: 1}
@@ -4024,6 +4021,7 @@ GameObject:
   - component: {fileID: 7942269698278038130}
   - component: {fileID: 5307510359956913382}
   - component: {fileID: 7249696140636285777}
+  - component: {fileID: 3124754850073023025}
   m_Layer: 5
   m_Name: Background
   m_TagString: Untagged
@@ -4071,7 +4069,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2100000, guid: 05612eb141eab9242858f4d948779be7, type: 2}
   m_Color: {r: 0.01, g: 0.02, b: 0.06, a: 0.7}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -4089,6 +4087,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &3124754850073023025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7573229751099162107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4877b72db26649e4a80d5a2bd74b03cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7945348420803926301
 GameObject:
   m_ObjectHideFlags: 0
