@@ -13,6 +13,9 @@ public class ShopGridUI : MonoBehaviour
     
     [SerializeField] private UnityEngine.UI.ScrollRect scrollRect;
 
+    /// <summary>Tienda de la escena (cada instancia del prefab la pisa).</summary>
+    public ShopSystem Shop => shop;
+
     /// <summary>Tarjetas de la tab actual, en orden.</summary>
     public IReadOnlyList<ShopItemCellUI> Cells => cells;
 

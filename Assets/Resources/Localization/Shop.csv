@@ -35,9 +35,11 @@ shop.next.start_day,Arrancar el día,Start the day
 shop.next.blocked,Faltan recursos,Not enough supplies
 "# Requisitos para el próximo día (ShopRequirementsUI), en mayúsculas"
 shop.req.title,PARA ARRANCAR MAÑANA,TO OPEN TOMORROW
-shop.req.meat,CARNE   {0} / {1},MEAT   {0} / {1}
-shop.req.coal,CARBÓN  {0} / {1},CHARCOAL  {0} / {1}
-shop.req.deficit,FALTA: {0},MISSING: {0}
+shop.req.meat.label,CARNE,MEAT
+shop.req.coal.label,CARBÓN,CHARCOAL
+shop.req.amount,{0} / {1},{0} / {1}
+shop.req.status,ESTADO,STATUS
+shop.req.missing,FALTA COMPRAR,STILL TO BUY
 shop.req.ready,LISTO PARA ARRANCAR,READY TO OPEN
 shop.req.streak,NOCHES SEGUIDAS CON STRIKES: {0} / {1},NIGHTS IN A ROW WITH STRIKES: {0} / {1}
 shop.req.cuts,{0} CORTES,{0} CUTS
