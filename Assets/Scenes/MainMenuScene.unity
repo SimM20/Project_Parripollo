@@ -553,6 +553,7 @@ GameObject:
   - component: {fileID: 745859596}
   - component: {fileID: 745859597}
   - component: {fileID: 745859598}
+  - component: {fileID: 745859599}
   m_Layer: 5
   m_Name: MainMenuPanel
   m_TagString: Untagged
@@ -603,6 +604,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f936dff9d3f64348aab5ebcc876d084, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  outro: {fileID: 745859599}
   versionText: {fileID: 1310941363}
   optionsPanel: {fileID: 7230194976102899822}
   hideWhileOptionsOpen:
@@ -645,6 +647,9 @@ MonoBehaviour:
   - {fileID: 854357652}
   buttons: {fileID: 1805156574}
   version: {fileID: 1310941362}
+  fadeHoldSeconds: 0.2
+  fadeSeconds: 0.9
+  fadeColor: {r: 0.06, g: 0.04, b: 0.03, a: 1}
   fromHour: 5
   toHour: 6.5
   hourStart: 0.3
@@ -668,6 +673,56 @@ MonoBehaviour:
   buttonFadeSeconds: 0.2
   pixelStep: 4
   skipUnlockDelay: 0.15
+--- !u!114 &745859599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 745859591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3149ad4d8180c29469e12d99fd3c4fe0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  menuGroup: {fileID: 745859597}
+  background: {fileID: 1111576034}
+  sun: {fileID: 1930247011}
+  halo: {fileID: 1869501629}
+  title: {fileID: 426554003}
+  titleLayers:
+  - {fileID: 2125742504}
+  - {fileID: 912085741}
+  subtitleTexts:
+  - {fileID: 703512412}
+  - {fileID: 854357652}
+  buttons: {fileID: 1805156574}
+  version: {fileID: 1310941362}
+  buttonsStart: 0
+  buttonsSeconds: 0.4
+  buttonsSink: 120
+  buttonStagger: 0.06
+  buttonFadeSeconds: 0.18
+  subtitleStart: 0.05
+  subtitleSeconds: 0.35
+  titleStart: 0.15
+  titleSeconds: 0.4
+  titleRise: 140
+  layerLag: 0.05
+  toHour: 21
+  hourStart: 0.4
+  hourSeconds: 2.6
+  haloStart: 1.95
+  haloSeconds: 0.7
+  haloColor: {r: 1, g: 0.6, b: 0.35, a: 0.6}
+  haloFromScale: 0.3
+  haloToScale: 0.9
+  fadeStart: 2.8
+  fadeSeconds: 0.8
+  fadeHoldSeconds: 0.15
+  fadeColor: {r: 0.06, g: 0.04, b: 0.03, a: 1}
+  pixelStep: 4
+  skipArmSeconds: 0.25
 --- !u!1 &807130122
 GameObject:
   m_ObjectHideFlags: 0

@@ -4,10 +4,15 @@ using UnityEngine.EventSystems;
 
 /// <summary>
 /// Menú principal: botones (Jugar / Opciones / Salir) y número de versión.
-/// La entrada del menú al cargar la escena la hace <see cref="MainMenuIntro"/>.
+/// La entrada del menú al cargar la escena la hace <see cref="MainMenuIntro"/>; la salida al
+/// apretar Salir, <see cref="MainMenuOutro"/>.
 /// </summary>
 public class MainMenuPanel : MonoBehaviour
 {
+    [Header("Salida")]
+    [Tooltip("Animación de salida antes de cerrar el juego. Vacío = cierra en el acto.")]
+    [SerializeField] private MainMenuOutro outro;
+
     [Header("Versión")]
     [Tooltip("Muestra Application.version (Player Settings → Version). Vacío = no se toca.")]
     [SerializeField] private TMP_Text versionText;
@@ -65,6 +70,14 @@ public class MainMenuPanel : MonoBehaviour
     }
 
     public void ExitGame()
+    {
+        if (outro != null)
+            outro.Play(Quit);
+        else
+            Quit();
+    }
+
+    private static void Quit()
     {
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;

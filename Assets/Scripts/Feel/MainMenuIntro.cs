@@ -1,10 +1,12 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.UI;
+using static MenuSequence;
 
 /// <summary>
 /// Intro del menú principal, cada vez que se abre la escena: amanece en la ruta y después entra
-/// el menú. El fondo arranca de noche y recorre la madrugada hasta la hora fija del menú con
+/// el menú. Primero un fundido desde negro a la noche quieta, como anticipación; los tiempos del
+/// resto de la secuencia cuentan desde que termina. El fondo arranca de noche y recorre la madrugada hasta la hora fija del menú con
 /// <see cref="DayCycleBackground.SetScriptedHour"/>; cuando el sol asoma, un halo crece desde él y
 /// se apaga. Recién ahí cae el título, se escribe el subtítulo y suben los botones.
 ///
@@ -20,11 +22,6 @@ using UnityEngine.InputSystem;
 [DisallowMultipleComponent]
 public class MainMenuIntro : MonoBehaviour
 {
-    // Los primeros frames de la escena traen el pico de carga: el delta se topea para que ese salto
-    // no se coma media intro (igual que SceneFadeIn).
-    private const float MaxFrameStep = 1f / 30f;
-    private const int AllCharacters = 99999;
-
     [Header("Escena")]
     [Tooltip("CanvasGroup del menú completo: bloquea clicks y Submit mientras dura la intro.")]
     [SerializeField] private CanvasGroup menuGroup;
@@ -44,7 +41,15 @@ public class MainMenuIntro : MonoBehaviour
     [Tooltip("Número de versión: aparece con el último botón. Vacío = no se toca.")]
     [SerializeField] private RectTransform version;
 
-    [Header("Amanecer")]
+    [Header("Fundido inicial")]
+    [Tooltip("Segundos en negro antes de empezar a aclarar.")]
+    [SerializeField] [Min(0f)] private float fadeHoldSeconds = 0.2f;
+    [Tooltip("Segundos del fundido de negro a la noche. El resto de la secuencia arranca al terminar.")]
+    [SerializeField] [Min(0f)] private float fadeSeconds = 0.9f;
+    [Tooltip("Mismo color que el velo de SceneFadeIn, para que el paso entre los dos no se note.")]
+    [SerializeField] private Color fadeColor = new Color(0.06f, 0.04f, 0.03f, 1f);
+
+    [Header("Amanecer (tiempos desde el fin del fundido)")]
     [Range(0f, 24f)]
     [SerializeField] private float fromHour = 5f;
     [Tooltip("Hora en la que queda el menú. Tiene que coincidir con fallbackHour del fondo.")]
@@ -90,6 +95,8 @@ public class MainMenuIntro : MonoBehaviour
     [Tooltip("Segundos entre saltar la intro y que el menú responda.")]
     [SerializeField] [Min(0f)] private float skipUnlockDelay = 0.15f;
 
+    private Image veil;
+    private float leadIn;
     private CanvasGroup titleGroup;
     private CanvasGroup versionGroup;
     private CanvasGroup[] buttonGroups;
@@ -113,7 +120,10 @@ public class MainMenuIntro : MonoBehaviour
         for (int i = 0; i < buttonGroups.Length; i++)
             buttonGroups[i] = GetOrAddGroup(buttons.GetChild(i));
 
-        total = Mathf.Max(
+        veil = CreateVeil(menuGroup.GetComponentInParent<Canvas>().rootCanvas.transform, "IntroVeil");
+        leadIn = fadeHoldSeconds + fadeSeconds;
+
+        total = leadIn + Mathf.Max(
             hourStart + hourSeconds,
             halo != null ? haloStart + haloSeconds : 0f,
             titleStart + layerLag * Mathf.Max(titleLayers.Length - 1, 0) + titleSeconds,
@@ -162,11 +172,15 @@ public class MainMenuIntro : MonoBehaviour
 
     private void Evaluate(float t)
     {
+        SetVeilAlpha(veil, fadeColor, 1f - FeelEase.InOutCubic(Progress(t, fadeHoldSeconds, fadeSeconds)));
+
+        t -= leadIn;
+
         float hourT = Progress(t, hourStart, hourSeconds);
         background.SetScriptedHour(Mathf.Lerp(fromHour, toHour, FeelEase.InOutCubic(hourT)));
 
         if (halo != null)
-            EvaluateHalo(Progress(t, haloStart, haloSeconds));
+            EvaluateHalo(halo, sun, haloColor, haloFromScale, haloToScale, Progress(t, haloStart, haloSeconds));
 
         // Título: aparece en el primer tramo de la caída y rebota al llegar.
         titleGroup.alpha = Progress(t, titleStart, titleSeconds * 0.3f);
@@ -174,7 +188,7 @@ public class MainMenuIntro : MonoBehaviour
         {
             float p = Progress(t, titleStart + i * layerLag, titleSeconds);
             float drop = titleDrop * (1f - FeelEase.OutBack(p, titleOvershoot));
-            titleLayers[i].anchoredPosition = titleLayerBase[i] + new Vector2(0f, Snap(drop));
+            titleLayers[i].anchoredPosition = titleLayerBase[i] + new Vector2(0f, Snap(drop, pixelStep));
         }
 
         float subtitleT = Progress(t, subtitleStart, subtitleSeconds);
@@ -187,30 +201,12 @@ public class MainMenuIntro : MonoBehaviour
         }
 
         float rise = buttonsRise * (1f - FeelEase.OutCubic(Progress(t, buttonsStart, buttonsSeconds)));
-        buttons.anchoredPosition = buttonsBase - new Vector2(0f, Snap(rise));
+        buttons.anchoredPosition = buttonsBase - new Vector2(0f, Snap(rise, pixelStep));
         for (int i = 0; i < buttonGroups.Length; i++)
             buttonGroups[i].alpha = Progress(t, buttonsStart + i * buttonStagger, buttonFadeSeconds);
 
         if (versionGroup != null)
             versionGroup.alpha = Progress(t, buttonsStart + buttonGroups.Length * buttonStagger, buttonFadeSeconds);
-    }
-
-    private void EvaluateHalo(float p)
-    {
-        bool visible = p > 0f && p < 1f;
-        halo.enabled = visible;
-        if (!visible) return;
-
-        // Sigue al sol, que todavía está subiendo.
-        halo.transform.position = sun.position;
-        halo.transform.localScale = Vector3.one * Mathf.Lerp(haloFromScale, haloToScale, FeelEase.OutCubic(p));
-
-        // Se prende rápido, se sostiene y se apaga.
-        const float riseShare = 0.15f;
-        float alpha = Mathf.Clamp01(p / riseShare) * (1f - FeelEase.InQuad((p - riseShare) / (1f - riseShare)));
-        Color color = haloColor;
-        color.a *= alpha;
-        halo.color = color;
     }
 
     private void SetMenuInteractable(bool interactable)
@@ -219,26 +215,4 @@ public class MainMenuIntro : MonoBehaviour
         menuGroup.blocksRaycasts = interactable;
     }
 
-    private float Snap(float value) =>
-        pixelStep > 0f ? Mathf.Round(value / pixelStep) * pixelStep : value;
-
-    private static float Progress(float t, float start, float seconds) =>
-        Mathf.Clamp01((t - start) / seconds);
-
-    private static CanvasGroup GetOrAddGroup(Component target)
-    {
-        CanvasGroup group = target.GetComponent<CanvasGroup>();
-        return group != null ? group : target.gameObject.AddComponent<CanvasGroup>();
-    }
-
-    private static bool SkipPressed()
-    {
-        // El teclado se lee directo para que Enter y Espacio también salten: InputManager no los
-        // expone fuera del módulo de UI.
-        Keyboard keyboard = Keyboard.current;
-        return (keyboard != null && keyboard.anyKey.wasPressedThisFrame)
-            || InputManager.PrimaryPressed
-            || InputManager.WasPressed(GameAction.Back)
-            || InputManager.WasPressed(GameAction.Pause);
-    }
 }
