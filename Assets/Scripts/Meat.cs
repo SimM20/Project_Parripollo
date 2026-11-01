@@ -657,7 +657,9 @@ public class Meat : Item
 
     public virtual void Cook(float heatFromSlot)
     {
-        if (TutorialManager.IsCookingPaused)
+        // Agarrada no se cocina: mientras se arrastra sigue anotada en sus slots (por si vuelve a su
+        // lugar), pero ya no está sobre las brasas. Igual que IsOnGrill, que apaga calor, humo y barra.
+        if (TutorialManager.IsCookingPaused || isHeldByMouse)
             return;
 
         if (lastCookFrame == Time.frameCount)
