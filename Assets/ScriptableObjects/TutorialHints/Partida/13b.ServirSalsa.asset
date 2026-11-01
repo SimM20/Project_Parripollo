@@ -21,7 +21,7 @@ MonoBehaviour:
   placement: 2
   offset: {x: 0, y: 0}
   requires: []
-  showWhile: 0e00000012000000
+  showWhile: 0e0000001200000022000000
   priority: 96
   completeOn: 18
   completeOnlyIf: 

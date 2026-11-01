@@ -58,6 +58,9 @@ public partial class TutorialHintContext
     private Transform sauceTarget;
     private bool strikeWarning;
     private bool closedWithCustomers;
+    private bool sauceInHand;
+    private SaucePourGuide pourGuide;
+    private Transform pourPoint;
 
     // Anotado de las señales.
     private Transform heldPiece;
@@ -81,6 +84,7 @@ public partial class TutorialHintContext
         RefreshMissingCuts(customers);
         RefreshShift();
         RefreshShop();
+        RefreshSauce();
 
         if (HeldPiece == null)
             heldPiece = null;
@@ -136,6 +140,8 @@ public partial class TutorialHintContext
             case HintCondition.AshUnderFire: return ashUnderFire != null;
             case HintCondition.PlateHasUnusableMeat:
                 return plateHasMeat && (plateHasBurnt || (waitingCustomer != null && plateCustomer == null));
+            case HintCondition.DraggingSauce: return pourPoint != null;
+            case HintCondition.NotDraggingSauce: return !sauceInHand;
             default: return EvaluateShop(condition);
         }
     }
@@ -165,6 +171,7 @@ public partial class TutorialHintContext
             case HintAnchorId.ClockHud: return clockHud;
             case HintAnchorId.AshUnderFire: return ashUnderFire;
             case HintAnchorId.PauseButton: return pauseButton != null && pauseButton.gameObject.activeInHierarchy ? pauseButton : null;
+            case HintAnchorId.SaucePourPoint: return pourPoint;
             default: return ResolveShopAnchor(anchor);
         }
     }
@@ -632,6 +639,27 @@ public partial class TutorialHintContext
         // Primero se resuelve el que ya recibe la M.
         if (selectedMissingCut != null)
             otherMissingCut = null;
+    }
+
+    // ── Salsas ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Frasco en la mano y, si todavía no vierte, el punto donde conviene darlo vuelta. El fantasma que
+    /// lo marca (<see cref="SaucePourGuide"/>) es lo único que crea el contexto: un visual del
+    /// tutorial, no del juego. Se crea recién cuando alguien agarra un frasco.
+    /// </summary>
+    private void RefreshSauce()
+    {
+        sauceInHand = ToppingDraggable.Held != null;
+        pourPoint = null;
+
+        if (!sauceInHand && pourGuide == null)
+            return;
+
+        if (pourGuide == null)
+            pourGuide = SaucePourGuide.Create();
+
+        pourPoint = pourGuide.Resolve();
     }
 
     // ── La jornada ──────────────────────────────────────────────────────────

@@ -104,6 +104,11 @@ public enum HintAnchorId
     AshUnderFire,
     /// <summary>El botón de pausa del HUD.</summary>
     PauseButton,
+    /// <summary>
+    /// El fantasma del frasco dado vuelta donde conviene verter (<see cref="SaucePourGuide"/>), mientras
+    /// se arrastra un frasco que todavía no vierte.
+    /// </summary>
+    SaucePourPoint,
 }
 
 /// <summary>
@@ -177,4 +182,8 @@ public enum HintCondition
     AshUnderFire,
     /// <summary>El plato tiene carne que no le sirve a nadie: quemada, o un corte que no pidió ningún cliente que espera.</summary>
     PlateHasUnusableMeat,
+    /// <summary>Se está arrastrando un frasco de salsa y todavía no vierte.</summary>
+    DraggingSauce,
+    /// <summary>No hay ningún frasco de salsa en la mano (ni arrastrándose ni vertiendo).</summary>
+    NotDraggingSauce,
 }

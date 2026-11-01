@@ -67,6 +67,11 @@ public class BuildFoodDropZone : MonoBehaviour
     [Tooltip("Margen libre entre la fila y el borde del plato. El plato se toma como un óvalo inscripto en su collider.")]
     [SerializeField] private float plateEdgeMargin = 0.1f;
 
+    [Tooltip("Tamaño de la loza blanca respecto del óvalo inscripto en el collider. El sprite del plato tiene " +
+             "margen transparente: con 1 las salsas caerían sobre la tabla alrededor del plato.")]
+    [Range(0.3f, 1f)]
+    [SerializeField] private float plateSurfaceScale = 0.62f;
+
     [Tooltip("Sorting base de sides/toppings. Va DEBAJO de la carne (MeatTransferBuffer.plateMeatSortingBase = 400) " +
              "para que nunca la tapen; cada visual suma su índice.")]
     [SerializeField] private int sideTopSortingOrder = 390;
@@ -273,28 +278,84 @@ public class BuildFoodDropZone : MonoBehaviour
     }
 
     /// <summary>
-    /// True si el punto cae sobre la superficie del plato: el óvalo inscripto en el collider (igual
-    /// que <see cref="RowWidthAt"/>), no la caja entera, cuyas esquinas ya son la tabla.
+    /// Óvalo de la loza del plato: el inscripto en el collider, achicado por
+    /// <see cref="plateSurfaceScale"/> (el sprite tiene margen transparente alrededor del plato).
+    /// </summary>
+    private bool TryGetSurfaceEllipse(out Vector2 center, out Vector2 extents)
+    {
+        center = Vector2.zero;
+        extents = Vector2.zero;
+        if (!isActiveAndEnabled || zoneCollider == null)
+            return false;
+
+        Bounds b = zoneCollider.bounds;
+        center = b.center;
+        extents = (Vector2)b.extents * plateSurfaceScale;
+        return extents.x > 0f && extents.y > 0f;
+    }
+
+    /// <summary>
+    /// True si el punto cae sobre la loza del plato (ver <see cref="TryGetSurfaceEllipse"/>), no
+    /// sobre la tabla que lo rodea.
     /// </summary>
     public static bool IsOnPlateSurface(Vector3 worldPoint)
     {
         for (int i = 0; i < ActiveZones.Count; i++)
         {
             BuildFoodDropZone zone = ActiveZones[i];
-            if (zone == null || !zone.isActiveAndEnabled || zone.zoneCollider == null)
+            if (zone == null || !zone.TryGetSurfaceEllipse(out Vector2 c, out Vector2 e))
                 continue;
 
-            Bounds b = zone.zoneCollider.bounds;
-            if (b.extents.x <= 0f || b.extents.y <= 0f)
-                continue;
-
-            float nx = (worldPoint.x - b.center.x) / b.extents.x;
-            float ny = (worldPoint.y - b.center.y) / b.extents.y;
+            float nx = (worldPoint.x - c.x) / e.x;
+            float ny = (worldPoint.y - c.y) / e.y;
             if (nx * nx + ny * ny <= 1f)
                 return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Lleva el punto adentro de la loza del plato más cercano (el mismo óvalo que
+    /// <see cref="IsOnPlateSurface"/>), achicado en <paramref name="margin"/> para que lo que se apoye
+    /// ahí no asome por el borde. False si no hay plato vivo: el punto queda como estaba.
+    /// </summary>
+    public static bool TryClampToPlateSurface(Vector3 worldPoint, float margin, out Vector3 clamped)
+    {
+        clamped = worldPoint;
+        bool found = false;
+        float bestSqr = float.MaxValue;
+
+        for (int i = 0; i < ActiveZones.Count; i++)
+        {
+            BuildFoodDropZone zone = ActiveZones[i];
+            if (zone == null || !zone.TryGetSurfaceEllipse(out Vector2 c, out Vector2 e))
+                continue;
+
+            float a = Mathf.Max(e.x - margin, 0.01f);
+            float h = Mathf.Max(e.y - margin, 0.01f);
+
+            float nx = (worldPoint.x - c.x) / a;
+            float ny = (worldPoint.y - c.y) / h;
+            float r = Mathf.Sqrt(nx * nx + ny * ny);
+
+            Vector3 candidate = worldPoint;
+            if (r > 1f)
+            {
+                candidate.x = c.x + nx / r * a;
+                candidate.y = c.y + ny / r * h;
+            }
+
+            float sqr = ((Vector2)(candidate - worldPoint)).sqrMagnitude;
+            if (sqr < bestSqr)
+            {
+                bestSqr = sqr;
+                clamped = candidate;
+                found = true;
+            }
+        }
+
+        return found;
     }
 
     public static void ClearActivePlateVisuals()

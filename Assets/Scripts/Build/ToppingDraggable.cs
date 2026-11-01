@@ -32,7 +32,8 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Width of the sauce thread at the top (pour origin).")]
     [SerializeField] private float sauceWidth = 0.06f;
 
-    [Tooltip("Maximum length of the sauce thread downward from the pour origin.")]
+    [Tooltip("Distancia hacia abajo desde la boca del frasco donde la salsa toca la mesa. " +
+             "Si ese punto cae fuera del plato, el chorro se desvía hasta el borde del plato.")]
     [SerializeField] private float sauceLength = 2f;
 
     [Tooltip("Optional child Transform at the tip of the container. " +
@@ -52,8 +53,12 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Speed of the Perlin noise scroll. Higher = faster wobble.")]
     [SerializeField] private float wobbleSpeed = 4f;
 
-    [Tooltip("How fast the stream grows to full length when pouring starts.")]
+    [Tooltip("Velocidad inicial (unidades/s) con la que el chorro sale del frasco.")]
     [SerializeField] private float streamGrowSpeed = 3f;
+
+    [Tooltip("Aceleración (unidades/s²) del chorro al caer: sale lento y llega al plato cada vez más rápido. " +
+             "Las salpicaduras no aparecen hasta que el chorro toca el plato.")]
+    [SerializeField] private float streamFallAcceleration = 14f;
 
     [Header("Sauce Splatters")]
     [Tooltip("Seconds between each splatter spawn. Lower = denser sauce.")]
@@ -65,8 +70,19 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("± random variation added to the base size.")]
     [SerializeField] private float splatterSizeVariation = 0.05f;
 
-    [Tooltip("± horizontal spread from the impact point.")]
+    [Tooltip("Radio máximo del charco alrededor del impacto, una vez que creció del todo.")]
     [SerializeField] private float splatterSpread = 0.1f;
+
+    [Tooltip("Fracción de splatterSpread con la que nace el charco cuando el chorro toca el plato.")]
+    [Range(0.05f, 1f)]
+    [SerializeField] private float puddleStartSpread = 0.3f;
+
+    [Tooltip("Segundos vertiendo en el mismo lugar hasta que el charco llega a splatterSpread. " +
+             "Al mover el frasco el charco se angosta: deja un hilo en vez de manchar todo.")]
+    [SerializeField, Min(0.01f)] private float puddleGrowTime = 0.8f;
+
+    [Tooltip("Tamaño de cada mancha (sobre splatterSize) con el charco completo. Las primeras salen al 70%.")]
+    [SerializeField, Min(0.1f)] private float puddleFullSizeScale = 1.3f;
 
     [Tooltip("Optional splatter sprites, already drawn in the table's perspective and colored. " +
              "One is picked at random per splatter. If empty, a circle is generated and tinted with sauceColor.")]
@@ -78,10 +94,10 @@ public class ToppingDraggable : MonoBehaviour
 
     [Tooltip("Chance per splatter of a tiny droplet bouncing out of the impact.")]
     [Range(0f, 1f)]
-    [SerializeField] private float dropletChance = 0.3f;
+    [SerializeField] private float dropletChance = 0.12f;
 
     [Tooltip("How far (world units) a bouncing droplet lands from the impact.")]
-    [SerializeField] private float dropletDistance = 0.18f;
+    [SerializeField] private float dropletDistance = 0.1f;
 
     [Tooltip("Sorting order for splatters (should be above the food sprite).")]
     [SerializeField] private int splatterSortingOrder = 5500;
@@ -145,6 +161,11 @@ public class ToppingDraggable : MonoBehaviour
     private static Material sauceThreadMaterial;
     private Vector3[] streamPoints;
     private float streamCurrentLength;
+    private float streamFallSpeed;
+    private bool streamLanded;
+    private Vector3 impactPoint;
+    private float puddleRadius;
+    private Vector3 lastPuddleImpact;
     private float perlinSeed;
 
     private float lastSplatterTime;
@@ -246,6 +267,53 @@ public class ToppingDraggable : MonoBehaviour
 
     private bool UsesStock => !ignoreStock && toppingData != null && ToppingStock.Instance != null;
 
+    /// <summary>Se está arrastrando el frasco (vierta o no).</summary>
+    public bool IsDragging => isDragging;
+
+    /// <summary>El frasco está dado vuelta y saliendo salsa.</summary>
+    public bool IsPouring => isPouring;
+
+    /// <summary>El frasco que se está arrastrando, o null. Solo se arrastra uno a la vez.</summary>
+    public static ToppingDraggable Held
+    {
+        get
+        {
+            for (int i = 0; i < ActiveInstances.Count; i++)
+            {
+                if (ActiveInstances[i] != null && ActiveInstances[i].isDragging)
+                    return ActiveInstances[i];
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Dónde tiene que estar el frasco para que, dado vuelta, la salsa caiga en el centro del plato.
+    /// Queda dentro de la zona donde se da vuelta (si no, ahí no vierte). False sin plato o sin zona.
+    /// Lo usa el tutorial para marcar el punto.
+    /// </summary>
+    public bool TryGetIdealPourPosition(out Vector3 position)
+    {
+        position = transform.position;
+
+        BuildFoodDropZone zone = FindDropZone();
+        if (zone == null || zone.ZoneCollider == null || rotationZone == null)
+            return false;
+
+        // Boca del frasco respecto del pivote con el frasco derecho; dado vuelta (180°) queda espejada.
+        Vector3 mouthLocal = pourOrigin != null ? transform.InverseTransformPoint(pourOrigin.position) : Vector3.zero;
+        Vector3 invertedMouth = Quaternion.Euler(0f, 0f, 180f) * Vector3.Scale(mouthLocal, transform.lossyScale);
+
+        Vector3 plateCenter = zone.ZoneCollider.bounds.center;
+        Vector3 ideal = plateCenter + Vector3.up * sauceLength - invertedMouth;
+
+        if (!rotationZone.OverlapPoint(ideal))
+            ideal = rotationZone.ClosestPoint(ideal);
+
+        position = new Vector3(ideal.x, ideal.y, transform.position.z);
+        return true;
+    }
+
     private void SaveSauceToStock()
     {
         if (UsesStock)
@@ -313,11 +381,18 @@ public class ToppingDraggable : MonoBehaviour
 
             if (sauceThread != null)
                 UpdateSauceThread();
-            if (Time.time - lastSplatterTime >= splatterInterval)
+
+            // El charco recién empieza cuando el chorro toca el plato, no apenas se da vuelta el frasco.
+            if (streamLanded)
             {
-                SpawnSplatter();
-                lastSplatterTime = Time.time;
-                GamepadHaptics.Play(HapticEvent.SaucePouring);
+                UpdatePuddle();
+
+                if (Time.time - lastSplatterTime >= splatterInterval)
+                {
+                    SpawnSplatter();
+                    lastSplatterTime = Time.time;
+                    GamepadHaptics.Play(HapticEvent.SaucePouring);
+                }
             }
         }
 
@@ -394,6 +469,9 @@ public class ToppingDraggable : MonoBehaviour
         isPouring = true;
         lastSplatterTime = Time.time;
         streamCurrentLength = 0f;
+        streamFallSpeed = streamGrowSpeed;
+        streamLanded = false;
+        puddleRadius = splatterSpread * puddleStartSpread;
         perlinSeed = Random.Range(0f, 1000f);
         CreateSauceThread();
         SetBarPop(true);
@@ -636,7 +714,7 @@ public class ToppingDraggable : MonoBehaviour
         LineRenderer line = new GameObject(name).AddComponent<LineRenderer>();
         line.positionCount = segments;
         line.startWidth = width;
-        line.endWidth = width * 0.5f;
+        line.endWidth = width * 0.75f;
         line.sharedMaterial = sauceThreadMaterial;
         line.startColor = color;
         line.endColor = new Color(color.r, color.g, color.b, color.a * 0.7f);
@@ -654,7 +732,22 @@ public class ToppingDraggable : MonoBehaviour
         int segments = streamPoints.Length;
         Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
 
-        streamCurrentLength = Mathf.MoveTowards(streamCurrentLength, sauceLength, streamGrowSpeed * Time.deltaTime);
+        impactPoint = GetImpactPoint(origin);
+        Vector3 toImpact = impactPoint - origin;
+        float targetLength = toImpact.magnitude;
+        Vector3 fallDir = targetLength > 0.0001f ? toImpact / targetLength : Vector3.down;
+
+        // Cae como un líquido: acelera hasta tocar el plato. Si el plato queda más cerca, se acorta al toque.
+        streamFallSpeed += streamFallAcceleration * Time.deltaTime;
+        streamCurrentLength = Mathf.Min(streamCurrentLength + streamFallSpeed * Time.deltaTime, targetLength);
+
+        if (!streamLanded && streamCurrentLength >= targetLength - 0.001f)
+        {
+            streamLanded = true;
+            lastPuddleImpact = impactPoint;
+            // El primer contacto deja una mancha enseguida, sin esperar el intervalo.
+            lastSplatterTime = Time.time - splatterInterval;
+        }
 
         streamPoints[0] = origin;
 
@@ -665,17 +758,28 @@ public class ToppingDraggable : MonoBehaviour
         {
             float t = (float)i / (segments - 1);
 
-            Vector3 idealPos = origin + Vector3.down * (segmentSpacing * i);
+            Vector3 idealPos = origin + fallDir * (segmentSpacing * i);
 
+            // El vaivén es máximo a mitad del chorro y nulo en las puntas: la boca queda pegada al
+            // frasco y la punta cae justo sobre el charco.
             float noiseX = Mathf.PerlinNoise(
                 perlinSeed + i * 0.5f,
                 time * wobbleSpeed + i * 0.3f
             ) - 0.5f;
-            idealPos.x += noiseX * wobbleAmplitude * (1f + t);
+            idealPos.x += noiseX * wobbleAmplitude * 2f * Mathf.Sin(t * Mathf.PI);
 
-            float chaseMultiplier = 1f - t * 0.5f;
-            float chase = streamChaseSpeed * chaseMultiplier * Time.deltaTime;
-            streamPoints[i] = Vector3.Lerp(streamPoints[i], idealPos, Mathf.Clamp01(chase));
+            // La punta no se arrastra: siempre está donde cae la salsa, así el chorro nunca se
+            // despega del charco. El tramo del medio sí persigue y hace la curva al mover el frasco.
+            if (i == segments - 1)
+            {
+                streamPoints[i] = idealPos;
+            }
+            else
+            {
+                float chaseMultiplier = 1f - t * 0.5f;
+                float chase = streamChaseSpeed * chaseMultiplier * Time.deltaTime;
+                streamPoints[i] = Vector3.Lerp(streamPoints[i], idealPos, Mathf.Clamp01(chase));
+            }
 
             streamPoints[i].z = origin.z;
         }
@@ -685,22 +789,53 @@ public class ToppingDraggable : MonoBehaviour
             sauceThreadOutline.SetPositions(streamPoints);
     }
 
+    /// <summary>
+    /// Dónde toca la salsa: <see cref="sauceLength"/> debajo de la boca, llevado adentro del plato.
+    /// El margen deja lugar para el charco, así no se derrama por el borde.
+    /// </summary>
+    private Vector3 GetImpactPoint(Vector3 origin)
+    {
+        Vector3 impact = origin + Vector3.down * sauceLength;
+        float margin = splatterSize * 0.5f + puddleRadius * 0.5f;
+        BuildFoodDropZone.TryClampToPlateSurface(impact, margin, out impact);
+        impact.z = origin.z;
+        return impact;
+    }
+
+    /// <summary>
+    /// El charco crece mientras se vierte en el mismo lugar. Si el frasco se mueve, se angosta en
+    /// proporción a lo que se movió: deja un hilo de salsa en vez de una mancha ancha.
+    /// </summary>
+    private void UpdatePuddle()
+    {
+        float minRadius = splatterSpread * puddleStartSpread;
+        float moved = Vector2.Distance(impactPoint, lastPuddleImpact);
+        lastPuddleImpact = impactPoint;
+
+        puddleRadius = Mathf.MoveTowards(puddleRadius, splatterSpread, splatterSpread / puddleGrowTime * Time.deltaTime);
+        puddleRadius = Mathf.Max(minRadius, puddleRadius - moved);
+    }
+
     private void SpawnSplatter()
     {
-        Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
-        Vector3 impactPoint = origin + Vector3.down * sauceLength;
+        // 0 recién nacido, 1 charco completo: las manchas crecen con el charco, así se nota que se junta salsa.
+        float growth = splatterSpread > 0f ? Mathf.Clamp01(puddleRadius / splatterSpread) : 1f;
+        float size = Mathf.Max(
+            splatterSize * Mathf.Lerp(0.7f, puddleFullSizeScale, growth) + Random.Range(-splatterSizeVariation, splatterSizeVariation),
+            0.01f);
 
         // La tabla es 2.5D: la salsa se reparte en una elipse aplastada, no en una línea.
-        Vector2 spread = Random.insideUnitCircle * splatterSpread;
-        impactPoint.x += spread.x;
-        impactPoint.y += spread.y * perspectiveSquash;
+        // Más denso al centro que en el borde, como un charco que se expande.
+        Vector2 spread = Random.insideUnitCircle * puddleRadius * Mathf.Lerp(0.5f, 1f, Random.value);
+        Vector3 point = impactPoint + new Vector3(spread.x, spread.y * perspectiveSquash, 0f);
+        BuildFoodDropZone.TryClampToPlateSurface(point, size * 0.5f, out point);
+        point.z = impactPoint.z;
 
-        float size = Mathf.Max(splatterSize + Random.Range(-splatterSizeVariation, splatterSizeVariation), 0.01f);
-        GameObject splatterGo = CreateSplatter(impactPoint, size);
+        GameObject splatterGo = CreateSplatter(point, size);
         ScalePunch.PopIn(splatterGo.transform, 0.3f, 0.12f);
 
         if (Random.value < dropletChance)
-            SpawnDroplet(impactPoint, size);
+            SpawnDroplet(point, size);
     }
 
     private GameObject CreateSplatter(Vector3 position, float size)
@@ -739,21 +874,29 @@ public class ToppingDraggable : MonoBehaviour
         return splatterGo;
     }
 
-    /// <summary>Una gotita salta del impacto en un arco corto y queda como salpicadura chica.</summary>
-    private void SpawnDroplet(Vector3 impactPoint, float size)
+    /// <summary>
+    /// Una gotita salta del impacto en un arco corto y bajo, y queda como salpicadura chica.
+    /// Nunca sale del plato: el destino se lleva adentro del borde.
+    /// </summary>
+    private void SpawnDroplet(Vector3 from, float size)
     {
         Vector2 dir = Random.insideUnitCircle.normalized;
-        float distance = dropletDistance * Random.Range(0.6f, 1f);
-        Vector3 target = impactPoint + new Vector3(dir.x, dir.y * perspectiveSquash, 0f) * distance;
+        float distance = dropletDistance * Random.Range(0.5f, 1f);
+        float dropletSize = Mathf.Max(size * 0.3f, 0.01f);
 
-        GameObject droplet = CreateSplatter(impactPoint, Mathf.Max(size * 0.35f, 0.01f));
-        StartCoroutine(FlyDroplet(droplet.transform, impactPoint, target));
+        Vector3 target = from + new Vector3(dir.x, dir.y * perspectiveSquash, 0f) * distance;
+        BuildFoodDropZone.TryClampToPlateSurface(target, dropletSize * 0.5f, out target);
+        target.z = from.z;
+
+        GameObject droplet = CreateSplatter(from, dropletSize);
+        StartCoroutine(FlyDroplet(droplet.transform, from, target));
     }
 
     private static IEnumerator FlyDroplet(Transform droplet, Vector3 from, Vector3 to)
     {
-        const float duration = 0.16f;
-        const float arcHeight = 0.08f;
+        const float duration = 0.14f;
+        // El salto es proporcional a la distancia: una gota que cae cerca apenas se levanta.
+        float arcHeight = Vector2.Distance(from, to) * 0.3f;
 
         for (float t = 0f; t < duration; t += Time.deltaTime)
         {
