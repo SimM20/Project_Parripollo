@@ -68,6 +68,7 @@ hint.clean_ashes,Limpiar cenizas,Clear the ashes
 hint.rotate,Rotar,Rotate
 hint.add_bread,Agregá el pan,Add the bread
 hint.add_sauce,Serví la salsa,Add the sauce
+hint.pour_sauce,Dalo vuelta acá,Tip it here
 hint.missing_cut,Pedir otro corte,Ask for another cut
 hint.pick_customer,Elegí al cliente,Pick the customer
 hint.clear_plate,Vaciar plato,Clear the plate

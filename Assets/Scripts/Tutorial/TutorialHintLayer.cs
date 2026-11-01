@@ -71,6 +71,17 @@ public class TutorialHintLayer : MonoBehaviour
         return view;
     }
 
+    /// <summary>True si un cartel a la vista (no uno que se está retirando) apunta a <paramref name="target"/>.</summary>
+    public bool IsPointingAt(Transform target)
+    {
+        for (int i = 0; i < views.Count; i++)
+        {
+            if (views[i] != null && views[i].IsShowing && views[i].Target == target)
+                return true;
+        }
+        return false;
+    }
+
     /// <summary>Retira todos los carteles a la vista.</summary>
     public void HideAll(bool completed = false)
     {

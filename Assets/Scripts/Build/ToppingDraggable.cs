@@ -267,6 +267,53 @@ public class ToppingDraggable : MonoBehaviour
 
     private bool UsesStock => !ignoreStock && toppingData != null && ToppingStock.Instance != null;
 
+    /// <summary>Se está arrastrando el frasco (vierta o no).</summary>
+    public bool IsDragging => isDragging;
+
+    /// <summary>El frasco está dado vuelta y saliendo salsa.</summary>
+    public bool IsPouring => isPouring;
+
+    /// <summary>El frasco que se está arrastrando, o null. Solo se arrastra uno a la vez.</summary>
+    public static ToppingDraggable Held
+    {
+        get
+        {
+            for (int i = 0; i < ActiveInstances.Count; i++)
+            {
+                if (ActiveInstances[i] != null && ActiveInstances[i].isDragging)
+                    return ActiveInstances[i];
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Dónde tiene que estar el frasco para que, dado vuelta, la salsa caiga en el centro del plato.
+    /// Queda dentro de la zona donde se da vuelta (si no, ahí no vierte). False sin plato o sin zona.
+    /// Lo usa el tutorial para marcar el punto.
+    /// </summary>
+    public bool TryGetIdealPourPosition(out Vector3 position)
+    {
+        position = transform.position;
+
+        BuildFoodDropZone zone = FindDropZone();
+        if (zone == null || zone.ZoneCollider == null || rotationZone == null)
+            return false;
+
+        // Boca del frasco respecto del pivote con el frasco derecho; dado vuelta (180°) queda espejada.
+        Vector3 mouthLocal = pourOrigin != null ? transform.InverseTransformPoint(pourOrigin.position) : Vector3.zero;
+        Vector3 invertedMouth = Quaternion.Euler(0f, 0f, 180f) * Vector3.Scale(mouthLocal, transform.lossyScale);
+
+        Vector3 plateCenter = zone.ZoneCollider.bounds.center;
+        Vector3 ideal = plateCenter + Vector3.up * sauceLength - invertedMouth;
+
+        if (!rotationZone.OverlapPoint(ideal))
+            ideal = rotationZone.ClosestPoint(ideal);
+
+        position = new Vector3(ideal.x, ideal.y, transform.position.z);
+        return true;
+    }
+
     private void SaveSauceToStock()
     {
         if (UsesStock)
