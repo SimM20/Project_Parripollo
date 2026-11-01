@@ -2504,8 +2504,10 @@ MainMenuScene (build index 0)
   ├── Init.Awake() → GameSettings.ApplyCurrent()   ← aplica las opciones del jugador (ver 3.10)
   │     lee %USERPROFILE%/AppData/.../init.cfg  (Application.persistentDataPath)
   │     aplica Screen.SetResolution (si cambió) + vSyncCount/targetFrameRate + InputManager.SetInputMode + Loc.SetLanguage
-  ├── MainMenuIntro (en MainMenuPanel, Feel/MainMenuIntro.cs): intro de ~3,1 s cada vez que se abre la escena, saltable
+  ├── MainMenuIntro (en MainMenuPanel, Feel/MainMenuIntro.cs): intro cada vez que se abre la escena, saltable
   │     (cualquier tecla, click, A/B/Start). Todo es función del tiempo transcurrido (Evaluate): saltar = ir al final.
+  │     · Fundido inicial (anticipación): velo IntroVeil creado en runtime, último hijo del Canvas, sin raycast, color del
+  │       velo de SceneFadeIn. 0,2 s en negro + 0,9 s a la noche quieta. Los tiempos de abajo cuentan desde ahí (~4,2 s total)
   │     · Amanecer: DayCycleBackground.SetScriptedHour 05:00 → 06:30 (InOutCubic, 0,3–2,7 s). Se fija en Awake, antes
   │       del Start del fondo, para que el primer frame ya sea de noche. Al terminar, ClearScriptedHour (fallbackHour = 6.5)
   │     · HaloSol (objeto de escena, no del prefab; Sprites/FondoCicloDia/HaloSol.png, 160 px a PPU 25, anillos de alfa
@@ -2516,7 +2518,15 @@ MainMenuScene (build index 0)
   │     · Desplazamientos de UI redondeados a 4 px de referencia (pixelStep). Tiempo unscaled, delta topeado a 1/30
   │     · El CanvasGroup del menú bloquea clicks y Submit hasta el final; tras un salto se libera 0,15 s después, así la
   │       misma tecla no aprieta JUGAR. Se bloquea en Start (no Awake): JUGAR ya quedó seleccionado en su OnEnable
-  └── MainMenuPanel: versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Opciones → OptionsPanel · Salir → Quit (en Editor, sale de Play)
+  ├── MainMenuOutro (en MainMenuPanel, Feel/MainMenuOutro.cs): salida de ~3,75 s al apretar SALIR, "se cierra la jornada".
+  │     Arranca apagado; MainMenuPanel.ExitGame lo prende con Play(Quit) y bloquea el CanvasGroup del menú.
+  │     · 0–0,6 s: botones se hunden y apagan de arriba a abajo, subtítulo se borra desde el final, título sube y se va
+  │     · 0,4–3,0 s: time-lapse del día entero, de la hora actual del fondo a 21:00 (InOutCubic): el sol cruza y se pone
+  │       por la izquierda hacia t ≈ 2,4 s, con destello del HaloSol (1,95–2,65 s, antes de que sea de noche)
+  │     · 2,8–3,6 s: fundido a negro (velo OutroVeil, color de SceneFadeIn) + 0,15 s en negro → Quit
+  │     · Cualquier tecla/click/A/B/Start sale en el acto, salvo los primeros 0,25 s (la pulsación que apretó SALIR)
+  │     Helpers compartidos con la intro (Progress, Snap, velo, halo, entrada de salto): Feel/MenuSequence.cs (estática)
+  └── MainMenuPanel: versión (Application.version) · Jugar → LoadSceneByName("GameScene") · Opciones → OptionsPanel · Salir → MainMenuOutro, después Quit (en Editor, sale de Play; sin outro asignado cierra en el acto)
         botones con MenuButtonHover (escala al hover/click, unscaled) sobre sprites Boton Comenzar / Boton Continuar
         └── GameScene arranca directo, sin diálogo: si las ayudas están prendidas, los carteles del tutorial aparecen
             solos (TutorialHints, ver 3.7). TutorialScene y ShopTutorial ya no se abren desde el juego (se borran en la fase 7)
