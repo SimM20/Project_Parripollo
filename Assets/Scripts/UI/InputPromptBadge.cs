@@ -157,7 +157,7 @@ public class InputPromptBadge : MonoBehaviour
             && boundTarget != null
             && !GamePause.IsPaused
             && IsTargetShown()
-            && !(hideUnderTutorialHint && TutorialHintLayer.Instance != null && TutorialHintLayer.Instance.IsShowingOn(boundTarget))
+            && !(hideUnderTutorialHint && TutorialHintLayer.Instance != null && TutorialHintLayer.Instance.IsPointingAt(boundTarget))
             && TryGetTargetScreenRect(out Vector2 screenMin, out Vector2 screenMax)
             && Place(screenMin, screenMax);
 

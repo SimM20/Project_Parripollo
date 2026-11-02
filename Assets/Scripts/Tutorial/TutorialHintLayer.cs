@@ -92,20 +92,6 @@ public class TutorialHintLayer : MonoBehaviour
         }
     }
 
-    /// <summary>Hay un cartel a la vista apuntando a <paramref name="target"/>.</summary>
-    public bool IsShowingOn(Transform target)
-    {
-        if (target == null || !canvas.enabled)
-            return false;
-
-        for (int i = 0; i < views.Count; i++)
-        {
-            if (views[i] != null && views[i].IsShowing && views[i].Target == target)
-                return true;
-        }
-        return false;
-    }
-
     private TutorialHintView GetFreeView()
     {
         for (int i = 0; i < views.Count; i++)
