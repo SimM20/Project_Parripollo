@@ -44,8 +44,14 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Number of points in the sauce stream. More = smoother curve.")]
     [SerializeField] private int streamSegments = 10;
 
-    [Tooltip("How fast each point chases the one above it. Lower = more delay/trailing.")]
-    [SerializeField] private float streamChaseSpeed = 12f;
+    [Tooltip("Cuánto se arquea el chorro hacia atrás por cada unidad/s que se mueve el frasco.")]
+    [SerializeField] private float streamSwayPerSpeed = 0.06f;
+
+    [Tooltip("Arqueo máximo (unidades de mundo) a mitad del chorro, por más rápido que se mueva el frasco.")]
+    [SerializeField] private float streamMaxSway = 0.25f;
+
+    [Tooltip("Segundos que tarda el arqueo en seguir al movimiento. Más alto = más suave y perezoso.")]
+    [SerializeField, Min(0.01f)] private float streamSwaySmoothTime = 0.08f;
 
     [Tooltip("Horizontal wobble intensity from Perlin noise.")]
     [SerializeField] private float wobbleAmplitude = 0.04f;
@@ -59,6 +65,29 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Aceleración (unidades/s²) del chorro al caer: sale lento y llega al plato cada vez más rápido. " +
              "Las salpicaduras no aparecen hasta que el chorro toca el plato.")]
     [SerializeField] private float streamFallAcceleration = 14f;
+
+    [Header("Landing Marker")]
+    [Tooltip("Muestra dónde va a caer la salsa: un aro sobre el plato y, antes de verter, una guía " +
+             "punteada desde la boca del frasco hasta ese punto.")]
+    [SerializeField] private bool showLandingMarker = true;
+
+    [Tooltip("Color del aro y de la guía punteada.")]
+    [SerializeField] private Color landingMarkerColor = Color.white;
+
+    [Tooltip("Diámetro mínimo del aro en unidades de mundo. Mientras vierte crece con el charco.")]
+    [SerializeField, Min(0.05f)] private float landingMarkerSize = 0.35f;
+
+    [Tooltip("Ancho de la guía punteada.")]
+    [SerializeField] private float previewLineWidth = 0.035f;
+
+    [Tooltip("Rayas por unidad de mundo en la guía punteada.")]
+    [SerializeField, Min(0.5f)] private float previewDashesPerUnit = 6f;
+
+    [Tooltip("Velocidad con la que las rayas bajan hacia el aro.")]
+    [SerializeField] private float previewFlowSpeed = 2f;
+
+    [Tooltip("Sorting order del aro (arriba de las salpicaduras, debajo del chorro).")]
+    [SerializeField] private int landingMarkerSortingOrder = 5600;
 
     [Header("Sauce Splatters")]
     [Tooltip("Seconds between each splatter spawn. Lower = denser sauce.")]
@@ -75,7 +104,10 @@ public class ToppingDraggable : MonoBehaviour
 
     [Tooltip("Fracción de splatterSpread con la que nace el charco cuando el chorro toca el plato.")]
     [Range(0.05f, 1f)]
-    [SerializeField] private float puddleStartSpread = 0.3f;
+    [SerializeField] private float puddleStartSpread = 0.85f;
+
+    [Tooltip("Manchas que aparecen de golpe cuando el chorro toca el plato, así el charco arranca con cuerpo.")]
+    [SerializeField, Min(0)] private int landingSplashCount = 9;
 
     [Tooltip("Segundos vertiendo en el mismo lugar hasta que el charco llega a splatterSpread. " +
              "Al mover el frasco el charco se angosta: deja un hilo en vez de manchar todo.")]
@@ -83,6 +115,25 @@ public class ToppingDraggable : MonoBehaviour
 
     [Tooltip("Tamaño de cada mancha (sobre splatterSize) con el charco completo. Las primeras salen al 70%.")]
     [SerializeField, Min(0.1f)] private float puddleFullSizeScale = 1.3f;
+
+    [Header("Sauce Trail")]
+    [Tooltip("Ancho del cordón de salsa que queda al mover el frasco mientras vierte.")]
+    [SerializeField, Min(0.01f)] private float sauceTrailWidth = 0.12f;
+
+    [Tooltip("Velocidad del impacto (unidades/s) desde la que se deja cordón en vez de charco.")]
+    [SerializeField, Min(0f)] private float trailMinSpeed = 0.5f;
+
+    [Tooltip("Velocidad del impacto a la que el cordón queda en su ancho más fino.")]
+    [SerializeField, Min(0.01f)] private float trailFastSpeed = 4f;
+
+    [Tooltip("Multiplicador del ancho moviendo despacio (se junta más salsa).")]
+    [SerializeField, Min(0.1f)] private float trailSlowWidthScale = 1.3f;
+
+    [Tooltip("Multiplicador del ancho moviendo rápido (el cordón se estira).")]
+    [SerializeField, Min(0.1f)] private float trailFastWidthScale = 0.7f;
+
+    [Tooltip("Distancia mínima entre puntos del cordón. Menos = curva más suave.")]
+    [SerializeField, Min(0.005f)] private float trailPointSpacing = 0.03f;
 
     [Tooltip("Optional splatter sprites, already drawn in the table's perspective and colored. " +
              "One is picked at random per splatter. If empty, a circle is generated and tinted with sauceColor.")]
@@ -160,13 +211,42 @@ public class ToppingDraggable : MonoBehaviour
     private LineRenderer sauceThreadOutline;
     private static Material sauceThreadMaterial;
     private Vector3[] streamPoints;
-    private float streamCurrentLength;
+    private float streamProgress;
     private float streamFallSpeed;
     private bool streamLanded;
     private Vector3 impactPoint;
     private float puddleRadius;
     private Vector3 lastPuddleImpact;
     private float perlinSeed;
+    private Vector3 lastStreamOrigin;
+    private float streamSway;
+    private float streamSwayVelocity;
+
+    /// <summary>Un cordón de salsa: contorno oscuro, cuerpo y brillo, con los mismos puntos.</summary>
+    private class SauceTrail
+    {
+        public GameObject root;
+        public LineRenderer outline;
+        public LineRenderer body;
+        public LineRenderer gloss;
+        public readonly List<Vector3> points = new List<Vector3>();
+        public readonly List<float> widths = new List<float>();
+    }
+
+    private const int MaxTrailPoints = 256;
+    private SauceTrail trail;
+    private Vector3 lastTrailImpact;
+
+    private SpriteRenderer landingMarker;
+    private LineRenderer previewLine;
+    private Vector3[] previewPoints;
+    private float landingMarkerAlpha;
+    private static Sprite cachedLandingRingSprite;
+    private static Material cachedPreviewLineMaterial;
+
+    private const int PreviewLineSegments = 12;
+    // Cuánto del recorrido cae derecho antes de curvarse hacia el impacto (si el plato lo desvía).
+    private const float StreamStraightFraction = 0.6f;
 
     private float lastSplatterTime;
     private readonly List<GameObject> activeSplatters = new List<GameObject>();
@@ -220,6 +300,11 @@ public class ToppingDraggable : MonoBehaviour
     {
         GamePause.OnPaused -= CancelDrag;
         ActiveInstances.Remove(this);
+
+        if (landingMarker != null)
+            Destroy(landingMarker.gameObject);
+        if (previewLine != null)
+            Destroy(previewLine.gameObject);
     }
 
     void Awake()
@@ -300,9 +385,7 @@ public class ToppingDraggable : MonoBehaviour
         if (zone == null || zone.ZoneCollider == null || rotationZone == null)
             return false;
 
-        // Boca del frasco respecto del pivote con el frasco derecho; dado vuelta (180°) queda espejada.
-        Vector3 mouthLocal = pourOrigin != null ? transform.InverseTransformPoint(pourOrigin.position) : Vector3.zero;
-        Vector3 invertedMouth = Quaternion.Euler(0f, 0f, 180f) * Vector3.Scale(mouthLocal, transform.lossyScale);
+        Vector3 invertedMouth = GetInvertedMouthOffset();
 
         Vector3 plateCenter = zone.ZoneCollider.bounds.center;
         Vector3 ideal = plateCenter + Vector3.up * sauceLength - invertedMouth;
@@ -313,6 +396,15 @@ public class ToppingDraggable : MonoBehaviour
         position = new Vector3(ideal.x, ideal.y, transform.position.z);
         return true;
     }
+
+    /// <summary>Boca del frasco respecto del pivote con el frasco derecho; dado vuelta (180°) queda espejada.</summary>
+    private Vector3 GetInvertedMouthOffset()
+    {
+        Vector3 mouthLocal = pourOrigin != null ? transform.InverseTransformPoint(pourOrigin.position) : Vector3.zero;
+        return Quaternion.Euler(0f, 0f, 180f) * Vector3.Scale(mouthLocal, transform.lossyScale);
+    }
+
+    private Vector3 GetMouthPosition() => pourOrigin != null ? pourOrigin.position : transform.position;
 
     private void SaveSauceToStock()
     {
@@ -387,9 +479,15 @@ public class ToppingDraggable : MonoBehaviour
             {
                 UpdatePuddle();
 
+                float impactSpeed = Vector2.Distance(impactPoint, lastTrailImpact) / Mathf.Max(Time.deltaTime, 0.0001f);
+                lastTrailImpact = impactPoint;
+                UpdateSauceTrail(impactSpeed);
+
+                // Quieto se junta charco; moviéndose deja el cordón, sin manchas sueltas como pinceladas.
                 if (Time.time - lastSplatterTime >= splatterInterval)
                 {
-                    SpawnSplatter();
+                    if (impactSpeed < trailMinSpeed)
+                        SpawnSplatter();
                     lastSplatterTime = Time.time;
                     GamepadHaptics.Play(HapticEvent.SaucePouring);
                 }
@@ -398,6 +496,7 @@ public class ToppingDraggable : MonoBehaviour
 
         UpdateSqueeze();
         UpdateSauceBar();
+        UpdateLandingMarker(insideZone);
     }
 
     /// <summary>Mientras vierte, la botella se aprieta a pulsos (más angosta y apenas más alta).</summary>
@@ -423,6 +522,7 @@ public class ToppingDraggable : MonoBehaviour
         }
 
         StopPouring();
+        HideLandingMarker();
 
         transform.position = startPosition;
         transform.rotation = startRotation;
@@ -453,6 +553,7 @@ public class ToppingDraggable : MonoBehaviour
         isDragging = false;
         GamePause.OnPaused -= CancelDrag;
         StopPouring();
+        HideLandingMarker();
 
         transform.position = startPosition;
         transform.rotation = startRotation;
@@ -468,7 +569,7 @@ public class ToppingDraggable : MonoBehaviour
     {
         isPouring = true;
         lastSplatterTime = Time.time;
-        streamCurrentLength = 0f;
+        streamProgress = 0f;
         streamFallSpeed = streamGrowSpeed;
         streamLanded = false;
         puddleRadius = splatterSpread * puddleStartSpread;
@@ -484,6 +585,8 @@ public class ToppingDraggable : MonoBehaviour
     {
         isPouring = false;
         SetBarPop(false);
+        // El cordón queda en el plato; la próxima vertida empieza uno nuevo.
+        trail = null;
 
         if (sauceThread != null)
         {
@@ -698,7 +801,10 @@ public class ToppingDraggable : MonoBehaviour
         sauceThread = CreateStreamLine("SauceThread", sauceWidth, sauceColor, 5999, segments);
 
         streamPoints = new Vector3[segments];
-        Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
+        Vector3 origin = GetMouthPosition();
+        lastStreamOrigin = origin;
+        streamSway = 0f;
+        streamSwayVelocity = 0f;
         for (int i = 0; i < segments; i++)
             streamPoints[i] = origin;
 
@@ -713,8 +819,10 @@ public class ToppingDraggable : MonoBehaviour
 
         LineRenderer line = new GameObject(name).AddComponent<LineRenderer>();
         line.positionCount = segments;
-        line.startWidth = width;
-        line.endWidth = width * 0.75f;
+        // Gruesa en la boca, se afina al caer y se abre apenas al tocar el plato.
+        line.widthMultiplier = width;
+        line.widthCurve = new AnimationCurve(
+            new Keyframe(0f, 1f), new Keyframe(0.6f, 0.65f), new Keyframe(1f, 0.85f));
         line.sharedMaterial = sauceThreadMaterial;
         line.startColor = color;
         line.endColor = new Color(color.r, color.g, color.b, color.a * 0.7f);
@@ -730,58 +838,61 @@ public class ToppingDraggable : MonoBehaviour
         if (sauceThread == null || streamPoints == null) return;
 
         int segments = streamPoints.Length;
-        Vector3 origin = pourOrigin != null ? pourOrigin.position : transform.position;
+        Vector3 origin = GetMouthPosition();
 
-        impactPoint = GetImpactPoint(origin);
-        Vector3 toImpact = impactPoint - origin;
-        float targetLength = toImpact.magnitude;
-        Vector3 fallDir = targetLength > 0.0001f ? toImpact / targetLength : Vector3.down;
+        impactPoint = GetImpactPoint(origin, puddleRadius);
+        float curveLength = EstimateStreamLength(origin, impactPoint);
 
         // Cae como un líquido: acelera hasta tocar el plato. Si el plato queda más cerca, se acorta al toque.
         streamFallSpeed += streamFallAcceleration * Time.deltaTime;
-        streamCurrentLength = Mathf.Min(streamCurrentLength + streamFallSpeed * Time.deltaTime, targetLength);
+        streamProgress = Mathf.Min(streamProgress + streamFallSpeed * Time.deltaTime / curveLength, 1f);
 
-        if (!streamLanded && streamCurrentLength >= targetLength - 0.001f)
+        if (!streamLanded && streamProgress >= 1f)
         {
             streamLanded = true;
             lastPuddleImpact = impactPoint;
-            // El primer contacto deja una mancha enseguida, sin esperar el intervalo.
+            lastTrailImpact = impactPoint;
+            trail = CreateSauceTrail(impactPoint);
+            // El primer contacto salpica varias manchas de una, y la siguiente sale sin esperar el intervalo.
+            for (int s = 0; s < landingSplashCount; s++)
+                SpawnSplatter();
             lastSplatterTime = Time.time - splatterInterval;
         }
 
+        // Al mover el frasco el chorro se arquea hacia atrás como una sola curva, proporcional a la
+        // velocidad y con tope. Nada de puntos persiguiéndose uno a otro: con movimientos rápidos
+        // eso hacía que el hilo se estirara y serpenteara como un fideo.
+        float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+        float mouthSpeedX = (origin.x - lastStreamOrigin.x) / dt;
+        lastStreamOrigin = origin;
+        float targetSway = Mathf.Clamp(-mouthSpeedX * streamSwayPerSpeed, -streamMaxSway, streamMaxSway);
+        streamSway = Mathf.SmoothDamp(streamSway, targetSway, ref streamSwayVelocity, streamSwaySmoothTime, Mathf.Infinity, dt);
+
+        // Vertiendo rápido el vaivén se apaga: el hilo queda limpio mientras se mueve.
+        float wobbleScale = 1f - Mathf.Clamp01(Mathf.Abs(streamSway) / Mathf.Max(streamMaxSway, 0.0001f));
+
         streamPoints[0] = origin;
 
-        float segmentSpacing = streamCurrentLength / (segments - 1);
         float time = Time.time;
 
         for (int i = 1; i < segments; i++)
         {
             float t = (float)i / (segments - 1);
+            float along = t * streamProgress;
 
-            Vector3 idealPos = origin + fallDir * (segmentSpacing * i);
+            Vector3 pos = EvaluateStream(origin, impactPoint, along);
 
-            // El vaivén es máximo a mitad del chorro y nulo en las puntas: la boca queda pegada al
-            // frasco y la punta cae justo sobre el charco.
+            // Arqueo y vaivén son máximos a mitad del chorro y nulos en las puntas: la boca queda
+            // pegada al frasco y la punta cae justo sobre el aro.
+            float belly = 4f * along * (1f - along);
             float noiseX = Mathf.PerlinNoise(
                 perlinSeed + i * 0.5f,
                 time * wobbleSpeed + i * 0.3f
             ) - 0.5f;
-            idealPos.x += noiseX * wobbleAmplitude * 2f * Mathf.Sin(t * Mathf.PI);
+            pos.x += streamSway * belly + noiseX * wobbleAmplitude * 2f * wobbleScale * Mathf.Sin(t * Mathf.PI);
 
-            // La punta no se arrastra: siempre está donde cae la salsa, así el chorro nunca se
-            // despega del charco. El tramo del medio sí persigue y hace la curva al mover el frasco.
-            if (i == segments - 1)
-            {
-                streamPoints[i] = idealPos;
-            }
-            else
-            {
-                float chaseMultiplier = 1f - t * 0.5f;
-                float chase = streamChaseSpeed * chaseMultiplier * Time.deltaTime;
-                streamPoints[i] = Vector3.Lerp(streamPoints[i], idealPos, Mathf.Clamp01(chase));
-            }
-
-            streamPoints[i].z = origin.z;
+            pos.z = origin.z;
+            streamPoints[i] = pos;
         }
 
         sauceThread.SetPositions(streamPoints);
@@ -790,16 +901,187 @@ public class ToppingDraggable : MonoBehaviour
     }
 
     /// <summary>
+    /// Recorrido del chorro (t de 0 a 1): baja derecho desde la boca y, si el plato desvió el impacto
+    /// a un costado, se curva recién en el último tramo. Así se lee como caída y no como una diagonal.
+    /// </summary>
+    private static Vector3 EvaluateStream(Vector3 origin, Vector3 impact, float t)
+    {
+        Vector3 control = new Vector3(origin.x, Mathf.Lerp(origin.y, impact.y, StreamStraightFraction), origin.z);
+        float u = 1f - t;
+        return u * u * origin + 2f * u * t * control + t * t * impact;
+    }
+
+    private static float EstimateStreamLength(Vector3 origin, Vector3 impact)
+    {
+        const int samples = 8;
+        float length = 0f;
+        Vector3 previous = origin;
+        for (int i = 1; i <= samples; i++)
+        {
+            Vector3 p = EvaluateStream(origin, impact, (float)i / samples);
+            length += Vector3.Distance(previous, p);
+            previous = p;
+        }
+
+        return Mathf.Max(length, 0.0001f);
+    }
+
+    /// <summary>
     /// Dónde toca la salsa: <see cref="sauceLength"/> debajo de la boca, llevado adentro del plato.
     /// El margen deja lugar para el charco, así no se derrama por el borde.
     /// </summary>
-    private Vector3 GetImpactPoint(Vector3 origin)
+    private Vector3 GetImpactPoint(Vector3 origin, float puddle)
     {
         Vector3 impact = origin + Vector3.down * sauceLength;
-        float margin = splatterSize * 0.5f + puddleRadius * 0.5f;
+        float margin = splatterSize * 0.5f + puddle * 0.5f;
         BuildFoodDropZone.TryClampToPlateSurface(impact, margin, out impact);
         impact.z = origin.z;
         return impact;
+    }
+
+    /// <summary>
+    /// Marca dónde va a caer la salsa mientras el frasco está en la zona de verter. Antes de verter:
+    /// aro tenue que late y guía punteada que baja desde donde va a quedar la boca (con el frasco ya
+    /// dado vuelta). Vertiendo: aro firme alrededor del charco, y el chorro reemplaza a la guía.
+    /// </summary>
+    private void UpdateLandingMarker(bool insideZone)
+    {
+        bool show = showLandingMarker && isDragging && (isPouring || (insideZone && !sauceEmpty));
+        float targetAlpha = show ? (isPouring ? 0.9f : 0.45f + 0.2f * Mathf.Sin(Time.time * 2f * Mathf.PI * 1.5f)) : 0f;
+        landingMarkerAlpha = Mathf.MoveTowards(landingMarkerAlpha, targetAlpha, 6f * Time.deltaTime);
+
+        if (landingMarkerAlpha <= 0f)
+        {
+            HideLandingMarker();
+            return;
+        }
+
+        EnsureLandingMarker();
+
+        Vector3 mouth;
+        Vector3 impact;
+        if (isPouring)
+        {
+            mouth = GetMouthPosition();
+            impact = impactPoint;
+        }
+        else
+        {
+            mouth = transform.position + GetInvertedMouthOffset();
+            impact = GetImpactPoint(mouth, splatterSpread * puddleStartSpread);
+        }
+
+        // Vertiendo, el aro abraza el charco; si no, queda en el tamaño mínimo.
+        float diameter = Mathf.Max(landingMarkerSize, isPouring ? puddleRadius * 2f + splatterSize : 0f);
+        float ringScale = diameter / Mathf.Max(landingMarker.sprite.bounds.size.x, 0.0001f);
+        landingMarker.transform.position = impact;
+        landingMarker.transform.localScale = new Vector3(ringScale, ringScale * perspectiveSquash, 1f);
+        landingMarker.color = new Color(landingMarkerColor.r, landingMarkerColor.g, landingMarkerColor.b,
+            landingMarkerColor.a * landingMarkerAlpha);
+        landingMarker.enabled = true;
+
+        bool showPreview = !isPouring;
+        previewLine.enabled = showPreview;
+        if (!showPreview)
+            return;
+
+        for (int i = 0; i < PreviewLineSegments; i++)
+            previewPoints[i] = EvaluateStream(mouth, impact, (float)i / (PreviewLineSegments - 1));
+        previewLine.SetPositions(previewPoints);
+
+        Color c = landingMarkerColor;
+        c.a *= landingMarkerAlpha;
+        previewLine.startColor = c;
+        previewLine.endColor = c;
+        previewLine.sharedMaterial.mainTextureOffset = new Vector2(-Time.time * previewFlowSpeed, 0f);
+    }
+
+    private void HideLandingMarker()
+    {
+        landingMarkerAlpha = 0f;
+        if (landingMarker != null)
+            landingMarker.enabled = false;
+        if (previewLine != null)
+            previewLine.enabled = false;
+    }
+
+    private void EnsureLandingMarker()
+    {
+        if (landingMarker == null)
+        {
+            landingMarker = new GameObject("SauceLandingMarker").AddComponent<SpriteRenderer>();
+            landingMarker.sprite = GetLandingRingSprite();
+            landingMarker.sortingOrder = landingMarkerSortingOrder;
+        }
+
+        if (previewLine == null)
+        {
+            previewLine = new GameObject("SaucePreviewLine").AddComponent<LineRenderer>();
+            previewLine.positionCount = PreviewLineSegments;
+            previewLine.widthMultiplier = previewLineWidth;
+            previewLine.sharedMaterial = GetPreviewLineMaterial();
+            previewLine.sharedMaterial.mainTextureScale = new Vector2(previewDashesPerUnit, 1f);
+            previewLine.textureMode = LineTextureMode.Tile;
+            previewLine.sortingOrder = landingMarkerSortingOrder + 1;
+            previewLine.useWorldSpace = true;
+            previewPoints = new Vector3[PreviewLineSegments];
+        }
+    }
+
+    /// <summary>Aro pixel art blanco con contorno oscuro adentro y afuera, y un punto al centro. Se tiñe con el color del marcador.</summary>
+    private static Sprite GetLandingRingSprite()
+    {
+        if (cachedLandingRingSprite != null)
+            return cachedLandingRingSprite;
+
+        const int size = 24;
+        const float r = size * 0.5f;
+        Color32 clear = new Color32(0, 0, 0, 0);
+        Color32 white = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+        Color32 outline = new Color32(BarOutline.r, BarOutline.g, BarOutline.b, 0xC8);
+
+        var pixels = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float dx = x + 0.5f - r;
+            float dy = y + 0.5f - r;
+            float d = Mathf.Sqrt(dx * dx + dy * dy);
+
+            Color32 c = clear;
+            if (d > r) { }
+            else if (d > r - 1f) c = outline;
+            else if (d > r - 3f) c = white;
+            else if (d > r - 4f) c = outline;
+            else if (d <= 1.5f) c = white;
+            else if (d <= 2.5f) c = outline;
+
+            pixels[y * size + x] = c;
+        }
+
+        cachedLandingRingSprite = CreatePixelSprite(size, size, pixels, new Vector2(0.5f, 0.5f), "SauceLandingRing");
+        return cachedLandingRingSprite;
+    }
+
+    /// <summary>Material de la guía: raya y hueco del mismo largo, repetidos a lo largo de la línea.</summary>
+    private static Material GetPreviewLineMaterial()
+    {
+        if (cachedPreviewLineMaterial != null)
+            return cachedPreviewLineMaterial;
+
+        var tex = new Texture2D(4, 1, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Repeat,
+            name = "SaucePreviewDash"
+        };
+        Color32 white = new Color32(0xFF, 0xFF, 0xFF, 0xFF);
+        Color32 clear = new Color32(0xFF, 0xFF, 0xFF, 0x00);
+        tex.SetPixels32(new[] { white, white, clear, clear });
+        tex.Apply(false, true);
+
+        cachedPreviewLineMaterial = new Material(Shader.Find("Sprites/Default")) { mainTexture = tex };
+        return cachedPreviewLineMaterial;
     }
 
     /// <summary>
@@ -814,6 +1096,142 @@ public class ToppingDraggable : MonoBehaviour
 
         puddleRadius = Mathf.MoveTowards(puddleRadius, splatterSpread, splatterSpread / puddleGrowTime * Time.deltaTime);
         puddleRadius = Mathf.Max(minRadius, puddleRadius - moved);
+    }
+
+    /// <summary>
+    /// Cordón nuevo con su raíz en el impacto. Vive con las salpicaduras (undo, limpiar, viajar con
+    /// el plato): sus líneas están en espacio local, así se mueven con la raíz.
+    /// </summary>
+    private SauceTrail CreateSauceTrail(Vector3 start)
+    {
+        var t = new SauceTrail { root = new GameObject("SauceTrail") };
+        t.root.transform.position = start;
+        if (splatterParent != null)
+            t.root.transform.SetParent(splatterParent, true);
+
+        // Debajo de las manchas: el charco que se junta al frenar tapa el cordón, no al revés.
+        Color outlineColor = new Color(sauceColor.r * 0.45f, sauceColor.g * 0.45f, sauceColor.b * 0.45f, sauceColor.a);
+        Color glossColor = Color.Lerp(sauceColor, Color.white, 0.45f);
+        glossColor.a = 0.8f;
+        t.outline = CreateTrailLine(t.root.transform, "Outline", outlineColor, splatterSortingOrder - 3);
+        t.body = CreateTrailLine(t.root.transform, "Body", sauceColor, splatterSortingOrder - 2);
+        t.gloss = CreateTrailLine(t.root.transform, "Gloss", glossColor, splatterSortingOrder - 1);
+
+        t.points.Add(start);
+        t.points.Add(start);
+        t.widths.Add(sauceTrailWidth);
+        t.widths.Add(sauceTrailWidth);
+        RebuildSauceTrail(t);
+
+        activeSplatters.Add(t.root);
+        return t;
+    }
+
+    private static LineRenderer CreateTrailLine(Transform parent, string name, Color color, int sortingOrder)
+    {
+        if (sauceThreadMaterial == null)
+            sauceThreadMaterial = new Material(Shader.Find("Sprites/Default"));
+
+        LineRenderer line = new GameObject(name).AddComponent<LineRenderer>();
+        line.transform.SetParent(parent, false);
+        line.useWorldSpace = false;
+        line.sharedMaterial = sauceThreadMaterial;
+        line.startColor = color;
+        line.endColor = color;
+        line.sortingOrder = sortingOrder;
+        line.numCapVertices = 6;
+        line.numCornerVertices = 4;
+        line.alignment = LineAlignment.View;
+        return line;
+    }
+
+    /// <summary>
+    /// Estira el cordón hasta el impacto. Moviendo despacio queda grueso (se junta salsa) y rápido se
+    /// afina. En la tabla 2.5D un trazo horizontal se ve más finito que uno vertical.
+    /// </summary>
+    private void UpdateSauceTrail(float impactSpeed)
+    {
+        if (trail == null || trail.root == null)
+            return;
+
+        int n = trail.points.Count;
+        Vector3 anchor = trail.points[n - 2];
+        Vector2 dir = (Vector2)(impactPoint - anchor);
+        float dirX = dir.sqrMagnitude > 0.000001f ? Mathf.Abs(dir.normalized.x) : 0f;
+
+        float speed01 = Mathf.InverseLerp(trailMinSpeed, trailFastSpeed, impactSpeed);
+        float width = sauceTrailWidth
+                      * Mathf.Lerp(trailSlowWidthScale, trailFastWidthScale, speed01)
+                      * Mathf.Lerp(1f, perspectiveSquash, dirX);
+
+        // El último punto es la punta viva pegada al chorro; al alejarse lo suficiente queda fijo y nace otro.
+        trail.points[n - 1] = impactPoint;
+        trail.widths[n - 1] = width;
+
+        if (Vector2.Distance(anchor, impactPoint) >= trailPointSpacing)
+        {
+            if (n >= MaxTrailPoints)
+            {
+                trail = CreateSauceTrail(impactPoint);
+                return;
+            }
+
+            trail.points.Add(impactPoint);
+            trail.widths.Add(width);
+        }
+
+        RebuildSauceTrail(trail);
+    }
+
+    private static void RebuildSauceTrail(SauceTrail t)
+    {
+        int n = t.points.Count;
+        var local = new Vector3[n];
+        var glossLocal = new Vector3[n];
+        Transform root = t.root.transform;
+
+        float total = 0f;
+        var distances = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            if (i > 0)
+                total += Vector2.Distance(t.points[i - 1], t.points[i]);
+            distances[i] = total;
+
+            Vector3 p = t.points[i];
+            local[i] = root.InverseTransformPoint(p);
+            // El brillo va corrido hacia arriba, donde le pega la luz al cordón.
+            glossLocal[i] = root.InverseTransformPoint(p + Vector3.up * t.widths[i] * 0.18f);
+        }
+
+        AnimationCurve bodyCurve = new AnimationCurve();
+        AnimationCurve outlineCurve = new AnimationCurve();
+        AnimationCurve glossCurve = new AnimationCurve();
+        float lastTime = -1f;
+        for (int i = 0; i < n; i++)
+        {
+            float time = total > 0.0001f ? distances[i] / total : (float)i / Mathf.Max(n - 1, 1);
+            if (time <= lastTime)
+                continue;
+            lastTime = time;
+
+            float w = t.widths[i];
+            bodyCurve.AddKey(time, w);
+            outlineCurve.AddKey(time, w * 1.35f);
+            glossCurve.AddKey(time, w * 0.3f);
+        }
+
+        ApplyTrailLine(t.outline, local, outlineCurve);
+        ApplyTrailLine(t.body, local, bodyCurve);
+        ApplyTrailLine(t.gloss, glossLocal, glossCurve);
+    }
+
+    private static void ApplyTrailLine(LineRenderer line, Vector3[] positions, AnimationCurve widthCurve)
+    {
+        line.positionCount = positions.Length;
+        line.SetPositions(positions);
+        line.widthMultiplier = 1f;
+        line.widthCurve = widthCurve;
     }
 
     private void SpawnSplatter()
