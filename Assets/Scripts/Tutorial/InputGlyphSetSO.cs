@@ -10,16 +10,24 @@ using UnityEngine;
 /// sin dibujo propio se muestra como una tecla (o botón de joystick) en blanco con su nombre encima
 /// (<see cref="InputPrompts.GetLabel(string, InputScheme, GamepadFamily)"/>), así que cualquier
 /// binding o joystick anda sin arte nuevo.
+///
+/// Los dibujos de joystick van por familia (<see cref="InputManager.ActiveGamepadFamily"/>): Xbox,
+/// PlayStation o genérico. El genérico (Switch Pro, 8BitDo...) dibuja la posición del botón y no su
+/// letra, porque la letra cambia de marca a marca; un control sin dibujo genérico usa el de Xbox.
+/// También los usa <see cref="InputPromptBadge"/> (los íconos fijos sobre la pestaña o el botón).
 /// </summary>
 [CreateAssetMenu(fileName = "InputGlyphs", menuName = "Tutorial/Input Glyphs")]
 public class InputGlyphSetSO : ScriptableObject
 {
+    /// <summary>⚠️ Se serializa como int: los valores nuevos van siempre al final.</summary>
     public enum Device
     {
         Keyboard,
         Mouse,
         Xbox,
         PlayStation,
+        /// <summary>Joystick que no es ni Xbox ni PlayStation. Sin dibujo propio cae al de Xbox.</summary>
+        Generic,
     }
 
     [Serializable]
@@ -48,7 +56,7 @@ public class InputGlyphSetSO : ScriptableObject
     public HintGlyph Resolve(HintPrompt prompt, InputScheme scheme, GamepadFamily family)
     {
         bool gamepad = scheme == InputScheme.Gamepad;
-        Device pad = family == GamepadFamily.PlayStation ? Device.PlayStation : Device.Xbox;
+        Device pad = PadDevice(family);
 
         switch (prompt.input)
         {
@@ -99,6 +107,16 @@ public class InputGlyphSetSO : ScriptableObject
         return new HintGlyph(sprite, blankKey, InputPrompts.GetLabel(actionName, InputScheme.KeyboardMouse, family));
     }
 
+    private static Device PadDevice(GamepadFamily family)
+    {
+        switch (family)
+        {
+            case GamepadFamily.PlayStation: return Device.PlayStation;
+            case GamepadFamily.Generic: return Device.Generic;
+            default: return Device.Xbox;
+        }
+    }
+
     private Sprite Find(Device device, string control)
     {
         for (int i = 0; i < entries.Count; i++)
@@ -108,7 +126,9 @@ public class InputGlyphSetSO : ScriptableObject
                 && string.Equals(entry.control, control, StringComparison.OrdinalIgnoreCase))
                 return entry.sprite;
         }
-        return null;
+
+        // Un joystick genérico sin dibujo propio para ese botón usa el de Xbox (igual que los textos).
+        return device == Device.Generic ? Find(Device.Xbox, control) : null;
     }
 }
 
