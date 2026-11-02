@@ -33,3 +33,81 @@ MonoBehaviour:
   - device: 1
     control: hover
     sprite: {fileID: 21300000, guid: c592c0ff074ac1640a4e455d43de0784, type: 3}
+  - device: 0
+    control: space
+    sprite: {fileID: 1801727622, guid: 405017239cadfa54ea40da09b3184692, type: 3}
+  - device: 0
+    control: r
+    sprite: {fileID: -1024856395, guid: e7bf456d393f88b4a8e58e4537bc3955, type: 3}
+  - device: 2
+    control: buttonSouth
+    sprite: {fileID: 21300000, guid: 6d9dcb1cde36cf3478ce4928370139b7, type: 3}
+  - device: 3
+    control: buttonSouth
+    sprite: {fileID: 21300000, guid: 1b78c968711d2ca4cb56cf48eec44613, type: 3}
+  - device: 4
+    control: buttonSouth
+    sprite: {fileID: 21300000, guid: e3fdb5a465dee0d4abe0b9c88fa3c1f6, type: 3}
+  - device: 2
+    control: buttonEast
+    sprite: {fileID: 21300000, guid: e1657d49b24a30e40810ac01cd9bc269, type: 3}
+  - device: 3
+    control: buttonEast
+    sprite: {fileID: 21300000, guid: 1d5f877fcd802ff4fb789ab5d83932c8, type: 3}
+  - device: 4
+    control: buttonEast
+    sprite: {fileID: 21300000, guid: 95916d1f89775bb418649d6244396fe7, type: 3}
+  - device: 2
+    control: buttonWest
+    sprite: {fileID: 21300000, guid: bf95b14b14daf3a4eb2c843c59a0456a, type: 3}
+  - device: 3
+    control: buttonWest
+    sprite: {fileID: 21300000, guid: 9fc41ce0bba102a42b8197cf7f1dea93, type: 3}
+  - device: 4
+    control: buttonWest
+    sprite: {fileID: 21300000, guid: 68aaf75177f12a244bad55b9e275e993, type: 3}
+  - device: 2
+    control: buttonNorth
+    sprite: {fileID: 21300000, guid: 6e8172ce20ffb654086938998b775d3f, type: 3}
+  - device: 3
+    control: buttonNorth
+    sprite: {fileID: 21300000, guid: 9088068b5a4f3834daa6f17e868df8e5, type: 3}
+  - device: 4
+    control: buttonNorth
+    sprite: {fileID: 21300000, guid: 90df1419315bcbf4a9b3f3625588086e, type: 3}
+  - device: 2
+    control: leftShoulder
+    sprite: {fileID: 21300000, guid: 8882c842e82a9284793ecba0a02ae769, type: 3}
+  - device: 3
+    control: leftShoulder
+    sprite: {fileID: 21300000, guid: b312586338bef4d47802107ea26d8eab, type: 3}
+  - device: 4
+    control: leftShoulder
+    sprite: {fileID: 21300000, guid: 465c804987e4d854fbdc72e9cd7979d2, type: 3}
+  - device: 2
+    control: rightShoulder
+    sprite: {fileID: 21300000, guid: d132b2cc4637da64bbdd173b8a4eef43, type: 3}
+  - device: 3
+    control: rightShoulder
+    sprite: {fileID: 21300000, guid: b968c781b04529d4499139b9ee654369, type: 3}
+  - device: 4
+    control: rightShoulder
+    sprite: {fileID: 21300000, guid: d6c1bcdf4a9d81046b2292546e1c7b77, type: 3}
+  - device: 2
+    control: leftTrigger
+    sprite: {fileID: 21300000, guid: aaaa85c1b45ff0744b7f352ed3f2523c, type: 3}
+  - device: 3
+    control: leftTrigger
+    sprite: {fileID: 21300000, guid: cb53f7c5c1c69c046805fccaecbb1092, type: 3}
+  - device: 4
+    control: leftTrigger
+    sprite: {fileID: 21300000, guid: 0c6e6d3fdcbc1f443bd4ff261529811b, type: 3}
+  - device: 2
+    control: rightTrigger
+    sprite: {fileID: 21300000, guid: db234edd5e233c64c80dcee5f57588ba, type: 3}
+  - device: 3
+    control: rightTrigger
+    sprite: {fileID: 21300000, guid: b8c0c850668d45240bcdbc3ec953aa3f, type: 3}
+  - device: 4
+    control: rightTrigger
+    sprite: {fileID: 21300000, guid: cc5579dd1b6aed64298463d32ba52221, type: 3}
