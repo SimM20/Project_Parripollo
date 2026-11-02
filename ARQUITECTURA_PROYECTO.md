@@ -2,6 +2,14 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-02** (rama `refactor/limpieza-legacy`) — **limpieza de legacy y carpetas nuevas**.
+> Salieron el tutorial viejo (`TutorialScene`, `ShopTutorial`, `TutorialManager`, `TutorialOfferController`, `TutorialStepSO`
+> y sus pasos/paneles), la bandeja (`MeatTray`, `ToBuildDraggableMeat`), `ViewManager` / `ViewType`, las notificaciones de
+> parrilla, la vista Cooler y las colas legacy de `MeatTransferBuffer` / `CoalTransferBuffer`, y `SampleScene`. La carne del
+> plato **ya no pasa por el undo**: solo vuelve a mano a la parrilla. Build: `MainMenuScene` → `GameScene` → `EndScene`.
+> `Assets/` se reorganizó por tipo (`Art/`, `Audio/`, `Data/`, `Prefabs/`, `Scripts/`, `Settings/`); lo que el juego no usa
+> quedó en `Assets/_SinUso/` para revisar. Secciones 0 y 1. **Las entradas de abajo de esta fecha pueden nombrar rutas y
+> sistemas que ya no existen.**
 > Última actualización parcial: **2026-09-21** (rama `development`) — dos gestos sobre el plato: agarrar **el plato** lo lleva entero al cliente (única entrega); agarrar **la carne** mueve solo la carne (reposicionar en el plato, bandeja o parrilla; nunca entrega). Sin anclaje de carne. Secciones 2.4 y 3.4, `TutorialManager.CheckPlateMeatDragAllowed`.
 > Última actualización parcial: **2026-09-23** (rama `development`) — el collider de los visuales de carne se calca sobre la **silueta de cada corte** (`Build/SpriteColliderFitter.cs`) en vez de ser el mismo cuadrado del lienzo para todos: el plato ya no pierde los clicks que caían al lado de la carne. `StockPrefab.prefab` quedó **sin collider** (lo construye el fitter en runtime). Secciones 3.3, 3.4 y nota 33.
 > Última actualización parcial: **2026-09-25** (rama `Store-Fixes`) — la celda de la tienda muestra cuánto se **tiene** de cada item (línea `ItemStock` → `ShopItemCellUI.stockText`; en las mejoras, el nivel) y el carbón aclara que la bolsa trae `unitsPerBag` unidades. La racha de `ShopRequirementsUI` dice "NOCHES SEGUIDAS CON STRIKES". Sección 3.6 y nota 14.
@@ -216,7 +224,7 @@
 | Motor | Unity **2022.3.62f3**, URP (2D), **Input System 1.19** (Active Input Handling = *Both*) detrás de `InputManager` — ver 3.1 → *Input* |
 | Cámara | **Perspectiva** (`orthographic: 0`, FOV `56`, en `z = -10`). No es ortográfica — ver nota 22 |
 | Lenguaje | C#, assembly única `Assembly-CSharp` (sin `.asmdef` en `Assets/Scripts`). `Scripts/Editor/` va a `Assembly-CSharp-Editor` |
-| Código propio | `Assets/Scripts/` — **156 archivos, ~27k líneas** |
+| Código propio | `Assets/Scripts/` — **178 archivos, ~36k líneas** |
 | Third-party | `Assets/AmplifyShaderEditor/` (plugin de shaders, **ignorar**), TextMesh Pro |
 | Género | Simulador de parrilla argentina **contrarreloj**: cocinar cortes, armar platos/sándwiches y entregar a los clientes que entran durante la jornada |
 | Jornada | **06:30 → 21:00 en 5 minutos reales** (`DayClock`). A las 21:00 cierra y deja de entrar gente; el día termina **cuando se va el último cliente**, no al cerrar |
@@ -224,12 +232,12 @@
 | Idioma del dominio | Español (`Crudo`, `Jugoso`, `Hecho`, `Muy_Hecho`, `Pasado`, `Quemado`): nombres de enums, assets y campos |
 | Idiomas del juego | **Español** (fuente) e **inglés**, por tablas CSV — ver 3.11. Cortes de carne y toppings quedan en español en todos los idiomas |
 
-**Escenas (build order)**: `0 MainMenuScene` → `1 GameScene` → `2 TutorialScene` → `3 ShopTutorial` → `4 EndScene`.
-`GameOverScene` está en la lista pero **deshabilitada**. `SampleScene.unity` existe pero **no está en build** (legacy).
+**Escenas (build order)**: `0 MainMenuScene` → `1 GameScene` → `2 EndScene` (y "Reintentar" vuelve a `GameScene`).
+Son las únicas tres escenas del proyecto. El tutorial vive dentro de `GameScene` como carteles contextuales (3.7).
 
 **Vista única.** Desde el refactor del 2026-08-29 (`9d0c1b5`, ver `PLAN_REFACTOR_BUILDVIEW_GRILLVIEW.md`) todo el
-gameplay de una noche —cocinar, armar el plato y entregar— ocurre **dentro de `GrillView`**. La Cooler View y la
-Build View están deprecadas: sus `ViewType` siguen en el enum pero `ViewManager.Show` los redirige a `Grill`.
+gameplay de una noche —cocinar, armar el plato y entregar— ocurre **dentro de `GrillView`**. Desde 2026-11-02 ya no hay
+`ViewManager`: las vistas Cooler y Build y su enum se borraron.
 
 ---
 
@@ -237,73 +245,111 @@ Build View están deprecadas: sus `ViewType` siguen en el enum pero `ViewManager
 
 ```
 Assets/Scripts/
-├── (raíz)          Managers globales, modelo base de items/grilla, utilidades, audio
-├── Core/           Orquestación de partida, reloj de la jornada (DayClock), armado del plato, staging plato/bandeja, pausa global
-├── Grill/          Vista Parrilla: cocción, capas carne/carbón, HUD de hover, VFX de humo/flip
-├── Cooler/         Stock persistente (CoolerSystem). Vista Heladera DEPRECADA → StockPanel
-├── Build/          Plato: zona de drop, pan/guarniciones/toppings, undo, entrega por arrastre
-├── Customers/      Clientes: spawn, paciencia, hover, burbuja de pedido (base al pecho + expandida) y de feedback
-├── Orders/         Modelo y generación de pedidos (corte + punto + pan/toppings)
-├── Food/           Catálogo (SO), validación de platos, evaluación económica (cocción + extras)
-├── Shop/           Tienda (post-noche): tabs + breadcrumb, compra individual. Dos capas de UI
+├── Core/           Orquestación de partida (GameManager), reloj de la jornada (DayClock), stats del día, pausa global, arranque (Init), utilidades de escena
+├── Grill/          Parrilla: grilla (GridSlot), items arrastrables (Item, Meat, Coal), cocción, capas carne/carbón, carbón, basura, HUD de hover, VFX
+├── Build/          Plato: armado (BuildStationSystem), carne del plato (MeatTransferBuffer), zona de drop, pan/guarniciones/toppings, undo, entrega por arrastre
+├── Stock/          Stock persistente (CoolerSystem) y stock de salsas (ToppingStock)
+├── Customers/      Clientes: spawn, paciencia, hover, burbuja de pedido y de feedback. Pedidos (Order, OrderSystem)
+├── Food/           Datos base de items (ItemDataSO), catálogo (SO), validación de platos, evaluación económica (cocción + extras)
+├── Shop/           Tienda (post-noche): lógica headless (ShopSystem) y captura de fondo
+│   ├── UI/             Las dos capas de UI de la tienda (*UI uGUI y *2D world-space)
+│   └── Upgrades/       UpgradeSO y el activador de mejoras
+├── Run/            Estado de la run: billetera, derrota, evaluación económica, reseteo
 ├── Strikes/        Strikes por clientes perdidos: contador, HUD de X, aviso de gameplay, popup de cierre
 ├── Background/     Fondo por capas que sigue la hora del DayClock (amanecer → noche) + nubes con parallax + tránsito en la ruta
 ├── Input/          InputManager (Input System nuevo, teclado/mouse + gamepad), navegación por saltos, cursor, eventos de puntero del mundo
 ├── Settings/       GameSettings: opciones del jugador (init.cfg) — cargar, guardar, aplicar
 ├── Localization/   Loc (tablas CSV por idioma) y LocalizedText (textos fijos de escena/prefab)
-├── Tutorial/       Tutorial nuevo: señales del juego (TutorialSignals) y carteles contextuales
-├── UI/             ViewManager, Tutorial viejo, SlidingPanel (base de paneles), notificaciones, HUD SO, feedback, íconos fijos del control (InputPromptBadge)
-│   ├── Options/        Menú de opciones: panel + fila selectora "< valor >"
-│   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
-│   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
-├── Radio/          La radio de la mejora: objeto clickeable del mostrador + emisora DDOL que nunca se corta
+├── Tutorial/       Tutorial: señales del juego (TutorialSignals) y carteles contextuales
+├── Audio/          AudioManager
+│   └── Radio/          La radio de la mejora: objeto clickeable del mostrador + emisora DDOL que nunca se corta
+├── UI/
+│   ├── HUD/            HudManager, HudContainer, HudDatabaseSO, MoneyPopup, RollbackButtonUI
+│   ├── Menus/          Menú principal, pausa, pantalla final, UIManager, botones de menú
+│   │   └── Options/        Menú de opciones: panel + fila selectora "< valor >"
+│   ├── Panels/         SlidingPanel (base) + paneles laterales
+│   │   ├── StockPanel/     Panel deslizante izquierdo: stock → parrilla
+│   │   └── ToppingsPanel/  Panel deslizante derecho: panes / guarniciones / frascos → plato
+│   └── World/          UI sobre el mundo: feedback de entrega, íconos fijos del control (InputPromptBadge), estilo de burbujas
 ├── Feel/           Game feel: easing, golpes de escala, fantasmas de sprite, asentado visual, entrada de paneles y de escena
-└── Editor/         Solo editor: reseteo de mejoras al salir de Play
+└── Editor/         Solo editor: reseteo de mejoras al salir de Play, simuladores de economía, herramientas de localización
 ```
 
 ### Responsabilidades por carpeta
 
 | Carpeta | Responsabilidad | Archivos clave |
 |---|---|---|
-| **raíz** | Singletons de sesión (`UIManager`, `AudioManager`, `PlayerWallet`, `CoalConsumptionTracker`), modelo base drag&drop (`Item`), grilla (`GridSlot`), entidades físicas (`Meat`, `Coal`), buffer de carbón, arranque (`Init`), utilidades de escena, `HudManager` | `Item.cs`, `GridSlot.cs`, `Meat.cs`, `Coal.cs`, `PlayerWallet.cs`, `CoalConsumptionTracker.cs`, `AudioManager.cs`, `HudManager.cs`, `SceneManagementUtils.cs` |
-| **Core/** | Comandos de input de la partida (lee `InputManager`) y árbitro de la entrega (`GameManager`), **reloj de la jornada (`DayClock`)** y stats del día (`DayStats`), armado del plato (`BuildStationSystem`), **staging plato ↔ bandeja** (`MeatTransferBuffer`), draggable de la bandeja (`ToBuildDraggableMeat`), basura (`TrashZone`), pausa global (`GamePause`), activador de mejoras (`UpgradeUnlockActivator`) | `GameManager.cs`, `DayClock.cs`, `MeatTransferBuffer.cs` (1145), `BuildStationSystem.cs`, `GamePause.cs`, `ToBuildDraggableMeat.cs` |
-| **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón, VFX (`BurnSmoke`, `FlipPuff`) | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `CoalStackCounter.cs`, `BurnSmoke.cs`, `FlipPuff.cs` |
-| **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
-| **Build/** | Zona de drop del plato (`BuildFoodDropZone`, **un solo corte por plato**), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command, **incluye la carne**), **entrega del plato por arrastre** (`PlateDeliveryDraggable`, única vía de entrega) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (696), `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs`, `SpriteColliderFitter.cs` |
-| **Customers/** | Llegada de clientes según el horario del `DayClock` y la curva de afluencia, tick de paciencia, hover de entrega, view + **burbuja de pedido por cliente** (base al pecho siempre visible, expandida al hover) + recuadro, **feedback de entrega/abandono/cambio** (burbuja de 4 s con estado, pago y propina), gateo de pick bajo paneles | `CustomerSystem.cs` (1030), `Customer.cs`, `CustomerView.cs`, `CustomerOrderBubble.cs`, `CustomerFeedbackBubble.cs`, `CustomerFeedbackConfigSO.cs`, `CustomerFeedbackState.cs` |
-| **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada con toppings | `OrderSystem.cs`, `Order.cs` |
-| **Food/** | Catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
-| **Shop/** | Lógica de tienda headless (`ShopSystem`) + **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene` y `ShopTutorial`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**) | `ShopSystem.cs`, `ShopGridUI.cs`, `ShopItemCellUI.cs`, `ShopBreadcrumbUI.cs`, `ShopHeaderUI.cs` |
+| **Core/** | Comandos de input de la partida (lee `InputManager`) y árbitro de la entrega (`GameManager`), **reloj de la jornada (`DayClock`)** y stats del día (`DayStats`), pausa global (`GamePause`), arranque (`Init`), utilidades de escena (`SceneManagementUtils`) | `GameManager.cs`, `DayClock.cs`, `GamePause.cs`, `Init.cs`, `SceneManagementUtils.cs` |
+| **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), grilla (`GridSlot`), modelo base drag&drop (`Item`) y entidades físicas (`Meat`, `Coal`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**) y de carbón (`CoalSO`), consumo de carbón (`CoalConsumptionTracker`), preview de carbón (`CoalTransferBuffer`), basura (`TrashZone`), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón, VFX (`BurnSmoke`, `FlipPuff`) | `GrillSystem.cs`, `GridSlot.cs`, `Item.cs`, `Meat.cs`, `Coal.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `BurnSmoke.cs` |
+| **Build/** | Armado del plato (`BuildStationSystem`), **carne del plato** (`MeatTransferBuffer`: visuales, vuelta a la parrilla y preview de slots), zona de drop del plato (`BuildFoodDropZone`, **un solo corte por plato**), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command, **sin la carne**), **entrega del plato por arrastre** (`PlateDeliveryDraggable`, única vía de entrega) | `BuildStationSystem.cs`, `MeatTransferBuffer.cs`, `BuildFoodDropZone.cs`, `ToppingDraggable.cs`, `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs` |
+| **Stock/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL) y stock de salsas (`ToppingStock`, DDOL) | `CoolerSystem.cs`, `ToppingStock.cs` |
+| **Customers/** | Llegada de clientes según el horario del `DayClock` y la curva de afluencia, tick de paciencia, hover de entrega, view + **burbuja de pedido por cliente** (base al pecho siempre visible, expandida al hover) + recuadro, **feedback de entrega/abandono/cambio** (burbuja de 4 s con estado, pago y propina), gateo de pick bajo paneles. Pedidos: `Order` (corte + punto pedido + pan/sides/toppings) y generación ponderada (`OrderSystem`) | `CustomerSystem.cs`, `Customer.cs`, `CustomerView.cs`, `CustomerOrderBubble.cs`, `CustomerFeedbackBubble.cs`, `OrderSystem.cs`, `Order.cs` |
+| **Food/** | Datos base de items (`ItemDataSO`, `ItemType`), catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `ItemDataSO.cs`, `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
+| **Shop/** | Lógica de tienda headless (`ShopSystem`, `ShopConfigSO`) y captura de fondo (`ShopBackdropCapture*`). En `Shop/UI/` las **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**). En `Shop/Upgrades/` las mejoras (`UpgradeSO`, `UpgradeUnlockActivator`) | `ShopSystem.cs`, `UI/ShopGridUI.cs`, `UI/ShopItemCellUI.cs`, `UI/ShopHeaderUI.cs`, `Upgrades/UpgradeSO.cs` |
+| **Run/** | Estado de la run entre noches: billetera (`PlayerWallet`, DDOL), derrota (`RunDefeatConfigSO`, `RunDefeatScreen`), evaluación económica (`RunEconomyEvaluator`), reseteo (`RunStateReset`) | `PlayerWallet.cs`, `RunEconomyEvaluator.cs`, `RunStateReset.cs` |
 | **Strikes/** | Penalización de jornada por clientes que se van con paciencia 0 (`StrikeSystem`, singleton de escena), HUD de X (`StrikeHudView`), aviso “¡Te clavaron el cartel!” (`StrikeLimitNotice`) y popup modal de cierre anticipado en `EndScene` (`StrikeEndPopup`) | `StrikeSystem.cs`, `StrikeHudView.cs`, `StrikeLimitNotice.cs`, `StrikeEndPopup.cs` |
 | **Background/** | Fondo de `GameScene` en capas (cielo, estrellas, luna, sol, nubes, paisaje). `DayCycleBackground` lee la hora del `DayClock` y se la pasa a las capas; cada `DayCycleLayer` mezcla su color (y opcionalmente su sprite) entre claves horarias; `DayCycleArc` mueve sol y luna; `ParallaxLayer` desliza las nubes; `RoadTraffic` hace pasar vehículos por la ruta. Solo visual: no escribe la hora ni toca el gameplay | `DayCycleBackground.cs`, `DayCycleLayer.cs`, `DayCycleArc.cs`, `ParallaxLayer.cs`, `RoadTraffic.cs` |
-| **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI y **nombres de teclas/botones para los textos** (`InputPrompts`, tokens `[[Accion]]`). Bindings en `Assets/Input/GameControls.inputactions` | `InputPrompts.cs`, `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
-| **UI/** | `ViewManager` (hoy casi inerte), tutorial data-driven (`TutorialManager` + `TutorialStepSO`), **`SlidingPanel`** (base abstracta de los dos paneles laterales), notificaciones de parrilla (vivas pero sin disparar), feedback de entrega, `MoneyPopup`, `RollbackButtonUI`, `MenuButtonHover` (escala al hover/click de los botones del menú y de la tienda; no reacciona si el `Selectable` está deshabilitado), `InputPromptBadge` (ícono fijo de la tecla/botón sobre un interactuable, ver 3.1 → *Input*) | `ViewManager.cs`, `TutorialManager.cs` (985), `SlidingPanel.cs`, `MoneyPopup.cs`, `GrillNotificationManager.cs`, `InputPromptBadge.cs` |
+| **Input/** | Única puerta de entrada del input (`InputManager`, DDOL, se crea solo desde `Resources/InputManager.prefab`): puntero unificado mouse / puntero virtual del gamepad, **navegación por saltos entre elementos** (`GamepadNavigator` + reglas en `GamepadNavTargets`), acciones de juego (`GameAction`), eventos de puntero para colliders del mundo (`WorldPointerDispatcher` → `OnWorldPointerXXX`), recuadro de selección y flecha del gamepad (`GamepadCursorView`) y configuración del módulo de UI y **nombres de teclas/botones para los textos** (`InputPrompts`, tokens `[[Accion]]`). Bindings en `Assets/Settings/Input/GameControls.inputactions` | `InputPrompts.cs`, `InputManager.cs`, `GamepadNavigator.cs`, `GamepadNavTargets.cs`, `WorldPointerDispatcher.cs`, `GamepadCursorView.cs`, `InputTypes.cs` |
+| **UI/HUD/** | HUD de la partida (`HudManager`, `HudContainer`, datos en `HudDatabaseSO`), `MoneyPopup`, `RollbackButtonUI` (flecha de deshacer) | `HudManager.cs`, `HudContainer.cs`, `MoneyPopup.cs`, `RollbackButtonUI.cs` |
+| **UI/Menus/** | Menú principal (`MainMenuPanel`), pausa (`PauseMenuHandler`), pantalla final (`EndScreen`), `UIManager`, `MenuButtonHover` (escala al hover/click de los botones del menú y de la tienda; no reacciona si el `Selectable` está deshabilitado), `RetroMenuButton` | `MainMenuPanel.cs`, `PauseMenuHandler.cs`, `EndScreen.cs`, `MenuButtonHover.cs` |
+| **UI/Panels/** | **`SlidingPanel`** (base abstracta de los dos paneles laterales) | `SlidingPanel.cs` |
+| **UI/World/** | UI pegada al mundo: feedback de entrega (`DeliveryFeedbackText`), `InputPromptBadge` (ícono fijo de la tecla/botón sobre un interactuable, ver 3.1 → *Input*), estilo de burbujas (`WorldBubbleStyle`) | `DeliveryFeedbackText.cs`, `InputPromptBadge.cs`, `WorldBubbleStyle.cs` |
 | **Settings/** | `GameSettings` (estática): struct `SettingsData`, lectura perezosa de `init.cfg`, `ApplyAndSave`, aplicación (pantalla, VSync/FPS, `InputManager.SetInputMode`, `Loc.SetLanguage`). También guarda la lista de carteles del tutorial aprendidos (`LearnedHints`) | `GameSettings.cs` |
 | **Tutorial/** | Tutorial nuevo (ver 3.7 → *Carteles contextuales*). `TutorialSignals`: hub estático por donde el juego avisa lo que hace el jugador (reemplaza a los `TutorialManager.Notify*`). Director: `TutorialHintDirector` (qué cartel, cuándo), `TutorialHintContext` (foto de la partida), `TutorialHintSO` / `TutorialHintSetSO` (datos), `TutorialProgress` (lo aprendido). Cartel: `TutorialHintLayer` (canvas y pool), `TutorialHintView`, `InputGlyphSetSO` (íconos de controles). `TutorialHintDebug` (QA) | `TutorialSignals.cs`, `TutorialHintDirector.cs`, `TutorialHintContext.cs`, `TutorialHintView.cs`, `InputGlyphSetSO.cs` |
 | **Localization/** | `Loc` (estática): carga las tablas `Resources/Localization/*.csv`, idioma activo, `Get`/`Format`/`GetPool`, tokens `[[...]]`, evento `OnTextsChanged`. `LocalizedText`: componente para los textos fijos de escenas y prefabs. Herramientas de editor en `Editor/LocalizationTools.cs` | `Loc.cs`, `LocalizedText.cs` |
-| **UI/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
-| **UI/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda-interruptor (`StockPanelSlot`), stock en la mano → parrilla (`StockPlacementMode`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPlacementMode.cs`, `StockPanelTab.cs` |
-| **UI/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
-| **Radio/** | `Radio` (el objeto del mostrador que activa la mejora `RadioUpgrade`: prender/apagar, lista de canciones, salto al ritmo) y `RadioStation` (emisora DDOL creada en runtime: elige, encadena y funde las canciones) | `Radio.cs`, `RadioStation.cs` |
+| **UI/Menus/Options/** | `OptionsMenuPanel` (cambios pendientes hasta *Aplicar*) y `OptionSelectorUI` (fila con flechas, en vez de Dropdown para que ande con la navegación del gamepad). Prefab `Prefabs/UI/OptionsPanel.prefab` | `OptionsMenuPanel.cs`, `OptionSelectorUI.cs` |
+| **UI/Panels/StockPanel/** | Panel izquierdo: estado y layout (`StockPanelController : SlidingPanel`), celda-interruptor (`StockPanelSlot`), stock en la mano → parrilla (`StockPlacementMode`), pestaña (`StockPanelTab`) | `StockPanelController.cs`, `StockPanelSlot.cs`, `StockPlacementMode.cs`, `StockPanelTab.cs` |
+| **UI/Panels/ToppingsPanel/** | Panel derecho: hospeda los GameObjects reales de panes/guarniciones/frascos y los acomoda en grilla (`ToppingsPanelController : SlidingPanel`) | `ToppingsPanelController.cs` |
+| **Audio/** | `AudioManager` (singleton de sesión: clips de feedback y efectos) | `AudioManager.cs` |
+| **Audio/Radio/** | `Radio` (el objeto del mostrador que activa la mejora `RadioUpgrade`: prender/apagar, lista de canciones, salto al ritmo) y `RadioStation` (emisora DDOL creada en runtime: elige, encadena y funde las canciones) | `Radio.cs`, `RadioStation.cs` |
 | **Feel/** | Solo presentación, sin lógica de juego. `FeelEase` (curvas), `ScalePunch` (golpe/pop de escala para transforms **sin collider**), `SpriteGhost` (copia pooleada de un sprite que se anima y desaparece), `SettleOffset` (corrimiento visual que se apaga solo, para piezas con collider compensado), `UIPopIn` (entrada de ventanas de UI), `SceneFadeIn` (fundido de salida y entrada de escena, se crea solo), `MainMenuIntro` (amanecer + entrada del menú principal, ver 4.1) | `SpriteGhost.cs`, `SettleOffset.cs`, `ScalePunch.cs`, `UIPopIn.cs` |
-| **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO` | `UpgradeStateResetter.cs` |
+| **Editor/** | `UpgradeStateResetter`: al salir de Play devuelve `UpgradeSO.currentLevel = 0` y restaura los `CoalSO`. Simuladores de economía (`EconomySimulator`, `ResourceBalanceSimulator`, leen `Data/Config/*.asset` por ruta) y `LocalizationTools` | `UpgradeStateResetter.cs`, `EconomySimulator.cs`, `LocalizationTools.cs` |
+
+### Estructura de `Assets/`
+
+```
+Assets/
+├── Art/
+│   ├── Fonts/          Bungee, Nunito, ParripolloPixel (+ sus SDF de TextMesh Pro)
+│   ├── Materials/      Materiales de VFX, humo, distorsión de calor y fondo de la tienda
+│   ├── Shaders/        Distorsión de calor (URP 2D) y dither de la tienda
+│   ├── Textures/       Ruido de calor; VFX/ texturas de humo
+│   └── Sprites/
+│       ├── Coal/           Carbón por estado + íconos
+│       ├── Customers/      Clientes (POV) y retratos
+│       ├── Environment/    DayCycle/ fondo por capas (+ Vehicles/)
+│       ├── Food/           Cuts/<corte>/ (sprite por punto, .aseprite al lado), Sides/, Breads/, Sauces/ (+ Splatters/)
+│       ├── Stall/          El puesto: mostrador, parrilla, tacho, radio, fuego
+│       └── UI/             Buttons/, CookBar/, Cursor/, Elements/, HUD/, Input/ (glifos de controles), Menus/, StockPanel/, Tutorial/
+├── Audio/              SFX/ efectos, Music/ canciones de la radio
+├── Data/               ScriptableObjects (ver abajo)
+├── Prefabs/            Managers/ ([MANAGERS], [SYSTEMS], TransferBuffer), Grill/, Customers/, Environment/, Shop/, UI/
+├── Resources/          Lo que se carga por nombre: InputManager, TipRules, ParripolloPixel SDF, Localization/*.csv
+├── Scenes/             MainMenuScene, GameScene, EndScene
+├── Scripts/            Ver arriba
+├── Settings/           URP (UniversalRP, Renderer2D, global settings), Input/GameControls.inputactions, plantilla de escena
+├── _SinUso/            Arte, fuentes y audio que ningún asset usa, con su ruta original adentro. Para revisar y borrar
+├── AmplifyShaderEditor/, TextMesh Pro/, Plugins/   Third-party (no tocar)
+```
+
+Los `.aseprite` / `.psd` fuente van en la misma carpeta que su PNG. Lo que va en `Resources/` se carga por nombre desde el
+código: si se mueve adentro de una subcarpeta hay que actualizar la ruta del `Resources.Load`.
 
 ### Assets de datos
 
 ```
-Assets/ScriptableObjects/
-├── Cuts/            MeatCutSO   — Chinchulin, Costillita de cerdo, Matambre, Paty, Pechuga de pollo, Tira de asado, Vacio
+Assets/Data/
+├── Cuts/            MeatCutSO   — Chinchulin, Chorizo, ChorizoTutorial, Costillita de cerdo, Matambre, Paty, Pechuga de pollo, Tira de asado, Vacio
 ├── Breads/          BreadSO     — Pan de paty, Pan flauta
 ├── Sides/           SideSO      — Fritas, Ensalada verde, Ensalada de papa y huevo
 ├── Toppings/        ToppingSO   — Chimichurri, Salsa criolla
-├── Variants/        ProductVariantSO
-├── Tutorial/        TutorialStepSO ×31 (secuencia ordenada 1..31)
+├── Variants/        ProductVariantSO — platos y sándwiches
 ├── Upgrades/        UpgradeSO   — CoalBurnTimeUpgrade, CustomerCapacityUpgrade, TipUpgrade, RadioUpgrade
-├── FoodCatalog.asset / FoodCatalogTutorial.asset
-├── CustomerFeedbackSO.asset     (CustomerFeedbackConfigSO: tiempos, colores y sprites del feedback; las frases están en las tablas)
-├── ShopConfig.asset / CoalData.asset
-├── Chorizo.asset, ChorizoTutorial.asset
-└── TEST.asset                   (scratch, sin uso conocido)
+├── TutorialHints/   TutorialHintSO / TutorialHintSetSO — Partida/, Tienda/, InputGlyphs
+├── Coal/            CoalData.asset (CoalSO)
+├── Customers/       CustomerFeedbackSO.asset (CustomerFeedbackConfigSO: tiempos, colores y sprites del feedback; las frases están en las tablas)
+├── UI/              HudDatabase.asset (HudDatabaseSO)
+└── Config/          FoodCatalog, ShopConfig, RunDefeatConfig
 ```
 
 ```
@@ -317,13 +363,12 @@ Assets/Resources/Localization/   Tablas de textos (key,es,en). Se cargan todas: 
 └── Input.csv       nombres de teclas y botones para los tokens [[Accion]]
 ```
 
-Prefabs relevantes: `Prefabs/GrillView.prefab` (contiene `StockPanel`, `MeatTray`, `ToBuild`), `Prefabs/[SYSTEMS].prefab`
-(las escenas son instancias; ahí viven `GrillSystem`, `CustomerSystem`, `UpgradeUnlockActivator`…), `Prefabs/UI/StockPanel.prefab`,
-`Prefabs/UI/PauseCanvas.prefab`, `Prefabs/FeedbackBubble.prefab`, `Prefabs/Cliente*.prefab`, `Prefabs/FondoCicloDia.prefab`
-(fondo de `GameScene`, ver 3.9), `Prefabs/UI/MeatCookHoverBar.prefab` (barra de cocción por hover, hija de `MeatHoverBubble`
-en `GameScene` y `TutorialScene`), `Prefabs/UI/InputPromptBadges.prefab` (íconos fijos de Q / E / Espacio, en `GameScene` y
-`TutorialScene`, ver 3.1 → *Input*). `BuildView.prefab` y
-`CoolerView.prefab` siguen en el proyecto pero **no se alcanzan** (`GameScene` ya no tiene instancia de `CoolerView`).
+Prefabs relevantes: `Prefabs/Grill/GrillView.prefab` (contiene `StockPanel`, `ToBuild`), `Prefabs/Managers/[SYSTEMS].prefab`
+(las escenas son instancias; ahí viven `GrillSystem`, `CustomerSystem`, `UpgradeUnlockActivator`…), `Prefabs/Managers/[MANAGERS].prefab`
+(`GameManager`), `Prefabs/UI/StockPanel.prefab`, `Prefabs/UI/PauseCanvas.prefab`, `Prefabs/Customers/Cliente*.prefab`,
+`Prefabs/Environment/FondoCicloDia.prefab` (fondo de `GameScene`, ver 3.9), `Prefabs/UI/MeatCookHoverBar.prefab` (barra de
+cocción por hover, hija de `MeatHoverBubble`), `Prefabs/UI/InputPromptBadges.prefab` (íconos fijos de Q / E / Espacio, ver
+3.1 → *Input*), `Prefabs/Shop/ShopCanvas.prefab` (tienda de `EndScene`).
 
 ---
 

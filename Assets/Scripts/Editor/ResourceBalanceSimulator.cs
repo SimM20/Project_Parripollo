@@ -230,7 +230,7 @@ public static class ResourceBalanceSimulator
             d.defeat = sso.FindProperty("runDefeatConfig").objectReferenceValue as RunDefeatConfigSO;
         }
         if (d.maxStrikes <= 0) d.maxStrikes = 3;
-        if (d.defeat == null) d.defeat = AssetDatabase.LoadAssetAtPath<RunDefeatConfigSO>("Assets/ScriptableObjects/RunDefeatConfig.asset");
+        if (d.defeat == null) d.defeat = AssetDatabase.LoadAssetAtPath<RunDefeatConfigSO>("Assets/Data/Config/RunDefeatConfig.asset");
         d.baseCoalReq = o?.baseCoalRequirement ?? d.defeat.baseCoalRequirement;
         d.coalReqPerDay = o?.coalRequirementPerDay ?? d.defeat.coalRequirementPerDay;
         d.baseMeatReq = d.defeat.baseMeatRequirement;
@@ -238,7 +238,7 @@ public static class ResourceBalanceSimulator
         d.strikeStreakDefeat = d.defeat.strikeStreakDefeatEnabled;
         d.maxStrikeNights = d.defeat.MaxConsecutiveStrikeNights;
 
-        var shopCfg = AssetDatabase.LoadAssetAtPath<ShopConfigSO>("Assets/ScriptableObjects/ShopConfig.asset");
+        var shopCfg = AssetDatabase.LoadAssetAtPath<ShopConfigSO>("Assets/Data/Config/ShopConfig.asset");
         d.coal = shopCfg.coal;
         d.estimatedCoal = o?.estimatedCoalConsumption ?? shopCfg.estimatedCoalConsumption;
         d.coalBurn = o?.coalBurnTime ?? d.coal.maxBurnTime;
@@ -273,7 +273,7 @@ public static class ResourceBalanceSimulator
         }
         d.rules.ashKeepsStackRank = o?.ashKeepsStackRank ?? DetectAshKeepsStackRank(d.coal, out _);
 
-        var catalog = AssetDatabase.LoadAssetAtPath<FoodCatalogSO>("Assets/ScriptableObjects/FoodCatalog.asset");
+        var catalog = AssetDatabase.LoadAssetAtPath<FoodCatalogSO>("Assets/Data/Config/FoodCatalog.asset");
         d.toppings = catalog.GetAvailableToppings().Where(t => t != null).ToList();
         d.sides = catalog.GetAvailableSides().Where(t => t != null).ToList();
         d.upgrades = catalog.GetAllUpgrades().Where(u => u != null).ToList();
