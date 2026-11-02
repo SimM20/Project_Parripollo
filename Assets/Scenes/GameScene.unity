@@ -9005,10 +9005,14 @@ MonoBehaviour:
   wobbleAmplitude: 0.04
   wobbleSpeed: 4
   streamGrowSpeed: 3
+  streamFallAcceleration: 14
   splatterInterval: 0.05
   splatterSize: 0.1
   splatterSizeVariation: 0.04
   splatterSpread: 0.42
+  puddleStartSpread: 0.3
+  puddleGrowTime: 0.8
+  puddleFullSizeScale: 1.3
   splatterSprites:
   - {fileID: 21300000, guid: b64a7c878f624614a54833dc145357ad, type: 3}
   - {fileID: 21300000, guid: 9c1a46fee7bd4c59a42528733b55441c, type: 3}
@@ -11145,6 +11149,7 @@ MonoBehaviour:
   itemSpacing: 0.85
   minItemSpacing: 0.45
   plateEdgeMargin: 0.1
+  plateSurfaceScale: 0.62
   sideTopSortingOrder: 390
 --- !u!61 &1310823262
 BoxCollider2D:
@@ -13126,10 +13131,14 @@ MonoBehaviour:
   wobbleAmplitude: 0.04
   wobbleSpeed: 4
   streamGrowSpeed: 3
+  streamFallAcceleration: 14
   splatterInterval: 0.05
   splatterSize: 0.1
   splatterSizeVariation: 0.04
   splatterSpread: 0.3
+  puddleStartSpread: 0.3
+  puddleGrowTime: 0.8
+  puddleFullSizeScale: 1.3
   splatterSprites:
   - {fileID: 21300000, guid: 02a1bc1ceddf4fd088650632c1e2b07f, type: 3}
   - {fileID: 21300000, guid: f176f39a22214e1c8783ec622ef4d00b, type: 3}
