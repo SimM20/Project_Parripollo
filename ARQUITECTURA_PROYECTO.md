@@ -1268,7 +1268,14 @@ giran 180° en la `PouringZone`; `PouringOrigin` va en la punta del pico. Las sa
 (`Sprites/Salpicaduras/`, 4 por salsa, ya dibujadas en la perspectiva de la tabla: borde inferior oscuro = grosor):
 sin rotación al azar (solo espejo), repartidas en una elipse (`perspectiveSquash`), con pop al caer y gotitas que
 saltan en arco (`dropletChance`). El chorro tiene un contorno oscuro (segundo `LineRenderer`) y la botella se aprieta
-a pulsos mientras vierte (`squeezeAmount`); la barra de salsa compensa esa escala.
+a pulsos mientras vierte (`squeezeAmount`); la barra de salsa compensa esa escala. Con `sauceChunkColors` (la
+criolla: cebolla y morrón) bajan trocitos pixel art por el chorro (`streamChunkRate`, pool de `SpriteRenderer` a 5999,
+entre el hilo y el frasco) y quedan en el cordón (`trailChunksPerUnit`, hijos de la raíz del cordón). Vacío = salsa lisa.
+Ojo: `Sprites/Default` ignora `mainTextureScale/Offset`, por eso los trocitos no son una textura que se desplaza.
+El cordón no es un trazo prolijo: su grosor varía con ruido a lo largo (`trailWidthJitter`, `trailLumpLength`), el
+brillo aparece por tramos, y mientras el frasco se mueve caen manchas chicas pegadas a la línea (`trailSplatterChance`,
+`trailSplatterSizeScale`, `trailSplatterSpread`, `trailDropletChance`). Las del charco no se usan ahí porque, repartidas
+con `splatterSpread`, quedaban como pinceladas.
 
 **Barra de salsa.** Pixel art procedural (`CreateSauceBar`): marco de madera con la paleta de `Barra Coccion v4`,
 `barWidthPixels` (44) de ancho y `barPixelSize` (0.12 = un pixel del arte del frasco). El relleno avanza de a pixel

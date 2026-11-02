@@ -13117,7 +13117,7 @@ MonoBehaviour:
   ignoreStock: 0
   rotationZone: {fileID: 1533875616}
   rotationSpeed: 360
-  sauceColor: {r: 0.69, g: 0.204, b: 0.118, a: 1}
+  sauceColor: {r: 0.686, g: 0.259, b: 0.153, a: 1}
   sauceWidth: 0.1
   sauceLength: 2
   pourOrigin: {fileID: 1826849858}
@@ -13126,6 +13126,9 @@ MonoBehaviour:
   wobbleAmplitude: 0.04
   wobbleSpeed: 4
   streamGrowSpeed: 3
+  sauceChunkColors:
+  - {r: 0.941, g: 0.902, b: 0.808, a: 1}
+  - {r: 0.518, g: 0.784, b: 0.29, a: 1}
   splatterInterval: 0.05
   splatterSize: 0.1
   splatterSizeVariation: 0.04
