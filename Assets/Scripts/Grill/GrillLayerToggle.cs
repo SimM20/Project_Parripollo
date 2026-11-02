@@ -100,12 +100,6 @@ public class GrillLayerToggle : MonoBehaviour
     public void Toggle()
     {
         GrillLayer nextLayer = CurrentLayer == GrillLayer.Meat ? GrillLayer.Coal : GrillLayer.Meat;
-        if (!TutorialManager.CheckGrillLayerToggleAllowed(nextLayer))
-        {
-            Debug.Log($"[GrillLayerToggle] Cambio de capa a {nextLayer} bloqueado por el tutorial.");
-            return;
-        }
-
         ShowLayer(nextLayer);
         ToggleSprite();
         GamepadHaptics.Play(HapticEvent.GrillLayerToggled);

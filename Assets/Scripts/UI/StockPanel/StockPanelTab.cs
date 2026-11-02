@@ -79,11 +79,11 @@ public class StockPanelTab : MonoBehaviour
         if (controller == null)
             return;
 
-        // El gate del tutorial vive en SlidingPanel.CanOpen(): Toggle() se rechaza solo.
+        // SlidingPanel.CanOpen() puede rechazar el Toggle() solo.
         bool wasOpen = controller.IsOpen;
         controller.Toggle();
 
-        // El destello confirma el cambio: si el tutorial rechazó la apertura no hay destello.
+        // El destello confirma el cambio: si se rechazó la apertura no hay destello.
         if (controller.IsOpen != wasOpen)
             flash = 1f;
     }

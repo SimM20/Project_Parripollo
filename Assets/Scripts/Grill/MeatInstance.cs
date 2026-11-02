@@ -168,7 +168,7 @@ public class MeatInstance : Meat
     {
         heatPerSlot = 0f;
 
-        if (!IsOnGrill || TutorialManager.IsCookingPaused)
+        if (!IsOnGrill)
             return false;
 
         float total = GetTotalHeatReceived();

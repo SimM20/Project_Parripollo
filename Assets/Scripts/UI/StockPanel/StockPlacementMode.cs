@@ -291,7 +291,7 @@ public class StockPlacementMode : MonoBehaviour
         CoolerSystem cooler = CoolerSystem.Instance;
 
         if (grill == null || cooler == null || !GrillLayerToggle.IsItemTypeAllowed(ItemType.Coal)
-            || !TutorialManager.CheckStockDragAllowed(placed) || !cooler.TryTake(placed, 1))
+            || !cooler.TryTake(placed, 1))
         {
             Refuse();
             return;
@@ -328,7 +328,7 @@ public class StockPlacementMode : MonoBehaviour
         CoolerSystem cooler = CoolerSystem.Instance;
 
         if (grill == null || cooler == null || !GrillLayerToggle.IsItemTypeAllowed(ItemType.Meat)
-            || !TutorialManager.CheckStockDragAllowed(cut) || !cooler.TryTake(cut, 1))
+            || !cooler.TryTake(cut, 1))
         {
             Refuse();
             return;

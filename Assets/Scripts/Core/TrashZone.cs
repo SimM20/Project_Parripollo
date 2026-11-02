@@ -5,8 +5,6 @@ public class TrashZone : MonoBehaviour
 {
     [Header("Config")]
     [SerializeField] private Collider2D zoneCollider;
-    [SerializeField] private bool onlyWhenGrillView = true;
-    [SerializeField] private ViewManager viewManager;
 
     [Header("Feedback")]
     [Tooltip("Segundos que tarda lo tirado en caer adentro del tacho (solo visual: ya se destruyo).")]
@@ -37,9 +35,6 @@ public class TrashZone : MonoBehaviour
             if (zone == null)
                 continue;
 
-            if (!zone.CanConsumeNow())
-                continue;
-
             if (!zone.ContainsPoint(worldPoint))
                 continue;
 
@@ -48,17 +43,6 @@ public class TrashZone : MonoBehaviour
         }
 
         return false;
-    }
-
-    private bool CanConsumeNow()
-    {
-        if (!onlyWhenGrillView)
-            return true;
-
-        if (viewManager == null)
-            return true;
-
-        return viewManager.CurrentView == ViewType.Grill;
     }
 
     private bool ContainsPoint(Vector3 worldPoint)
@@ -132,9 +116,6 @@ public class TrashZone : MonoBehaviour
 
         if (zoneCollider == null)
             zoneCollider = GetComponentInChildren<Collider2D>();
-
-        if (viewManager == null)
-            viewManager = FindFirstObjectByType<ViewManager>();
     }
 
     void OnValidate() => EnsureReferences();

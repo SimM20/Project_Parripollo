@@ -147,7 +147,7 @@ public class Meat : Item
     public bool IsPointerOver => isPointerOver;
 
     /// <summary>
-    /// El sprite de la pieza se esta dibujando. GrillSystem y ViewManager apagan los renderers de las
+    /// El sprite de la pieza se esta dibujando. GrillSystem y GrillLayerToggle apagan los renderers de las
     /// piezas para ocultarlas; el aviso de quemado, que no es hijo de la pieza, lo sigue por aca.
     /// </summary>
     public bool IsVisualShown => spriteRenderer != null && spriteRenderer.enabled;
@@ -213,7 +213,7 @@ public class Meat : Item
     {
         get
         {
-            if (cut == null || TutorialManager.IsCookingPaused || !IsCurrentlyCooking() || IsAnySideBurned)
+            if (cut == null || !IsCurrentlyCooking() || IsAnySideBurned)
                 return float.PositiveInfinity;
 
             float heat = GetTotalHeatReceived();
@@ -228,7 +228,7 @@ public class Meat : Item
     /// </summary>
     public float SecondsToActiveSideHeat(float targetHeat)
     {
-        if (cut == null || TutorialManager.IsCookingPaused || !IsCurrentlyCooking())
+        if (cut == null || !IsCurrentlyCooking())
             return float.PositiveInfinity;
 
         return SecondsToSideHeat(isSideA, targetHeat, GetTotalHeatReceived());
@@ -659,7 +659,7 @@ public class Meat : Item
     {
         // Agarrada no se cocina: mientras se arrastra sigue anotada en sus slots (por si vuelve a su
         // lugar), pero ya no está sobre las brasas. Igual que IsOnGrill, que apaga calor, humo y barra.
-        if (TutorialManager.IsCookingPaused || isHeldByMouse)
+        if (isHeldByMouse)
             return;
 
         if (lastCookFrame == Time.frameCount)
@@ -775,9 +775,6 @@ public class Meat : Item
 
     private bool TrySendToBuildBuffer(Vector3 dropWorldPoint)
     {
-        if (!TutorialManager.CheckMeatDragToBuildAllowed())
-            return false;
-
         MeatTransferBuffer transferBuffer = FindFirstObjectByType<MeatTransferBuffer>();
         if (transferBuffer == null) return false;
         return transferBuffer.TryPlateMeatFromGrill(this, dropWorldPoint);

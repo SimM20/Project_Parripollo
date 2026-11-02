@@ -11,8 +11,8 @@ using UnityEngine.UI;
 /// <c>GameControls.inputactions</c>.
 ///
 /// Vive en un canvas overlay sin GraphicRaycaster (prefab <c>Prefabs/UI/InputPromptBadges</c>): nunca
-/// le saca un click ni un hover a nada. Se oculta en pausa, con el objetivo apagado (ViewManager apaga
-/// los renderers), mientras un cartel del tutorial apunta al mismo objeto y si la acción no tiene
+/// le saca un click ni un hover a nada. Se oculta en pausa, con el objetivo apagado (los paneles y las
+/// capas de la parrilla apagan los renderers), mientras un cartel del tutorial apunta al mismo objeto y si la acción no tiene
 /// tecla en el control en uso. Late al apretar la acción.
 /// </summary>
 [RequireComponent(typeof(CanvasGroup))]
@@ -220,7 +220,7 @@ public class InputPromptBadge : MonoBehaviour
         }
     }
 
-    /// <summary>El objetivo se dibuja: ViewManager y los paneles apagan renderers, no GameObjects.</summary>
+    /// <summary>El objetivo se dibuja: los paneles y las capas de la parrilla apagan renderers, no GameObjects.</summary>
     private bool IsTargetShown()
     {
         if (!boundTarget.gameObject.activeInHierarchy)

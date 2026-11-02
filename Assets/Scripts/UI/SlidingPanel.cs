@@ -5,8 +5,8 @@ using UnityEngine;
 
 /// <summary>
 /// Base de los paneles deslizantes de la vista Parrilla (stock a la izquierda,
-/// items de armado a la derecha). Resuelve el deslizamiento, el gateo por vista y
-/// el area de cancelacion de drops; cada panel concreto define su contenido.
+/// items de armado a la derecha). Resuelve el deslizamiento y el area de
+/// cancelacion de drops; cada panel concreto define su contenido.
 ///
 /// Los nombres de los campos serializados se mantienen identicos a los que tenia
 /// StockPanelController, asi que los prefabs y overrides de escena existentes
@@ -18,9 +18,6 @@ public abstract class SlidingPanel : MonoBehaviour
     [SerializeField] protected Transform slidingRoot;
     [Tooltip("Fondo del panel. Un drop soltado sobre el se cancela sin tocar el estado del juego.")]
     [SerializeField] protected SpriteRenderer panelBackground;
-
-    [Header("Systems")]
-    [SerializeField] protected ViewManager viewManager;
 
     [Header("Slide Animation")]
     [SerializeField] private float openLocalX = 0f;
@@ -67,17 +64,10 @@ public abstract class SlidingPanel : MonoBehaviour
 
     // ── Ciclo de vida ───────────────────────────────────────────────────────
 
-    protected virtual void OnEnable()
-    {
-        BindViewManager();
-    }
-
     protected virtual void Start()
     {
         ValidateReferences();
 
-        // ViewManager.Show() solo dispara OnViewChanged cuando cambia de vista, asi que
-        // el Show(Grill) inicial nunca nos llega: hay que auto-inicializarse aca.
         if (slidingRoot != null)
             slidingRoot.gameObject.SetActive(true);
 
@@ -94,9 +84,6 @@ public abstract class SlidingPanel : MonoBehaviour
 
     protected virtual void OnDisable()
     {
-        if (viewManager != null)
-            viewManager.OnViewChanged -= HandleViewChanged;
-
         OnPanelClosing();
         SetOpenState(false);
 
@@ -112,16 +99,13 @@ public abstract class SlidingPanel : MonoBehaviour
     /// <summary>Se llama al final del Start, antes del cierre inicial. Ideal para poblar el contenido.</summary>
     protected virtual void OnPanelStarted() { }
 
-    /// <summary>Se llama al entrar a la vista Parrilla, antes de cerrar el panel. Ideal para repintar.</summary>
-    protected virtual void OnEnteredGrillView() { }
-
     /// <summary>Se llama antes de cada cierre y al desactivarse. Debe cancelar cualquier arrastre en curso.</summary>
     protected virtual void OnPanelClosing() { }
 
     /// <summary>Se llama despues de iniciar una apertura aceptada.</summary>
     protected virtual void OnPanelOpened() { }
 
-    /// <summary>Gate de apertura. Devolver false rechaza el Open() (lo usa el tutorial).</summary>
+    /// <summary>Gate de apertura. Devolver false rechaza el Open().</summary>
     protected virtual bool CanOpen() => true;
 
     /// <summary>Validacion de referencias de inspector. El hijo debe llamar a base.ValidateReferences().</summary>
@@ -130,60 +114,8 @@ public abstract class SlidingPanel : MonoBehaviour
         if (slidingRoot == null)
             Debug.LogWarning("[" + GetType().Name + "] Falta la referencia 'slidingRoot'. El panel no puede deslizarse.");
 
-        if (viewManager == null)
-            Debug.LogWarning("[" + GetType().Name + "] Falta la referencia 'viewManager'. Usa SetViewManager() desde afuera del prefab.");
-
         if (panelBackground == null)
             Debug.LogWarning("[" + GetType().Name + "] Falta la referencia 'panelBackground'. Soltar un item sobre el panel no cancelara el arrastre.");
-    }
-
-    // ── Referencias externas ────────────────────────────────────────────────
-
-    /// <summary>
-    /// Asigna el ViewManager desde afuera del prefab (vive fuera de GrillView).
-    /// Rebinde la suscripcion al evento de cambio de vista.
-    /// </summary>
-    public void SetViewManager(ViewManager manager)
-    {
-        if (viewManager == manager)
-            return;
-
-        if (viewManager != null)
-            viewManager.OnViewChanged -= HandleViewChanged;
-
-        viewManager = manager;
-
-        if (isActiveAndEnabled)
-            BindViewManager();
-    }
-
-    private void BindViewManager()
-    {
-        if (viewManager == null)
-            return;
-
-        viewManager.OnViewChanged -= HandleViewChanged;
-        viewManager.OnViewChanged += HandleViewChanged;
-    }
-
-    private void HandleViewChanged(ViewType view)
-    {
-        if (view == ViewType.Grill)
-        {
-            if (slidingRoot != null)
-                slidingRoot.gameObject.SetActive(true);
-
-            OnEnteredGrillView();
-            Close(true);
-            return;
-        }
-
-        OnPanelClosing();
-
-        // ViewManager.SetVisualVisibility apaga SpriteRenderer/Collider2D/Canvas pero no los
-        // MeshRenderer de TextMeshPro: hay que desactivar el root para que el panel desaparezca.
-        if (slidingRoot != null)
-            slidingRoot.gameObject.SetActive(false);
     }
 
     // ── Gate de drop ────────────────────────────────────────────────────────

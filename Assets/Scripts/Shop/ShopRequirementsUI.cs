@@ -14,7 +14,7 @@ public class ShopRequirementsUI : MonoBehaviour
     [Header("References")]
     [SerializeField] private ShopSystem shop;
 
-    [Tooltip("Root opcional: se apaga entero si esta tienda no aplica mínimos (ShopTutorial).")]
+    [Tooltip("Root opcional: se apaga entero si esta tienda no aplica mínimos.")]
     [SerializeField] private GameObject root;
 
     [Header("Text")]
@@ -79,7 +79,7 @@ public class ShopRequirementsUI : MonoBehaviour
 
         if (!shop.EnforceRunMinimums)
         {
-            // Sin mínimos (ShopTutorial) la barra no tiene nada que decir.
+            // Sin mínimos la barra no tiene nada que decir.
             if (root != null) root.SetActive(false);
             return;
         }

@@ -12,7 +12,7 @@ using UnityEngine;
 /// Desaparece al toque al quemarse, al sacar la pieza de la parrilla y durante el flip (al dar vuelta
 /// la pieza la otra cara arranca de su propio punto).
 ///
-/// NO es hijo de la carne: GrillLayerToggle, GrillSystem y ViewManager prenden y apagan todos los
+/// NO es hijo de la carne: GrillLayerToggle y GrillSystem prenden y apagan todos los
 /// SpriteRenderer hijos de cada pieza, y GamepadNavTargets los suma al area de seleccion. Lo crea
 /// <see cref="Meat"/> desde burnAlertPrefab la primera vez que la pieza se cocina, lo destruye con
 /// ella, y el cartel sigue la visibilidad del sprite de la pieza (<see cref="Meat.IsVisualShown"/>).

@@ -573,7 +573,7 @@ public class InputManager : MonoBehaviour
     /// <summary>
     /// Deja el EventSystem activo con un <see cref="InputSystemUIInputModule"/> que usa el mapa
     /// "UI" del asset del juego. Las escenas ya vienen con ese módulo; esto cubre los que se
-    /// crean en runtime (TutorialManager) y cualquier StandaloneInputModule que haya quedado.
+    /// crean en runtime y cualquier StandaloneInputModule que haya quedado.
     /// </summary>
     private void EnsureUIModule()
     {

@@ -12,7 +12,7 @@ public class ShopSystem : MonoBehaviour
     [Tooltip("Mínimos de recursos para arrancar el próximo día. Sin asignar, no se gatea nada.")]
     [SerializeField] private RunDefeatConfigSO runDefeatConfig;
 
-    [Tooltip("Apagar en ShopTutorial: ahí los mínimos no aplican y bloquearían el tutorial.")]
+    [Tooltip("Apagado, la tienda no exige los mínimos de la run.")]
     [SerializeField] private bool enforceRunMinimums = true;
     
     // Carrito paralelo para toppings

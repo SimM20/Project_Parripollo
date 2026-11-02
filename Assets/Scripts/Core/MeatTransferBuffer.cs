@@ -2,15 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Staging de cortes fuera de la parrilla, dentro de la vista Parrilla.
-///
-/// Dos destinos:
-///   Plato    — cortes ya montados en el armado (BuildStationSystem). Entran arrastrando
-///              carne desde la parrilla a la zona del plato, o desde la bandeja.
-///   Bandeja  — cortes que salieron del plato (undo o devolución por arrastre). Se pueden
-///              volver a llevar al plato o de vuelta a la parrilla, conservando la cocción.
-///
-/// La cola ToGrill/MeatHolder es legado de la Cooler View deprecada: ya no la alimenta nadie.
+/// Carne del plato: cortes ya montados en el armado (BuildStationSystem). Entran arrastrando
+/// carne desde la parrilla a la zona del plato, y la única salida (además de la entrega) es
+/// arrastrarlos de vuelta a la parrilla, conservando la cocción. También dibuja el preview de
+/// slots de la parrilla mientras se arrastra un corte (desde el plato o desde el stock).
 /// </summary>
 public class MeatTransferBuffer : MonoBehaviour
 {
@@ -18,27 +13,10 @@ public class MeatTransferBuffer : MonoBehaviour
     [SerializeField] private GrillSystem grillSystem;
     [SerializeField] private BuildStationSystem buildStationSystem;
 
-    [Header("Anchors")]
-    [SerializeField] private Transform toGrillAnchor;
-    [SerializeField] private Transform meatHolderAnchor;
-    [Tooltip("Bandeja de cortes devueltos del plato. Vive dentro de GrillView.")]
-    [SerializeField] private Transform trayAnchor;
-
     [Header("Visual")]
     [SerializeField] private GameObject visualPrefab;
-    [Min(0.01f)]
-    [SerializeField] private float stackSpacing = 0.2f;
-    [SerializeField] private Vector3 stackDirection = Vector3.up;
-    [SerializeField] private int toGrillSortingBase = 100;
-    [SerializeField] private int meatHolderSortingBase = 200;
-    [SerializeField] private int traySortingBase = 400;
     [Tooltip("Orden de dibujo de la carne sobre el plato. Debe quedar por debajo de los visuales de acompañamientos/toppings de BuildFoodDropZone.")]
     [SerializeField] private int plateMeatSortingBase = 400;
-
-    [Header("Tray Layout")]
-    [Min(0.01f)]
-    [SerializeField] private float trayWorldSpacing = 1.5f;
-    [SerializeField] private Vector3 trayWorldDirection = Vector3.right;
 
     [Header("Variant Sprite (Plate)")]
     [SerializeField] private Vector3 variantSpriteScale = new Vector3(0.12f, 0.12f, 0.12f);
@@ -46,8 +24,6 @@ public class MeatTransferBuffer : MonoBehaviour
 
     [Header("Visual Size")]
     [SerializeField] private Vector3 fixedWorldScale = Vector3.one;
-
-    private System.Type meatHolderDraggableType;
 
     private class BufferedMeatData
     {
@@ -107,63 +83,9 @@ public class MeatTransferBuffer : MonoBehaviour
         }
     }
 
-    private readonly List<BufferedMeatData> toGrillCuts = new List<BufferedMeatData>();
-    private readonly List<BufferedMeatData> meatHolderCuts = new List<BufferedMeatData>();
-    private readonly List<BufferedMeatData> trayCuts = new List<BufferedMeatData>();
-    private readonly List<Vector3> toGrillLocalPositions = new List<Vector3>();
-    private readonly List<Vector3> meatHolderLocalPositions = new List<Vector3>();
-    private readonly List<Vector3> trayLocalPositions = new List<Vector3>();
-
-    private readonly List<GameObject> toGrillVisuals = new List<GameObject>();
-    private readonly List<GameObject> meatHolderVisuals = new List<GameObject>();
-    private readonly List<GameObject> trayVisuals = new List<GameObject>();
     private readonly List<GameObject> plateMeatVisuals = new List<GameObject>();
     private readonly List<BufferedMeatData> plateMeatCuts = new List<BufferedMeatData>();
     private readonly List<GridSlot> meatHolderHoverSlots = new List<GridSlot>();
-
-    void Start()
-    {
-        meatHolderDraggableType = ResolveType("MeatHolderDraggableMeat");
-        RefreshVisuals();
-    }
-
-    // ── Cola legado ToGrill → MeatHolder (Cooler View deprecada) ────────────
-
-    public void EnqueueToGrill(MeatCutSO cut)
-    {
-        BufferedMeatData entry = BufferedMeatData.FromCut(cut);
-        if (entry == null)
-            return;
-
-        toGrillCuts.Add(entry);
-        toGrillLocalPositions.Add(GetStackLocalPosition(toGrillLocalPositions.Count));
-        RebuildStack(toGrillCuts, toGrillVisuals, toGrillAnchor, toGrillSortingBase, false, toGrillLocalPositions);
-    }
-
-    public bool EnqueueToGrillAtPoint(MeatCutSO cut, Vector3 worldPoint)
-    {
-        BufferedMeatData entry = BufferedMeatData.FromCut(cut);
-        if (entry == null)
-            return false;
-
-        toGrillCuts.Add(entry);
-        toGrillLocalPositions.Add(WorldToAnchorLocalPosition(worldPoint, toGrillAnchor));
-        RebuildStack(toGrillCuts, toGrillVisuals, toGrillAnchor, toGrillSortingBase, false, toGrillLocalPositions);
-        return true;
-    }
-
-    public void MoveToMeatHolder()
-    {
-        if (toGrillCuts.Count > 0)
-        {
-            meatHolderCuts.AddRange(toGrillCuts);
-            meatHolderLocalPositions.AddRange(toGrillLocalPositions);
-            toGrillCuts.Clear();
-            toGrillLocalPositions.Clear();
-        }
-
-        RefreshVisuals();
-    }
 
     // ── Parrilla → Plato ────────────────────────────────────────────────────
 
@@ -190,8 +112,8 @@ public class MeatTransferBuffer : MonoBehaviour
         meat.ReleaseOccupiedSlots();
         Destroy(meat.gameObject);
 
-        GameObject visual = AdoptVisualIntoPlate(entry, null, dropWorldPoint);
-        BuildUndoHistory.Instance?.Push(new AddMeatUndoAction(this, visual));
+        // Sin undo: la carne se devuelve a mano, arrastrándola a la parrilla.
+        GameObject visual = AdoptVisualIntoPlate(entry, dropWorldPoint);
 
         Debug.Log("[Plato] Corte montado desde la parrilla: " + (cut != null ? cut.cutName : "Sin corte")
                   + " | A: " + entry.SideAState + " | B: " + entry.SideBState);
@@ -202,82 +124,7 @@ public class MeatTransferBuffer : MonoBehaviour
         return true;
     }
 
-    // ── Bandeja → Plato / Parrilla ──────────────────────────────────────────
-
-    /// <summary>Monta en el plato un corte que estaba en la bandeja. False si el punto no cae en la zona del plato.</summary>
-    public bool TryPlateFromTrayById(int entryId, Vector3 dropWorldPoint)
-    {
-        if (entryId < 0 || entryId >= trayCuts.Count)
-            return false;
-
-        BufferedMeatData entry = trayCuts[entryId];
-        if (entry == null || entry.cut == null)
-            return false;
-
-        if (!BuildFoodDropZone.TryAcceptMeatAt(dropWorldPoint, entry.cut, entry.state, entry.SideAState, entry.SideBState))
-            return false;
-
-        GameObject visual = entryId < trayVisuals.Count ? trayVisuals[entryId] : null;
-        RemoveTrayEntryAt(entryId, false);
-
-        GameObject plated = AdoptVisualIntoPlate(entry, visual, dropWorldPoint);
-        BuildUndoHistory.Instance?.Push(new AddMeatUndoAction(this, plated));
-
-        RefreshVisuals();
-
-        Debug.Log("[Plato] Corte montado desde la bandeja: " + entry.cut.cutName + " | Estado: " + entry.state);
-        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnBuildZone, cut: entry.cut, target: plated != null ? plated.transform : null);
-        return true;
-    }
-
-    /// <summary>Devuelve a la parrilla un corte de la bandeja, restaurando sus tiempos de cocción.</summary>
-    public bool TryDropFromTrayById(int entryId, Vector3 dropWorldPoint, bool rotateFootprint)
-    {
-        if (grillSystem == null)
-            return false;
-
-        if (entryId < 0 || entryId >= trayCuts.Count)
-            return false;
-
-        BufferedMeatData entry = trayCuts[entryId];
-        if (entry == null || entry.cut == null)
-            return false;
-
-        if (!grillSystem.TrySpawnMeatAtPoint(entry.cut, dropWorldPoint, out Meat spawnedMeat, rotateFootprint))
-            return false;
-
-        entry.ApplyTo(spawnedMeat, rotateFootprint);
-        spawnedMeat.PlayDropSettle(dropWorldPoint);
-        RemoveTrayEntryAt(entryId, true);
-
-        RefreshVisuals();
-
-        Debug.Log("[Bandeja] Corte devuelto a la parrilla: " + entry.cut.cutName + " | Estado: " + entry.state);
-        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: entry.cut, meat: spawnedMeat);
-        return true;
-    }
-
-    /// <summary>
-    /// Retorna la carne del plato a la bandeja, restaurando sus tiempos de cocción originales.
-    /// Usado tanto por arrastre directo (drop sobre la bandeja) como por el Rollback/Undo.
-    /// </summary>
-    public bool TryReturnPlateMeatToTray(GameObject plateVisual = null)
-    {
-        if (!TryResolvePlateEntry(plateVisual, out int index, out BufferedMeatData returnedData))
-            return false;
-
-        RemovePlateEntryAt(index);
-
-        int newIndex = trayCuts.Count;
-        trayCuts.Add(returnedData);
-        trayLocalPositions.Add(GetTrayLocalPosition(newIndex));
-
-        RefreshVisuals();
-
-        string cutName = returnedData.cut != null ? returnedData.cut.cutName : "Sin corte";
-        Debug.Log("[Bandeja] Carne devuelta desde el plato: " + cutName + " | Estado: " + returnedData.state);
-        return true;
-    }
+    // ── Plato → Parrilla ────────────────────────────────────────────────────
 
     /// <summary>
     /// Devuelve a la parrilla la carne del plato, restaurando tiempos de coccion y rotacion.
@@ -309,8 +156,6 @@ public class MeatTransferBuffer : MonoBehaviour
         returnedData.ApplyTo(spawnedMeat, rotateFootprint);
         spawnedMeat.PlayDropSettle(dropWorldPoint);
         RemovePlateEntryAt(index);
-
-        RefreshVisuals();
 
         Debug.Log("[Plato] Carne devuelta a la parrilla: " + returnedData.cut.cutName + " | Estado: " + returnedData.state);
         TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: returnedData.cut, meat: spawnedMeat);
@@ -397,49 +242,23 @@ public class MeatTransferBuffer : MonoBehaviour
         ResolveBuildStation()?.RemoveCutAt(index);
     }
 
-    private void RemoveTrayEntryAt(int entryId, bool destroyVisual)
-    {
-        if (entryId < 0 || entryId >= trayCuts.Count)
-            return;
-
-        trayCuts.RemoveAt(entryId);
-
-        if (entryId < trayLocalPositions.Count)
-            trayLocalPositions.RemoveAt(entryId);
-
-        if (entryId >= trayVisuals.Count)
-            return;
-
-        GameObject visual = trayVisuals[entryId];
-        trayVisuals.RemoveAt(entryId);
-
-        if (destroyVisual && visual != null)
-            Destroy(visual);
-    }
-
     /// <summary>
-    /// Convierte un visual (nuevo o reciclado de la bandeja) en un visual de plato:
-    /// lo saca del anchor, lo deja en mundo, le pone el sprite del estado y lo hace
-    /// arrastrable para la entrega.
+    /// Crea el visual de plato de un corte: lo deja en mundo, le pone el sprite del estado
+    /// y lo hace arrastrable para la entrega.
     /// </summary>
-    private GameObject AdoptVisualIntoPlate(BufferedMeatData entry, GameObject visual, Vector3 worldPoint)
+    private GameObject AdoptVisualIntoPlate(BufferedMeatData entry, Vector3 worldPoint)
     {
         if (entry == null || entry.cut == null)
             return null;
 
-        if (visual == null)
+        if (visualPrefab == null)
         {
-            if (visualPrefab == null)
-            {
-                Debug.LogWarning("[MeatTransferBuffer] Falta 'visualPrefab': el corte entra al armado pero sin visual en el plato.");
-                plateMeatCuts.Add(entry);
-                return null;
-            }
-
-            visual = Instantiate(visualPrefab);
+            Debug.LogWarning("[MeatTransferBuffer] Falta 'visualPrefab': el corte entra al armado pero sin visual en el plato.");
+            plateMeatCuts.Add(entry);
+            return null;
         }
 
-        visual.transform.SetParent(null, true);
+        GameObject visual = Instantiate(visualPrefab);
         visual.transform.position = worldPoint;
         visual.transform.localRotation = Quaternion.identity;
         visual.transform.localScale = fixedWorldScale;
@@ -451,11 +270,6 @@ public class MeatTransferBuffer : MonoBehaviour
             renderer.flipX = !entry.isSideA;
             renderer.sortingOrder = plateMeatSortingBase + plateMeatVisuals.Count;
         }
-
-        // Los draggables de staging no tienen sentido una vez montado en el plato.
-        ToBuildDraggableMeat trayDrag = visual.GetComponent<ToBuildDraggableMeat>();
-        if (trayDrag != null)
-            Destroy(trayDrag);
 
         if (visual.GetComponent<PlateDeliveryDraggable>() == null)
             visual.AddComponent<PlateDeliveryDraggable>();
@@ -589,80 +403,6 @@ public class MeatTransferBuffer : MonoBehaviour
         }
     }
 
-    // ── Reconstrucción de visuales ──────────────────────────────────────────
-
-    public void RefreshVisuals()
-    {
-        RebuildStack(toGrillCuts, toGrillVisuals, toGrillAnchor, toGrillSortingBase, false, toGrillLocalPositions);
-        RebuildStack(meatHolderCuts, meatHolderVisuals, meatHolderAnchor, meatHolderSortingBase, true, meatHolderLocalPositions);
-        RebuildStack(trayCuts, trayVisuals, ResolveTrayAnchor(), traySortingBase, false, trayLocalPositions);
-        EnsureTrayDrags();
-    }
-
-    // ── Parrilla ← MeatHolder (legado) ──────────────────────────────────────
-
-    public bool TryDropFromMeatHolder(MeatCutSO cut, Vector3 dropWorldPoint)
-    {
-        return TryDropFromMeatHolder(cut, dropWorldPoint, false);
-    }
-
-    public bool TryDropFromMeatHolder(MeatCutSO cut, Vector3 dropWorldPoint, bool rotateFootprint)
-    {
-        if (cut == null)
-            return false;
-
-        return TryDropFromMeatHolderById(FindMeatHolderIndexByCut(cut), dropWorldPoint, rotateFootprint);
-    }
-
-    public bool TryDropFromMeatHolderById(int entryId, Vector3 dropWorldPoint)
-    {
-        return TryDropFromMeatHolderById(entryId, dropWorldPoint, false);
-    }
-
-    public bool TryDropFromMeatHolderById(int entryId, Vector3 dropWorldPoint, bool rotateFootprint)
-    {
-        if (grillSystem == null)
-            return false;
-
-        if (entryId < 0 || entryId >= meatHolderCuts.Count)
-            return false;
-
-        BufferedMeatData entry = meatHolderCuts[entryId];
-        if (entry == null || entry.cut == null)
-            return false;
-
-        if (!grillSystem.TrySpawnMeatAtPoint(entry.cut, dropWorldPoint, out Meat spawnedMeat, rotateFootprint))
-            return false;
-
-        entry.ApplyTo(spawnedMeat, rotateFootprint);
-        meatHolderCuts.RemoveAt(entryId);
-
-        if (entryId >= 0 && entryId < meatHolderLocalPositions.Count)
-            meatHolderLocalPositions.RemoveAt(entryId);
-
-        RefreshVisuals();
-
-        string cutName = entry.cut != null ? entry.cut.cutName : "Sin corte";
-        Debug.Log("Mandaste a la parrilla desde MeatHolder: " + cutName + " | Estado: " + entry.state);
-        TutorialSignals.Raise(TutorialSignal.MeatPlacedOnGrill, cut: entry.cut, meat: spawnedMeat);
-        return true;
-    }
-
-    private int FindMeatHolderIndexByCut(MeatCutSO cut)
-    {
-        if (cut == null)
-            return -1;
-
-        for (int i = 0; i < meatHolderCuts.Count; i++)
-        {
-            BufferedMeatData entry = meatHolderCuts[i];
-            if (entry != null && entry.cut == cut)
-                return i;
-        }
-
-        return -1;
-    }
-
     // ── Preview de hover sobre la grilla ────────────────────────────────────
 
     public void UpdateMeatHolderHover(MeatCutSO cut, Vector3 worldPoint)
@@ -791,302 +531,11 @@ public class MeatTransferBuffer : MonoBehaviour
         return new Vector2Int(Mathf.Max(1, size.x), Mathf.Max(1, size.y));
     }
 
-    // ── Bandeja: anclas y consultas ─────────────────────────────────────────
-
-    /// <summary>
-    /// True si el punto cae sobre la bandeja. Lo usa el arrastre del plato para devolver un corte.
-    ///
-    /// Mide SOLO el subarbol del anchor: el padre de 'MeatTray' es el root de GrillView, asi que
-    /// medirlo tragaba media parrilla y la carne devuelta terminaba en la bandeja. Si la bandeja
-    /// esta desactivada en la escena no reclama ningun punto.
-    /// </summary>
-    /// <summary>Raíz de la bandeja (MeatTray). La navegación con gamepad la usa como destino de la carne del plato.</summary>
-    public Transform TrayAnchor => ResolveTrayAnchor();
-
-    public bool IsOverMeatTray(Vector3 worldPoint)
-    {
-        Transform anchor = ResolveTrayAnchor();
-        if (anchor == null || !anchor.gameObject.activeInHierarchy)
-            return false;
-
-        Collider2D[] colliders = anchor.GetComponentsInChildren<Collider2D>();
-        for (int i = 0; i < colliders.Length; i++)
-        {
-            if (colliders[i] != null && colliders[i].enabled && colliders[i].OverlapPoint(new Vector2(worldPoint.x, worldPoint.y)))
-                return true;
-        }
-
-        SpriteRenderer[] renderers = anchor.GetComponentsInChildren<SpriteRenderer>();
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            if (renderers[i] == null || renderers[i].sprite == null)
-                continue;
-
-            Vector3 point = worldPoint;
-            point.z = renderers[i].bounds.center.z;
-            if (renderers[i].bounds.Contains(point))
-                return true;
-        }
-
-        return false;
-    }
-
-    private Transform ResolveTrayAnchor()
-    {
-        if (trayAnchor != null)
-            return trayAnchor;
-
-        trayAnchor = FindTransformByNameUnderRoot("MeatTray", "GrillView");
-        return trayAnchor;
-    }
-
     private BuildStationSystem ResolveBuildStation()
     {
         if (buildStationSystem == null)
             buildStationSystem = Object.FindAnyObjectByType<BuildStationSystem>();
         return buildStationSystem;
-    }
-
-    private static Transform FindTransformByNameUnderRoot(string targetName, string rootName)
-    {
-        if (string.IsNullOrEmpty(targetName))
-            return null;
-
-        Transform[] allTransforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (int i = 0; i < allTransforms.Length; i++)
-        {
-            Transform candidate = allTransforms[i];
-            if (candidate == null || candidate.name != targetName)
-                continue;
-
-            if (!IsUnderRoot(candidate, rootName))
-                continue;
-
-            return candidate;
-        }
-
-        return null;
-    }
-
-    private static bool IsUnderRoot(Transform target, string rootName)
-    {
-        if (target == null)
-            return false;
-
-        if (string.IsNullOrEmpty(rootName))
-            return true;
-
-        Transform current = target;
-        while (current != null)
-        {
-            if (current.name == rootName)
-                return true;
-
-            current = current.parent;
-        }
-
-        return false;
-    }
-
-    // ── Layout de pilas ─────────────────────────────────────────────────────
-
-    private void RebuildStack(List<BufferedMeatData> sourceEntries, List<GameObject> visuals, Transform anchor, int sortingBase, bool enableDragToGrill, List<Vector3> localPositions)
-    {
-        if (anchor == null || visualPrefab == null)
-        {
-            ClearVisualList(visuals);
-            return;
-        }
-
-        SyncPositionList(localPositions, sourceEntries.Count);
-
-        while (visuals.Count < sourceEntries.Count)
-        {
-            GameObject go = Instantiate(visualPrefab, anchor);
-            visuals.Add(go);
-        }
-
-        while (visuals.Count > sourceEntries.Count)
-        {
-            int lastIndex = visuals.Count - 1;
-            GameObject go = visuals[lastIndex];
-            visuals.RemoveAt(lastIndex);
-
-            if (go != null)
-                Destroy(go);
-        }
-
-        Vector3 direction = stackDirection.sqrMagnitude > 0f ? stackDirection.normalized : Vector3.up;
-
-        for (int i = 0; i < visuals.Count; i++)
-        {
-            GameObject go = visuals[i];
-            BufferedMeatData entry = sourceEntries[i];
-            MeatCutSO cut = entry != null ? entry.cut : null;
-
-            if (go == null || cut == null)
-                continue;
-
-            if (go.transform.parent != anchor)
-                go.transform.SetParent(anchor, false);
-
-            ApplyFixedWorldScale(go.transform);
-
-            if (localPositions != null && i < localPositions.Count)
-                go.transform.localPosition = localPositions[i];
-            else
-                go.transform.localPosition = direction * stackSpacing * i;
-
-            go.transform.localRotation = Quaternion.identity;
-
-            SpriteRenderer renderer = go.GetComponent<SpriteRenderer>();
-            if (renderer != null)
-            {
-                renderer.sprite = cut.GetSpriteForState(entry.state, entry.isSideA);
-                renderer.flipX = !entry.isSideA;
-                renderer.sortingOrder = sortingBase + i;
-            }
-
-            if (enableDragToGrill)
-                EnsureMeatHolderDrag(go, entry, i);
-        }
-    }
-
-    private Vector3 GetStackLocalPosition(int index)
-    {
-        Vector3 direction = stackDirection.sqrMagnitude > 0f ? stackDirection.normalized : Vector3.up;
-        return direction * stackSpacing * Mathf.Max(0, index);
-    }
-
-    private Vector3 GetTrayLocalPosition(int index)
-    {
-        Vector3 dir = trayWorldDirection.sqrMagnitude > 0f
-            ? trayWorldDirection.normalized
-            : Vector3.right;
-
-        Vector3 worldOffset = dir * trayWorldSpacing * Mathf.Max(0, index);
-
-        Transform anchor = ResolveTrayAnchor();
-        if (anchor != null)
-        {
-            Vector3 local = anchor.InverseTransformVector(worldOffset);
-            local.z = 0f;
-            return local;
-        }
-
-        return worldOffset;
-    }
-
-    private void ApplyFixedWorldScale(Transform target)
-    {
-        if (target == null)
-            return;
-
-        Transform parent = target.parent;
-        if (parent == null)
-        {
-            target.localScale = fixedWorldScale;
-            return;
-        }
-
-        Vector3 parentScale = parent.lossyScale;
-        target.localScale = new Vector3(
-            SafeDivide(fixedWorldScale.x, parentScale.x),
-            SafeDivide(fixedWorldScale.y, parentScale.y),
-            SafeDivide(fixedWorldScale.z, parentScale.z));
-    }
-
-    private static float SafeDivide(float value, float divisor)
-    {
-        return Mathf.Abs(divisor) > 0.0001f ? value / divisor : value;
-    }
-
-    private static Vector3 WorldToAnchorLocalPosition(Vector3 worldPoint, Transform anchor)
-    {
-        if (anchor == null)
-            return worldPoint;
-
-        Vector3 localPoint = anchor.InverseTransformPoint(worldPoint);
-        localPoint.z = 0f;
-        return localPoint;
-    }
-
-    private void SyncPositionList(List<Vector3> localPositions, int targetCount)
-    {
-        if (localPositions == null)
-            return;
-
-        while (localPositions.Count > targetCount)
-            localPositions.RemoveAt(localPositions.Count - 1);
-
-        while (localPositions.Count < targetCount)
-            localPositions.Add(GetStackLocalPosition(localPositions.Count));
-    }
-
-    private void EnsureTrayDrags()
-    {
-        for (int i = 0; i < trayVisuals.Count; i++)
-        {
-            GameObject go = trayVisuals[i];
-            if (go == null || i >= trayCuts.Count)
-                continue;
-
-            BufferedMeatData entry = trayCuts[i];
-            if (entry == null || entry.cut == null)
-                continue;
-
-            ToBuildDraggableMeat drag = go.GetComponent<ToBuildDraggableMeat>();
-            if (drag == null)
-                drag = go.AddComponent<ToBuildDraggableMeat>();
-
-            drag.Setup(entry.cut, this, i, entry.isGridRotated);
-        }
-    }
-
-    private void EnsureMeatHolderDrag(GameObject go, BufferedMeatData entry, int entryId)
-    {
-        if (go == null || entry == null || entry.cut == null || meatHolderDraggableType == null)
-            return;
-
-        Component drag = go.GetComponent(meatHolderDraggableType);
-        if (drag == null)
-            drag = go.AddComponent(meatHolderDraggableType);
-
-        go.SendMessage("SetCut", entry.cut, SendMessageOptions.DontRequireReceiver);
-        go.SendMessage("SetTransferBuffer", this, SendMessageOptions.DontRequireReceiver);
-        go.SendMessage("SetTransferEntryId", entryId, SendMessageOptions.DontRequireReceiver);
-        go.SendMessage("SetInitialGridRotation", entry.isGridRotated, SendMessageOptions.DontRequireReceiver);
-    }
-
-    private static System.Type ResolveType(string typeName)
-    {
-        if (string.IsNullOrEmpty(typeName))
-            return null;
-
-        System.Type direct = System.Type.GetType(typeName);
-        if (direct != null)
-            return direct;
-
-        var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
-        for (int i = 0; i < assemblies.Length; i++)
-        {
-            System.Type found = assemblies[i].GetType(typeName);
-            if (found != null)
-                return found;
-        }
-
-        return null;
-    }
-
-    private void ClearVisualList(List<GameObject> visuals)
-    {
-        for (int i = 0; i < visuals.Count; i++)
-        {
-            if (visuals[i] != null)
-                Destroy(visuals[i]);
-        }
-
-        visuals.Clear();
     }
 
     void OnDisable()

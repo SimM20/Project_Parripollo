@@ -17,7 +17,6 @@ public class MeatClickable : MonoBehaviour
         if (StockPlacementMode.IsActive) return;
         if (!meat.IsOnGrill) return;
         if (meat.IsFlipping) return;
-        if (!TutorialManager.CheckMeatFlipAllowed()) return;
 
         meat.Flip();
     }

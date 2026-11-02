@@ -72,11 +72,7 @@ public class StockPanelController : SlidingPanel
         placement.Bind(this);
     }
 
-    protected override void OnEnable()
-    {
-        base.OnEnable();
-        BindCoolerSystem();
-    }
+    void OnEnable() => BindCoolerSystem();
 
     protected override void OnDisable()
     {
@@ -101,7 +97,6 @@ public class StockPanelController : SlidingPanel
         RefreshSlots();
     }
 
-    protected override void OnEnteredGrillView() => RefreshSlots();
 
     protected override void OnPanelClosing()
     {
@@ -110,8 +105,6 @@ public class StockPanelController : SlidingPanel
     }
 
     protected override void OnPanelOpened() => TutorialSignals.Raise(TutorialSignal.StockPanelOpened);
-
-    protected override bool CanOpen() => TutorialManager.CheckStockPanelOpenAllowed();
 
     protected override void ValidateReferences()
     {

@@ -152,15 +152,14 @@ public class DeliveryFeedbackText : MonoBehaviour
     }
 
     /// <summary>
-    /// Se prende/apaga el GameObject y no el renderer: ViewManager.SetVisualVisibility prende
-    /// todos los SpriteRenderer de la vista al mostrarla, y dejaba el cartel vacío a la vista.
+    /// Se prende/apaga el GameObject y no el renderer, para que algo que prenda en bloque los
+    /// SpriteRenderer de la vista no deje el cartel vacío a la vista.
     /// </summary>
     private void SetBackgroundVisible(bool visible)
     {
         if (background == null) return;
 
         background.gameObject.SetActive(visible);
-        // Al ocultar la vista, ViewManager también apaga el renderer: se vuelve a prender al mostrar.
         if (visible) background.enabled = true;
     }
 

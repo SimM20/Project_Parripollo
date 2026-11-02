@@ -199,12 +199,6 @@ public class StockPanelSlot : MonoBehaviour
         if (CoolerSystem.Instance == null || CoolerSystem.Instance.GetCount(item) <= 0)
             return;
 
-        if (!TutorialManager.CheckStockDragAllowed(item))
-        {
-            Debug.Log($"[StockPanelSlot] Selección de {item.itemName} bloqueada por el tutorial.");
-            return;
-        }
-
         placement.Arm(item, this);
     }
 
