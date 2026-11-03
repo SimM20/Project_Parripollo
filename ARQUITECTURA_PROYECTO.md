@@ -206,6 +206,14 @@
 > de arriba del rombo). Usan el mismo `InputGlyphSetSO` que los carteles, que sumó `Device.Generic`, la tecla Espacio y
 > la R, y **24 íconos placeholder de joystick** (`Sprites/UI/Input/`); los carteles del tutorial también los muestran.
 > Lo tapado por un cartel lo decide `TutorialHintLayer.IsPointingAt` (el mismo que usa `SaucePourGuide`). Secciones 1, 3.1 → *Input*, 3.7 → *Carteles contextuales*, 4.4 y nota 35.
+>
+> Última actualización parcial: **2026-11-02** (rama `Topping-ReView`) — **salsa vertida rehecha en pixel art (solo
+> presentación)**. Salieron el `LineRenderer` del chorro, el cordón de `LineRenderer` y los sprites de `Sprites/Salpicaduras/`
+> (quedan en el proyecto, sin uso). El chorro se dibuja fila por fila en una textura (`Build/SauceStreamFX.cs`) y la salsa del
+> plato es un campo de alturas que se escurre como salsa espesa (`Build/SauceDecal.cs`): un charco por arrastre, sobre la
+> loza, con la paleta de los sprites viejos (`Build/SaucePalette.cs`). Al cortar, la cola termina de caer en gotas. Mismo
+> registro, undo, stock, marcador y arrastre del plato. `BuildFoodDropZone.TryGetNearestPlateSurface` (nuevo). Sección 3.4 →
+> *Verter*.
 
 ---
 
@@ -269,7 +277,7 @@ Assets/Scripts/
 | **Core/** | Comandos de input de la partida (lee `InputManager`) y árbitro de la entrega (`GameManager`), **reloj de la jornada (`DayClock`)** y stats del día (`DayStats`), armado del plato (`BuildStationSystem`), **staging plato ↔ bandeja** (`MeatTransferBuffer`), draggable de la bandeja (`ToBuildDraggableMeat`), basura (`TrashZone`), pausa global (`GamePause`), activador de mejoras (`UpgradeUnlockActivator`) | `GameManager.cs`, `DayClock.cs`, `MeatTransferBuffer.cs` (1145), `BuildStationSystem.cs`, `GamePause.cs`, `ToBuildDraggableMeat.cs` |
 | **Grill/** | Propagación de calor y spawn en grilla (`GrillSystem`), datos de corte (`MeatCutSO` — **está en `MeatType.cs`**), toggle capa carne/carbón, barra y burbuja de cocción por hover, contador de apilado de carbón, VFX (`BurnSmoke`, `FlipPuff`) | `GrillSystem.cs`, `MeatType.cs`, `GrillLayerToggle.cs`, `MeatCookHoverBar.cs`, `CoalStackCounter.cs`, `BurnSmoke.cs`, `FlipPuff.cs` |
 | **Cooler/** | Stock persistente `ItemDataSO → int` (`CoolerSystem`, DDOL). El resto de la carpeta (visualizadores y draggables de la heladera) está **deprecado** desde el StockPanel | `CoolerSystem.cs` · deprecados: `CoolerStockVisualizer.cs`, `CoalStockVisualizer.cs`, `CoolerDraggableMeat.cs`, `DraggableCoal.cs` |
-| **Build/** | Zona de drop del plato (`BuildFoodDropZone`, **un solo corte por plato**), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`), historial de undo (patrón Command, **incluye la carne**), **entrega del plato por arrastre** (`PlateDeliveryDraggable`, única vía de entrega) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (696), `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs`, `SpriteColliderFitter.cs` |
+| **Build/** | Zona de drop del plato (`BuildFoodDropZone`, **un solo corte por plato**), draggables de pan/side/topping, frascos vertibles con salsa (`ToppingDraggable`; chorro y charco pixel art: `SauceStreamFX`, `SauceDecal`, `SaucePalette`), historial de undo (patrón Command, **incluye la carne**), **entrega del plato por arrastre** (`PlateDeliveryDraggable`, única vía de entrega) | `BuildFoodDropZone.cs`, `ToppingDraggable.cs` (1425), `SauceStreamFX.cs`, `SauceDecal.cs`, `BuildUndoHistory.cs`, `BuildUndoActions.cs`, `PlateDeliveryDraggable.cs`, `SpriteColliderFitter.cs` |
 | **Customers/** | Llegada de clientes según el horario del `DayClock` y la curva de afluencia, tick de paciencia, hover de entrega, view + **burbuja de pedido por cliente** (base al pecho siempre visible, expandida al hover) + recuadro, **feedback de entrega/abandono/cambio** (burbuja de 4 s con estado, pago y propina), gateo de pick bajo paneles | `CustomerSystem.cs` (1030), `Customer.cs`, `CustomerView.cs`, `CustomerOrderBubble.cs`, `CustomerFeedbackBubble.cs`, `CustomerFeedbackConfigSO.cs`, `CustomerFeedbackState.cs` |
 | **Orders/** | `Order` (corte + punto pedido + pan/sides/toppings) y generación aleatoria ponderada con toppings | `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
@@ -471,9 +479,9 @@ Parrilla ──drag a la zona "ToBuild" (superficie naranja = plato)──► PL
 
 ToppingsPanel [T] ──drag──► plato
    │  BuildDraggableFoodItem (pan / side) → BuildFoodDropZone.TryAcceptAt → SetBread / AddSide + visual + Push(undo)
-   │  ToppingDraggable (botella squeeze)  → verter sobre PouringZone → AddTopping + salpicaduras + Push(undo)
+   │  ToppingDraggable (botella squeeze)  → verter sobre PouringZone → AddTopping + charco (SauceDecal) + Push(undo)
    │                                         la salsa sale de ToppingStock (nota 39); vacío → aviso sauce.empty
-   │                                         sin visual extra en el plato: las salpicaduras son la salsa
+   │                                         sin visual extra en el plato: el charco es la salsa
    │  Los visuales de side/topping sólido van a SLOTS fijos alrededor de la carne (SpawnPlateVisual(sprite, kind)),
    │  con tamaño normalizado y sorting por DEBAJO del corte: acompañan, nunca tapan (ver 3.4 → Layout del plato)
 
@@ -719,7 +727,7 @@ static bool Enabled                                     // prender/apagar todo (
 | `PieceRotated` | Rotar footprint (`Meat`, `StockPlacementMode`, `ToBuildDraggableMeat`, `PlateDeliveryDraggable`) | tic mínimo |
 | `MeatOnPlate` | `MeatTransferBuffer.AdoptVisualIntoPlate` (desde parrilla o bandeja) | golpe medio |
 | `PiecePlaced` | Pan/side/topping aceptado (`BuildDraggableFoodItem`), carne del plato a la bandeja | toque |
-| `SaucePouring` | `ToppingDraggable`, con cada salpicadura (0.05 s) | zumbido fino |
+| `SaucePouring` | `ToppingDraggable`, con cada tic de la vertida en el plato (`splatterInterval`, 0.05 s) | zumbido fino |
 | `PlateCleared` | `GameManager` (C / LT) si el plato tenía algo (`BuildStationSystem.IsEmpty`) | barrido |
 | `UndoDone` | `BuildUndoHistory.UndoLast` | tic-toc |
 | `Trashed` | `TrashZone.Consume` | golpe sordo + rebote |
@@ -1258,24 +1266,28 @@ public void RefreshCollider()   // recalca el collider sobre la silueta del spri
 | Cancelación | `OnDisable`/`OnDestroy` del visual que conduce llaman `CancelDrag()`: restauran posiciones y `sortingOrder` sin intentar el drop |
 | Collider | `SpriteColliderFitter.Fit(gameObject, selfRenderer, GrabPadding = 0.04)`: un `PolygonCollider2D` calcado sobre la **silueta del corte**, no una caja. Se re-mide en `Awake` y cada vez que el pan cambia sprite/escala/rotación del visual (`MeatTransferBuffer.UpdatePlateMeatSprite` y `RestorePlateMeatVisual` llaman a `RefreshCollider()`). Ver nota 33 |
 
-Las salpicaduras de salsa (`SauceSplatter`, creadas por `ToppingDraggable`) que cayeron **sobre el plato**
-viajan con él (`ToppingDraggable.CollectPlateSplatters`, filtra con `BuildFoodDropZone.IsOverPlateAt`): desde
-2026-10-24 son el único visual de la salsa (ya no se agrega el sprite del frasco al plato). Las derramadas en la
-tabla quedan donde cayeron. Todas se limpian con `ToppingDraggable.ClearAllSplatters()` en la entrega.
+La salsa del plato (`SauceDecal`, uno por arrastre de frasco, creados por `ToppingDraggable`) viaja con él
+(`ToppingDraggable.CollectPlateSplatters`: la raíz del charco es el centro de la loza, filtra con
+`BuildFoodDropZone.IsOnPlateSurface`): desde 2026-10-24 es el único visual de la salsa (ya no se agrega el sprite del
+frasco al plato). Todo se limpia con `ToppingDraggable.ClearAllSplatters()` en la entrega.
 
-**Verter (desde 2026-10-24).** Los frascos son botellas squeeze (`chimi_botella.png`, `criolla_botella.png`) que
-giran 180° en la `PouringZone`; `PouringOrigin` va en la punta del pico. Las salpicaduras usan `splatterSprites`
-(`Sprites/Salpicaduras/`, 4 por salsa, ya dibujadas en la perspectiva de la tabla: borde inferior oscuro = grosor):
-sin rotación al azar (solo espejo), repartidas en una elipse (`perspectiveSquash`), con pop al caer y gotitas que
-saltan en arco (`dropletChance`). El chorro tiene un contorno oscuro (segundo `LineRenderer`) y la botella se aprieta
-a pulsos mientras vierte (`squeezeAmount`); la barra de salsa compensa esa escala. Con `sauceChunkColors` (la
-criolla: cebolla y morrón) bajan trocitos pixel art por el chorro (`streamChunkRate`, pool de `SpriteRenderer` a 5999,
-entre el hilo y el frasco) y quedan en el cordón (`trailChunksPerUnit`, hijos de la raíz del cordón). Vacío = salsa lisa.
-Ojo: `Sprites/Default` ignora `mainTextureScale/Offset`, por eso los trocitos no son una textura que se desplaza.
-El cordón no es un trazo prolijo: su grosor varía con ruido a lo largo (`trailWidthJitter`, `trailLumpLength`), el
-brillo aparece por tramos, y mientras el frasco se mueve caen manchas chicas pegadas a la línea (`trailSplatterChance`,
-`trailSplatterSizeScale`, `trailSplatterSpread`, `trailDropletChance`). Las del charco no se usan ahí porque, repartidas
-con `splatterSpread`, quedaban como pinceladas.
+**Verter (desde 2026-10-24; pixel art desde 2026-11-02).** Los frascos son botellas squeeze (`chimi_botella.png`,
+`criolla_botella.png`) que giran 180° en la `PouringZone`; `PouringOrigin` va en la punta del pico. La botella se aprieta
+a pulsos mientras vierte (`squeezeAmount`); la barra de salsa compensa esa escala. Todo lo de la salsa es pixel art a
+`saucePixelSize` (0.02 ≈ 2 px de pantalla a 1080p) sobre una misma grilla de mundo, con la paleta de cada frasco
+(`SaucePalette`: `sauceOutlineColor` / `Shadow` / `sauceColor` / `Light` / `Highlight`, sacados de los sprites viejos de
+`Sprites/Salpicaduras/`; alfa 0 = derivado de `sauceColor`) y los trocitos de `sauceChunkColors` (criolla: cebolla y
+morrón; chimi: hierbas, ajo y ají).
+
+| Pieza | Detalle |
+|---|---|
+| Chorro (`SauceStreamFX`, sorting 5998) | La forma la sigue calculando `ToppingDraggable.UpdateSauceThread` (caída que acelera, arqueo al mover, vaivén); el FX la dibuja **fila por fila** en una textura que sigue al chorro: contorno a los costados, luz a la izquierda, sombra a la derecha. Se afina al acelerar (mismo caudal, más rápido), late con los apretones de la botella (bajan a la velocidad de la caída) con un brillo que baja con cada uno, y lleva trocitos de 1 px (`streamChunkRate`). Donde toca el plato el pie se abre y salta una corona de pixeles a 14 fps. Al cortar la vertida (`Release`) la cola se suelta de la boca, se estrangula en gotas y lo que quedaba en el aire **llega al plato** y se suma al charco (si todavía no había tocado, cae derecho y arma el charco igual). Las gotitas (`landingSplashCount` al tocar, `dropletChance` por tic) vuelan en arco y mojan el charco donde caen, siempre dentro de la loza |
+| Charco (`SauceDecal`, sorting `splatterSortingOrder` + n) | Grilla que cubre la loza (`TryGetNearestPlateSurface`); la salsa no la pasa. Es un **campo de alturas**: el chorro deja `pourVolumeRate` por segundo en una campana (en línea entre frames, sin huecos) y la salsa se escurre hacia sus vecinas mientras el desnivel supere `sauceThickness` (vecinos, diagonales y saltos de caballo, así sale redondo; en vertical aguanta más por la perspectiva, así sale ovalado). Quieto se junta un charco que crece (~0.35 de radio tras 1 s); moviendo el frasco queda un cordón más fino cuanto más rápido. Solo se simula donde la salsa se mueve y se duerme al asentarse. Lo mojado no se seca (bordes estables) y el borde se ondula con ruido suave |
+| Dibujo del charco | Luz de arriba a la izquierda como los sprites viejos: borde de arriba claro, contorno abajo y a la derecha, panza oscura sobre el contorno, relieve donde se encima salsa, un reflejo corto arriba a la izquierda y brillos sueltos, sombrita sobre el plato (1 px bajo el borde) y halo de aceite/jugo (`sauceHaloColor`, 1 px por fuera). Trocitos fijos por celda (`puddleChunkDensity`): no se mueven cuando el charco crece. Ondas claras salen del impacto mientras se vierte quieto (`rippleInterval`) |
+| Varias vertidas | Un charco por arrastre (el undo de esa vertida lo saca entero). El arrastre siguiente del mismo frasco **arranca con la salsa del anterior** (`TryInherit`) y lo esconde, así la salsa nueva se junta con la vieja sin dos contornos; `RemoveSplattersFrom` vuelve a mostrar el anterior. Cada charco nuevo va un sorting más arriba: la salsa que cae después queda encima de la otra |
+
+`splatterSpread` / `puddleStartSpread` / `puddleGrowTime` / `splatterSize` siguen reservando el charco al acercar el
+impacto al borde del plato (no cambió dónde cae la salsa); el aro abraza el más grande entre ese y el charco dibujado.
 
 **Barra de salsa.** Pixel art procedural (`CreateSauceBar`): marco de madera con la paleta de `Barra Coccion v4`,
 `barWidthPixels` (44) de ancho y `barPixelSize` (0.12 = un pixel del arte del frasco). El relleno avanza de a pixel
