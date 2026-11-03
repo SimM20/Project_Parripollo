@@ -1931,7 +1931,7 @@ bool strikeStreakDefeatEnabled;  int MaxConsecutiveStrikeNights;   // 3
 // RunEconomyEvaluator — static PURO, mismo criterio que CookingDeliveryEvaluator
 RunEconomyStatus Evaluate(day, config, meatStock, coalStock, money,
                           cheapestCutPrice, anyCutForSale, anyCoalForSale,
-                          coalBagPrice, coalUnitsPerBag, coalStorageCap)
+                          coalBagPrice, coalUnitsPerBag)
 // RunEconomyStatus: MeetsMinimums · CanAfford · HasBlockingGap · CanContinue · MoneyAfterMinimums
 ```
 
@@ -1955,12 +1955,10 @@ pantalla de derrota es `DaysPlayed`.
 | Reset de run | `RunStateReset`: snapshot de `CoalSO.maxBurnTime` (lo toma `ShopSystem.Start`, primera llamada gana) y vuelta de `UpgradeSO.currentLevel` a 0. `MeatCutSO.isUnlocked` se corrige solo vía `CoalConsumptionTracker` |
 | QA | `StrikeSystem` → *QA/Sumar noche cerrada por strikes*, *QA/Reiniciar racha de noches*. `RunDefeatScreen` → *QA/Forzar derrota por recursos*, *QA/Forzar derrota por racha de strikes* |
 
-⚠️ **`ShopSystem.enforceRunMinimums`** está en `false` en `ShopTutorial.unity`: sin eso el tutorial queda
-bloqueado por mínimos que nunca se cumplen. En `GameScene` y `EndScene` va en `true`.
+`ShopSystem.enforceRunMinimums` va en `true` en `GameScene` y `EndScene` (lo apagaba solo el tutorial viejo).
 
-⚠️ **Tope de almacenamiento.** `CoolerSystem.CoalStorageCap` (40, antes dos `40` hardcodeados) capea el carbón.
-Como el mínimo es `10 + (N-1)`, en el **día 31** el requisito llega a 40 y después es inalcanzable:
-`RunEconomyStatus.requirementAboveStorageCap` lo detecta y lo reporta como derrota explícita.
+**Sin tope de carbón.** Desde 2026-11-03 el stock de carbón no tiene máximo: antes `CoolerSystem.CoalStorageCap`
+(40) lo recortaba y, como el mínimo es `10 + (N-1)`, desde el día 32 la run quedaba perdida sí o sí.
 
 ⚠️ **Varios cortes tienen `basePrice = 0`** (`Paty`, `Chinchulín`, `Costillita de cerdo`, `Pechuga de pollo`,
 `Matambre`). Como el costo de la carne faltante usa el corte comprable más barato, hoy completar el mínimo de

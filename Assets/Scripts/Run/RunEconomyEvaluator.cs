@@ -35,16 +35,12 @@ public struct RunEconomyStatus
     /// <summary>No hay carbón a la venta para cubrir el faltante de carbón.</summary>
     public bool noCoalAvailableToBuy;
 
-    /// <summary>El mínimo de carbón supera el tope de almacenamiento: es inalcanzable por diseño.</summary>
-    public bool requirementAboveStorageCap;
-
     public bool MeetsMinimums => meatDeficit <= 0 && coalDeficit <= 0;
 
     /// <summary>Faltante que ninguna cantidad de plata puede cubrir.</summary>
     public bool HasBlockingGap
         => (meatDeficit > 0 && noCutAvailableToBuy)
-        || (coalDeficit > 0 && noCoalAvailableToBuy)
-        || requirementAboveStorageCap;
+        || (coalDeficit > 0 && noCoalAvailableToBuy);
 
     // Tolerancia mínima: la plata es float y los precios se suman, no queremos perder
     // una run por un epsilon de redondeo.
@@ -75,7 +71,6 @@ public static class RunEconomyEvaluator
     /// <param name="anyCoalForSale">Si hay carbón comprable.</param>
     /// <param name="coalBagPrice">Precio de una bolsa de carbón.</param>
     /// <param name="coalUnitsPerBag">Unidades que aporta una bolsa.</param>
-    /// <param name="coalStorageCap">Tope de carbón en el cooler. 0 o menos = sin tope.</param>
     public static RunEconomyStatus Evaluate(
         int day,
         RunDefeatConfigSO config,
@@ -86,8 +81,7 @@ public static class RunEconomyEvaluator
         bool anyCutForSale,
         bool anyCoalForSale,
         float coalBagPrice,
-        int coalUnitsPerBag,
-        int coalStorageCap)
+        int coalUnitsPerBag)
     {
         RunEconomyStatus status = default;
 
@@ -111,12 +105,6 @@ public static class RunEconomyEvaluator
 
         status.noCutAvailableToBuy = !anyCutForSale;
         status.noCoalAvailableToBuy = !anyCoalForSale;
-
-        // El cooler capea el carbón (ver CoolerSystem.CoalStorageCap). Pasado ese punto el
-        // mínimo no se puede alcanzar ni con plata infinita, así que lo reportamos como
-        // derrota explícita en vez de dejar al jugador trabado sin explicación.
-        status.requirementAboveStorageCap =
-            coalStorageCap > 0 && status.coalRequired > coalStorageCap;
 
         return status;
     }
