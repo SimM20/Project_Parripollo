@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Item : MonoBehaviour
+public class Item : MonoBehaviour, IWorldPointerDownHandler, IWorldPointerDragHandler, IWorldPointerUpHandler
 {
     [SerializeField] protected ItemType itemType;
     protected Vector3 startPosition;
@@ -10,7 +10,7 @@ public class Item : MonoBehaviour
     protected bool isHeldByMouse;
     private readonly List<GridSlot> hoveredSlots = new List<GridSlot>();
 
-    protected void OnWorldPointerDown()
+    public void OnWorldPointerDown()
     {
         if (!CanBeginHold()) return;
 
@@ -22,7 +22,7 @@ public class Item : MonoBehaviour
         UpdateHoverPreview();
     }
 
-    protected void OnWorldPointerDrag()
+    public void OnWorldPointerDrag()
     {
         if (!isHeldByMouse) return;
 

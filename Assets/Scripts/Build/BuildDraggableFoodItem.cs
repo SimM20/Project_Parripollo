@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class BuildDraggableFoodItem : MonoBehaviour
+public class BuildDraggableFoodItem : MonoBehaviour, IWorldPointerDownHandler, IWorldPointerDragHandler, IWorldPointerUpHandler
 {
     [Header("Food Data (assign exactly one)")]
     [SerializeField] public BreadSO breadData;
@@ -94,7 +94,7 @@ public class BuildDraggableFoodItem : MonoBehaviour
         ApplyPresentation(Vector3.zero);
     }
 
-    void OnWorldPointerDown()
+    public void OnWorldPointerDown()
     {
         // Agarrado a mitad de la vuelta: el origen es su lugar real, sin el corrimiento.
         settle.Stop();
@@ -113,13 +113,13 @@ public class BuildDraggableFoodItem : MonoBehaviour
         }
     }
 
-    void OnWorldPointerDrag()
+    public void OnWorldPointerDrag()
     {
         if (!isDragging) return;
         transform.position = GetFoodItemMouseWorldPos();
     }
 
-    void OnWorldPointerUp()
+    public void OnWorldPointerUp()
     {
         if (!isDragging) return;
         isDragging = false;

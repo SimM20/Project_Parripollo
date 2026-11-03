@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CustomerView : MonoBehaviour
+public class CustomerView : MonoBehaviour, IWorldPointerDownHandler, IWorldPointerEnterHandler, IWorldPointerExitHandler
 {
     // La barra de paciencia es sprites sueltos (Fondo + Completo) y la camara del juego es
     // perspectiva, asi que separarlos en Z para decidir quien dibuja encima deforma la barra:
@@ -637,7 +637,7 @@ public class CustomerView : MonoBehaviour
         hasPickBounds = true;
     }
 
-    void OnWorldPointerDown()
+    public void OnWorldPointerDown()
     {
         if (customer != null && customer.IsInFeedback) return;
 
@@ -648,7 +648,7 @@ public class CustomerView : MonoBehaviour
         }
     }
 
-    void OnWorldPointerEnter()
+    public void OnWorldPointerEnter()
     {
         if (customer != null && customer.IsInFeedback) return;
 
@@ -785,7 +785,7 @@ public class CustomerView : MonoBehaviour
         MeatCutSO cut = order.PrimaryCut;
         return cut != null ? cut.GetSpriteForState(requestedState, true) : null;
     }
-    void OnWorldPointerExit()
+    public void OnWorldPointerExit()
     {
         isHovered = false;
         RestoreBubbleAfterHover();

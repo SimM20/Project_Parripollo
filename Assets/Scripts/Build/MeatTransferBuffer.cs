@@ -304,7 +304,7 @@ public class MeatTransferBuffer : MonoBehaviour
 
     /// <summary>
     /// Tinte de preview por corte (alineado con el orden de montaje) mientras el plato se
-    /// arrastra sobre un cliente. Lo invoca GameManager por SendMessage.
+    /// arrastra sobre un cliente. Lo invoca GameManager.
     /// </summary>
     public void SetPlateMeatTints(List<Color> tints)
     {

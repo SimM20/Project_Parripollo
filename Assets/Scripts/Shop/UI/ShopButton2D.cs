@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider2D))]
-public class ShopButton2D : MonoBehaviour
+public class ShopButton2D : MonoBehaviour, IWorldPointerEnterHandler, IWorldPointerExitHandler, IWorldPointerClickHandler
 {
     [Header("Visual")]
     [SerializeField] private SpriteRenderer iconRenderer;
@@ -37,20 +37,20 @@ public class ShopButton2D : MonoBehaviour
         ApplyVisual();
     }
 
-    void OnWorldPointerEnter()
+    public void OnWorldPointerEnter()
     {
         if (!Interactable) return;
         isHovered = true;
         ApplyVisual();
     }
 
-    void OnWorldPointerExit()
+    public void OnWorldPointerExit()
     {
         isHovered = false;
         ApplyVisual();
     }
 
-    void OnWorldPointerClick()
+    public void OnWorldPointerClick()
     {
         if (Interactable) OnClicked?.Invoke();
     }

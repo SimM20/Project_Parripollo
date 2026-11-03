@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-public class Meat : Item
+public class Meat : Item, IWorldPointerEnterHandler, IWorldPointerExitHandler
 {
     [Header("Data")]
     [FormerlySerializedAs("meatData")]
@@ -1080,14 +1080,14 @@ public class Meat : Item
         spriteRenderer.flipX = !isSideA;
     }
 
-    void OnWorldPointerEnter()
+    public void OnWorldPointerEnter()
     {
         isPointerOver = true;
         if (isHeldByMouse) return;
         ShowHover();
     }
 
-    void OnWorldPointerExit()
+    public void OnWorldPointerExit()
     {
         isPointerOver = false;
         if (MeatHoverBubble.Instance != null)
