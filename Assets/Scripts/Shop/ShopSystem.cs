@@ -525,13 +525,7 @@ public class ShopSystem : MonoBehaviour
 
         int meatStock = GetTotalMeatCuts() + meatGained;
 
-        int baseCoal = GetTotalCoalUnits();
-        int coalStock = baseCoal + coalGained;
-
-        // Comprar carbón por encima del tope del cooler tira la plata a la basura:
-        // la simulación no debe contar unidades que el Add va a descartar.
-        if (CoolerSystem.CoalStorageCap > 0 && coalStock > CoolerSystem.CoalStorageCap)
-            coalStock = Mathf.Max(baseCoal, CoolerSystem.CoalStorageCap);
+        int coalStock = GetTotalCoalUnits() + coalGained;
 
         float cheapestCut = GetCheapestPurchasableCutPrice(out bool anyCut);
 
@@ -541,8 +535,7 @@ public class ShopSystem : MonoBehaviour
 
         return RunEconomyEvaluator.Evaluate(
             day, runDefeatConfig, meatStock, coalStock, money,
-            cheapestCut, anyCut, anyCoal, coalBagPrice, coalUnitsPerBag,
-            CoolerSystem.CoalStorageCap
+            cheapestCut, anyCut, anyCoal, coalBagPrice, coalUnitsPerBag
         );
     }
 

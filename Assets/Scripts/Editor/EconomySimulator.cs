@@ -103,7 +103,7 @@ public static class EconomySimulator
         public AnimationCurve affluence;
         public float affluenceAvg = 1f;
         public float basePatience, dayDuration, toppingChance, startMoney, feedbackSeconds;
-        public int maxSim, firstNight, perNight, maxNight, maxToppings, maxStrikes, coalStorageCap;
+        public int maxSim, firstNight, perNight, maxNight, maxToppings, maxStrikes;
         public Dictionary<ItemDataSO, int> initialStock = new Dictionary<ItemDataSO, int>();
     }
 
@@ -185,7 +185,6 @@ public static class EconomySimulator
                 if (item != null && amount > 0) d.initialStock[item] = amount;
             }
         }
-        d.coalStorageCap = CoolerSystem.CoalStorageCap;
 
         var catalog = AssetDatabase.LoadAssetAtPath<FoodCatalogSO>("Assets/Data/Config/FoodCatalog.asset");
         d.toppings = catalog.GetAvailableToppings().Where(t => t != null).ToList();
@@ -500,9 +499,7 @@ public static class EconomySimulator
         int coalNeed = Mathf.CeilToInt(p.coalsOnGrill * d.dayDuration * 0.9f / burnTime) + 2;
         coalNeed = Mathf.Max(coalNeed, d.defeat != null ? d.defeat.GetCoalRequirement(nextNight) : 0);
         int perBag = Mathf.Max(1, d.coal.unitsPerBag);
-        if (d.coalStorageCap > 0) coalNeed = Mathf.Min(coalNeed, d.coalStorageCap);
         while (s.coal < coalNeed && s.money >= d.coal.basePrice) { s.coal += perBag; s.money -= d.coal.basePrice; }
-        if (d.coalStorageCap > 0) s.coal = Mathf.Min(s.coal, d.coalStorageCap);
 
         // Después la carne: lo que usó anoche (atendidos + desperdicio), con el colchón del perfil.
         // Nunca menos que el mínimo de carne de la regla de derrota.
@@ -590,7 +587,7 @@ public static class EconomySimulator
                 // Derrota total: misma regla que ShopSystem.BuildRunStatus / RunEconomyEvaluator.
                 var cheapest = d.cuts.Where(c => n + 1 >= c.unlockNight).Min(c => c.so.basePrice);
                 var status = RunEconomyEvaluator.Evaluate(n + 1, d.defeat, s.stock.Values.Sum(), s.coal, s.money,
-                    cheapest, true, true, d.coal.basePrice, d.coal.unitsPerBag, d.coalStorageCap);
+                    cheapest, true, true, d.coal.basePrice, d.coal.unitsPerBag);
                 bool strikeDefeat = d.defeat != null && d.defeat.strikeStreakDefeatEnabled
                                     && s.strikeNightsInRow >= d.defeat.maxConsecutiveStrikeNights;
                 if (!status.CanContinue || strikeDefeat)

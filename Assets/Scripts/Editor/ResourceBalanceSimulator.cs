@@ -142,7 +142,7 @@ public static class ResourceBalanceSimulator
         public AnimationCurve affluence;
         public float affluenceAvg = 1f;
         public float basePatience, dayDuration, toppingChance, sideChance, startMoney, feedbackSeconds, coalBurn, coalPrice;
-        public int maxSim, firstNight, perNight, maxNight, maxToppings, maxSides, maxStrikes, coalCap, unitsPerBag, estimatedCoal;
+        public int maxSim, firstNight, perNight, maxNight, maxToppings, maxSides, maxStrikes, unitsPerBag, estimatedCoal;
         public Dictionary<CutData, int> initialMeat = new Dictionary<CutData, int>();
         public int initialCoal;
         public float sideBonus, idleFactor, idleSlowdown;
@@ -244,7 +244,6 @@ public static class ResourceBalanceSimulator
         d.coalBurn = o?.coalBurnTime ?? d.coal.maxBurnTime;
         d.coalPrice = d.coal.basePrice;
         d.unitsPerBag = Mathf.Max(1, d.coal.unitsPerBag);
-        d.coalCap = CoolerSystem.CoalStorageCap;
 
         var cooler = UnityEngine.Object.FindFirstObjectByType<CoolerSystem>(FindObjectsInactive.Include);
         var stock = new SerializedObject(cooler).FindProperty("initialStock");
@@ -254,7 +253,7 @@ public static class ResourceBalanceSimulator
             var item = e.FindPropertyRelative("item").objectReferenceValue as ItemDataSO;
             int amount = e.FindPropertyRelative("amount").intValue;
             if (item == null || amount <= 0) continue;
-            if (item is CoalSO) d.initialCoal = Mathf.Min(d.initialCoal + amount, d.coalCap);
+            if (item is CoalSO) d.initialCoal += amount;
             else if (item is MeatCutSO m)
             {
                 var cd = d.cuts.FirstOrDefault(c => c.so == m);
@@ -785,10 +784,10 @@ public static class ResourceBalanceSimulator
     {
         if (units <= 0) return;
         int bags = Mathf.CeilToInt((float)units / d.unitsPerBag);
-        for (int i = 0; i < bags && s.money >= d.coalPrice && s.coal < d.coalCap; i++)
+        for (int i = 0; i < bags && s.money >= d.coalPrice; i++)
         {
             s.money -= d.coalPrice; r.spentCoal += d.coalPrice;
-            s.coal = Mathf.Min(d.coalCap, s.coal + d.unitsPerBag);
+            s.coal += d.unitsPerBag;
         }
     }
 
@@ -893,7 +892,7 @@ public static class ResourceBalanceSimulator
 
                 var cheapest = d.cuts.Where(c => n + 1 >= c.unlockNight).Min(c => c.so.basePrice);
                 var status = RunEconomyEvaluator.Evaluate(n + 1, ReqConfig(d), s.meat.Sum(), s.coal, s.money, cheapest, true, true,
-                    d.coalPrice, d.unitsPerBag, d.coalCap);
+                    d.coalPrice, d.unitsPerBag);
                 r.blocked = !status.CanContinue;
                 r.strikeDefeat = d.strikeStreakDefeat && s.strikeNightsInRow >= d.maxStrikeNights;
                 sum.perNight[n - 1].Add(r);
