@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GrillLayerToggle : MonoBehaviour
+public class GrillLayerToggle : MonoBehaviour, IWorldPointerDownHandler
 {
     public enum GrillLayer { Meat, Coal }
 
@@ -92,7 +92,7 @@ public class GrillLayerToggle : MonoBehaviour
         return Mathf.Lerp(inactiveAlpha, 1f, k);
     }
 
-    void OnWorldPointerDown()
+    public void OnWorldPointerDown()
     {
         Toggle();
     }

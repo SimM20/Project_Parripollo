@@ -7,7 +7,7 @@ using UnityEngine;
 /// mano, otro click = soltarlo) y late mientras está seleccionada. El carbón queda en la mano y
 /// cada click en la parrilla pone uno; de la carne va una sola unidad por selección.
 /// </summary>
-public class StockPanelSlot : MonoBehaviour
+public class StockPanelSlot : MonoBehaviour, IWorldPointerEnterHandler, IWorldPointerExitHandler, IWorldPointerDownHandler
 {
     [Header("Visual")]
     [SerializeField] private SpriteRenderer iconRenderer;
@@ -77,9 +77,9 @@ public class StockPanelSlot : MonoBehaviour
 
     // ── Feedback de la celda (solo visual) ──────────────────────────────────
 
-    void OnWorldPointerEnter() => pointerOver = true;
+    public void OnWorldPointerEnter() => pointerOver = true;
 
-    void OnWorldPointerExit() => pointerOver = false;
+    public void OnWorldPointerExit() => pointerOver = false;
 
     /// <summary>
     /// El icono crece con el puntero encima (si hay algo para tomar) y vuelve al salir; con su
@@ -178,7 +178,7 @@ public class StockPanelSlot : MonoBehaviour
     /// Con su ítem en la mano, este click lo suelta; si no, lo pone en la mano (carbón o una
     /// unidad de carne), y lo que hubiera de otra celda vuelve a la suya.
     /// </summary>
-    void OnWorldPointerDown()
+    public void OnWorldPointerDown()
     {
         StockPlacementMode placement = owner != null ? owner.Placement : null;
         if (placement == null)

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class MeatClickable : MonoBehaviour
+public class MeatClickable : MonoBehaviour, IWorldPointerOverHandler
 {
     private Meat meat;
 
@@ -9,7 +9,7 @@ public class MeatClickable : MonoBehaviour
         meat = GetComponent<Meat>();
     }
 
-    void OnWorldPointerOver()
+    public void OnWorldPointerOver()
     {
         if (meat == null) return;
         if (!InputManager.SecondaryPressed) return;

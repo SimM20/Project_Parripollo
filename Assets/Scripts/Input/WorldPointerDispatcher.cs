@@ -7,8 +7,8 @@ using UnityEngine;
 ///
 /// Los OnMouseXXX nativos solo escuchan al mouse del sistema: con el cursor del gamepad
 /// nunca se dispararían. Por eso los scripts ya no declaran OnMouseDown/Drag/Up/Enter/Exit
-/// sino los mensajes de <see cref="Messages"/>, y este dispatcher los envía con la misma
-/// semántica que el SendMouseEvents de Unity:
+/// sino que implementan las interfaces IWorldPointerXXXHandler (ver WorldPointerHandlers.cs),
+/// y este dispatcher las llama con la misma semántica que el SendMouseEvents de Unity:
 ///
 ///  • Down  → al objeto bajo el puntero el frame en que se aprieta el botón principal.
 ///  • Drag  → cada frame con el botón apretado, SIEMPRE al objeto del Down (aunque el puntero ya no esté encima).
@@ -17,23 +17,10 @@ using UnityEngine;
 ///
 /// Igual que el nativo: raycast 3D y 2D por separado (cada uno con su propio estado), respeta
 /// <see cref="Camera.eventMask"/> (así <see cref="GamePause"/> apaga el mundo con eventMask = 0)
-/// y entrega por SendMessage, así que el mensaje llega a todos los componentes del objeto.
+/// y el evento llega a todos los componentes del objeto que implementen la interfaz.
 /// </summary>
 public sealed class WorldPointerDispatcher
 {
-    /// <summary>Nombres de los mensajes. Equivalen 1:1 a OnMouseDown, OnMouseDrag, etc.</summary>
-    public static class Messages
-    {
-        public const string Down = "OnWorldPointerDown";
-        public const string Drag = "OnWorldPointerDrag";
-        public const string Up = "OnWorldPointerUp";
-        /// <summary>Equivale a OnMouseUpAsButton: se soltó sobre el mismo objeto que se apretó.</summary>
-        public const string Click = "OnWorldPointerClick";
-        public const string Enter = "OnWorldPointerEnter";
-        public const string Over = "OnWorldPointerOver";
-        public const string Exit = "OnWorldPointerExit";
-    }
-
     private const int Physics3D = 0;
     private const int Physics2DIndex = 1;
     private const int HitKinds = 2;
@@ -133,7 +120,7 @@ public sealed class WorldPointerDispatcher
             if (hit != null)
             {
                 downHit[i] = hit;
-                Send(hit, Messages.Down);
+                Send<IWorldPointerDownHandler>(hit, h => h.OnWorldPointerDown());
             }
         }
         else if (!held)
@@ -144,39 +131,60 @@ public sealed class WorldPointerDispatcher
                 downHit[i] = null;
 
                 if (hit == down)
-                    Send(down, Messages.Click);
-                Send(down, Messages.Up);
+                    Send<IWorldPointerClickHandler>(down, h => h.OnWorldPointerClick());
+                Send<IWorldPointerUpHandler>(down, h => h.OnWorldPointerUp());
             }
         }
         else if (downHit[i] != null)
         {
-            Send(downHit[i], Messages.Drag);
+            Send<IWorldPointerDragHandler>(downHit[i], h => h.OnWorldPointerDrag());
         }
 
         // Un objeto destruido compara igual a null: el Exit simplemente no sale, como en Unity.
         if (hit == lastHit[i])
         {
             if (hit != null)
-                Send(hit, Messages.Over);
+                Send<IWorldPointerOverHandler>(hit, h => h.OnWorldPointerOver());
         }
         else
         {
             if (lastHit[i] != null)
-                Send(lastHit[i], Messages.Exit);
+                Send<IWorldPointerExitHandler>(lastHit[i], h => h.OnWorldPointerExit());
 
             if (hit != null)
             {
-                Send(hit, Messages.Enter);
-                Send(hit, Messages.Over);
+                Send<IWorldPointerEnterHandler>(hit, h => h.OnWorldPointerEnter());
+                Send<IWorldPointerOverHandler>(hit, h => h.OnWorldPointerOver());
             }
         }
 
         lastHit[i] = hit;
     }
 
-    private static void Send(GameObject target, string message)
+    /// <summary>
+    /// Llama al evento en todos los componentes del objeto que lo implementan, igual que el
+    /// SendMessage de antes: nada si el objeto está apagado, y una excepción en un componente
+    /// no corta a los demás. La lista sale de un pool: un handler puede disparar otro evento.
+    /// </summary>
+    private static void Send<T>(GameObject target, System.Action<T> call) where T : class
     {
-        if (target != null)
-            target.SendMessage(message, SendMessageOptions.DontRequireReceiver);
+        if (target == null || !target.activeInHierarchy)
+            return;
+
+        using (UnityEngine.Pool.ListPool<T>.Get(out List<T> handlers))
+        {
+            target.GetComponents(handlers);
+            for (int i = 0; i < handlers.Count; i++)
+            {
+                try
+                {
+                    call(handlers[i]);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogException(e, handlers[i] as Object);
+                }
+            }
+        }
     }
 }

@@ -4,7 +4,7 @@ using UnityEngine;
 /// Pestaña lateral que abre y cierra un panel deslizante al hacer clic.
 /// Sirve para cualquier SlidingPanel (stock, items de armado).
 /// </summary>
-public class StockPanelTab : MonoBehaviour
+public class StockPanelTab : MonoBehaviour, IWorldPointerEnterHandler, IWorldPointerExitHandler, IWorldPointerDownHandler
 {
     [Header("References")]
     [SerializeField] private SlidingPanel controller;
@@ -70,11 +70,11 @@ public class StockPanelTab : MonoBehaviour
             tabRenderer.color = baseColor;
     }
 
-    void OnWorldPointerEnter() => pointerOver = true;
+    public void OnWorldPointerEnter() => pointerOver = true;
 
-    void OnWorldPointerExit() => pointerOver = false;
+    public void OnWorldPointerExit() => pointerOver = false;
 
-    void OnWorldPointerDown()
+    public void OnWorldPointerDown()
     {
         if (controller == null)
             return;

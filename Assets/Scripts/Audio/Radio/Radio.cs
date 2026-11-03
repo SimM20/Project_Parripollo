@@ -9,7 +9,7 @@ using UnityEngine;
 /// (la radio se prende y se apaga igual, sin sonido). Prendida, salta al ritmo como en el demake.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
-public class Radio : MonoBehaviour
+public class Radio : MonoBehaviour, IWorldPointerDownHandler
 {
     [Header("Canciones")]
     [Tooltip("Se eligen al azar, sin repetir la misma dos veces seguidas. Huecos vacíos se saltean. " +
@@ -58,7 +58,7 @@ public class Radio : MonoBehaviour
         visual.localPosition = basePosition;
     }
 
-    void OnWorldPointerDown()
+    public void OnWorldPointerDown()
     {
         Toggle();
     }

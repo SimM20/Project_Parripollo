@@ -2,6 +2,10 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-03** (rama `refactor/sin-sendmessage`) — **sin `SendMessage` y build con IL2CPP**.
+> Los eventos de puntero del mundo pasaron a interfaces (`Input/WorldPointerHandlers.cs`, `IWorldPointerXXXHandler`) y
+> `GameManager` llama directo a `MeatTransferBuffer`. *Scripting Backend* de Standalone = **IL2CPP** (stripping *Minimal*).
+> Las DLL de `Plugins/Roslyn` (las usa el MCP de Unity) quedaron **solo para el editor**: antes se empaquetaban en el build.
 > Última actualización parcial: **2026-11-02** (rama `refactor/limpieza-legacy`) — **limpieza de legacy y carpetas nuevas**.
 > Salieron el tutorial viejo (`TutorialScene`, `ShopTutorial`, `TutorialManager`, `TutorialOfferController`, `TutorialStepSO`
 > y sus pasos/paneles), la bandeja (`MeatTray`, `ToBuildDraggableMeat`), `ViewManager` / `ViewType`, las notificaciones de
@@ -407,7 +411,7 @@ graph TD
     SP[SlidingPanel<br/>StockPanel / ToppingsPanel]
 
     GM -->|SerializeField| VM & CUS & GS & BSS & SHOP
-    GM -.->|SendMessage| MTB
+    GM --> MTB
     GM -->|Validate / EvaluateCut / EvaluateExtras / EvaluateDeliveryFeedback| EVAL[CookingDeliveryEvaluator]
     GM -->|Add pago+propina| PW
     GM -->|MoneyPopup.Spawn| HUD[HudManager]
@@ -415,7 +419,7 @@ graph TD
     GM -->|EndNight| CCT
     GM -->|Toggle por acción| SP
     IM -->|WasPressed GameAction| GM
-    IM -.->|SendMessage OnWorldPointerXXX| MEAT & PDD & SP & CV
+    IM -->|IWorldPointerXXXHandler| MEAT & PDD & SP & CV
 
     CUS -->|event OnNightEnded| GM
     DC[DayClock] -->|event OnClosingTime| CUS
@@ -467,7 +471,7 @@ graph TD
 | **Static notification hub + gates** | `TutorialSignals.Raise(...)` y `TutorialManager.Check*Allowed(...)` | 14 señales `TutorialSignal` (evento estático `Raised`, no-op sin suscriptores: el juego no sabe quién escucha) y 12 `Check*Allowed` (devuelven `true` si `Instance == null`) → en `GameScene` no hay `TutorialManager` y ningún gate bloquea |
 | **Command** | `IBuildUndoAction` + `BuildUndoHistory` (pila) | `AddSideUndoAction`, `AddToppingUndoAction`, `SetBreadUndoAction`, **`AddMeatUndoAction`** (devuelve el corte a la bandeja) |
 | **Buffer / staging area** | `MeatTransferBuffer`, `CoalTransferBuffer` | `BufferedMeatData`/`BufferedCoalData` (POCO con tiempos de cocción) + visuales. `MeatTransferBuffer` hoy administra **plato + bandeja**; la cola `ToGrill/MeatHolder` es legado |
-| **Duck typing por reflexión / `SendMessage`** | `WorldPointerDispatcher`→ colliders del mundo (`OnWorldPointerXXX`, igual que los `OnMouseXXX` nativos), `GameManager`→`MeatTransferBuffer`, `MeatHolderDraggableMeat`, `CoolerDraggableMeat`, `*StockVisualizer` | `Type.GetType` sobre todos los assemblies + `MethodInfo.Invoke` / `SendMessage(..., DontRequireReceiver)`. Rompe el binding estático a propósito |
+| **Interfaces de eventos de puntero** | `WorldPointerDispatcher`→ colliders del mundo (`IWorldPointerDown/Drag/Up/Click/Enter/Over/ExitHandler`, en `Input/WorldPointerHandlers.cs`; equivalen a los `OnMouseXXX` nativos) | `GetComponents<T>` + llamada directa. Sin `SendMessage` en el código de juego desde 2026-11-03 |
 | **Registro estático de instancias** | `Coal.ActiveCoals`, `BuildFoodDropZone.ActiveZones`, `TrashZone.ActiveZones`, `ToppingDraggable.ActiveInstances`, `PlateDeliveryDraggable.Instances`, `SlidingPanel.OpenPanels` | Alta en `OnEnable`, baja en `OnDisable`/`OnDestroy`. Habilita APIs estáticas tipo `TryAcceptAt`, `ClearAllSplatters`, `AnyPanelOpen` |
 | **Data-driven (ScriptableObject)** | `ItemDataSO` → `MeatCutSO`, `CoalSO`, `UpgradeSO`; `BreadSO`, `SideSO`, `ToppingSO`, `ProductVariantSO`, `FoodCatalogSO`, `ShopConfigSO`, `TutorialStepSO`, `HudDatabaseSO`, `CustomerFeedbackConfigSO` | ⚠️ Los SO mutan en runtime (`isUnlocked`, `UpgradeSO.currentLevel`, `CoalSO._maxBurnTime`) → **el estado persiste entre sesiones de Editor** (ver `UpgradeStateResetter`) |
 | **Service / Facade** | `FoodAvailabilityService` | Cruza `FoodCatalogSO` (estático) con `CoolerSystem` (stock live) |
@@ -582,7 +586,7 @@ teclas ni botones (eso es de `InputManager`) y **no** contiene lógica de cocci�
 | Campos clave | |
 |---|---|
 | `[SF] customerSystem, grillSystem, coolerSystem, viewManager, buildStationSystem, shopSystem, wallet, grillLayerToggle, foodAvailabilityService, catalog` | Referencias de inspector |
-| `[SF] MonoBehaviour meatTransferBuffer, coalTransferBuffer` | ⚠️ Tipados como `MonoBehaviour`: `meatTransferBuffer` se invoca **solo por `SendMessage`**; `coalTransferBuffer` ya no se usa desde acá |
+| `[SF] MeatTransferBuffer meatTransferBuffer` | Visuales de la carne del plato: limpiar, teñir durante el preview de entrega |
 | `[SF] Color previewExactTint / OffByOne / OffByTwo / Blocked` | Header *Delivery Preview Tints* |
 
 ```csharp
@@ -622,7 +626,7 @@ suma a `servedToday` y no llama a `TutorialManager.NotifyProductDelivered`. Si l
 mal (`extrasNote != null`), el mensaje de `DeliveryFeedbackText` explica por qué cobró menos.
 
 `cutOffsets` (uno por corte, `CutBlocked = -1`) alimenta `ShowDeliveryPreviewOnPlate` → tintes por
-`SendMessage("SetPlateMeatTints", List<Color>)`; al salir del cliente `ClearDeliveryPreviewOnPlate` →
+`MeatTransferBuffer.SetPlateMeatTints(List<Color>)`; al salir del cliente `ClearDeliveryPreviewOnPlate` →
 `ClearPlateMeatTints`. Un tinte nuevo corta un flash en curso; un `Clear` con flash en curso no hace nada.
 
 `MissingCut` (`M` / View-Share): busca un sustituto con stock en `foodAvailabilityService.GetAvailableCuts()` y llama
@@ -729,7 +733,7 @@ void ConfigureUIModule(InputSystemUIInputModule)
 | **Visual** (`GamepadCursorView`) | Canvas overlay propio, por encima de todo. **Recuadro de esquinas con latido** alrededor de lo seleccionado: amarillo = algo para agarrar/clickear, verde = destino. **Flecha** solo con el cursor libre o sin nada seleccionado (sprite asignable; si no hay, la genera en runtime; se achica mientras se mantiene A). El cursor del sistema se oculta con gamepad |
 | **Íconos fijos del control** (`UI/InputPromptBadge`) | Prefab `Prefabs/UI/InputPromptBadges.prefab` (en `GameScene` y `TutorialScene`): canvas overlay **orden 4** (abajo del aviso de strikes, 5, y de los carteles, 15), `CanvasScaler` 1920×1080 / 0.5, **sin `GraphicRaycaster`** y con `raycastTarget` apagado. Tres hijos, uno por interactuable: `StockPanel` (`ToggleStockPanel`, Q · LB · L1), `ToppingsPanel` (`ToggleToppingsPanel`, E · RB · R1) y `GrillLayer` (`ToggleGrillLayer`, Espacio · Y · △). Cada `InputPromptBadge` tiene una `GameAction`, el `InputGlyphSetSO` de los carteles y un objetivo: `Anchor` (`StockTab`, `ToppingsTab`, `LayerButton`; se buscan solos por tipo, igual que en `TutorialHintContext`, así el prefab no lleva referencias de escena) o `Custom` + `target`. Cada `LateUpdate` proyecta el `Renderer` (o `Collider2D`) del objetivo con la cámara en perspectiva y se apoya en `targetPoint` de ese rectángulo con su `badgePivot` + `offset` (hoy: colgando debajo, al medio), sin salirse de la pantalla: la pestaña se desliza con su panel y el ícono la sigue. El ícono sale de `InputGlyphSetSO.Resolve(HintPrompt.For(acción))` y se rehace con `Loc.OnTextsChanged`, que también salta al cambiar de esquema o de familia (`InputPrompts`). Sin dibujo propio, tecla o botón en blanco con el nombre. Alto: `glyphHeight` (56 en Q/E, 44 en Espacio); el ancho sale del sprite. Se desvanece (`fadeSeconds`, sin escalar) en pausa (`GamePause.IsPaused`), con el objetivo apagado (`activeInHierarchy` y `Renderer.enabled`: `ViewManager` apaga renderers), si la acción no tiene binding en el control en uso y mientras un cartel del tutorial apunta al mismo objeto (`TutorialHintLayer.IsPointingAt`, `hideUnderTutorialHint`). Al apretar la acción hace un `ScalePunch` (`pressPunch`). Para sumar otro: un hijo más del prefab con otra `GameAction` y un `Anchor` nuevo (al final del enum) o `Custom` con override de escena |
 | **UI (uGUI)** | El gamepad maneja un `Mouse` **virtual** (`VirtualCursorMouse`, `InputSystem.QueueStateEvent`): para el `InputSystemUIInputModule` es un mouse más, así que botones, hovers (`MenuButtonHover`) y scroll de Canvas andan con el cursor sin código extra. Los `EventSystem` de las 5 escenas usan `InputSystemUIInputModule` con el mapa `UI`; si aparece un `StandaloneInputModule` (o un módulo sin configurar, como el que crea `TutorialManager`) `InputManager` lo reemplaza/configura en runtime con un warning |
-| **`WorldPointerDispatcher`** | Reemplazo de `SendMouseEvents` para los colliders del mundo con el puntero de `InputManager`: `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` ≡ `OnMouseDown/Drag/Up/UpAsButton/Enter/Over/Exit`. Misma semántica que el nativo: raycast 3D y 2D por cámara (por `depth`), máscara `cullingMask & eventMask`, `eventMask == 0` corta, `Drag`/`Up` siempre al objeto del `Down`, entrega por `SendMessage` |
+| **`WorldPointerDispatcher`** | Reemplazo de `SendMouseEvents` para los colliders del mundo con el puntero de `InputManager`: `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` ≡ `OnMouseDown/Drag/Up/UpAsButton/Enter/Over/Exit`. Misma semántica que el nativo: raycast 3D y 2D por cámara (por `depth`), máscara `cullingMask & eventMask`, `eventMask == 0` corta, `Drag`/`Up` siempre al objeto del `Down`. Entrega: a todos los componentes del objeto que implementen la interfaz del evento (`IWorldPointerXXXHandler`); nada si el objeto está inactivo, y una excepción en un receptor no corta a los demás. Un receptor nuevo implementa la interfaz y su método `public` |
 | **Familia del gamepad** | `DualShockGamepad` (incluye DualSense) → `PlayStation`; `XInputController` → `Xbox`; el resto → `Generic`. Un genérico en modo DirectInput que Unity no reconozca como `Gamepad` entra como `Joystick`: solo mueve el cursor (`<Joystick>/stick`) y hace click (`<Joystick>/trigger`) |
 
 ⚠️ **Gamepad y `Submit` de UI.** El mapa `UI` **no** tiene bindings de gamepad para `Navigate`/`Submit`/`Cancel` a
@@ -1174,7 +1178,7 @@ bool TryReturnPlateMeatToTray(GameObject plateVisual = null)          // undo (A
 bool TryReturnPlateMeatToGrill(GameObject plateVisual, Vector3[, bool rotateFootprint])  // solo si hay hueco libre; sin bool usa la rotación del corte
 bool TryGetPlateMeatInfo(GameObject plateVisual, out MeatCutSO, out bool isGridRotated)  // para el preview de slots del drag de solo-carne
 bool IsOverMeatTray(Vector3)                          // mide SOLO el subárbol del anchor MeatTray
-// Visuales del plato (los 3 los llama GameManager por SendMessage)
+// Visuales del plato (los 3 los llama GameManager)
 void ClearPlateMeatVisuals(), SetPlateMeatTints(List<Color>), ClearPlateMeatTints()
 void SetPlateMeatVisualsVisible(bool), UpdatePlateMeatSprite(Sprite)
 bool TryCaptureLastPlateMeatVisual(out GameObject, out Sprite, out Vector3, out Vector3)  // undo del pan
@@ -2727,7 +2731,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | # | Nota |
 |---|---|
 | 1 | **`MeatCutSO` vive en `Grill/MeatType.cs`**; `GrillSlot` en `Grill/GrillSlots.cs`. Los nombres de archivo no siempre coinciden con la clase. `Grill/GrillSys2.cs` está **vacío**. `ShopGlobalBar2D.cs` declara `ShopHeader2D` |
-| 2 | `GameManager` habla con `MeatTransferBuffer` **solo por `SendMessage`** (campo tipado `MonoBehaviour`). Renombrar `ClearPlateMeatVisuals`, `SetPlateMeatTints` o `ClearPlateMeatTints` **rompe en silencio**. `MoveToMeatHolder` / `MoveToCoalHolder` / `MoveToBuildMeatHolder` ya no se invocan desde ningún lado |
+| 2 | ~~`GameManager` → `MeatTransferBuffer` por `SendMessage`~~: desde 2026-11-03 son llamadas directas (campo tipado `MeatTransferBuffer`) |
 | 3 | `MeatHolderDraggableMeat` y `CoolerDraggableMeat` invocan al buffer por **reflexión** (`MethodInfo`). Son legado de la Cooler View: hoy no se instancian |
 | 4 | Los visualizadores deprecados hacen `AddComponent(Type resuelto por nombre)` + `SendMessage("SetCut"/...)`. No copiar el patrón |
 | 5 | Los `ScriptableObject` **mutan en runtime** (`isUnlocked`, `UpgradeSO.currentLevel`, `CoalSO._maxBurnTime`, `ProductVariantSO.isUnlocked`) → el estado se filtra entre sesiones del Editor. `UpgradeStateResetter` cubre solo mejoras y carbones |

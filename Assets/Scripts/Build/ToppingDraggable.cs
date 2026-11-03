@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ToppingDraggable : MonoBehaviour
+public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldPointerDragHandler, IWorldPointerUpHandler
 {
     [Header("Food Data")]
     [Tooltip("The ToppingSO this container represents (Chimichurri, Salsa Criolla, etc.).")]
@@ -422,7 +422,7 @@ public class ToppingDraggable : MonoBehaviour
             ToppingStock.Instance.SetSauceAmount(toppingData, currentSauceAmount);
     }
 
-    void OnWorldPointerDown()
+    public void OnWorldPointerDown()
     {
         if (sauceEmpty && UsesStock)
             DeliveryFeedbackText.Instance?.Show(Loc.Format("sauce.empty", toppingData.toppingName));
@@ -447,7 +447,7 @@ public class ToppingDraggable : MonoBehaviour
         }
     }
 
-    void OnWorldPointerDrag() => DragTo(GetMouseWorldPos());
+    public void OnWorldPointerDrag() => DragTo(GetMouseWorldPos());
 
     /// <summary>Un frame de arrastre con el frasco en esa posición de mundo (la del puntero).</summary>
     private void DragTo(Vector3 worldPosition)
@@ -530,7 +530,7 @@ public class ToppingDraggable : MonoBehaviour
         transform.localScale = new Vector3(startScale.x * squeezeFactor.x, startScale.y * squeezeFactor.y, startScale.z);
     }
 
-    void OnWorldPointerUp()
+    public void OnWorldPointerUp()
     {
         if (!isDragging) return;
         isDragging = false;

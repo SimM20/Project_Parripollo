@@ -6,7 +6,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private CustomerSystem customerSystem;
     [SerializeField] private GrillSystem grillSystem;
-    [SerializeField] private MonoBehaviour meatTransferBuffer;
+    [SerializeField] private MeatTransferBuffer meatTransferBuffer;
     [SerializeField] private BuildStationSystem buildStationSystem;
     [SerializeField] private FoodCatalogSO catalog;
     [SerializeField] private FoodAvailabilityService foodAvailabilityService;
@@ -108,7 +108,7 @@ public class GameManager : MonoBehaviour
                 GamepadHaptics.Play(HapticEvent.PlateCleared);
 
             ClearBuildAssembly();
-            meatTransferBuffer?.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
+            if (meatTransferBuffer != null) meatTransferBuffer.ClearPlateMeatVisuals();
             BuildFoodDropZone.ClearActivePlateVisuals();
             ToppingDraggable.ClearAllSplatters();
             Debug.Log("[Plato] Plato limpiado.");
@@ -442,12 +442,12 @@ public class GameManager : MonoBehaviour
             tints.Add(tint);
         }
 
-        meatTransferBuffer?.SendMessage("SetPlateMeatTints", tints, SendMessageOptions.DontRequireReceiver);
+        if (meatTransferBuffer != null) meatTransferBuffer.SetPlateMeatTints(tints);
     }
 
     public void ClearDeliveryPreviewOnPlate()
     {
-        meatTransferBuffer?.SendMessage("ClearPlateMeatTints", SendMessageOptions.DontRequireReceiver);
+        if (meatTransferBuffer != null) meatTransferBuffer.ClearPlateMeatTints();
     }
 
     /// <summary>
@@ -524,7 +524,7 @@ public class GameManager : MonoBehaviour
             DeliveryFeedbackText.Instance?.Show(note);
 
         ClearBuildAssembly();
-        meatTransferBuffer.SendMessage("ClearPlateMeatVisuals", SendMessageOptions.DontRequireReceiver);
+        if (meatTransferBuffer != null) meatTransferBuffer.ClearPlateMeatVisuals();
         BuildFoodDropZone.ClearActivePlateVisuals();
         ToppingDraggable.ClearAllSplatters();
 
