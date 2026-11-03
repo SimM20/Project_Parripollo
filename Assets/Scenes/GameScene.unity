@@ -2715,10 +2715,6 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
-    - target: {fileID: 3616573278603901959, guid: 9491b763193b0954487dedc1580658d3, type: 3}
-      propertyPath: viewManager
-      value: 
-      objectReference: {fileID: 1648097971}
     - target: {fileID: 3721987827440296609, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: m_Color.a
       value: 0
@@ -4043,10 +4039,6 @@ PrefabInstance:
       propertyPath: grillSystem
       value: 
       objectReference: {fileID: 1141140570}
-    - target: {fileID: 6249678548236163508, guid: 9491b763193b0954487dedc1580658d3, type: 3}
-      propertyPath: viewManager
-      value: 
-      objectReference: {fileID: 1648097971}
     - target: {fileID: 6249678548236163508, guid: 9491b763193b0954487dedc1580658d3, type: 3}
       propertyPath: coalTransferBuffer
       value: 
@@ -12104,17 +12096,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0fb06a1292a6e5a45933d8e38a49cabc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GrillSlot
---- !u!114 &1648097971 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1699864827656576789, guid: ab7212da717468a4b91b0218d5acd9f5, type: 3}
-  m_PrefabInstance: {fileID: 2137234444}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 138f0c01674cec74a9ff7a0e43a07e49, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ViewManager
 --- !u!1 &1652302169
 GameObject:
   m_ObjectHideFlags: 0
@@ -12650,7 +12631,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slidingRoot: {fileID: 492413379}
   panelBackground: {fileID: 404078398}
-  viewManager: {fileID: 1648097971}
   openLocalX: 0
   closedLocalX: 4.6
   slideDuration: 0.2
