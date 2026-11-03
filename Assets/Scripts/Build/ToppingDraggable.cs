@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -26,10 +25,10 @@ public class ToppingDraggable : MonoBehaviour
     public Collider2D PouringZone => rotationZone;
 
     [Header("Pour Visual")]
-    [Tooltip("Color of the sauce thread. Used for the LineRenderer.")]
+    [Tooltip("Color base de la salsa (el cuerpo del chorro y del charco).")]
     [SerializeField] private Color sauceColor = new Color(0.18f, 0.54f, 0.14f, 1f);
 
-    [Tooltip("Width of the sauce thread at the top (pour origin).")]
+    [Tooltip("Ancho del chorro al salir de la boca. Se afina al caer.")]
     [SerializeField] private float sauceWidth = 0.06f;
 
     [Tooltip("Distancia hacia abajo desde la boca del frasco donde la salsa toca la mesa. " +
@@ -66,20 +65,37 @@ public class ToppingDraggable : MonoBehaviour
              "Las salpicaduras no aparecen hasta que el chorro toca el plato.")]
     [SerializeField] private float streamFallAcceleration = 14f;
 
+    [Header("Sauce Pixel Art")]
+    [Tooltip("Tamaño en mundo de un pixel de salsa (chorro, gotas y charco). 0.02 ≈ 2 pixeles de pantalla a 1080p.")]
+    [SerializeField, Min(0.005f)] private float saucePixelSize = 0.02f;
+
+    [Tooltip("Contorno: el borde de abajo y de la derecha del charco y los costados del chorro. " +
+             "Alfa 0 = sale del color base.")]
+    [SerializeField] private Color sauceOutlineColor = new Color(0f, 0f, 0f, 0f);
+
+    [Tooltip("Sombra: la panza del charco (la fila sobre el contorno) y el lado derecho del chorro. Alfa 0 = automático.")]
+    [SerializeField] private Color sauceShadowColor = new Color(0f, 0f, 0f, 0f);
+
+    [Tooltip("Luz: el borde de arriba del charco y el lado izquierdo del chorro. Alfa 0 = automático.")]
+    [SerializeField] private Color sauceLightColor = new Color(0f, 0f, 0f, 0f);
+
+    [Tooltip("Brillo: los reflejos cortos de la salsa mojada. Alfa 0 = automático.")]
+    [SerializeField] private Color sauceHighlightColor = new Color(0f, 0f, 0f, 0f);
+
+    [Tooltip("Aceite o jugo que se escurre alrededor del charco, un pixel por fuera del borde. " +
+             "El alfa es cuánto se ve (0 = sin halo).")]
+    [SerializeField] private Color sauceHaloColor = new Color(0f, 0f, 0f, 0f);
+
     [Header("Sauce Chunks")]
-    [Tooltip("Colores de los trocitos que bajan por el chorro y quedan en el cordón (cebolla, morrón...). " +
+    [Tooltip("Colores de los trocitos que bajan por el chorro y quedan en el charco (cebolla, morrón, hierbas...). " +
              "Vacío = salsa lisa.")]
     [SerializeField] private Color[] sauceChunkColors;
 
     [Tooltip("Trocitos por segundo que salen por el chorro.")]
     [SerializeField, Min(0f)] private float streamChunkRate = 150f;
 
-    [Tooltip("Trocitos por unidad de mundo que quedan en el cordón al mover el frasco.")]
-    [SerializeField, Min(0f)] private float trailChunksPerUnit = 70f;
-
-    [Tooltip("Tamaño en mundo de un pixel de los trocitos (un pixel del frasco es 0.006). " +
-             "Un poco más grandes que el arte para que se lean en el chorro.")]
-    [SerializeField, Min(0.001f)] private float sauceChunkPixelSize = 0.008f;
+    [Tooltip("Fracción de los pixeles del charco que tienen un trocito.")]
+    [SerializeField, Range(0f, 0.5f)] private float puddleChunkDensity = 0.12f;
 
     [Header("Landing Marker")]
     [Tooltip("Muestra dónde va a caer la salsa: un aro sobre el plato y, antes de verter, una guía " +
@@ -104,90 +120,52 @@ public class ToppingDraggable : MonoBehaviour
     [Tooltip("Sorting order del aro (arriba de las salpicaduras, debajo del chorro).")]
     [SerializeField] private int landingMarkerSortingOrder = 5600;
 
-    [Header("Sauce Splatters")]
-    [Tooltip("Seconds between each splatter spawn. Lower = denser sauce.")]
+    [Header("Sauce on Plate")]
+    [Tooltip("Segundos entre tics de la vertida: vibración del gamepad y chance de que salte una gotita.")]
     [SerializeField] private float splatterInterval = 0.05f;
 
-    [Tooltip("Base size of each splatter in world units.")]
+    [Tooltip("Margen (mundo) que se deja entre el impacto y el borde del plato, junto con el charco.")]
     [SerializeField] private float splatterSize = 0.15f;
 
-    [Tooltip("± random variation added to the base size.")]
-    [SerializeField] private float splatterSizeVariation = 0.05f;
-
-    [Tooltip("Radio máximo del charco alrededor del impacto, una vez que creció del todo.")]
+    [Tooltip("Radio del charco alrededor del impacto que se reserva al acercarse al borde del plato " +
+             "(y el mínimo del aro). El charco dibujado crece solo, con la salsa que cae.")]
     [SerializeField] private float splatterSpread = 0.1f;
 
     [Tooltip("Fracción de splatterSpread con la que nace el charco cuando el chorro toca el plato.")]
     [Range(0.05f, 1f)]
     [SerializeField] private float puddleStartSpread = 0.85f;
 
-    [Tooltip("Manchas que aparecen de golpe cuando el chorro toca el plato, así el charco arranca con cuerpo.")]
+    [Tooltip("Gotitas que saltan de golpe cuando el chorro toca el plato.")]
     [SerializeField, Min(0)] private int landingSplashCount = 9;
 
-    [Tooltip("Segundos vertiendo en el mismo lugar hasta que el charco llega a splatterSpread. " +
-             "Al mover el frasco el charco se angosta: deja un hilo en vez de manchar todo.")]
+    [Tooltip("Segundos vertiendo en el mismo lugar hasta que el charco reservado llega a splatterSpread.")]
     [SerializeField, Min(0.01f)] private float puddleGrowTime = 0.8f;
 
-    [Tooltip("Tamaño de cada mancha (sobre splatterSize) con el charco completo. Las primeras salen al 70%.")]
-    [SerializeField, Min(0.1f)] private float puddleFullSizeScale = 1.3f;
+    [Tooltip("Cuánta salsa cae por segundo. Más = el charco crece más rápido y el cordón que queda " +
+             "al mover el frasco sale más ancho.")]
+    [SerializeField, Min(0f)] private float pourVolumeRate = 1400f;
 
-    [Header("Sauce Trail")]
-    [Tooltip("Ancho del cordón de salsa que queda al mover el frasco mientras vierte.")]
-    [SerializeField, Min(0.01f)] private float sauceTrailWidth = 0.12f;
+    [Tooltip("Qué tan espesa es la salsa: más alto = se apila y se abre menos; más bajo = se escurre más.")]
+    [SerializeField, Range(0.05f, 2f)] private float sauceThickness = 0.35f;
 
-    [Tooltip("Velocidad del impacto (unidades/s) desde la que se deja cordón en vez de charco.")]
-    [SerializeField, Min(0f)] private float trailMinSpeed = 0.5f;
+    [Tooltip("Segundos entre las ondas que salen del impacto mientras se vierte quieto.")]
+    [SerializeField, Min(0.05f)] private float rippleInterval = 0.22f;
 
-    [Tooltip("Velocidad del impacto a la que el cordón queda en su ancho más fino.")]
-    [SerializeField, Min(0.01f)] private float trailFastSpeed = 4f;
-
-    [Tooltip("Multiplicador del ancho moviendo despacio (se junta más salsa).")]
-    [SerializeField, Min(0.1f)] private float trailSlowWidthScale = 1.3f;
-
-    [Tooltip("Multiplicador del ancho moviendo rápido (el cordón se estira).")]
-    [SerializeField, Min(0.1f)] private float trailFastWidthScale = 0.7f;
-
-    [Tooltip("Distancia mínima entre puntos del cordón. Menos = curva más suave.")]
-    [SerializeField, Min(0.005f)] private float trailPointSpacing = 0.03f;
-
-    [Tooltip("Cuánto varía el grosor del cordón a lo largo (0 = parejo, 1 = de casi nada al doble).")]
-    [SerializeField, Range(0f, 1f)] private float trailWidthJitter = 0.45f;
-
-    [Tooltip("Largo (unidades de mundo) de cada bulto del cordón. Menos = más desparejo; muy corto queda en zigzag.")]
-    [SerializeField, Min(0.01f)] private float trailLumpLength = 0.13f;
-
-    [Tooltip("Chance por tic de splatterInterval de que caiga una mancha sobre el cordón mientras se mueve el frasco.")]
-    [SerializeField, Range(0f, 1f)] private float trailSplatterChance = 0.85f;
-
-    [Tooltip("Tamaño de esas manchas respecto de splatterSize. Chicas: ensucian el borde sin parecer pinceladas.")]
-    [SerializeField, Min(0.1f)] private float trailSplatterSizeScale = 0.75f;
-
-    [Tooltip("Cuánto se corren de la línea, en anchos del cordón. Cerca de 1 rompen el borde.")]
-    [SerializeField, Min(0f)] private float trailSplatterSpread = 0.8f;
-
-    [Tooltip("Chance de gotita por mancha del cordón (aparte de dropletChance, que es la del charco).")]
-    [SerializeField, Range(0f, 1f)] private float trailDropletChance = 0.4f;
-
-    [Tooltip("Optional splatter sprites, already drawn in the table's perspective and colored. " +
-             "One is picked at random per splatter. If empty, a circle is generated and tinted with sauceColor.")]
-    [SerializeField] private Sprite[] splatterSprites;
-
-    [Tooltip("Vertical squash of the 2.5D table: splatters spread in an ellipse instead of a line.")]
+    [Tooltip("Aplastamiento vertical de la mesa 2.5D: el charco se abre en un óvalo, no en un círculo.")]
     [Range(0.2f, 1f)]
     [SerializeField] private float perspectiveSquash = 0.6f;
 
-    [Tooltip("Chance per splatter of a tiny droplet bouncing out of the impact.")]
+    [Tooltip("Chance por tic de splatterInterval de que salte una gotita del impacto.")]
     [Range(0f, 1f)]
     [SerializeField] private float dropletChance = 0.12f;
 
-    [Tooltip("How far (world units) a bouncing droplet lands from the impact.")]
+    [Tooltip("Hasta qué distancia (mundo) del impacto cae una gotita.")]
     [SerializeField] private float dropletDistance = 0.1f;
 
-    [Tooltip("Sorting order for splatters (should be above the food sprite).")]
+    [Tooltip("Sorting order del charco (arriba de la comida). Cada charco nuevo va un poco más arriba.")]
     [SerializeField] private int splatterSortingOrder = 5500;
 
-    [Tooltip("Parent transform for splatters (e.g. the food GameObject). " +
-             "If null, splatters are spawned in world space.")]
+    [Tooltip("Padre de los charcos. Null = en la raíz de la escena.")]
     [SerializeField] private Transform splatterParent;
 
     [Header("Squeeze")]
@@ -240,9 +218,6 @@ public class ToppingDraggable : MonoBehaviour
     private bool isPouring;
     private bool toppingRegistered; 
 
-    private LineRenderer sauceThread;
-    private LineRenderer sauceThreadOutline;
-    private static Material sauceThreadMaterial;
     private Vector3[] streamPoints;
     private float streamProgress;
     private float streamFallSpeed;
@@ -255,48 +230,18 @@ public class ToppingDraggable : MonoBehaviour
     private float streamSway;
     private float streamSwayVelocity;
 
-    /// <summary>Un cordón de salsa: contorno oscuro, cuerpo y brillo, con los mismos puntos.</summary>
-    private class SauceTrail
-    {
-        public GameObject root;
-        public LineRenderer outline;
-        public LineRenderer body;
-        public LineRenderer gloss;
-        public readonly List<Vector3> points = new List<Vector3>();
-        public readonly List<float> widths = new List<float>();
-        public float length;
-        public float glossSeed;
-    }
+    // El chorro (y lo que queda en el aire al cortar) y el charco de este arrastre en el plato.
+    private SauceStreamFX streamFX;
+    private SauceDecal currentDecal;
+    private SaucePalette palette;
+    private Vector3 lastPourImpact;
+    private float lastRippleTime;
+    private static int decalSortingCounter;
 
-    private const int MaxTrailPoints = 256;
-    private SauceTrail trail;
-    private Vector3 lastTrailImpact;
-
-    /// <summary>Un trocito que baja por el chorro: cuánto recorrió desde la boca y de qué lado del hilo va.</summary>
-    private class StreamChunk
-    {
-        public SpriteRenderer renderer;
-        public float distance;
-        public float speed;
-        public float side;
-    }
-
-    private readonly List<StreamChunk> streamChunks = new List<StreamChunk>();
-    private AnimationCurve streamWidthCurve;
-    private float[] streamLengths;
-    private float streamChunkTimer;
-    private float trailChunkBudget;
-    private Sprite[] chunkSprites;
-
-    // Formas de los trocitos, de arriba hacia abajo: L color, S sombra, . vacío.
-    private static readonly string[][] ChunkShapes =
-    {
-        new[] { "LL", "LS" },
-        new[] { "LLL", "LLS" },
-        new[] { "LLS" },
-        new[] { "L", "S" },
-        new[] { "LL" },
-    };
+    // Por debajo de esta velocidad del impacto (unidades/s) se está vertiendo quieto: salen ondas.
+    private const float StillPourSpeed = 0.5f;
+    // El primer contacto con el plato deja de una la salsa de este rato de vertida.
+    private const float LandingPlopSeconds = 0.12f;
     private const float ChunkShadeFactor = 0.75f;
 
     private SpriteRenderer landingMarker;
@@ -311,8 +256,9 @@ public class ToppingDraggable : MonoBehaviour
     private const float StreamStraightFraction = 0.6f;
 
     private float lastSplatterTime;
-    private readonly List<GameObject> activeSplatters = new List<GameObject>();
-    private Sprite generatedCircleSprite;
+    // Un charco por arrastre; el último del frasco es el visible (los anteriores quedan escondidos
+    // adentro de él, para el undo).
+    private readonly List<SauceDecal> sauceDecals = new List<SauceDecal>();
 
     private float currentSauceAmount;
     private bool sauceEmpty;
@@ -367,13 +313,8 @@ public class ToppingDraggable : MonoBehaviour
             Destroy(landingMarker.gameObject);
         if (previewLine != null)
             Destroy(previewLine.gameObject);
-
-        for (int i = 0; i < streamChunks.Count; i++)
-        {
-            if (streamChunks[i].renderer != null)
-                Destroy(streamChunks[i].renderer.gameObject);
-        }
-        streamChunks.Clear();
+        if (streamFX != null)
+            Destroy(streamFX.gameObject);
     }
 
     void Awake()
@@ -490,6 +431,8 @@ public class ToppingDraggable : MonoBehaviour
         GamePause.OnPaused += CancelDrag;
         isPouring = false;
         toppingRegistered = false;
+        // Cada arrastre tiene su charco (el undo lo saca entero).
+        currentDecal = null;
 
         startPosition = transform.position;
         startRotation = transform.rotation;
@@ -504,11 +447,14 @@ public class ToppingDraggable : MonoBehaviour
         }
     }
 
-    void OnWorldPointerDrag()
+    void OnWorldPointerDrag() => DragTo(GetMouseWorldPos());
+
+    /// <summary>Un frame de arrastre con el frasco en esa posición de mundo (la del puntero).</summary>
+    private void DragTo(Vector3 worldPosition)
     {
         if (!isDragging) return;
 
-        transform.position = GetMouseWorldPos();
+        transform.position = worldPosition;
 
         bool insideZone = IsInsideRotationZone();
 
@@ -540,26 +486,29 @@ public class ToppingDraggable : MonoBehaviour
         {
             DrainSauce();
 
-            if (sauceThread != null)
+            if (isPouring && streamPoints != null)
                 UpdateSauceThread();
 
             // El charco recién empieza cuando el chorro toca el plato, no apenas se da vuelta el frasco.
-            if (streamLanded)
+            if (isPouring && streamLanded)
             {
                 UpdatePuddle();
 
-                float impactSpeed = Vector2.Distance(impactPoint, lastTrailImpact) / Mathf.Max(Time.deltaTime, 0.0001f);
-                lastTrailImpact = impactPoint;
-                UpdateSauceTrail(impactSpeed);
+                float impactSpeed = Vector2.Distance(impactPoint, lastPourImpact) / Mathf.Max(Time.deltaTime, 0.0001f);
+                PourIntoDecal();
 
-                // Quieto se junta charco; moviéndose deja el cordón con manchas chicas pegadas,
-                // no las del charco (esas, desparramadas, quedaban como pinceladas).
+                // Quieto, la salsa que cae hace ondas en el charco; moviéndose deja el cordón.
+                if (impactSpeed < StillPourSpeed && Time.time - lastRippleTime >= rippleInterval)
+                {
+                    lastRippleTime = Time.time;
+                    if (currentDecal != null)
+                        currentDecal.AddRipple(impactPoint);
+                }
+
                 if (Time.time - lastSplatterTime >= splatterInterval)
                 {
-                    if (impactSpeed < trailMinSpeed)
-                        SpawnSplatter();
-                    else if (Random.value < trailSplatterChance)
-                        SpawnTrailSplatter();
+                    if (Random.value < dropletChance)
+                        SpawnDroplet(impactPoint);
                     lastSplatterTime = Time.time;
                     GamepadHaptics.Play(HapticEvent.SaucePouring);
                 }
@@ -646,8 +595,6 @@ public class ToppingDraggable : MonoBehaviour
         streamLanded = false;
         puddleRadius = splatterSpread * puddleStartSpread;
         perlinSeed = Random.Range(0f, 1000f);
-        streamChunkTimer = 0f;
-        trailChunkBudget = 0f;
         CreateSauceThread();
         SetBarPop(true);
 
@@ -657,28 +604,12 @@ public class ToppingDraggable : MonoBehaviour
 
     private void StopPouring()
     {
+        // Lo que ya salió del frasco termina de caer en el plato.
+        if (isPouring && streamFX != null)
+            streamFX.Release(impactPoint.y, pourVolumeRate, PourRadius);
+
         isPouring = false;
         SetBarPop(false);
-        // El cordón queda en el plato; la próxima vertida empieza uno nuevo.
-        trail = null;
-
-        if (sauceThread != null)
-        {
-            Destroy(sauceThread.gameObject);
-            sauceThread = null;
-        }
-
-        if (sauceThreadOutline != null)
-        {
-            Destroy(sauceThreadOutline.gameObject);
-            sauceThreadOutline = null;
-        }
-
-        for (int i = 0; i < streamChunks.Count; i++)
-        {
-            if (streamChunks[i].renderer != null)
-                streamChunks[i].renderer.enabled = false;
-        }
 
         // Toda vertida termina acá (soltar, cancelar, frasco vacío): se guarda una vez y no por frame.
         SaveSauceToStock();
@@ -869,20 +800,13 @@ public class ToppingDraggable : MonoBehaviour
         return sprite;
     }
 
+    /// <summary>Arranca el chorro pegado a la boca. Se dibuja en pixel art (<see cref="SauceStreamFX"/>).</summary>
     private void CreateSauceThread()
     {
-        if (sauceThread != null) return;
-
         int segments = Mathf.Max(streamSegments, 2);
+        if (streamPoints == null || streamPoints.Length != segments)
+            streamPoints = new Vector3[segments];
 
-        // Contorno oscuro detrás del chorro, como el borde del resto del arte. Los trocitos van
-        // arriba del hilo (5999) y abajo del frasco que se arrastra (6000).
-        Color outlineColor = new Color(sauceColor.r * 0.45f, sauceColor.g * 0.45f, sauceColor.b * 0.45f, sauceColor.a);
-        sauceThreadOutline = CreateStreamLine("SauceThreadOutline", sauceWidth * 1.35f, outlineColor, 5997, segments);
-        sauceThread = CreateStreamLine("SauceThread", sauceWidth, sauceColor, 5998, segments);
-        streamWidthCurve = sauceThread.widthCurve;
-
-        streamPoints = new Vector3[segments];
         Vector3 origin = GetMouthPosition();
         lastStreamOrigin = origin;
         streamSway = 0f;
@@ -890,34 +814,126 @@ public class ToppingDraggable : MonoBehaviour
         for (int i = 0; i < segments; i++)
             streamPoints[i] = origin;
 
-        sauceThread.SetPositions(streamPoints);
-        sauceThreadOutline.SetPositions(streamPoints);
+        // Los trocitos los dibuja el chorro; el frasco que se arrastra (6000) lo tapa en la boca.
+        if (streamFX == null)
+            streamFX = SauceStreamFX.Create(GetPalette(), 5998, EnsureDecal, OnTailLanded);
+
+        // Medio ancho con el borde incluido: el contorno es parte del chorro, no una línea aparte.
+        streamFX.BeginPour(sauceWidth * 0.65f, streamGrowSpeed, streamFallAcceleration, squeezeFrequency, streamChunkRate);
     }
 
-    private static LineRenderer CreateStreamLine(string name, float width, Color color, int sortingOrder, int segments)
+    /// <summary>
+    /// Paleta del pixel art de esta salsa, con lo del inspector. Los colores con alfa 0 salen del
+    /// color base (oscurecido o aclarado). Se arma una vez.
+    /// </summary>
+    private SaucePalette GetPalette()
     {
-        if (sauceThreadMaterial == null)
-            sauceThreadMaterial = new Material(Shader.Find("Sprites/Default"));
+        if (palette != null)
+            return palette;
 
-        LineRenderer line = new GameObject(name).AddComponent<LineRenderer>();
-        line.positionCount = segments;
-        // Gruesa en la boca, se afina al caer y se abre apenas al tocar el plato.
-        line.widthMultiplier = width;
-        line.widthCurve = new AnimationCurve(
-            new Keyframe(0f, 1f), new Keyframe(0.6f, 0.65f), new Keyframe(1f, 0.85f));
-        line.sharedMaterial = sauceThreadMaterial;
-        line.startColor = color;
-        line.endColor = new Color(color.r, color.g, color.b, color.a * 0.7f);
-        line.sortingOrder = sortingOrder;
-        line.useWorldSpace = true;
-        line.numCapVertices = 4;
-        line.numCornerVertices = 4;
-        return line;
+        Color body = sauceColor;
+        body.a = 1f;
+        Color Auto(Color picked, Color fallback) => picked.a > 0f ? picked : fallback;
+
+        Color outline = Auto(sauceOutlineColor, body * 0.5f);
+        outline.a = 1f;
+        Color shadowColor = Auto(sauceShadowColor, body * 0.76f);
+        shadowColor.a = 1f;
+
+        palette = new SaucePalette
+        {
+            pixelSize = saucePixelSize,
+            body = body,
+            outline = outline,
+            shadow = shadowColor,
+            light = Auto(sauceLightColor, Color.Lerp(body, new Color(1f, 0.9f, 0.7f), 0.22f)),
+            highlight = Auto(sauceHighlightColor, Color.Lerp(body, new Color(1f, 0.95f, 0.85f), 0.5f)),
+            halo = sauceHaloColor,
+            castShadow = new Color(outline.r * 0.5f, outline.g * 0.5f, outline.b * 0.5f, 0.32f),
+            chunkDensity = puddleChunkDensity,
+            seed = toppingData != null ? toppingData.name.GetHashCode() : GetInstanceID()
+        };
+
+        int count = sauceChunkColors != null ? sauceChunkColors.Length : 0;
+        palette.chunkLight = new Color32[count];
+        palette.chunkShade = new Color32[count];
+        for (int i = 0; i < count; i++)
+        {
+            Color c = sauceChunkColors[i];
+            c.a = 1f;
+            palette.chunkLight[i] = c;
+            palette.chunkShade[i] = new Color(c.r * ChunkShadeFactor, c.g * ChunkShadeFactor, c.b * ChunkShadeFactor, 1f);
+        }
+
+        return palette;
     }
+
+    // La campana con la que cae la salsa: lo que abarca el pie del chorro.
+    private float PourRadius => sauceWidth * 0.5f;
+
+    /// <summary>
+    /// Charco de este arrastre: lo crea al caer la primera salsa, sobre la loza del plato más
+    /// cercano. Si el frasco ya tenía un charco en ese plato, el nuevo arranca con esa salsa y el
+    /// viejo se esconde (el undo lo vuelve a mostrar).
+    /// </summary>
+    private SauceDecal EnsureDecal()
+    {
+        if (currentDecal != null)
+            return currentDecal;
+
+        Vector3 anchor = impactPoint;
+        bool onPlate = BuildFoodDropZone.TryGetNearestPlateSurface(anchor, out Vector2 center, out Vector2 extents);
+        if (!onPlate)
+        {
+            // Sin plato: un charco suelto alrededor del impacto.
+            center = anchor;
+            float r = splatterSpread * 4f + 0.3f;
+            extents = new Vector2(r, r * perspectiveSquash);
+        }
+
+        int order = splatterSortingOrder + decalSortingCounter++ % 50;
+        currentDecal = SauceDecal.Create(new Vector3(center.x, center.y, anchor.z), extents, onPlate,
+            GetPalette(), perspectiveSquash, sauceThickness, order, splatterParent);
+
+        SauceDecal previous = sauceDecals.Count > 0 ? sauceDecals[sauceDecals.Count - 1] : null;
+        if (previous != null && currentDecal.TryInherit(previous))
+            previous.SetVisible(false);
+
+        sauceDecals.Add(currentDecal);
+        return currentDecal;
+    }
+
+    /// <summary>Deja en el charco la salsa que cayó este frame, a lo largo de lo que se movió el impacto.</summary>
+    private void PourIntoDecal()
+    {
+        SauceDecal decal = EnsureDecal();
+        if (decal != null)
+            decal.PourLine(lastPourImpact, impactPoint, pourVolumeRate * Time.deltaTime, PourRadius);
+        lastPourImpact = impactPoint;
+    }
+
+    /// <summary>
+    /// La salsa toca el plato (el chorro, o la cola de una vertida ya cortada): arranca el charco
+    /// con un golpe de salsa y salta un puñado de gotitas.
+    /// </summary>
+    private void OnSauceLanded(Vector3 point)
+    {
+        SauceDecal decal = EnsureDecal();
+        if (decal != null)
+        {
+            decal.Pour(point, pourVolumeRate * LandingPlopSeconds, PourRadius * 1.5f);
+            decal.AddRipple(point);
+        }
+
+        for (int s = 0; s < landingSplashCount; s++)
+            SpawnDroplet(point);
+    }
+
+    private void OnTailLanded(Vector3 point) => OnSauceLanded(point);
 
     private void UpdateSauceThread()
     {
-        if (sauceThread == null || streamPoints == null) return;
+        if (streamPoints == null) return;
 
         int segments = streamPoints.Length;
         Vector3 origin = GetMouthPosition();
@@ -933,11 +949,10 @@ public class ToppingDraggable : MonoBehaviour
         {
             streamLanded = true;
             lastPuddleImpact = impactPoint;
-            lastTrailImpact = impactPoint;
-            trail = CreateSauceTrail(impactPoint);
-            // El primer contacto salpica varias manchas de una, y la siguiente sale sin esperar el intervalo.
-            for (int s = 0; s < landingSplashCount; s++)
-                SpawnSplatter();
+            lastPourImpact = impactPoint;
+            lastRippleTime = Time.time;
+            OnSauceLanded(impactPoint);
+            // El próximo tic (vibración, gotita) sale sin esperar el intervalo.
             lastSplatterTime = Time.time - splatterInterval;
         }
 
@@ -977,110 +992,8 @@ public class ToppingDraggable : MonoBehaviour
             streamPoints[i] = pos;
         }
 
-        sauceThread.SetPositions(streamPoints);
-        if (sauceThreadOutline != null)
-            sauceThreadOutline.SetPositions(streamPoints);
-
-        UpdateStreamChunks();
-    }
-
-    /// <summary>
-    /// Trocitos (cebolla, morrón...) que bajan por el chorro con la misma caída que la salsa: salen
-    /// de la boca, aceleran y se pierden al llegar a la punta, donde ya los muestran las salpicaduras.
-    /// </summary>
-    private void UpdateStreamChunks()
-    {
-        Sprite[] sprites = GetChunkSprites();
-        if (sprites == null)
-            return;
-
-        int segments = streamPoints.Length;
-        if (streamLengths == null || streamLengths.Length != segments)
-            streamLengths = new float[segments];
-
-        streamLengths[0] = 0f;
-        for (int i = 1; i < segments; i++)
-            streamLengths[i] = streamLengths[i - 1] + Vector2.Distance(streamPoints[i - 1], streamPoints[i]);
-        float visibleLength = streamLengths[segments - 1];
-
-        streamChunkTimer += streamChunkRate * Time.deltaTime;
-        while (streamChunkTimer >= 1f)
-        {
-            streamChunkTimer -= 1f;
-            SpawnStreamChunk(sprites);
-        }
-
-        for (int i = 0; i < streamChunks.Count; i++)
-        {
-            StreamChunk chunk = streamChunks[i];
-            if (!chunk.renderer.enabled)
-                continue;
-
-            chunk.speed += streamFallAcceleration * Time.deltaTime;
-            chunk.distance += chunk.speed * Time.deltaTime;
-            if (chunk.distance >= visibleLength)
-            {
-                chunk.renderer.enabled = false;
-                continue;
-            }
-
-            chunk.renderer.transform.position = SampleStream(chunk.distance, chunk.side);
-        }
-    }
-
-    private void SpawnStreamChunk(Sprite[] sprites)
-    {
-        StreamChunk chunk = null;
-        for (int i = 0; i < streamChunks.Count; i++)
-        {
-            if (!streamChunks[i].renderer.enabled)
-            {
-                chunk = streamChunks[i];
-                break;
-            }
-        }
-
-        if (chunk == null)
-        {
-            SpriteRenderer sr = new GameObject("SauceStreamChunk").AddComponent<SpriteRenderer>();
-            sr.sortingOrder = 5999;
-            chunk = new StreamChunk { renderer = sr };
-            streamChunks.Add(chunk);
-        }
-
-        chunk.renderer.sprite = sprites[Random.Range(0, sprites.Length)];
-        chunk.renderer.transform.localScale = Vector3.one * sauceChunkPixelSize;
-        chunk.distance = 0f;
-        chunk.speed = streamGrowSpeed;
-        chunk.side = Random.Range(-0.55f, 0.55f);
-        chunk.renderer.transform.position = streamPoints[0];
-        chunk.renderer.enabled = true;
-    }
-
-    /// <summary>Punto del chorro a esa distancia de la boca, corrido hacia un costado dentro del ancho del hilo.</summary>
-    private Vector3 SampleStream(float distance, float side)
-    {
-        int last = streamPoints.Length - 1;
-        int i = 1;
-        while (i < last && streamLengths[i] < distance)
-            i++;
-
-        Vector3 a = streamPoints[i - 1];
-        Vector3 b = streamPoints[i];
-        float segmentLength = streamLengths[i] - streamLengths[i - 1];
-        float k = segmentLength > 0.0001f ? (distance - streamLengths[i - 1]) / segmentLength : 0f;
-        Vector3 pos = Vector3.Lerp(a, b, k);
-
-        Vector2 dir = (Vector2)(b - a);
-        if (dir.sqrMagnitude > 0.000001f)
-        {
-            dir.Normalize();
-            float t = streamLengths[last] > 0.0001f ? distance / streamLengths[last] : 0f;
-            float halfWidth = sauceWidth * 0.5f * (streamWidthCurve != null ? streamWidthCurve.Evaluate(t) : 1f);
-            pos += new Vector3(-dir.y, dir.x, 0f) * (side * halfWidth);
-        }
-
-        return pos;
+        if (streamFX != null)
+            streamFX.UpdateStream(streamPoints, streamLanded, streamFallSpeed);
     }
 
     /// <summary>
@@ -1154,8 +1067,14 @@ public class ToppingDraggable : MonoBehaviour
             impact = GetImpactPoint(mouth, splatterSpread * puddleStartSpread);
         }
 
-        // Vertiendo, el aro abraza el charco; si no, queda en el tamaño mínimo.
-        float diameter = Mathf.Max(landingMarkerSize, isPouring ? puddleRadius * 2f + splatterSize : 0f);
+        // Vertiendo, el aro abraza el charco (el reservado o el dibujado, el más grande); si no,
+        // queda en el tamaño mínimo.
+        float diameter = landingMarkerSize;
+        if (isPouring)
+        {
+            float drawn = currentDecal != null ? currentDecal.MeasureRadius(impact) : 0f;
+            diameter = Mathf.Max(diameter, puddleRadius * 2f + splatterSize, (drawn + saucePixelSize * 2f) * 2f);
+        }
         float ringScale = diameter / Mathf.Max(landingMarker.sprite.bounds.size.x, 0.0001f);
         landingMarker.transform.position = impact;
         landingMarker.transform.localScale = new Vector3(ringScale, ringScale * perspectiveSquash, 1f);
@@ -1282,418 +1201,56 @@ public class ToppingDraggable : MonoBehaviour
     }
 
     /// <summary>
-    /// Cordón nuevo con su raíz en el impacto. Vive con las salpicaduras (undo, limpiar, viajar con
-    /// el plato): sus líneas están en espacio local, así se mueven con la raíz.
-    /// </summary>
-    private SauceTrail CreateSauceTrail(Vector3 start)
-    {
-        var t = new SauceTrail { root = new GameObject("SauceTrail"), glossSeed = Random.Range(0f, 100f) };
-        t.root.transform.position = start;
-        if (splatterParent != null)
-            t.root.transform.SetParent(splatterParent, true);
-
-        // Debajo de las manchas: el charco que se junta al frenar tapa el cordón, no al revés.
-        // Los trocitos van arriba del brillo (splatterSortingOrder - 1).
-        Color outlineColor = new Color(sauceColor.r * 0.45f, sauceColor.g * 0.45f, sauceColor.b * 0.45f, sauceColor.a);
-        Color glossColor = Color.Lerp(sauceColor, Color.white, 0.45f);
-        glossColor.a = 0.8f;
-        t.outline = CreateTrailLine(t.root.transform, "Outline", outlineColor, splatterSortingOrder - 4);
-        t.body = CreateTrailLine(t.root.transform, "Body", sauceColor, splatterSortingOrder - 3);
-        t.gloss = CreateTrailLine(t.root.transform, "Gloss", glossColor, splatterSortingOrder - 2);
-
-        t.points.Add(start);
-        t.points.Add(start);
-        t.widths.Add(sauceTrailWidth);
-        t.widths.Add(sauceTrailWidth);
-        RebuildSauceTrail(t);
-
-        activeSplatters.Add(t.root);
-        return t;
-    }
-
-    private static LineRenderer CreateTrailLine(Transform parent, string name, Color color, int sortingOrder)
-    {
-        if (sauceThreadMaterial == null)
-            sauceThreadMaterial = new Material(Shader.Find("Sprites/Default"));
-
-        LineRenderer line = new GameObject(name).AddComponent<LineRenderer>();
-        line.transform.SetParent(parent, false);
-        line.useWorldSpace = false;
-        line.sharedMaterial = sauceThreadMaterial;
-        line.startColor = color;
-        line.endColor = color;
-        line.sortingOrder = sortingOrder;
-        line.numCapVertices = 6;
-        line.numCornerVertices = 4;
-        line.alignment = LineAlignment.View;
-        return line;
-    }
-
-    /// <summary>
-    /// Estira el cordón hasta el impacto. Moviendo despacio queda grueso (se junta salsa) y rápido se
-    /// afina. En la tabla 2.5D un trazo horizontal se ve más finito que uno vertical. A lo largo tiene
-    /// bultos y angostamientos (ruido), así no queda un trazo de marcador.
-    /// </summary>
-    private void UpdateSauceTrail(float impactSpeed)
-    {
-        if (trail == null || trail.root == null)
-            return;
-
-        int n = trail.points.Count;
-        Vector3 anchor = trail.points[n - 2];
-        Vector2 dir = (Vector2)(impactPoint - anchor);
-        float dirX = dir.sqrMagnitude > 0.000001f ? Mathf.Abs(dir.normalized.x) : 0f;
-
-        float along = trail.length + dir.magnitude;
-        float lump = 1f + trailWidthJitter * (Mathf.PerlinNoise(perlinSeed + along / trailLumpLength, 0.37f) * 2f - 1f);
-
-        float speed01 = Mathf.InverseLerp(trailMinSpeed, trailFastSpeed, impactSpeed);
-        float width = sauceTrailWidth
-                      * Mathf.Lerp(trailSlowWidthScale, trailFastWidthScale, speed01)
-                      * Mathf.Lerp(1f, perspectiveSquash, dirX)
-                      * lump;
-
-        // El último punto es la punta viva pegada al chorro; al alejarse lo suficiente queda fijo y nace otro.
-        trail.points[n - 1] = impactPoint;
-        trail.widths[n - 1] = width;
-
-        if (Vector2.Distance(anchor, impactPoint) >= trailPointSpacing)
-        {
-            if (n >= MaxTrailPoints)
-            {
-                trail = CreateSauceTrail(impactPoint);
-                return;
-            }
-
-            SpawnTrailChunks(anchor, impactPoint, width);
-            trail.length = along;
-            trail.points.Add(impactPoint);
-            trail.widths.Add(width);
-        }
-
-        RebuildSauceTrail(trail);
-    }
-
-    /// <summary>
-    /// Deja trocitos sobre el tramo nuevo del cordón, repartidos a lo ancho. Son hijos de la raíz del
-    /// cordón: se van con el undo y viajan con el plato.
-    /// </summary>
-    private void SpawnTrailChunks(Vector3 from, Vector3 to, float width)
-    {
-        Sprite[] sprites = GetChunkSprites();
-        if (sprites == null)
-            return;
-
-        Vector2 dir = (Vector2)(to - from);
-        trailChunkBudget += dir.magnitude * trailChunksPerUnit;
-        if (trailChunkBudget < 1f)
-            return;
-
-        dir.Normalize();
-        Vector3 normal = new Vector3(-dir.y, dir.x, 0f);
-
-        while (trailChunkBudget >= 1f)
-        {
-            trailChunkBudget -= 1f;
-
-            Vector3 pos = Vector3.Lerp(from, to, Random.value) + normal * (Random.Range(-0.3f, 0.3f) * width);
-            pos.z = to.z;
-
-            SpriteRenderer sr = new GameObject("SauceChunk").AddComponent<SpriteRenderer>();
-            sr.sprite = sprites[Random.Range(0, sprites.Length)];
-            sr.sortingOrder = splatterSortingOrder - 1;
-            sr.transform.position = pos;
-            sr.transform.localScale = Vector3.one * sauceChunkPixelSize;
-            sr.transform.SetParent(trail.root.transform, true);
-        }
-    }
-
-    /// <summary>Trocitos pixel art de cada color de <see cref="sauceChunkColors"/>, con sombra. Null si la salsa es lisa.</summary>
-    private Sprite[] GetChunkSprites()
-    {
-        if (sauceChunkColors == null || sauceChunkColors.Length == 0)
-            return null;
-
-        if (chunkSprites != null)
-            return chunkSprites;
-
-        chunkSprites = new Sprite[sauceChunkColors.Length * ChunkShapes.Length];
-        for (int c = 0; c < sauceChunkColors.Length; c++)
-        {
-            Color baseColor = sauceChunkColors[c];
-            Color32 light = baseColor;
-            Color32 shade = new Color(baseColor.r * ChunkShadeFactor, baseColor.g * ChunkShadeFactor,
-                baseColor.b * ChunkShadeFactor, baseColor.a);
-            Color32 clear = new Color32(0, 0, 0, 0);
-
-            for (int s = 0; s < ChunkShapes.Length; s++)
-            {
-                string[] rows = ChunkShapes[s];
-                int h = rows.Length;
-                int w = rows[0].Length;
-                var pixels = new Color32[w * h];
-                for (int y = 0; y < h; y++)
-                for (int x = 0; x < w; x++)
-                {
-                    // Las formas se escriben de arriba hacia abajo; la textura arranca por abajo.
-                    char p = rows[h - 1 - y][x];
-                    pixels[y * w + x] = p == 'L' ? light : p == 'S' ? shade : clear;
-                }
-
-                chunkSprites[c * ChunkShapes.Length + s] =
-                    CreatePixelSprite(w, h, pixels, new Vector2(0.5f, 0.5f), "SauceChunk" + c + "_" + s);
-            }
-        }
-
-        return chunkSprites;
-    }
-
-    private static void RebuildSauceTrail(SauceTrail t)
-    {
-        int n = t.points.Count;
-        var local = new Vector3[n];
-        var glossLocal = new Vector3[n];
-        Transform root = t.root.transform;
-
-        float total = 0f;
-        var distances = new float[n];
-        for (int i = 0; i < n; i++)
-        {
-            if (i > 0)
-                total += Vector2.Distance(t.points[i - 1], t.points[i]);
-            distances[i] = total;
-
-            Vector3 p = t.points[i];
-            local[i] = root.InverseTransformPoint(p);
-            // El brillo va corrido hacia arriba, donde le pega la luz al cordón.
-            glossLocal[i] = root.InverseTransformPoint(p + Vector3.up * t.widths[i] * 0.18f);
-        }
-
-        AnimationCurve bodyCurve = new AnimationCurve();
-        AnimationCurve outlineCurve = new AnimationCurve();
-        AnimationCurve glossCurve = new AnimationCurve();
-        float lastTime = -1f;
-        for (int i = 0; i < n; i++)
-        {
-            float time = total > 0.0001f ? distances[i] / total : (float)i / Mathf.Max(n - 1, 1);
-            if (time <= lastTime)
-                continue;
-            lastTime = time;
-
-            float w = t.widths[i];
-            // El brillo aparece a tramos: corrido de punta a punta parecía un tubo de plástico.
-            float glossAmount = Mathf.Clamp01((Mathf.PerlinNoise(t.glossSeed + i * 0.3f, 7.1f) - 0.4f) * 4f);
-            bodyCurve.AddKey(time, w);
-            outlineCurve.AddKey(time, w * 1.35f);
-            glossCurve.AddKey(time, w * 0.3f * glossAmount);
-        }
-
-        ApplyTrailLine(t.outline, local, outlineCurve);
-        ApplyTrailLine(t.body, local, bodyCurve);
-        ApplyTrailLine(t.gloss, glossLocal, glossCurve);
-    }
-
-    private static void ApplyTrailLine(LineRenderer line, Vector3[] positions, AnimationCurve widthCurve)
-    {
-        line.positionCount = positions.Length;
-        line.SetPositions(positions);
-        line.widthMultiplier = 1f;
-        line.widthCurve = widthCurve;
-    }
-
-    private void SpawnSplatter()
-    {
-        // 0 recién nacido, 1 charco completo: las manchas crecen con el charco, así se nota que se junta salsa.
-        float growth = splatterSpread > 0f ? Mathf.Clamp01(puddleRadius / splatterSpread) : 1f;
-        float size = Mathf.Max(
-            splatterSize * Mathf.Lerp(0.7f, puddleFullSizeScale, growth) + Random.Range(-splatterSizeVariation, splatterSizeVariation),
-            0.01f);
-
-        // La tabla es 2.5D: la salsa se reparte en una elipse aplastada, no en una línea.
-        // Más denso al centro que en el borde, como un charco que se expande.
-        Vector2 spread = Random.insideUnitCircle * puddleRadius * Mathf.Lerp(0.5f, 1f, Random.value);
-        Vector3 point = impactPoint + new Vector3(spread.x, spread.y * perspectiveSquash, 0f);
-        BuildFoodDropZone.TryClampToPlateSurface(point, size * 0.5f, out point);
-        point.z = impactPoint.z;
-
-        GameObject splatterGo = CreateSplatter(point, size);
-        ScalePunch.PopIn(splatterGo.transform, 0.3f, 0.12f);
-
-        if (Random.value < dropletChance)
-            SpawnDroplet(point, size);
-    }
-
-    /// <summary>
-    /// Mancha chica que cae sobre el cordón mientras se mueve el frasco, corrida apenas de la línea:
-    /// ensucia el borde y lo deja desparejo. A veces salta una gotita.
-    /// </summary>
-    private void SpawnTrailSplatter()
-    {
-        float size = Mathf.Max(
-            splatterSize * trailSplatterSizeScale + Random.Range(-splatterSizeVariation, splatterSizeVariation) * trailSplatterSizeScale,
-            0.01f);
-
-        Vector2 offset = Random.insideUnitCircle * (sauceTrailWidth * trailSplatterSpread);
-        Vector3 point = impactPoint + new Vector3(offset.x, offset.y * perspectiveSquash, 0f);
-        BuildFoodDropZone.TryClampToPlateSurface(point, size * 0.5f, out point);
-        point.z = impactPoint.z;
-
-        GameObject splatterGo = CreateSplatter(point, size);
-        ScalePunch.PopIn(splatterGo.transform, 0.3f, 0.12f);
-
-        if (Random.value < trailDropletChance)
-            SpawnDroplet(point, size);
-    }
-
-    private GameObject CreateSplatter(Vector3 position, float size)
-    {
-        GameObject splatterGo = new GameObject("SauceSplatter");
-        splatterGo.transform.position = position;
-
-        SpriteRenderer sr = splatterGo.AddComponent<SpriteRenderer>();
-        bool customSprite = splatterSprites != null && splatterSprites.Length > 0;
-        sr.sprite = customSprite ? splatterSprites[Random.Range(0, splatterSprites.Length)] : GetSplatterSprite();
-        sr.sortingOrder = splatterSortingOrder;
-
-        if (customSprite)
-        {
-            // Los sprites ya traen color, perspectiva y brillo: solo se varía apenas el tono.
-            float tone = Random.Range(0.88f, 1f);
-            sr.color = new Color(tone, tone, tone, 1f);
-        }
-        else
-        {
-            Color c = sauceColor;
-            c.a = Random.Range(0.7f, 1f);
-            sr.color = c;
-        }
-
-        // Sin rotación al azar (rompería la perspectiva de la tabla): solo espejo horizontal.
-        float scale = size / Mathf.Max(sr.sprite.bounds.size.x, 0.0001f);
-        float flip = Random.value < 0.5f ? -1f : 1f;
-        float squash = customSprite ? 1f : perspectiveSquash;
-        splatterGo.transform.localScale = new Vector3(scale * flip, scale * squash, 1f);
-
-        if (splatterParent != null)
-            splatterGo.transform.SetParent(splatterParent, true);
-
-        activeSplatters.Add(splatterGo);
-        return splatterGo;
-    }
-
-    /// <summary>
-    /// Una gotita salta del impacto en un arco corto y bajo, y queda como salpicadura chica.
+    /// Una gotita salta del impacto en un arco corto y bajo, y moja el charco donde cae.
     /// Nunca sale del plato: el destino se lleva adentro del borde.
     /// </summary>
-    private void SpawnDroplet(Vector3 from, float size)
+    private void SpawnDroplet(Vector3 from)
     {
+        if (streamFX == null)
+            return;
+
         Vector2 dir = Random.insideUnitCircle.normalized;
-        float distance = dropletDistance * Random.Range(0.5f, 1f);
-        float dropletSize = Mathf.Max(size * 0.3f, 0.01f);
+        float distance = dropletDistance * Random.Range(0.4f, 1f);
 
         Vector3 target = from + new Vector3(dir.x, dir.y * perspectiveSquash, 0f) * distance;
-        BuildFoodDropZone.TryClampToPlateSurface(target, dropletSize * 0.5f, out target);
+        BuildFoodDropZone.TryClampToPlateSurface(target, saucePixelSize, out target);
         target.z = from.z;
 
-        GameObject droplet = CreateSplatter(from, dropletSize);
-        StartCoroutine(FlyDroplet(droplet.transform, from, target));
-    }
-
-    private static IEnumerator FlyDroplet(Transform droplet, Vector3 from, Vector3 to)
-    {
-        const float duration = 0.14f;
-        // El salto es proporcional a la distancia: una gota que cae cerca apenas se levanta.
-        float arcHeight = Vector2.Distance(from, to) * 0.3f;
-
-        for (float t = 0f; t < duration; t += Time.deltaTime)
-        {
-            if (droplet == null)
-                yield break;
-
-            float k = t / duration;
-            droplet.position = Vector3.Lerp(from, to, k) + Vector3.up * (arcHeight * 4f * k * (1f - k));
-            yield return null;
-        }
-
-        if (droplet != null)
-            droplet.position = to;
-    }
-
-    private Sprite GetSplatterSprite()
-    {
-        if (generatedCircleSprite != null)
-            return generatedCircleSprite;
-
-        generatedCircleSprite = GenerateCircleSprite();
-        return generatedCircleSprite;
-    }
-
-    private Sprite GenerateCircleSprite()
-    {
-        const int size = 32;
-        const float radius = size * 0.5f;
-        const float edgeSoftness = 1.5f;
-
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Bilinear;
-
-        Color[] pixels = new Color[size * size];
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                float dx = x - radius + 0.5f;
-                float dy = y - radius + 0.5f;
-                float dist = Mathf.Sqrt(dx * dx + dy * dy);
-
-                float alpha;
-                if (dist <= radius - edgeSoftness)
-                    alpha = 1f;
-                else if (dist >= radius)
-                    alpha = 0f;
-                else
-                    alpha = 1f - (dist - (radius - edgeSoftness)) / edgeSoftness;
-
-                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
-            }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        return Sprite.Create(
-            tex,
-            new Rect(0, 0, size, size),
-            new Vector2(0.5f, 0.5f),
-            size
-        );
+        streamFX.SpawnDroplet(from, target, Random.value < 0.35f ? 2 : 1);
     }
 
     public void ClearSplatters()
     {
-        for (int i = 0; i < activeSplatters.Count; i++)
+        for (int i = 0; i < sauceDecals.Count; i++)
         {
-            if (activeSplatters[i] != null)
-                Destroy(activeSplatters[i]);
+            if (sauceDecals[i] != null)
+                Destroy(sauceDecals[i].gameObject);
         }
 
-        activeSplatters.Clear();
+        sauceDecals.Clear();
+        currentDecal = null;
     }
 
-    /// <summary>Destruye los splatters desde el índice indicado en adelante. Usado por el undo de una vertida.</summary>
+    /// <summary>
+    /// Destruye los charcos desde el índice indicado en adelante y vuelve a mostrar el último que
+    /// queda (estaba escondido adentro del siguiente). Usado por el undo de una vertida.
+    /// </summary>
     public void RemoveSplattersFrom(int startIndex)
     {
         if (startIndex < 0)
             startIndex = 0;
 
-        for (int i = activeSplatters.Count - 1; i >= startIndex; i--)
+        for (int i = sauceDecals.Count - 1; i >= startIndex; i--)
         {
-            if (activeSplatters[i] != null)
-                Destroy(activeSplatters[i]);
+            if (sauceDecals[i] != null)
+                Destroy(sauceDecals[i].gameObject);
 
-            activeSplatters.RemoveAt(i);
+            sauceDecals.RemoveAt(i);
         }
+
+        currentDecal = null;
+        if (sauceDecals.Count > 0 && sauceDecals[sauceDecals.Count - 1] != null)
+            sauceDecals[sauceDecals.Count - 1].SetVisible(true);
     }
 
     /// <summary>Restaura la cantidad de salsa del frasco. Usado por el undo de una vertida.</summary>
@@ -1707,8 +1264,9 @@ public class ToppingDraggable : MonoBehaviour
     }
 
     /// <summary>
-    /// Agrega a la lista las salpicaduras que cayeron sobre el plato (las derramadas en la tabla quedan
-    /// afuera). PlateDeliveryDraggable las arrastra con el plato: son el único visual de la salsa.
+    /// Agrega a la lista los charcos que están sobre el plato (su raíz es el centro de la loza; uno
+    /// derramado en la tabla queda afuera). PlateDeliveryDraggable los arrastra con el plato: son el
+    /// único visual de la salsa.
     /// </summary>
     public static void CollectPlateSplatters(List<Transform> into)
     {
@@ -1721,12 +1279,12 @@ public class ToppingDraggable : MonoBehaviour
             if (instance == null)
                 continue;
 
-            List<GameObject> splatters = instance.activeSplatters;
-            for (int j = 0; j < splatters.Count; j++)
+            List<SauceDecal> decals = instance.sauceDecals;
+            for (int j = 0; j < decals.Count; j++)
             {
-                GameObject splatter = splatters[j];
-                if (splatter != null && BuildFoodDropZone.IsOnPlateSurface(splatter.transform.position))
-                    into.Add(splatter.transform);
+                SauceDecal decal = decals[j];
+                if (decal != null && BuildFoodDropZone.IsOnPlateSurface(decal.transform.position))
+                    into.Add(decal.transform);
             }
         }
     }
@@ -1738,6 +1296,8 @@ public class ToppingDraggable : MonoBehaviour
             if (ActiveInstances[i] != null)
                 ActiveInstances[i].ClearSplatters();
         }
+
+        decalSortingCounter = 0;
     }
 
     private void RegisterTopping()
@@ -1760,7 +1320,7 @@ public class ToppingDraggable : MonoBehaviour
             {
                 station.AddTopping(toppingData);
                 BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
-                    station, null, toppingData, false, this, activeSplatters.Count, currentSauceAmount));
+                    station, null, toppingData, false, this, sauceDecals.Count, currentSauceAmount));
                 Debug.Log("[ToppingDraggable] Topping registrado (fallback): " + toppingData.toppingName);
                 TutorialSignals.Raise(TutorialSignal.ToppingAdded, target: transform);
             }
@@ -1774,7 +1334,7 @@ public class ToppingDraggable : MonoBehaviour
         // Sin visual extra en el plato: la salsa vertida (las salpicaduras) ya lo muestra.
         zone.BuildStation.AddTopping(toppingData);
         BuildUndoHistory.Instance?.Push(new AddToppingUndoAction(
-            zone.BuildStation, zone, toppingData, false, this, activeSplatters.Count, currentSauceAmount));
+            zone.BuildStation, zone, toppingData, false, this, sauceDecals.Count, currentSauceAmount));
         Debug.Log("[ToppingDraggable] Topping registrado: " + toppingData.toppingName);
         TutorialSignals.Raise(TutorialSignal.ToppingAdded, target: transform);
     }
