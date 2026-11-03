@@ -7,8 +7,8 @@ using UnityEngine;
 /// Al alcanzar <see cref="MaxStrikes"/> se activa el estado de cierre anticipado: CustomerSystem deja
 /// de generar clientes nuevos y la noche termina cuando ya no queda ninguno activo.
 ///
-/// Singleton de escena, null-safe: si no existe en la escena (ej. TutorialScene) los
-/// llamadores usan los helpers estáticos y nada cambia (mismo patrón que TutorialManager).
+/// Singleton de escena, null-safe: si no existe en la escena los llamadores usan los
+/// helpers estáticos y nada cambia.
 /// Los strikes pertenecen sólo a la noche actual: <see cref="ResetForNewNight"/> los limpia.
 /// </summary>
 public class StrikeSystem : MonoBehaviour

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>Un elemento al que puede saltar la selección del gamepad, medido en pantalla.</summary>
 public struct NavTarget
 {
-    public enum Kind { UI, WorldCollider, GridSlot, GridBlock, Tray, PlateBody }
+    public enum Kind { UI, WorldCollider, GridSlot, GridBlock, PlateBody }
 
     public Object key;
     public Kind kind;
@@ -32,10 +32,10 @@ public struct NavTarget
 /// cómo se miden en pantalla. Todo lo que decide "a dónde puede saltar la selección" vive acá.
 ///
 ///  • Sin nada agarrado: botones de UI y, en el mundo, todo lo que se puede agarrar o clickear
-///    (celdas del stock, panes/guarniciones/frascos, carne y carbón de la capa activa, bandeja,
+///    (celdas del stock, panes/guarniciones/frascos, carne y carbón de la capa activa,
 ///    carne del plato, el plato, clientes, pestañas de los paneles, el botón de capa y la radio).
 ///  • Arrastrando: solo los lugares donde soltar lo agarrado (huecos válidos de la parrilla,
-///    plato, bandeja, tacho, zona de vertido o clientes), según <see cref="DragKind"/>. La carne
+///    plato, tacho, zona de vertido o clientes), según <see cref="DragKind"/>. La carne
 ///    no recorre huecos sueltos sino bloques del tamaño real del corte (con su rotación): cada
 ///    salto corre el bloque un slot, y el corte se dibuja encima del bloque donde va a caer.
 ///  • Con stock en la mano (<see cref="StockPlacementMode"/>, no hay botón apretado):
@@ -51,7 +51,6 @@ public static class GamepadNavTargets
         None,
         GrillMeat,
         GrillCoal,
-        TrayMeat,
         PlateMeat,
         WholePlate,
         PlateExtra,
@@ -85,7 +84,6 @@ public static class GamepadNavTargets
 
         if (pressed.TryGetComponent<Meat>(out _)) return DragKind.GrillMeat;
         if (pressed.TryGetComponent<Coal>(out _)) return DragKind.GrillCoal;
-        if (pressed.TryGetComponent<ToBuildDraggableMeat>(out _)) return DragKind.TrayMeat;
         if (pressed.TryGetComponent<BuildDraggableFoodItem>(out _)) return DragKind.PlateExtra;
         if (pressed.TryGetComponent<ToppingDraggable>(out _)) return DragKind.Sauce;
         return DragKind.None;
@@ -155,7 +153,6 @@ public static class GamepadNavTargets
             if (Coal.ActiveCoals[i] != null)
                 Add(into, Coal.ActiveCoals[i].GetComponent<Collider2D>(), NavTarget.Kind.WorldCollider, false);
         }
-        AddAllColliders<ToBuildDraggableMeat>(into);
         AddAllColliders<PlateDeliveryDraggable>(into);
 
         IReadOnlyList<BuildFoodDropZone> zones = BuildFoodDropZone.Zones;
@@ -189,12 +186,7 @@ public static class GamepadNavTargets
                 AddGridSlots(into, ItemType.Coal, pressed);
                 AddAllColliders<TrashZone>(into, true);
                 break;
-            case DragKind.TrayMeat:
-                AddPlateZones(into);
-                AddMeatBlocks(into, drag, pressed);
-                break;
             case DragKind.PlateMeat:
-                AddTray(into);
                 AddMeatBlocks(into, drag, pressed);
                 AddPlateZones(into);
                 break;
@@ -273,13 +265,6 @@ public static class GamepadNavTargets
                     incoming = pressed;
                 }
                 break;
-            case DragKind.TrayMeat:
-                if (pressed != null && pressed.TryGetComponent(out ToBuildDraggableMeat tray))
-                {
-                    cut = tray.Cut;
-                    rotated = tray.IsGridRotated;
-                }
-                break;
             case DragKind.PlateMeat:
                 PlateDeliveryDraggable.TryGetDraggedCut(out cut, out rotated);
                 break;
@@ -302,13 +287,6 @@ public static class GamepadNavTargets
             if (zones[i] != null)
                 Add(into, zones[i].ZoneCollider, NavTarget.Kind.WorldCollider, true);
         }
-    }
-
-    private static void AddTray(List<NavTarget> into)
-    {
-        MeatTransferBuffer buffer = Object.FindFirstObjectByType<MeatTransferBuffer>();
-        if (buffer != null && buffer.TrayAnchor != null)
-            Add(into, buffer.TrayAnchor, NavTarget.Kind.Tray, true);
     }
 
     private static void Add(List<NavTarget> into, Object key, NavTarget.Kind kind, bool drop)
@@ -387,8 +365,6 @@ public static class GamepadNavTargets
                 return MeasureSlot((GridSlot)target.key, ref target);
             case NavTarget.Kind.GridBlock:
                 return MeasureBlock(ref target);
-            case NavTarget.Kind.Tray:
-                return MeasureTray((Transform)target.key, ref target);
             case NavTarget.Kind.PlateBody:
                 return MeasurePlateBody((BuildFoodDropZone)target.key, ref target);
         }
@@ -458,30 +434,6 @@ public static class GamepadNavTargets
         return sr != null && sr.sprite != null
             ? sr.bounds
             : new Bounds(slot.transform.position, new Vector3(SlotFallbackSize, SlotFallbackSize, 0f));
-    }
-
-    private static bool MeasureTray(Transform anchor, ref NavTarget target)
-    {
-        if (anchor == null || !anchor.gameObject.activeInHierarchy)
-            return false;
-
-        bool any = false;
-        Bounds bounds = default;
-        foreach (Collider2D col in anchor.GetComponentsInChildren<Collider2D>())
-        {
-            if (!col.enabled) continue;
-            if (any) bounds.Encapsulate(col.bounds); else bounds = col.bounds;
-            any = true;
-        }
-        foreach (SpriteRenderer sr in anchor.GetComponentsInChildren<SpriteRenderer>())
-        {
-            if (sr.sprite == null) continue;
-            if (any) bounds.Encapsulate(sr.bounds); else bounds = sr.bounds;
-            any = true;
-        }
-        if (!any) return false;
-
-        return Project(new Vector3(bounds.center.x, bounds.center.y, anchor.position.z), bounds, anchor, ref target);
     }
 
     private static bool MeasurePlateBody(BuildFoodDropZone zone, ref NavTarget target)

@@ -38,19 +38,6 @@ public static class CookingDeliveryEvaluator
     /// </summary>
     public static DeliveryValidation Validate(IReadOnlyList<BuildStationSystem.CutSideStates> sideStates)
     {
-        return Validate(sideStates, null, null);
-    }
-
-    /// <summary>
-    /// Igual que Validate, pero con una excepción opcional por corte: si isCookingExempt(cut)
-    /// es true, esa pieza cruda o quemada se evalúa como cualquier otra y no suma strike
-    /// (usado por el tutorial). Sin el predicado, el comportamiento es el normal.
-    /// </summary>
-    public static DeliveryValidation Validate(
-        IReadOnlyList<BuildStationSystem.CutSideStates> sideStates,
-        IReadOnlyList<MeatCutSO> cuts,
-        System.Func<MeatCutSO, bool> isCookingExempt)
-    {
         var result = new DeliveryValidation
         {
             burnedIndices = new List<int>(),
@@ -63,11 +50,6 @@ public static class CookingDeliveryEvaluator
         for (int i = 0; i < sideStates.Count; i++)
         {
             if (!sideStates[i].IsBurned && !sideStates[i].IsRaw)
-                continue;
-
-            // Excepción de entrega (tutorial): los cortes eximidos se cobran como cualquier
-            // otro y no suman strike, así el guion del tutorial no se rompe.
-            if (isCookingExempt != null && cuts != null && i < cuts.Count && isCookingExempt(cuts[i]))
                 continue;
 
             // Quemado tiene prioridad: una pieza con una cara quemada cuenta solo como quemada.

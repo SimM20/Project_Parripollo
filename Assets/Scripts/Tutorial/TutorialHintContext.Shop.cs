@@ -95,7 +95,7 @@ public partial class TutorialHintContext
         switch (anchor)
         {
             case HintAnchorId.ShopRequirements:
-                // Sin mínimos (ShopTutorial) el panel está apagado: no hay nada que señalar.
+                // Sin mínimos el panel está apagado: no hay nada que señalar.
                 if (!shopReady || shopRequirements == null)
                     return null;
                 Transform panel = shopRequirements.Panel;

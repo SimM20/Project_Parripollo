@@ -171,7 +171,7 @@ public static class EconomySimulator
             d.defeat = sso.FindProperty("runDefeatConfig").objectReferenceValue as RunDefeatConfigSO;
         }
         if (d.maxStrikes <= 0) d.maxStrikes = 3;
-        if (d.defeat == null) d.defeat = AssetDatabase.LoadAssetAtPath<RunDefeatConfigSO>("Assets/ScriptableObjects/RunDefeatConfig.asset");
+        if (d.defeat == null) d.defeat = AssetDatabase.LoadAssetAtPath<RunDefeatConfigSO>("Assets/Data/Config/RunDefeatConfig.asset");
 
         var cooler = UnityEngine.Object.FindFirstObjectByType<CoolerSystem>(FindObjectsInactive.Include);
         if (cooler != null)
@@ -187,10 +187,10 @@ public static class EconomySimulator
         }
         d.coalStorageCap = CoolerSystem.CoalStorageCap;
 
-        var catalog = AssetDatabase.LoadAssetAtPath<FoodCatalogSO>("Assets/ScriptableObjects/FoodCatalog.asset");
+        var catalog = AssetDatabase.LoadAssetAtPath<FoodCatalogSO>("Assets/Data/Config/FoodCatalog.asset");
         d.toppings = catalog.GetAvailableToppings().Where(t => t != null).ToList();
         d.upgrades = catalog.GetAllUpgrades().Where(u => u != null).ToList();
-        d.coal = AssetDatabase.LoadAssetAtPath<ShopConfigSO>("Assets/ScriptableObjects/ShopConfig.asset").coal;
+        d.coal = AssetDatabase.LoadAssetAtPath<ShopConfigSO>("Assets/Data/Config/ShopConfig.asset").coal;
         d.feedbackSeconds = CustomerFeedbackConfigSO.Instance.FeedbackDuration;
 
         const int samples = 64;

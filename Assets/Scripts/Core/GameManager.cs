@@ -6,9 +6,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField] private CustomerSystem customerSystem;
     [SerializeField] private GrillSystem grillSystem;
-    [SerializeField] private ViewManager viewManager;
     [SerializeField] private MonoBehaviour meatTransferBuffer;
-    [SerializeField] private MonoBehaviour coalTransferBuffer;
     [SerializeField] private BuildStationSystem buildStationSystem;
     [SerializeField] private FoodCatalogSO catalog;
     [SerializeField] private FoodAvailabilityService foodAvailabilityService;
@@ -89,8 +87,7 @@ public class GameManager : MonoBehaviour
         // ── Paneles laterales ──
         if (InputManager.WasPressed(GameAction.ToggleStockPanel) && StockPanelController.Instance != null)
         {
-            if (StockPanelController.Instance.IsOpen || TutorialManager.CheckStockPanelOpenAllowed())
-                StockPanelController.Instance.Toggle();
+            StockPanelController.Instance.Toggle();
         }
 
         if (InputManager.WasPressed(GameAction.ToggleToppingsPanel) && ToppingsPanelController.Instance != null)
@@ -100,12 +97,12 @@ public class GameManager : MonoBehaviour
         if (InputManager.WasPressed(GameAction.ToggleGrillLayer))
             TryToggleGrillLayer();
 
-        if (InputManager.WasPressed(GameAction.CleanAshes) && TutorialManager.CheckCleanAshesAllowed())
+        if (InputManager.WasPressed(GameAction.CleanAshes))
             CleanAshes();
 
         // ── Armado y entrega (todo dentro de la vista Parrilla) ──
         // LT es también Rotate: con una pieza en la mano (botón principal apretado) gira la pieza y no toca el plato.
-        if (InputManager.WasPressed(GameAction.ClearPlate) && !InputManager.PrimaryHeld && TutorialManager.CheckClearBuildPlateAllowed())
+        if (InputManager.WasPressed(GameAction.ClearPlate) && !InputManager.PrimaryHeld)
         {
             if (!buildStationSystem.IsEmpty)
                 GamepadHaptics.Play(HapticEvent.PlateCleared);
@@ -331,13 +328,9 @@ public class GameManager : MonoBehaviour
         }
 
         // ── Validación de cocción: Crudo/Quemado no impiden entregar, pero cuestan un strike ──
-        // El tutorial exime al chorizo tutorial para no romper el guion; en GameScene
-        // no hay TutorialManager, así que el predicado siempre es false y nada cambia.
         var cuts = buildStationSystem.AssembledCuts;
         var sideStates = buildStationSystem.AssembledCutSideStates;
-
-        result.validation = CookingDeliveryEvaluator.Validate(
-            sideStates, cuts, TutorialManager.IsCookingDeliveryExempt);
+        result.validation = CookingDeliveryEvaluator.Validate(sideStates);
 
         // ── Evaluación económica por corte: peor desfase de ambas caras ──
         // Se calcula aunque la entrega vaya a costar un strike: el preview del arrastre tiñe
@@ -588,10 +581,6 @@ public class GameManager : MonoBehaviour
 
     private void EndNight(bool endedEarlyByPlayer)
     {
-        // En el tutorial no hay jornada que cerrar: salir no suma un día ni cuenta para la racha.
-        if (TutorialManager.TryExitTutorial())
-            return;
-
         customerSystem.OnNightEnded -= EndNight;
 
         DayClock.Instance?.StopDay();

@@ -77,9 +77,8 @@ public readonly struct TutorialSignalArgs
 }
 
 /// <summary>
-/// Punto único por donde el juego avisa al tutorial. Reemplaza a los viejos
-/// <c>TutorialManager.Notify*</c>: el juego no sabe quién escucha (los carteles contextuales,
-/// el TutorialManager de las escenas de tutorial o nadie).
+/// Punto único por donde el juego avisa al tutorial: el juego no sabe quién escucha
+/// (los carteles contextuales o nadie).
 ///
 /// Las señales se disparan en el mismo frame y en el mismo orden en que pasan las cosas.
 /// Ninguna sale de un <c>Update</c>: nada de esto corre por frame.
