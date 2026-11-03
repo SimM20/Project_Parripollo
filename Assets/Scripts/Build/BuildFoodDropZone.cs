@@ -316,6 +316,36 @@ public class BuildFoodDropZone : MonoBehaviour
     }
 
     /// <summary>
+    /// Óvalo de la loza (ver <see cref="TryGetSurfaceEllipse"/>) del plato vivo más cercano al punto,
+    /// en mundo. False si no hay plato vivo. Lo usa la salsa para dibujar el charco sobre la loza.
+    /// </summary>
+    public static bool TryGetNearestPlateSurface(Vector3 worldPoint, out Vector2 center, out Vector2 extents)
+    {
+        center = Vector2.zero;
+        extents = Vector2.zero;
+        bool found = false;
+        float bestSqr = float.MaxValue;
+
+        for (int i = 0; i < ActiveZones.Count; i++)
+        {
+            BuildFoodDropZone zone = ActiveZones[i];
+            if (zone == null || !zone.TryGetSurfaceEllipse(out Vector2 c, out Vector2 e))
+                continue;
+
+            float sqr = ((Vector2)worldPoint - c).sqrMagnitude;
+            if (sqr < bestSqr)
+            {
+                bestSqr = sqr;
+                center = c;
+                extents = e;
+                found = true;
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
     /// Lleva el punto adentro de la loza del plato más cercano (el mismo óvalo que
     /// <see cref="IsOnPlateSurface"/>), achicado en <paramref name="margin"/> para que lo que se apoye
     /// ahí no asome por el borde. False si no hay plato vivo: el punto queda como estaba.

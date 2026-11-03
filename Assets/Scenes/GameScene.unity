@@ -9000,24 +9000,44 @@ MonoBehaviour:
   sauceWidth: 0.1
   sauceLength: 2
   pourOrigin: {fileID: 355625164}
-  streamSegments: 10
-  streamChaseSpeed: 12
+  streamSegments: 16
+  streamSwayPerSpeed: 0.06
+  streamMaxSway: 0.25
+  streamSwaySmoothTime: 0.08
   wobbleAmplitude: 0.04
   wobbleSpeed: 4
   streamGrowSpeed: 3
   streamFallAcceleration: 14
+  saucePixelSize: 0.02
+  sauceOutlineColor: {r: 0.10980392, g: 0.18039216, b: 0.06666667, a: 1}
+  sauceShadowColor: {r: 0.17254902, g: 0.2901961, b: 0.101960786, a: 1}
+  sauceLightColor: {r: 0.34509805, g: 0.5372549, b: 0.18431373, a: 1}
+  sauceHighlightColor: {r: 0.6509804, g: 0.8117647, b: 0.41568628, a: 1}
+  sauceHaloColor: {r: 0.84705883, g: 0.76862746, b: 0.46666667, a: 0.4}
+  sauceChunkColors:
+  - {r: 0.078431375, g: 0.1254902, b: 0.047058824, a: 1}
+  - {r: 0.078431375, g: 0.1254902, b: 0.047058824, a: 1}
+  - {r: 0.10980392, g: 0.18039216, b: 0.06666667, a: 1}
+  - {r: 0.84705883, g: 0.76862746, b: 0.46666667, a: 1}
+  - {r: 0.7019608, g: 0.1882353, b: 0.10980392, a: 1}
+  streamChunkRate: 60
+  puddleChunkDensity: 0.12
+  showLandingMarker: 1
+  landingMarkerColor: {r: 1, g: 1, b: 1, a: 1}
+  landingMarkerSize: 0.35
+  previewLineWidth: 0.035
+  previewDashesPerUnit: 6
+  previewFlowSpeed: 2
+  landingMarkerSortingOrder: 5600
   splatterInterval: 0.05
   splatterSize: 0.1
-  splatterSizeVariation: 0.04
   splatterSpread: 0.42
-  puddleStartSpread: 0.3
+  puddleStartSpread: 0.85
+  landingSplashCount: 9
   puddleGrowTime: 0.8
-  puddleFullSizeScale: 1.3
-  splatterSprites:
-  - {fileID: 21300000, guid: b64a7c878f624614a54833dc145357ad, type: 3}
-  - {fileID: 21300000, guid: 9c1a46fee7bd4c59a42528733b55441c, type: 3}
-  - {fileID: 21300000, guid: 8d9aac33047f44d4a636f66eee8f4cf7, type: 3}
-  - {fileID: 21300000, guid: c78c5c6cf8174ba3aeeee1330f921a36, type: 3}
+  pourVolumeRate: 1400
+  sauceThickness: 0.35
+  rippleInterval: 0.22
   perspectiveSquash: 0.6
   dropletChance: 0.12
   dropletDistance: 0.1
@@ -13126,27 +13146,41 @@ MonoBehaviour:
   sauceWidth: 0.1
   sauceLength: 2
   pourOrigin: {fileID: 1826849858}
-  streamSegments: 10
-  streamChaseSpeed: 12
+  streamSegments: 16
+  streamSwayPerSpeed: 0.06
+  streamMaxSway: 0.25
+  streamSwaySmoothTime: 0.08
   wobbleAmplitude: 0.04
   wobbleSpeed: 4
   streamGrowSpeed: 3
   streamFallAcceleration: 14
+  saucePixelSize: 0.02
+  sauceOutlineColor: {r: 0.34509805, g: 0.105882354, b: 0.06666667, a: 1}
+  sauceShadowColor: {r: 0.52156866, g: 0.1764706, b: 0.11372549, a: 1}
+  sauceLightColor: {r: 0.7921569, g: 0.3882353, b: 0.23137255, a: 1}
+  sauceHighlightColor: {r: 0.92941177, g: 0.654902, b: 0.49019608, a: 1}
+  sauceHaloColor: {r: 0.7921569, g: 0.3882353, b: 0.23137255, a: 0.3019608}
   sauceChunkColors:
   - {r: 0.941, g: 0.902, b: 0.808, a: 1}
   - {r: 0.518, g: 0.784, b: 0.29, a: 1}
+  streamChunkRate: 60
+  puddleChunkDensity: 0.12
+  showLandingMarker: 1
+  landingMarkerColor: {r: 1, g: 1, b: 1, a: 1}
+  landingMarkerSize: 0.35
+  previewLineWidth: 0.035
+  previewDashesPerUnit: 6
+  previewFlowSpeed: 2
+  landingMarkerSortingOrder: 5600
   splatterInterval: 0.05
   splatterSize: 0.1
-  splatterSizeVariation: 0.04
   splatterSpread: 0.3
-  puddleStartSpread: 0.3
+  puddleStartSpread: 0.85
+  landingSplashCount: 9
   puddleGrowTime: 0.8
-  puddleFullSizeScale: 1.3
-  splatterSprites:
-  - {fileID: 21300000, guid: 02a1bc1ceddf4fd088650632c1e2b07f, type: 3}
-  - {fileID: 21300000, guid: f176f39a22214e1c8783ec622ef4d00b, type: 3}
-  - {fileID: 21300000, guid: f1eee5e4bb6948a1a7ac2857dd17192e, type: 3}
-  - {fileID: 21300000, guid: 2701dcb84ea44979ad28e9a4e464a74e, type: 3}
+  pourVolumeRate: 1400
+  sauceThickness: 0.35
+  rippleInterval: 0.22
   perspectiveSquash: 0.6
   dropletChance: 0.12
   dropletDistance: 0.1
