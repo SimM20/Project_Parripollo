@@ -108,6 +108,10 @@ public static class SceneManagementUtils
         DayStats.ResetDay();
         RadioStation.Shutdown(); // DDOL: sin esto la canción seguiría (muda) en la run siguiente
 
+        // Volver al menú reinicia el tutorial: la próxima partida vuelve a mostrar todas las ayudas.
+        if (TutorialProgress.AnyLearned)
+            TutorialProgress.Reset();
+
         LoadNow("MainMenuScene");
     }
 }
