@@ -2,6 +2,18 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-05** (rama `development`) — **parrilla y tabla en pixel art, parrilla de 5 filas**.
+> Sprites nuevos `Sprites/Stall/Parrilla Pixel.png` (265x100, en `GrillView/Parrilla`) y `Tabla Pixel.png` (205x90, en
+> `GrillView/ToBuild`), con su `.ase` al lado. **Todo arte dibujado sobre el lienzo de 480x270 va a PPU 25** (Point, sin
+> compresión): 480 px = 19,2 unidades, el ancho del mostrador. Con el PPU 100 por defecto se ve 4 veces más chico. Además
+> `GrillView` tiene escala X 0,81: sus hijos llevan `localScale.x = 1,2346` para compensarla, como el mostrador.
+> La parrilla se dibujó con **5 filas de 12**: se prendió la quinta fila de `Grill` y de `CoalGrill` (120 slots activos, 60 de
+> cada capa; antes 96). Ambas grillas comparten posición y ya no tienen paso propio: `GridTransformGroup.rowSpacing` tiene 5
+> entradas medidas del dibujo (centro de fila y paso por fila en px × 0,04). Las celdas de las puntas son más angostas y el
+> grupo solo sabe de pasos parejos: el centro del slot se corre hasta 3,8 px (0,15 u) en la fila de abajo. Respecto de la
+> composición del artista (`TODOJUNTO.png`) se subió la parrilla para que entre entre las dos bandas de `MostradorFrente`.
+> El collider de `ToBuild` conserva su zona de mundo, salvo el borde izquierdo (x = 1,04, el marco de la parrilla).
+> `Parrilla 2.5.png` y `Tabla_correcta_2.png` quedaron sin referencias y pasaron a `_SinUso/Sprites/Stall/`.
 > Última actualización parcial: **2026-11-03** (rama `refactor/sin-sendmessage`) — **sin `SendMessage` y build con IL2CPP**.
 > Los eventos de puntero del mundo pasaron a interfaces (`Input/WorldPointerHandlers.cs`, `IWorldPointerXXXHandler`) y
 > `GameManager` llama directo a `MeatTransferBuffer`. *Scripting Backend* de Standalone = **IL2CPP** (stripping *Minimal*).
