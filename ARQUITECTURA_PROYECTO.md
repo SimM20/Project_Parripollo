@@ -2,6 +2,11 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-05** (rama `development`) — **logo del estudio al abrir el juego**. Escena nueva
+> `StudioSplashScene` (índice 0 del build): `StudioSplash` reproduce 60 cuadros a 25 fps desde `Sprites/Splash/StudioLogoSplash.png`
+> (38 cuadros únicos, PPU 25, Point, sin compresión), queda 0,6 s quieto y pasa al menú. Se saltea con `MenuSequence.SkipPressed`.
+> La escena lleva su propio `Init`, para aplicar la config antes del logo. La cámara es ortográfica de tamaño 5,4 (480x270 exactos)
+> y usa el color del velo de `SceneFadeIn`. Por ahora no tiene sonido.
 > Última actualización parcial: **2026-11-05** (rama `development`) — **parrilla y tabla en pixel art, parrilla de 5 filas**.
 > Sprites nuevos `Sprites/Stall/Parrilla Pixel.png` (265x100, en `GrillView/Parrilla`) y `Tabla Pixel.png` (205x90, en
 > `GrillView/ToBuild`), con su `.ase` al lado. **Todo arte dibujado sobre el lienzo de 480x270 va a PPU 25** (Point, sin
@@ -256,8 +261,8 @@
 | Idioma del dominio | Español (`Crudo`, `Jugoso`, `Hecho`, `Muy_Hecho`, `Pasado`, `Quemado`): nombres de enums, assets y campos |
 | Idiomas del juego | **Español** (fuente) e **inglés**, por tablas CSV — ver 3.11. Cortes de carne y toppings quedan en español en todos los idiomas |
 
-**Escenas (build order)**: `0 MainMenuScene` → `1 GameScene` → `2 EndScene` (y "Reintentar" vuelve a `GameScene`).
-Son las únicas tres escenas del proyecto. El tutorial vive dentro de `GameScene` como carteles contextuales (3.7).
+**Escenas (build order)**: `0 StudioSplashScene` → `1 MainMenuScene` → `2 GameScene` → `3 EndScene` (y "Reintentar" vuelve a `GameScene`).
+Son las únicas cuatro escenas del proyecto. `StudioSplashScene` solo corre al abrir el juego: reproduce el logo del estudio (`Feel/StudioSplash.cs`) y carga `MainMenuScene` por nombre. El tutorial vive dentro de `GameScene` como carteles contextuales (3.7).
 
 **Vista única.** Desde el refactor del 2026-08-29 (`9d0c1b5`, ver `PLAN_REFACTOR_BUILDVIEW_GRILLVIEW.md`) todo el
 gameplay de una noche —cocinar, armar el plato y entregar— ocurre **dentro de `GrillView`**. Desde 2026-11-02 ya no hay
