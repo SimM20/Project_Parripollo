@@ -231,6 +231,98 @@ public class ShopSystem : MonoBehaviour
     public void IncrementToppingQty(ToppingSO topping, int delta = 1)
         => SetToppingQty(topping, GetToppingCartQty(topping) + delta);
 
+    public IEnumerable<KeyValuePair<ToppingSO, int>> EnumerateToppingCart() => toppingCart;
+
+    /// <summary>Hay algo en el carrito (items o toppings).</summary>
+    public bool HasCartItems => cart.Count > 0 || toppingCart.Count > 0;
+
+    // ── Agregar / quitar del carrito (capa uGUI) ────────────────────────
+    /// <summary>
+    /// Se pueden sumar <paramref name="qty"/> unidades al carrito: el item se vende, no pasa el tope,
+    /// la plata alcanza para TODO el carrito y el carrito resultante no rompe los mínimos del próximo día.
+    /// </summary>
+    public bool CanAddToCart(ItemDataSO item, int qty, out bool blockedByMinimums)
+    {
+        blockedByMinimums = false;
+        if (!IsPurchasable(item) || qty <= 0) return false;
+        if (qty > GetMaxPurchaseQty(item) - GetCartQty(item)) return false;
+
+        float cost = item.basePrice * qty;
+        if (Wallet == null || !Wallet.CanAfford(CartTotal() + cost)) return false;
+
+        int meat = item is MeatCutSO ? qty : 0;
+        int coal = item is CoalSO coalItem ? Mathf.Max(1, coalItem.unitsPerBag) * qty : 0;
+
+        blockedByMinimums = !CartKeepsRunAlive(cost, meat, coal);
+        return !blockedByMinimums;
+    }
+
+    /// <summary>Igual que la sobrecarga de <see cref="ItemDataSO"/>: un topping nunca aporta al mínimo.</summary>
+    public bool CanAddToCart(ToppingSO topping, int qty, out bool blockedByMinimums)
+    {
+        blockedByMinimums = false;
+        if (!IsToppingPurchasable(topping) || qty <= 0) return false;
+        if (qty > GetMaxPurchaseQty(topping) - GetToppingCartQty(topping)) return false;
+
+        float cost = topping.purchasePrice * qty;
+        if (Wallet == null || !Wallet.CanAfford(CartTotal() + cost)) return false;
+
+        blockedByMinimums = !CartKeepsRunAlive(cost, 0, 0);
+        return !blockedByMinimums;
+    }
+
+    public bool TryAddToCart(ItemDataSO item, int qty)
+    {
+        if (!CanAddToCart(item, qty, out _)) return false;
+
+        SetQty(item, GetCartQty(item) + qty);
+        TutorialSignals.Raise(TutorialSignal.ShopCartAdded);
+        return true;
+    }
+
+    public bool TryAddToCart(ToppingSO topping, int qty)
+    {
+        if (!CanAddToCart(topping, qty, out _)) return false;
+
+        SetToppingQty(topping, GetToppingCartQty(topping) + qty);
+        TutorialSignals.Raise(TutorialSignal.ShopCartAdded);
+        return true;
+    }
+
+    /// <summary>Saca la línea entera. No pasa por <see cref="IsPurchasable"/>: lo que está en el carrito siempre se puede sacar.</summary>
+    public void RemoveFromCart(ItemDataSO item)
+    {
+        if (item != null && cart.Remove(item)) OnCartChanged?.Invoke();
+    }
+
+    public void RemoveFromCart(ToppingSO topping)
+    {
+        if (topping != null && toppingCart.Remove(topping)) OnCartChanged?.Invoke();
+    }
+
+    /// <summary>El carrito se puede pagar: tiene algo, alcanza la plata y no rompe los mínimos del próximo día.</summary>
+    public bool CanConfirmCart()
+    {
+        if (!HasCartItems || Wallet == null) return false;
+        return Wallet.CanAfford(CartTotal()) && CartKeepsRunAlive(0f, 0, 0);
+    }
+
+    /// <summary>Los mínimos siguen alcanzables pagando el carrito actual más un extra hipotético.</summary>
+    private bool CartKeepsRunAlive(float extraCost, int extraMeat, int extraCoal)
+    {
+        if (!EnforceRunMinimums) return true;
+
+        int meat = extraMeat;
+        int coal = extraCoal;
+        foreach (var kv in cart)
+        {
+            if (kv.Key is MeatCutSO) meat += kv.Value;
+            else if (kv.Key is CoalSO coalItem) coal += Mathf.Max(1, coalItem.unitsPerBag) * kv.Value;
+        }
+
+        return BuildRunStatus(CartTotal() + extraCost, meat, coal).CanContinue;
+    }
+
     public void ClearCart()
     {
         bool hadItems = cart.Count > 0 || toppingCart.Count > 0;
@@ -298,6 +390,15 @@ public class ShopSystem : MonoBehaviour
         if (!Wallet.CanAfford(total))
         {
             message = Loc.Format("shop.buy.not_enough_money", total.ToString("F0"));
+            OnPurchaseResult?.Invoke(false, message);
+            return false;
+        }
+
+        // Sacar una línea puede dejar el resto del carrito fuera de los mínimos (p. ej. queda la
+        // mejora y se fue el carbón): el guard se repite acá con el carrito entero.
+        if (!CartKeepsRunAlive(0f, 0, 0))
+        {
+            message = Loc.Get("shop.buy.below_minimum");
             OnPurchaseResult?.Invoke(false, message);
             return false;
         }

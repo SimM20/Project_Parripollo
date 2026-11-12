@@ -1020,6 +1020,7 @@ MonoBehaviour:
   minusButton: {fileID: 2119622172362855974}
   plusButton: {fileID: 3195002155524040478}
   buyButton: {fileID: 1982740194349258279}
+  buyLabel: {fileID: 2745111066048329098}
   normalIconColor: {r: 1, g: 1, b: 1, a: 1}
   lockedIconColor: {r: 1, g: 1, b: 1, a: 0.6}
 --- !u!1 &4240390652248254366
@@ -2074,4 +2075,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e74c27f06e58b9245a08b5d1f9671ac5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  key: shop.cell.buy
+  key: shop.cell.add

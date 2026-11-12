@@ -53,6 +53,8 @@ public enum TutorialSignal
     UndoUsed,
     /// <summary>Se compró algo en la tienda (compra directa o carrito).</summary>
     ShopPurchased,
+    /// <summary>Se agregó algo al carrito de la tienda (la compra real es recién con "Comprar carrito").</summary>
+    ShopCartAdded,
 }
 
 /// <summary>Datos de una señal. Cada una llena solo lo que tiene sentido; el resto queda en null.</summary>

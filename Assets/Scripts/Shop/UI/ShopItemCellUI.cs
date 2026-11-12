@@ -28,6 +28,9 @@ public class ShopItemCellUI : MonoBehaviour
     [SerializeField] private Button plusButton;
     [SerializeField] private Button buyButton;
 
+    [Tooltip("Texto del botón: \"Agregar\", o \"En el carrito\" cuando ya está el máximo (mejoras, toppings).")]
+    [SerializeField] private LocalizedText buyLabel;
+
     [Header("Colors")]
     [SerializeField] private Color normalIconColor = Color.white;
     [SerializeField] private Color lockedIconColor = new Color(1f, 1f, 1f, 0.35f);
@@ -49,24 +52,24 @@ public class ShopItemCellUI : MonoBehaviour
 
     public Button BuyButton => buyButton;
 
-    /// <summary>El Comprar está habilitado: se puede pagar y la compra no rompe los mínimos del próximo día.</summary>
+    /// <summary>El Agregar está habilitado: el carrito con esto se puede pagar y no rompe los mínimos del próximo día.</summary>
     public bool CanBuy { get; private set; }
 
-    /// <summary>Se puede pagar, pero la compra dejaría los mínimos del próximo día fuera de alcance.</summary>
+    /// <summary>Se puede pagar, pero sumarlo al carrito dejaría los mínimos del próximo día fuera de alcance.</summary>
     public bool BlockedByMinimums { get; private set; }
 
     void Awake()
     {
         if (minusButton != null) minusButton.onClick.AddListener(OnMinus);
         if (plusButton != null) plusButton.onClick.AddListener(OnPlus);
-        if (buyButton != null) buyButton.onClick.AddListener(OnBuy);
+        if (buyButton != null) buyButton.onClick.AddListener(OnAdd);
     }
 
     void OnDestroy()
     {
         if (minusButton != null) minusButton.onClick.RemoveListener(OnMinus);
         if (plusButton != null) plusButton.onClick.RemoveListener(OnPlus);
-        if (buyButton != null) buyButton.onClick.RemoveListener(OnBuy);
+        if (buyButton != null) buyButton.onClick.RemoveListener(OnAdd);
     }
 
     public void Bind(ItemDataSO data, ShopSystem shop)
@@ -137,16 +140,20 @@ public class ShopItemCellUI : MonoBehaviour
         if (subtotalText != null) subtotalText.text = pendingQty > 1 ? Loc.Format("shop.cell.subtotal", price * pendingQty) : "";
         if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1);
 
-        bool canAfford = shop.Wallet != null && shop.Wallet.CanAfford(price * pendingQty);
+        // Spec punto 7: no se permite gastar la plata que hace falta para el mínimo del próximo
+        // día. Plata y mínimos se miden contra el carrito entero; el guard real vive en ShopSystem.
+        bool blockedByMinimums;
+        CanBuy = toppingItem != null
+            ? shop.CanAddToCart(toppingItem, pendingQty, out blockedByMinimums)
+            : shop.CanAddToCart(item, pendingQty, out blockedByMinimums);
+        BlockedByMinimums = blockedByMinimums;
 
-        // Spec punto 7: no se permite gastar la plata que hace falta para el mínimo del
-        // próximo día. Acá solo se apaga el botón; el guard real vive en ShopSystem.
-        bool allowedByMinimums = toppingItem != null
-            ? shop.IsPurchaseAllowedByRunMinimums(toppingItem, pendingQty)
-            : shop.IsPurchaseAllowedByRunMinimums(item, pendingQty);
-
-        CanBuy = purchasable && canAfford && allowedByMinimums;
-        BlockedByMinimums = purchasable && canAfford && !allowedByMinimums;
+        int inCart = toppingItem != null ? shop.GetToppingCartQty(toppingItem) : shop.GetCartQty(item);
+        if (buyLabel != null)
+        {
+            string key = inCart >= MaxQty ? "shop.cell.in_cart" : "shop.cell.add";
+            if (buyLabel.Key != key) buyLabel.Key = key;
+        }
 
         SetInteractable(minusButton, purchasable && pendingQty > 1);
         SetInteractable(plusButton, purchasable && pendingQty < MaxQty);
@@ -180,22 +187,21 @@ public class ShopItemCellUI : MonoBehaviour
         PunchIfChanged(qtyText, before != pendingQty, 0.18f);
     }
 
-    private void OnBuy()
+    private void OnAdd()
     {
         if (shop == null) return;
 
-        bool bought = false;
+        bool added = false;
         if (toppingItem != null)
-            bought = shop.TryBuyToppingNow(toppingItem, pendingQty, out _);
+            added = shop.TryAddToCart(toppingItem, pendingQty);
         else if (item != null)
-            bought = shop.TryBuyNow(item, pendingQty, out _);
+            added = shop.TryAddToCart(item, pendingQty);
 
         pendingQty = 1;
         RefreshVisuals();
 
-        // Solo si la compra se concretó: el ícono salta y lo que tenés se actualiza con un golpe.
-        PunchIfChanged(iconImage, bought, 0.16f);
-        PunchIfChanged(stockText, bought, 0.22f);
+        // Solo si entró al carrito: el ícono salta (el stock cambia recién al pagar el carrito).
+        PunchIfChanged(iconImage, added, 0.16f);
     }
 
     /// <summary>Golpe de escala de presentación (tiempo sin escalar). Textos e íconos sin raycast propio.</summary>
@@ -205,7 +211,8 @@ public class ShopItemCellUI : MonoBehaviour
             ScalePunch.Punch(target.transform, amount, 0.2f, true);
     }
 
-    private static Sprite ResolveIcon(ItemDataSO item)
+    /// <summary>Icono de la tarjeta. Lo reusa la línea del carrito.</summary>
+    public static Sprite ResolveIcon(ItemDataSO item)
     {
         if (item is CoalSO coal) return coal.coalSprite;
         if (item is MeatCutSO cut) return cut.GetDefaultSprite();
@@ -213,7 +220,8 @@ public class ShopItemCellUI : MonoBehaviour
         return null;
     }
 
-    private string ResolveName(ItemDataSO item)
+    /// <summary>Nombre de la tarjeta (el carbón con el tamaño de bolsa). Lo reusa la línea del carrito.</summary>
+    public static string ResolveName(ItemDataSO item)
     {
         if (item == null) return "";
         if (item is MeatCutSO cut) return cut.cutName;

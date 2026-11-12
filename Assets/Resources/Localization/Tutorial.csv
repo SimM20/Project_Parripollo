@@ -81,6 +81,6 @@ hint.remove_meat,Sacar la carne,Remove the meat
 hint.reset_hints_tip,Reiniciá las ayudas en Opciones,Reset hints in Options
 # Carteles de la tienda (EndScene)
 hint.shop_minimum,Lo mínimo para mañana,What you need for tomorrow
-hint.shop_buy,Comprar,Buy
+hint.shop_buy,Agregar al carrito,Add to cart
 hint.shop_blocked,"Primero, lo mínimo",Minimum first
 hint.shop_streak,"Con 3, perdés la partida",3 in a row and you lose

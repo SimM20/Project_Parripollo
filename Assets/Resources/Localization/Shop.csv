@@ -8,6 +8,12 @@ shop.cell.coal_bag,Bolsa de {0} unidades,Bag of {0} units
 shop.cell.level,NIVEL {0}/{1},LEVEL {0}/{1}
 shop.cell.subtotal,Total: ${0:N0},Total: ${0:N0}
 shop.cell.buy,Comprar,Buy
+shop.cell.add,Agregar,Add
+shop.cell.in_cart,En el carrito,In the cart
+# Carrito (ShopCartUI / ShopCartRowUI)
+shop.cart.title,Carrito,Cart
+shop.cart.empty,Todavía no agregaste nada.,Nothing added yet.
+shop.cart.subtotal,Subtotal,Subtotal
 # Header de la tienda (ShopHeaderUI)
 shop.header.title,Tienda,Shop
 shop.header.customers,Hoy vinieron {0} clientes,{0} customers came by today
@@ -32,6 +38,8 @@ shop.next.meat,Siguiente: Carnes,Next: Meats
 shop.next.upgrades,Siguiente: Mejoras,Next: Upgrades
 shop.next.toppings,Siguiente: Toppings,Next: Toppings
 shop.next.start_day,Arrancar el día,Start the day
+shop.next.buy_cart,Comprar carrito,Buy cart
+shop.next.cart_blocked,"Primero, lo mínimo",Minimum first
 shop.next.blocked,Faltan recursos,Not enough supplies
 "# Requisitos para el próximo día (ShopRequirementsUI), en mayúsculas"
 shop.req.title,PARA ARRANCAR MAÑANA,TO OPEN TOMORROW

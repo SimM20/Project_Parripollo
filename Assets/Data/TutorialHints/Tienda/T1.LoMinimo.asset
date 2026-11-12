@@ -23,6 +23,6 @@ MonoBehaviour:
   requires: []
   showWhile: 1b000000
   priority: 50
-  completeOn: 24
+  completeOn: 25
   completeOnlyIf: 
   completeAfterSeconds: 6
