@@ -54,7 +54,13 @@ public class CustomerOrderBubble : MonoBehaviour
     [SerializeField] private int baseSortingOrder = 20;
     [SerializeField] private int expandedSortingOrder = 30;
 
+    [Header("Icono de accion (cambiar pedido)")]
+    [Tooltip("Alto del icono del click derecho / X / cuadrado, en unidades de mundo. Va fijo en la " +
+             "esquina inferior derecha, montado sobre el borde, en los dos estados.")]
+    [SerializeField] private float actionGlyphSize = 0.34f;
+
     private Transform contentRoot;
+    private SpriteRenderer actionGlyphRenderer;
     private SpriteRenderer panelRenderer;
     private SpriteRenderer borderRenderer;
     private SpriteRenderer iconRenderer;
@@ -141,7 +147,32 @@ public class CustomerOrderBubble : MonoBehaviour
             detailText.text = BuildDetail(order);
 
         ApplyIcon();
+        ApplyActionGlyph();
         ApplyLayout(expandT);
+    }
+
+    /// <summary>
+    /// True si el punto de pantalla cae sobre la burbuja (panel + icono de accion). La camara es
+    /// perspectiva: se corta el rayo con el plano de la burbuja en vez de comparar en pantalla.
+    /// </summary>
+    public bool ContainsScreenPoint(Vector2 screenPoint)
+    {
+        if (!built || hidden || borderRenderer == null) return false;
+
+        Camera cam = Camera.main;
+        if (cam == null) return false;
+
+        Ray ray = cam.ScreenPointToRay(screenPoint);
+        Plane plane = new Plane(Vector3.back, borderRenderer.transform.position);
+        if (!plane.Raycast(ray, out float distance)) return false;
+
+        Bounds bounds = borderRenderer.bounds;
+        if (actionGlyphRenderer != null && actionGlyphRenderer.enabled)
+            bounds.Encapsulate(actionGlyphRenderer.bounds);
+
+        Vector3 point = ray.GetPoint(distance);
+        return point.x >= bounds.min.x && point.x <= bounds.max.x
+            && point.y >= bounds.min.y && point.y <= bounds.max.y;
     }
 
     /// <summary>
@@ -333,6 +364,21 @@ public class CustomerOrderBubble : MonoBehaviour
         iconRenderer.enabled = sprite != null;
     }
 
+    /// <summary>
+    /// Icono del click derecho (o X / cuadrado con joystick) que cambia el pedido. Se resuelve en
+    /// cada <see cref="Refresh"/>, que tambien corre al pasar de mouse a joystick (Loc.OnTextsChanged).
+    /// </summary>
+    private void ApplyActionGlyph()
+    {
+        if (actionGlyphRenderer == null) return;
+
+        InputGlyphSetSO glyphs = view != null && view.System != null ? view.System.InputGlyphs : null;
+        Sprite sprite = glyphs != null ? glyphs.Resolve(new HintPrompt(HintInput.RightClick)).Sprite : null;
+
+        actionGlyphRenderer.sprite = sprite;
+        actionGlyphRenderer.enabled = sprite != null;
+    }
+
     private Sprite GetNeutralOrderSprite()
     {
         Order order = customer?.order;
@@ -474,6 +520,14 @@ public class CustomerOrderBubble : MonoBehaviour
         }
 
         LayoutExtras(eased, size, order, textLeft);
+
+        // Icono de accion: esquina inferior derecha montada sobre el borde, por encima de todo.
+        if (actionGlyphRenderer != null)
+        {
+            WorldBubbleStyle.FitSprite(actionGlyphRenderer.transform, actionGlyphRenderer.sprite, actionGlyphSize,
+                new Vector3(halfW, -halfH, -0.03f));
+            actionGlyphRenderer.sortingOrder = order + 4;
+        }
     }
 
     /// <summary>
@@ -550,6 +604,11 @@ public class CustomerOrderBubble : MonoBehaviour
         titleText.enableWordWrapping = false;
 
         detailText = WorldBubbleStyle.CreateText(contentRoot, "Detail", 1.9f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+
+        var glyphGo = new GameObject("ActionGlyph");
+        glyphGo.transform.SetParent(contentRoot, false);
+        actionGlyphRenderer = glyphGo.AddComponent<SpriteRenderer>();
+        actionGlyphRenderer.enabled = false;
 
         built = true;
     }

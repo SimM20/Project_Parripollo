@@ -105,15 +105,6 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "MissingCut",
-                    "type": "Button",
-                    "id": "c4a51dde-a8ae-41e3-9442-3b87fb4dcfc3",
-                    "expectedControlType": "Button",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "Back",
                     "type": "Button",
                     "id": "7d0f3a52-2c6e-4b1a-9f4e-5a8c1e2d6b90",
@@ -363,28 +354,6 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "ClearPlate",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "063c8dd1-6548-454f-81a0-0f9435fa8bf4",
-                    "path": "<Keyboard>/m",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "KeyboardMouse",
-                    "action": "MissingCut",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "c1fd46f2-8b02-42e8-a950-237e85010802",
-                    "path": "<Gamepad>/select",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Gamepad",
-                    "action": "MissingCut",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

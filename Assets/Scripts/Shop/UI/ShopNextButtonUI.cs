@@ -14,7 +14,11 @@ public class ShopNextButtonUI : MonoBehaviour
     [Header("Scene")]
     [SerializeField] private string gameSceneName = "GameScene";
 
+    [Tooltip("Después de pagar el carrito el botón pasa a \"Arrancar el día\": un doble click no tiene que saltear ese paso.")]
+    [SerializeField] private float startDayLockAfterPurchase = 0.4f;
+
     private bool started;
+    private float startDayUnlockTime;
 
     void Awake()
     {
@@ -32,6 +36,7 @@ public class ShopNextButtonUI : MonoBehaviour
         if (shop != null)
         {
             shop.OnTabChanged += Refresh;
+            shop.OnCartChanged += Refresh;
 
             // Una compra cambia plata y stock, o sea que puede cumplir (o romper) el mínimo:
             // sin esto el botón seguiría bloqueado hasta cambiar de tab.
@@ -53,6 +58,7 @@ public class ShopNextButtonUI : MonoBehaviour
         if (shop != null)
         {
             shop.OnTabChanged -= Refresh;
+            shop.OnCartChanged -= Refresh;
             if (shop.Wallet != null) shop.Wallet.OnMoneyChanged -= OnMoneyChanged;
             if (shop.Cooler != null) shop.Cooler.OnInventoryChanged -= Refresh;
         }
@@ -66,9 +72,17 @@ public class ShopNextButtonUI : MonoBehaviour
 
         if (shop.CurrentTab == ShopTabType.Toppings)
         {
+            // Paso intermedio: con algo en el carrito, el botón primero lo paga.
+            if (shop.HasCartItems)
+            {
+                if (shop.TryConfirmPurchase(out _))
+                    startDayUnlockTime = Time.unscaledTime + startDayLockAfterPurchase;
+                return;
+            }
+
             // Último tab: arrancar próximo día. El botón ya debería estar deshabilitado,
             // pero la regla se vuelve a chequear acá por si algo lo dispara igual.
-            if (!CanStartNextDay()) return;
+            if (Time.unscaledTime < startDayUnlockTime || !CanStartNextDay()) return;
 
             SceneManagementUtils.LoadSceneByName(gameSceneName);
             return;
@@ -104,7 +118,8 @@ public class ShopNextButtonUI : MonoBehaviour
         if (shop == null) return;
 
         bool isLastTab = shop.CurrentTab == ShopTabType.Toppings;
-        bool blocked = isLastTab && !CanStartNextDay();
+        bool payCart = isLastTab && shop.HasCartItems;
+        bool blocked = isLastTab && (payCart ? !shop.CanConfirmCart() : !CanStartNextDay());
 
         if (button != null) button.interactable = !blocked;
 
@@ -115,7 +130,10 @@ public class ShopNextButtonUI : MonoBehaviour
             case ShopTabType.Coal:     label.text = Loc.Get("shop.next.meat"); break;
             case ShopTabType.Meat:     label.text = Loc.Get("shop.next.upgrades"); break;
             case ShopTabType.Upgrades: label.text = Loc.Get("shop.next.toppings"); break;
-            case ShopTabType.Toppings: label.text = Loc.Get(blocked ? "shop.next.blocked" : "shop.next.start_day"); break;
+            case ShopTabType.Toppings:
+                if (payCart) label.text = Loc.Get(blocked ? "shop.next.cart_blocked" : "shop.next.buy_cart");
+                else label.text = Loc.Get(blocked ? "shop.next.blocked" : "shop.next.start_day");
+                break;
         }
     }
 }

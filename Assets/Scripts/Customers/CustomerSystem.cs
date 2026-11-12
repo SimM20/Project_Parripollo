@@ -155,7 +155,14 @@ public class CustomerSystem : MonoBehaviour
 
     [Header("Delivery Feedback")]
     [SerializeField] private CustomerFeedbackConfigSO feedbackConfig;
-    
+
+    [Header("Order Bubble")]
+    [Tooltip("Íconos de controles (Data/TutorialHints/InputGlyphs). La burbuja de pedido dibuja con esto el " +
+             "click derecho / X / □ que cambia el pedido por faltante. Sin asignar, la burbuja va sin ícono.")]
+    [SerializeField] private InputGlyphSetSO inputGlyphs;
+
+    public InputGlyphSetSO InputGlyphs => inputGlyphs;
+
     public FoodCatalogSO Catalog => availabilityService != null ? availabilityService.Catalog : null;
 
     public Customer currentCustomer;

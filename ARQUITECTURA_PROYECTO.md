@@ -2,6 +2,12 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-12** (rama `FeedBack-Improvements`) — **carrito en la tienda**. La tarjeta ya
+> no compra: su botón dice "Agregar" (`ShopSystem.TryAddToCart`) y el pago es uno solo con el botón grande, que en
+> Toppings pasa por "Comprar carrito" (`TryConfirmPurchase`) antes de "Arrancar el día". Panel nuevo `Cart` en la
+> columna derecha de `ShopCanvas.prefab` (`ShopCartUI` + líneas `ShopCartRowUI` / `Prefabs/Shop/ShopCartRow.prefab`
+> con −, + y X). Plata y mínimos se miden contra el carrito entero. Señal nueva `ShopCartAdded` (T1/T2 de la tienda
+> se completan con ella). Sección 3.6 y nota 8b.
 > Última actualización parcial: **2026-11-12** (rama `development`) — **panes, guarniciones, salsas, mesa y cartel en pixel art**.
 > Sprites nuevos (recortados del lienzo de 480x270, PPU 25, Point, sin compresión, `.ase` al lado): `Food/Breads/Pan Flauta`
 > (13x17) y `Pan de Paty` (17x15), `Food/Sides/Papas Fritas`, `Ensalada Verde` y `Ensalada Papa y Huevo` (20x20),
@@ -478,7 +484,7 @@ graph TD
 
     SHOP --> PW & CS_ & TS & CAT
     SHOP -->|events OnTabChanged/OnCartChanged/OnPurchaseResult| SUI["Shop*UI (activa) / Shop*2D (off)"]
-    SUI -->|SetTab / TryBuyNow / TryBuyToppingNow| SHOP
+    SUI -->|SetTab / TryAddToCart / TryConfirmPurchase| SHOP
 
     PW -->|event OnMoneyChanged| UIM & WD[WalletDisplay] & SUI
     UIM --> HUD --> HC[HudContainer]
@@ -1802,9 +1808,14 @@ int  GetTotalCoalUnits()                                // suma TODO el stock Co
 int  GetCartQty(ItemDataSO);  void SetQty(...), IncrementQty(...), ClearCart()
 float CartTotal(), MoneyAfterPurchase();  int CartCoalBags()
 List<MeatCutSO> GetLowStockCuts()
-bool TryConfirmPurchase(out string)                      // carrito completo — solo la capa 2D
-bool TryBuyNow(ItemDataSO, int qty, out string)          // ← compra individual (capa activa)
-bool TryBuyToppingNow(ToppingSO, int qty, out string)    // ← compra individual (capa activa)
+bool CanAddToCart(ItemDataSO|ToppingSO, int qty, out bool blockedByMinimums)  // tope, plata y mínimos CON el carrito
+bool TryAddToCart(ItemDataSO|ToppingSO, int qty)         // ← botón "Agregar" de la tarjeta y + de la línea
+void RemoveFromCart(ItemDataSO|ToppingSO)                 // ← X de la línea (no pasa por IsPurchasable)
+bool HasCartItems;  bool CanConfirmCart()                 // alcanza la plata y no rompe los mínimos
+IEnumerable<…> EnumerateCart() / EnumerateToppingCart()
+bool TryConfirmPurchase(out string)                      // ← "Comprar carrito" (capa activa); repite el guard de mínimos
+bool TryBuyNow(ItemDataSO, int qty, out string)          // compra individual: sin uso en la UI desde el carrito
+bool TryBuyToppingNow(ToppingSO, int qty, out string)    // compra individual: sin uso en la UI desde el carrito
 ```
 
 **Fuentes de items por tab** (`GetItemsForTab`):
@@ -1818,21 +1829,23 @@ bool TryBuyToppingNow(ToppingSO, int qty, out string)    // ← compra individua
 
 > El tab `Toppings` es el único que **no** pasa por `GetItemsForTab`: la UI llama a `GetToppings()` y bindea `ToppingSO`. Por eso `ShopGridUI` y `ShopItemCellUI` tienen una rama y un `Bind` por cada tipo.
 
-**Compra individual vs. carrito** — coexisten dos caminos:
+**Carrito (capa uGUI, la activa, desde 2026-11-12):**
 
 ```
-Compra individual (capa uGUI, la activa)
-   ShopItemCellUI: −/+ ajustan un `pendingQty` LOCAL de la celda (tope: GetMaxPurchaseQty)
-   → botón Comprar → ShopSystem.TryBuyNow(item, qty) / TryBuyToppingNow(topping, qty)
-   → valida IsPurchasable → Wallet.CanAfford → Wallet.TrySpend
-   → CoalSO: Cooler.Add(coal, unitsPerBag × qty) · UpgradeSO: up.Purchase() (+1 nivel) · resto: Cooler.Add(item, qty)
-   → ToppingSO: Toppings.Refill(topping) (frasco al tope; qty capada a 1)
-   → OnPurchaseResult(true, msg) + pendingQty vuelve a 1
-   ⚠️ NO emite OnCartChanged. El refresco lo disparan Wallet.OnMoneyChanged y Cooler.OnInventoryChanged
-
-Carrito (capa 2D, desactivada)
-   SetQty/IncrementQty → cart / toppingCart → TryConfirmPurchase() paga todo junto
+ShopItemCellUI: −/+ ajustan un `pendingQty` LOCAL de la celda (tope: GetMaxPurchaseQty)
+   → botón "Agregar" → ShopSystem.TryAddToCart(item|topping, qty) → SetQty/SetToppingQty → OnCartChanged
+     + TutorialSignal.ShopCartAdded. El botón dice "En el carrito" si ya está el máximo (mejoras, toppings).
+   CanAddToCart mide Wallet.CanAfford(CartTotal + costo) y los mínimos proyectando el carrito entero
+   (BuildRunStatus(CartTotal + costo, carne del carrito + qty, carbón del carrito + unidades)).
+ShopCartRowUI (una por línea): − → IncrementQty(-1) (apagado en 1) · + → TryAddToCart(1) · X → RemoveFromCart
+ShopNextButtonUI en Toppings: con carrito → "Comprar carrito" → TryConfirmPurchase()
+   → Wallet.CanAfford → CartKeepsRunAlive (sacar una línea puede dejar el resto fuera de los mínimos)
+   → Wallet.TrySpend → CoalSO: Cooler.Add(coal, unitsPerBag × qty) · UpgradeSO: up.Purchase() · resto: Cooler.Add
+   → ToppingSO: Toppings.Refill · vacía el carrito → OnCartChanged + OnPurchaseResult(true) + ShopPurchased
+   → el botón pasa a "Arrancar el día" (o "Faltan recursos"); 0.4 s de bloqueo para que un doble click no lo saltee.
+   Sin carrito → directo "Arrancar el día". Si el carrito no se puede pagar → "Primero, lo mínimo" deshabilitado.
 ```
+`TryBuyNow` / `TryBuyToppingNow` (compra individual) siguen en `ShopSystem` pero la UI ya no los llama.
 Dos carritos separados: `cart` (`ItemDataSO`) y `toppingCart` (`ToppingSO` → `ToppingStock`).
 `UpgradeSO` está capado a cantidad 1 en ambos caminos (`GetMaxPurchaseQty`): **una compra = un nivel**.
 
@@ -1853,7 +1866,16 @@ Layout (referencia 1920×1080, fondo `PauseMenubg` con la puerta a la derecha):
             [ tarjeta ][ tarjeta ][ tarjeta ][ tarjeta ]   (4 columnas, scroll vertical)  ← GridArea
 [ PARA ARRANCAR MAÑANA ][ NOCHES SEGUIDAS CON STRIKES ]  (racha solo con strikes)
 [ CARNE ][ CARBÓN ][ ESTADO / FALTA COMPRAR ]   [    SIGUIENTE: CARNES    ]  ← abajo (Requirements + Next Button, mismo alto)
+                                                                     [ CARRITO ] ← columna derecha (Cart), de las tabs hasta abajo
 ```
+
+- **Carrito (`ShopContent/Cart`):** anclado a la derecha y estirado en alto (`anchorMin = (1,0)`, `anchorMax = (1,1)`,
+  `offsetMin = (-312, 34)`, `offsetMax = (-40, -134)` → x 1608–1880 en 16:9: 7 u. de aire con el `litScale` del
+  "Siguiente", y el borde derecho alineado con `MoneyPlate`). Sub-`Canvas` + `GraphicRaycaster` propios (cambia seguido,
+  no reconstruye el canvas grande). Chapa `Panel_Ruta_Noche` sliced como las tarjetas, título "CARRITO", `ScrollRect`
+  vertical (`RectMask2D`, `VerticalLayoutGroup`, scrollbar clonada de la grilla, se oculta sola), aviso de vacío y
+  "SUBTOTAL" en Bungee amarilla. ⚠️ Pensado para 16:9: con `matchWidthOrHeight = 0.5`, en 16:10 el canvas mide ~1821
+  de ancho y el carrito pisa el borde derecho de la grilla.
 
 - Tabs, ayuda y grilla están anclados en `x = 833/1920` (centro de la persiana, sin la puerta): siguen al fondo
   estirado en pantallas que no son 16:9.
@@ -1890,7 +1912,9 @@ el flag `started` evita refrescar antes del primer `Start`.
 | `ShopGridUI` | Reconstruye la grilla al cambiar de tab. `AdjustCellCount` instancia/destruye celdas (`ShopItemCell 1.prefab`) bajo el `Content` del ScrollView y las bindea. Ante cambios de stock/plata solo llama `RefreshVisuals()` de cada celda (no reconstruye) |
 | `ShopItemCellUI` | Celda: icono, nombre, descripción, precio, **stock actual** (`stockText`, hijo `ItemStock` bajo el precio: `"TENÉS: N"` desde `Cooler.GetCount` / `ToppingStock.GetCount`, `"TENÉS: N U."` en carbón, `"NIVEL X/Y"` en mejoras), `pendingQty`, subtotal. El carbón agrega el tamaño de bolsa al nombre (`"Carbón x10"` / `"Charcoal x10"`) y a la descripción (`"Bolsa de 10 unidades"`) cuando `unitsPerBag > 1`. La descripción (`ItemDesc`) va en **Nunito** con auto-size 11–16, en una caja de 224×50 sin márgenes (no se sale de la tarjeta ni pisa el precio): antes era Bungee Hairline 12 y sus trazos, más finos que un píxel a ese tamaño, se dibujaban cortados. Los textos salen de las claves `shop.cell.*`; el nombre de cada item es `DisplayName` (y `DisplayDescription` en mejoras). Sin `stockText`, el nivel de la mejora vuelve a la descripción. Dos `Bind` (`ItemDataSO` / `ToppingSO`). Deshabilita `−` en `qty == 1`, y `Comprar` si el item no es comprable o no alcanza la plata. **Oculta el −/+ (`stepperRoot`) si el item se compra de a uno** (mejoras) y muestra el total (`shop.cell.subtotal`, `"Total: $N"`) **solo con cantidad > 1**. `lockedOverlay` es un velo oscuro sobre toda la tarjeta (`LockedOverlay`, sin `raycastTarget`) + icono atenuado para lo no comprable (bloqueado o mejora al máximo). Si el item no tiene sprite, el icono se apaga (un `Image` sin sprite dibuja un cuadrado blanco). Tarjeta de 280×480 |
 | `ShopSubtitleUI` | Una línea de ayuda por tab (`detailText`, Nunito). `titleText` es **opcional** y en el prefab está sin asignar: la tab activa ya dice en qué sección estás. En `Coal` el detalle es dinámico: `shop.help.coal` (`"Venís usando {0} unidades de carbón por jornada."`) o `shop.help.coal.first_night` si `DaysPlayed == 0` |
-| `ShopNextButtonUI` | Avanza `Coal → Meat → Upgrades → Toppings` cambiando el label (`"Siguiente: Carnes"`…`"Arrancar el día"`); en `Toppings` el botón carga `GameScene` |
+| `ShopNextButtonUI` | Avanza `Coal → Meat → Upgrades → Toppings` cambiando el label (`"Siguiente: Carnes"`…`"Arrancar el día"`). En `Toppings`, con algo en el carrito dice `"Comprar carrito"` y paga (`TryConfirmPurchase`); vacío, carga `GameScene`. Escucha `OnCartChanged` |
+| `ShopCartUI` | Panel `Cart`. Lee el `ShopSystem` de `ShopGridUI.Shop` (sin override por escena). Con `OnCartChanged` (y plata/stock/frascos) re-bindea una `ShopCartRowUI` por línea: las recicla (apaga, no destruye). Subtotal `$N0` con golpe cuando sube; `emptyState` sin líneas |
+| `ShopCartRowUI` | Línea (`ShopCartRow.prefab`, 232×92): icono en `Vidriera`, nombre (`ShopItemCellUI.ResolveIcon/ResolveName`, ahora `public static`), −/cantidad/+ (oculto si el item se compra de a uno), subtotal de la línea y X. Solo llama a `ShopSystem` |
 | `ShopTabSwipeUI` | En `GridArea`. Con `OnTabChanged` hace entrar sus `targets` (`Content` de la grilla, 420 u., recortado por el `Mask` del `Viewport`; `Hint` de la ayuda, 120 u.) desde la derecha si la tab nueva va después en el enum y desde la izquierda si va antes, con fade (`CanvasGroup`, se agrega solo) y ease-out cúbico en `duration` (0.25 s, tiempo unscaled). Solo anima la entrada (la grilla se reconstruye en el mismo evento) y solo toca la `x`: la `y` del `Content` es del `ScrollRect`. El `ShopSystem` lo lee de `ShopGridUI.Shop`, no tiene campo `shop` propio |
 
 Lecturas para los carteles del tutorial (no cambian nada de la tienda): `ShopItemCellUI.CanBuy` y `BlockedByMinimums`
@@ -1978,7 +2002,7 @@ pantalla de derrota es `DaysPlayed`.
 | Tope y switch de la racha | Cacheados en estáticos desde el SO en `StrikeSystem.Awake` — el SO no existe en `EndScene` |
 | Conteo de stock | `ShopSystem.GetTotalMeatCuts()` (espejo de `GetTotalCoalUnits()`, filtra `entry.Key is MeatCutSO`). Sin mínimo por tipo de corte: cualquier combinación sirve |
 | Costo del faltante | `GetCheapestPurchasableCutPrice()` × cortes faltantes + `ceil(faltante/unitsPerBag)` × precio de bolsa |
-| Bloqueo de compras | `ShopSystem.IsPurchaseAllowedByRunMinimums(...)` simula la compra y exige `CanContinue`. La UI apaga el botón (`ShopItemCellUI`); el guard real está en `TryBuyNow` / `TryBuyToppingNow` |
+| Bloqueo de compras | `ShopSystem.CanAddToCart(...)` simula el carrito entero más lo que se agrega y exige `CanContinue` (`IsPurchaseAllowedByRunMinimums` hace lo mismo para una compra suelta). La UI apaga "Agregar" (`ShopItemCellUI`) y el + de la línea; el guard real está en `TryAddToCart` y se repite en `TryConfirmPurchase` |
 | Gate de "arrancar el día" | `ShopNextButtonUI`: en el tab `Toppings` pide `MeetsMinimums`. Ahora escucha además `OnMoneyChanged` / `OnInventoryChanged` y usa `SceneManagementUtils.LoadSceneByName` |
 | Estado visual en tienda | `ShopRequirementsUI` en `ShopCanvas.prefab/.../ShopContent/Requirements` (abajo a la izquierda, 924×160, termina a 194 del borde = donde termina la grilla). Desde 2026-10-31 son **5 carteles** `Panel_Ruta_Noche` (`Sliced`, `pixelsPerUnitMultiplier = 2`, el marco del "Hoy vinieron") colgados de `Panel` (contenedor sin imagen; `ShopRequirementsUI.Panel` lo sigue devolviendo): arriba, alto 50, `TitlePlate` ("PARA ARRANCAR MAÑANA", `LocalizedText`) y `StreakPlate` (`"NOCHES SEGUIDAS CON STRIKES: N / M"`, `strikeStreakRoot`: se prende entero **solo con racha > 0** y es lo que devuelve `StreakLine`); abajo, alto 100, `MeatCard` y `CoalCard` (etiqueta `shop.req.*.label` por `LocalizedText` + número `shop.req.amount` `"{0} / {1}"`) y `StatusCard` (etiqueta `deficitLabelText`: `shop.req.status` "ESTADO" o `shop.req.missing` "FALTA COMPRAR"; valor "LISTO PARA ARRANCAR" o la lista de faltantes). Verde/rojo según se cumpla. Fuente ParripolloPixel |
 | Pantalla de derrota | `EndScene/RunDefeatCanvas` (order **30**, sobre `StrikeEndPopupCanvas` 20 y `ShopCanvas` 10) + `RunDefeatScreen`. Clon del popup de strikes: hijo `Popup` inactivo con fondo opaco `raycastTarget` |
@@ -2161,6 +2185,7 @@ siendo la carne y no la burbuja: si cambiara con cada hover, el director retirar
 | `DeliveryRejected` | `GameManager.TryDeliverToCustomer` cuando rechaza el cliente (`rejectedByCustomer`: corte equivocado o plato que no le sirve) |
 | `PlateCleared` / `UndoUsed` | `GameManager`, acción `ClearPlate` (C) / `BuildUndoHistory.UndoLast` (botón ↶) |
 | `ShopPurchased` | `ShopSystem`, en cada compra que sale bien (`TryBuyNow`, `TryBuyToppingNow`, `TryConfirmPurchase`), junto a `OnPurchaseResult(true, …)` |
+| `ShopCartAdded` | `ShopSystem.TryAddToCart`, cuando algo entra al carrito ("Agregar" de la tarjeta o + de la línea) |
 
 ⚠️ `TutorialSignal`, `HintInput`, `HintPlacement`, `HintAnchorId` y `HintCondition` se serializan como `int` en los assets de
 carteles: **valores nuevos siempre al final**. ⚠️ `GrillLayerChanged` también sale en el `Start` de `GrillLayerToggle`, con la
@@ -2237,8 +2262,8 @@ piden `ShopReady`: mientras el popup de cierre por strikes tapa la tienda, esper
 
 | Asset (`id`) | Cartel | Zona | Se ve mientras | Se aprende con | Prio |
 |---|---|---|---|---|---|
-| `T1.LoMinimo` (`shop_minimum`) | Lo mínimo para mañana | panel de requisitos, arriba | la tienda está lista (y aplica mínimos) | `ShopPurchased`, o 6 s a la vista | 50 |
-| `T2.Comprar` (`shop_buy`) | 🖱 Comprar | el primer Comprar habilitado, abajo | hay uno a la vista | `ShopPurchased` | 60 |
+| `T1.LoMinimo` (`shop_minimum`) | Lo mínimo para mañana | panel de requisitos, arriba | la tienda está lista (y aplica mínimos) | `ShopCartAdded`, o 6 s a la vista | 50 |
+| `T2.Comprar` (`shop_buy`) | 🖱 Agregar al carrito | el primer Agregar habilitado, abajo | hay uno a la vista | `ShopCartAdded` | 60 |
 | `T3.PrimeroLoMinimo` (`shop_blocked`) | Primero, lo mínimo | un Comprar apagado por los mínimos, abajo | se ve uno: se puede pagar, pero dejaría los mínimos fuera de alcance | 5 s a la vista | 70 |
 | `T4.Racha` (`shop_streak`) | Con 3, perdés la partida | la línea de la racha, a la derecha | racha > 0 | 5 s a la vista | 80 |
 
@@ -2689,14 +2714,15 @@ asset, no código. Gamepad en notación Xbox / PlayStation.
 | Cursor libre | mouse | stick derecho | Global | Mueve el puntero libre, para apuntar fino |
 | `PointerPrimary` | click izquierdo | A / ✕ | Global | Agarrar / soltar / click (mundo y UI) |
 | `PointerSecondary` | click derecho | X / □ | sobre carne en parrilla | `Meat.Flip()` |
+| `PointerSecondary` | click derecho | X / □ | sobre una pila de carbón (capa carbón) | `Coal.OnWorldPointerOver` → limpia **todas las cenizas de esa pila** (`Coal.DiscardAshesIn(slot.stackedCoals)`); los encendidos quedan. Ignorado con stock o una pieza en la mano |
+| `PointerSecondary` | click derecho | X / □ | sobre la **burbuja de pedido** del cliente (no el cuerpo) | `CustomerView.OnWorldPointerOver` → `GameManager.TryChangeOrderForMissingCut(customer)`: informa el corte faltante y sustituye el pedido por un corte con stock (propina anulada). La burbuja lleva fijo el ícono del click derecho / X / □ (esquina inferior derecha, `CustomerSystem.inputGlyphs`) |
 | `Pause` | `Esc` | Menu / Options | Global | Pausa / reanudar vía `GamePause`: congela tiempo, audio e input del mundo y cancela arrastres. Ignorada mientras hay un diálogo con pausa propia (`GamePause.SetDialogPaused`; hoy ninguno) |
 | `ToggleStockPanel` | `Q` | LB / L1 | Parrilla | Abre / cierra el **StockPanel**. Abrir pide `TutorialManager.CheckStockPanelOpenAllowed` |
 | `ToggleToppingsPanel` | `E` | RB / R1 | Parrilla | Abre / cierra el **ToppingsPanel** |
 | `ToggleGrillLayer` | `Space` | Y / △ | Parrilla | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; funciona también arrastrando una pieza) |
-| `CleanAshes` | `R` | RT / R2 | Parrilla | `CleanAshes()` — destruye carbones en `Ceniza` (gateado por el tutorial) |
+| `CleanAshes` | `R` | RT / R2 | Parrilla | `CleanAshes()` — destruye **todos** los carbones en `Ceniza` de la parrilla (`Coal.DiscardAshesIn(Coal.ActiveCoals)`). Convive con el click derecho por pila |
 | `Rotate` | `R` | LT / L2 | mientras se arrastra carne | Rotar footprint del corte (parrilla, StockPanel, bandeja, plato) |
 | `ClearPlate` | `C` | LT / L2 | Parrilla, con las manos libres | Limpiar el plato entero: armado + visuales de carne + sides/toppings + salpicaduras. `GameManager` lo ignora con `InputManager.PrimaryHeld` (pieza en la mano): ahí LT es `Rotate` |
-| `MissingCut` | `M` | View / Share | Parrilla | Informar corte faltante → sustituye el pedido por un corte con stock (`TriggerMissingCutChange`, propina anulada) |
 | `Back` | `Esc` | B / ○ | Menús | Volver / cerrar. Hoy lo usa solo el menú de opciones (menú principal y pausa). Comparte tecla con `Pause` (Esc: `GameManager` no alterna la pausa si `OptionsMenuPanel.AnyOpen`) |
 | Arrastrar carne a `ToBuild` | | | Parrilla | Monta el corte en el plato (uno solo) |
 | Arrastrar el plato | | | Parrilla | Entrega por **drag & drop**: soltar sobre un cliente entrega; rechazo → vuelve al plato; soltar sobre la bandeja / un hueco de la grilla → la carne se va ahí |
@@ -2711,7 +2737,9 @@ limpiar mientras se arrastra con el mouse). El panel de toppings va en `E` (ante
 En pantalla, `ToggleStockPanel`, `ToggleToppingsPanel` y `ToggleGrillLayer` tienen su ícono fijo debajo de la pestaña o
 del botón que accionan, con la tecla o el botón del control en uso (`InputPromptBadge`, 3.1 → *Input*).
 
-Ya **no existen**: `W`/`E`, `←`/`→` (cambio de vista), `A`/`D` (selección de cliente), `Space` en Build, `X` (descartar quemados).
+Ya **no existen**: `W`/`E`, `←`/`→` (cambio de vista), `A`/`D` (selección de cliente), `Space` en Build, `X` (descartar quemados),
+`M` / View·Share (`MissingCut`: acción y valor de `GameAction` borrados; ahora es click derecho sobre la burbuja, y el cartel
+14 del tutorial apunta a cualquier cliente con corte faltante con ícono de click derecho — el 14b "elegir cliente" ya no sale).
 
 ### 4.5 Ciclo de jornada
 
@@ -2744,8 +2772,9 @@ EndScene
    ├─ ShopSystem       tabs Coal → Meat → Upgrades → Toppings  (arranca en Coal)
    │     Header:     nombre de tienda · plata · total de carbón en el cooler
    │     Breadcrumb: 4 ShopTabButtonUI → SetTab (salto directo a cualquier tab)
-   │     Grid:       celdas con −/+ y botón Comprar → TryBuyNow / TryBuyToppingNow (pago inmediato)
-   │     Next:       avance secuencial de tab; en Toppings → SceneManager.LoadScene("GameScene")
+   │     Grid:       celdas con −/+ y botón Agregar → TryAddToCart (no paga)
+   │     Cart:       líneas con −/+/X y subtotal (columna derecha)
+   │     Next:       avance secuencial de tab; en Toppings → "Comprar carrito" (TryConfirmPurchase) → LoadScene("GameScene")
    ├─ ShopRoot        prefab de la capa 2D — presente en la escena pero con m_IsActive = 0
    └─ TutorialHints   carteles de la tienda (orden 15, set CartelesTienda): esperan a que se cierre el popup de strikes (ver 3.7)
 
@@ -2768,7 +2797,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 6 | Todos los singletons usan el mismo guard en `Awake`: `if (Instance != null && Instance != this) { Destroy(gameObject); return; } Instance = this;`. Mantener esa forma al agregar nuevos (`ToppingsPanelController` destruye solo el componente, no el GO) |
 | 7 | Vista `Grill`: el root **no se desactiva** — se apagan renderers/colliders/canvases. Con vista única esto ya no importa en runtime, pero `ViewManager.SetVisualVisibility` no apaga los `MeshRenderer` de TextMeshPro: por eso los paneles hacen `SetActive(false)` sobre `slidingRoot` fuera de Grill |
 | 8 | `Shop` tiene **dos capas de UI paralelas**. La activa es **`*UI` (uGUI, en `EndScene` y `ShopTutorial`)**; la capa `*2D` sigue en la escena dentro del prefab `ShopRoot` pero **desactivada** (`m_IsActive: 0`) — al tocar la tienda, editar los `*UI` y el prefab `ShopCanvas` (nota 34) |
-| 8b | La capa activa **no usa el carrito**: cada celda compra por su cuenta con `TryBuyNow`/`TryBuyToppingNow`, que **no emiten `OnCartChanged`**. `cart`/`toppingCart`, `CartTotal()`, `TryConfirmPurchase()` y `OnCartChanged` quedan vivos solo para la capa 2D |
+| 8b | Desde 2026-11-12 la capa activa **usa el carrito**: la tarjeta agrega (`TryAddToCart`) y "Comprar carrito" paga todo junto (`TryConfirmPurchase`). `TryBuyNow`/`TryBuyToppingNow` siguen vivos pero sin llamadas desde la UI y **no emiten `OnCartChanged`**. El stock ("TENÉS") y los requisitos muestran lo comprado, no lo que está en el carrito |
 | 8c | `ShopItemCellUI.pendingQty` es estado **local de la celda** y se resetea a 1 tras comprar o rebindear; no sobrevive a un cambio de tab, porque `ShopGridUI.RebuildAll` rebindea todas las celdas |
 | 8d | `ShopTabButtonUI` y `ShopGridUI` tienen `Debug.Log` de diagnóstico (`Awake`, `HandleClick`, `RebuildAll`) — quitarlos antes de release |
 | 9 | `ViewType.Shop` está en el enum pero `ViewManager` solo lo usa para `shopRoot.SetActive`; la tienda es una escena aparte. `ViewType.Cooler` y `ViewType.Build` **redirigen a `Grill`**: no hay más vistas que recorrer |

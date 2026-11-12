@@ -7719,6 +7719,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: dd74f019187152940a5589cb8c5b392e, type: 2}
     - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
+      propertyPath: inputGlyphs
+      value: 
+      objectReference: {fileID: 11400000, guid: 00258a0f3b94c554c849fe8b1beb9a01, type: 2}
+    - target: {fileID: 3880198846472769799, guid: 56830acc842e4e5448b82b576cf96901, type: 3}
       propertyPath: autoSlotRowCenter.y
       value: 1.94
       objectReference: {fileID: 0}
@@ -10678,6 +10682,7 @@ GameObject:
   - component: {fileID: 1249159320}
   - component: {fileID: 1249159319}
   - component: {fileID: 1249159322}
+  - component: {fileID: 1249159323}
   m_Layer: 5
   m_Name: RollBackButton
   m_TagString: Untagged
@@ -10702,7 +10707,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0.8, y: 0.75}
+  m_SizeDelta: {x: 0.8, y: 0.8}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1249159319
 MonoBehaviour:
@@ -10768,7 +10773,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: e8927c97a6087b9488146aff4ca342c2, type: 3}
+  m_Sprite: {fileID: 21300000, guid: d075a16995996df4d95b0781e3f5617e, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -10799,6 +10804,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   undoHistory: {fileID: 34340694}
+--- !u!114 &1249159323
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1249159317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cba4af9abfe63274e8cb811db0c70e65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pressedSprite: {fileID: 21300000, guid: b9b5458328b68dd4faf494d0b38d4d58, type: 3}
+  minPressedSeconds: 0.1
 --- !u!114 &1252672913 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5226237674964794911, guid: 9491b763193b0954487dedc1580658d3, type: 3}
@@ -10903,7 +10922,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 10.3, y: -1.12}
+  m_AnchoredPosition: {x: 9.43, y: -1.15}
   m_SizeDelta: {x: 0.9627, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1305651938

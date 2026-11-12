@@ -13,7 +13,7 @@ public enum GameAction
     Rotate,
     CleanAshes,
     ClearPlate,
-    MissingCut,
+    // MissingCut ya no existe: el cambio de pedido es click derecho (X / □) sobre la burbuja del cliente.
     /// <summary>Volver / cerrar en menús (Esc · B / ○).</summary>
     Back,
 }
