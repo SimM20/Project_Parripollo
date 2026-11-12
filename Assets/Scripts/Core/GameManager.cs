@@ -114,52 +114,59 @@ public class GameManager : MonoBehaviour
             Debug.Log("[Plato] Plato limpiado.");
             TutorialSignals.Raise(TutorialSignal.PlateCleared);
         }
+    }
 
-        if (InputManager.WasPressed(GameAction.MissingCut))
+    /// <summary>
+    /// Informa que el corte pedido por <paramref name="targetCustomer"/> falta y le cambia el pedido
+    /// por otro corte con stock (propina anulada). Lo dispara el click derecho (X / □) sobre la
+    /// burbuja del cliente (<see cref="CustomerView"/>). False si el cliente no admite el cambio.
+    /// </summary>
+    public bool TryChangeOrderForMissingCut(Customer targetCustomer)
+    {
+        if (GamePause.IsPaused) return false;
+
+        Order order = targetCustomer?.order;
+        if (targetCustomer == null || targetCustomer.IsInFeedback || order?.PrimaryCut == null)
+            return false;
+
+        MeatCutSO missingCut = order.PrimaryCut;
+
+        if (foodAvailabilityService != null)
+            foodAvailabilityService.InformMissingCut(missingCut);
+        else
+            CoolerSystem.Instance?.InformMissingItem(missingCut);
+
+        Debug.Log("[Plato] Corte faltante informado: " + missingCut.cutName);
+
+        // Buscar un corte sustituto disponible con stock
+        MeatCutSO substituteCut = null;
+        if (foodAvailabilityService != null)
         {
-            Customer targetCustomer = customerSystem?.SelectedCustomer ?? customerSystem?.currentCustomer;
-            Order order = targetCustomer?.order;
-            if (targetCustomer != null && !targetCustomer.IsInFeedback && order?.PrimaryCut != null)
+            var available = foodAvailabilityService.GetAvailableCuts();
+            for (int i = 0; i < available.Count; i++)
             {
-                MeatCutSO missingCut = order.PrimaryCut;
-
-                if (foodAvailabilityService != null)
-                    foodAvailabilityService.InformMissingCut(missingCut);
-                else
-                    CoolerSystem.Instance?.InformMissingItem(missingCut);
-
-                Debug.Log("[Plato] Corte faltante informado: " + missingCut.cutName);
-
-                // Buscar un corte sustituto disponible con stock
-                MeatCutSO substituteCut = null;
-                if (foodAvailabilityService != null)
+                if (available[i] != missingCut)
                 {
-                    var available = foodAvailabilityService.GetAvailableCuts();
-                    for (int i = 0; i < available.Count; i++)
-                    {
-                        if (available[i] != missingCut)
-                        {
-                            substituteCut = available[i];
-                            break;
-                        }
-                    }
+                    substituteCut = available[i];
+                    break;
                 }
-
-                if (substituteCut != null)
-                {
-                    customerSystem.TriggerMissingCutChange(targetCustomer, substituteCut);
-                    DeliveryFeedbackText.Instance?.Show(Loc.Format("delivery.missing_cut.changed", substituteCut.cutName));
-                    GamepadHaptics.Play(HapticEvent.OrderChanged);
-                }
-                else
-                {
-                    DeliveryFeedbackText.Instance?.Show(Loc.Get("delivery.missing_cut.none"));
-                    GamepadHaptics.Play(HapticEvent.ActionRefused);
-                }
-
-                TutorialSignals.Raise(TutorialSignal.MissingCutUsed, cut: missingCut);
             }
         }
+
+        if (substituteCut != null)
+        {
+            customerSystem.TriggerMissingCutChange(targetCustomer, substituteCut);
+            DeliveryFeedbackText.Instance?.Show(Loc.Format("delivery.missing_cut.changed", substituteCut.cutName));
+            GamepadHaptics.Play(HapticEvent.OrderChanged);
+        }
+        else
+        {
+            DeliveryFeedbackText.Instance?.Show(Loc.Get("delivery.missing_cut.none"));
+            GamepadHaptics.Play(HapticEvent.ActionRefused);
+        }
+
+        TutorialSignals.Raise(TutorialSignal.MissingCutUsed, cut: missingCut);
+        return true;
     }
 
     /// <summary>
@@ -183,33 +190,9 @@ public class GameManager : MonoBehaviour
 
     private void ClearBuildAssembly() => buildStationSystem.ClearAssembly();
 
-    private void CleanAshes()
-    {
-        int cleanedCount = 0;
-
-        for (int i = Coal.ActiveCoals.Count - 1; i >= 0; i--)
-        {
-            Coal coal = Coal.ActiveCoals[i];
-
-            if (coal != null && coal.state == CoalStates.Ceniza)
-            {
-                coal.ReleaseOccupiedSlots();
-
-                // Solo visual: la ceniza se vuela en un fantasma, el carbón ya se fue.
-                SpriteGhost.Spawn(coal.VisualRenderer, SpriteGhost.Motion.Vanish(0.22f, 0.32f));
-                Destroy(coal.gameObject);
-
-                cleanedCount++;
-            }
-        }
-
-        if (cleanedCount > 0)
-        {
-            Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
-            GamepadHaptics.Play(HapticEvent.AshesCleaned);
-            TutorialSignals.Raise(TutorialSignal.AshesCleaned);
-        }
-    }
+    // R: toda la parrilla. El click derecho sobre una pila limpia solo esa (Coal.OnWorldPointerOver).
+    // Destroy es diferido: ActiveCoals no cambia mientras se recorre.
+    private void CleanAshes() => Coal.NotifyAshesCleaned(Coal.DiscardAshesIn(Coal.ActiveCoals));
 
     /// <summary>
     /// Resultado de evaluar el plato armado contra un cliente. Lo produce

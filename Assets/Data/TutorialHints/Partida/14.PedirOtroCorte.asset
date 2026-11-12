@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: missing_cut
   prompt:
-    input: 1
-    action: 7
+    input: 3
+    action: 0
   textKey: hint.missing_cut
   anchor: 12
   placement: 3

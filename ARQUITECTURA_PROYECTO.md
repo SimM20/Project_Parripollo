@@ -2689,14 +2689,15 @@ asset, no código. Gamepad en notación Xbox / PlayStation.
 | Cursor libre | mouse | stick derecho | Global | Mueve el puntero libre, para apuntar fino |
 | `PointerPrimary` | click izquierdo | A / ✕ | Global | Agarrar / soltar / click (mundo y UI) |
 | `PointerSecondary` | click derecho | X / □ | sobre carne en parrilla | `Meat.Flip()` |
+| `PointerSecondary` | click derecho | X / □ | sobre una pila de carbón (capa carbón) | `Coal.OnWorldPointerOver` → limpia **todas las cenizas de esa pila** (`Coal.DiscardAshesIn(slot.stackedCoals)`); los encendidos quedan. Ignorado con stock o una pieza en la mano |
+| `PointerSecondary` | click derecho | X / □ | sobre la **burbuja de pedido** del cliente (no el cuerpo) | `CustomerView.OnWorldPointerOver` → `GameManager.TryChangeOrderForMissingCut(customer)`: informa el corte faltante y sustituye el pedido por un corte con stock (propina anulada). La burbuja lleva fijo el ícono del click derecho / X / □ (esquina inferior derecha, `CustomerSystem.inputGlyphs`) |
 | `Pause` | `Esc` | Menu / Options | Global | Pausa / reanudar vía `GamePause`: congela tiempo, audio e input del mundo y cancela arrastres. Ignorada mientras hay un diálogo con pausa propia (`GamePause.SetDialogPaused`; hoy ninguno) |
 | `ToggleStockPanel` | `Q` | LB / L1 | Parrilla | Abre / cierra el **StockPanel**. Abrir pide `TutorialManager.CheckStockPanelOpenAllowed` |
 | `ToggleToppingsPanel` | `E` | RB / R1 | Parrilla | Abre / cierra el **ToppingsPanel** |
 | `ToggleGrillLayer` | `Space` | Y / △ | Parrilla | Cambia la capa carne ↔ carbón (`TryToggleGrillLayer` → `GrillLayerToggle.Toggle`; funciona también arrastrando una pieza) |
-| `CleanAshes` | `R` | RT / R2 | Parrilla | `CleanAshes()` — destruye carbones en `Ceniza` (gateado por el tutorial) |
+| `CleanAshes` | `R` | RT / R2 | Parrilla | `CleanAshes()` — destruye **todos** los carbones en `Ceniza` de la parrilla (`Coal.DiscardAshesIn(Coal.ActiveCoals)`). Convive con el click derecho por pila |
 | `Rotate` | `R` | LT / L2 | mientras se arrastra carne | Rotar footprint del corte (parrilla, StockPanel, bandeja, plato) |
 | `ClearPlate` | `C` | LT / L2 | Parrilla, con las manos libres | Limpiar el plato entero: armado + visuales de carne + sides/toppings + salpicaduras. `GameManager` lo ignora con `InputManager.PrimaryHeld` (pieza en la mano): ahí LT es `Rotate` |
-| `MissingCut` | `M` | View / Share | Parrilla | Informar corte faltante → sustituye el pedido por un corte con stock (`TriggerMissingCutChange`, propina anulada) |
 | `Back` | `Esc` | B / ○ | Menús | Volver / cerrar. Hoy lo usa solo el menú de opciones (menú principal y pausa). Comparte tecla con `Pause` (Esc: `GameManager` no alterna la pausa si `OptionsMenuPanel.AnyOpen`) |
 | Arrastrar carne a `ToBuild` | | | Parrilla | Monta el corte en el plato (uno solo) |
 | Arrastrar el plato | | | Parrilla | Entrega por **drag & drop**: soltar sobre un cliente entrega; rechazo → vuelve al plato; soltar sobre la bandeja / un hueco de la grilla → la carne se va ahí |
@@ -2711,7 +2712,9 @@ limpiar mientras se arrastra con el mouse). El panel de toppings va en `E` (ante
 En pantalla, `ToggleStockPanel`, `ToggleToppingsPanel` y `ToggleGrillLayer` tienen su ícono fijo debajo de la pestaña o
 del botón que accionan, con la tecla o el botón del control en uso (`InputPromptBadge`, 3.1 → *Input*).
 
-Ya **no existen**: `W`/`E`, `←`/`→` (cambio de vista), `A`/`D` (selección de cliente), `Space` en Build, `X` (descartar quemados).
+Ya **no existen**: `W`/`E`, `←`/`→` (cambio de vista), `A`/`D` (selección de cliente), `Space` en Build, `X` (descartar quemados),
+`M` / View·Share (`MissingCut`: acción y valor de `GameAction` borrados; ahora es click derecho sobre la burbuja, y el cartel
+14 del tutorial apunta a cualquier cliente con corte faltante con ícono de click derecho — el 14b "elegir cliente" ya no sale).
 
 ### 4.5 Ciclo de jornada
 

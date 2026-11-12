@@ -152,9 +152,9 @@ public enum HintCondition
     /// cruda ni quemada (entregarla cuesta un strike).
     /// </summary>
     PlateReadyForCustomer,
-    /// <summary>El cliente elegido (al que va la M) pide un corte sin stock, ni en la parrilla ni en el plato.</summary>
+    /// <summary>Algún cliente pide un corte sin stock, ni en la parrilla ni en el plato (se cambia con click derecho sobre su burbuja).</summary>
     SelectedWantsMissingCut,
-    /// <summary>Otro cliente, no el elegido, pide un corte sin stock (y el elegido no).</summary>
+    /// <summary>Sin uso desde que el cambio de pedido es click derecho sobre la burbuja (no hace falta elegir cliente). Siempre false.</summary>
     OtherWantsMissingCut,
     /// <summary>
     /// El cliente rechazó el plato y sigue igual: con carne que no espera nadie, o que no se arregla

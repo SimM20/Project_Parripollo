@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CustomerView : MonoBehaviour, IWorldPointerDownHandler, IWorldPointerEnterHandler, IWorldPointerExitHandler
+public class CustomerView : MonoBehaviour, IWorldPointerDownHandler, IWorldPointerEnterHandler, IWorldPointerOverHandler, IWorldPointerExitHandler
 {
     // La barra de paciencia es sprites sueltos (Fondo + Completo) y la camara del juego es
     // perspectiva, asi que separarlos en Z para decidir quien dibuja encima deforma la barra:
@@ -659,6 +659,24 @@ public class CustomerView : MonoBehaviour, IWorldPointerDownHandler, IWorldPoint
         // La burbuja no se crea ni se mueve: la que ya está sobre el pecho se agranda.
         SetOrderBubbleExpanded(true);
         TutorialSignals.Raise(TutorialSignal.CustomerHovered, target: transform);
+    }
+
+    /// <summary>
+    /// Click derecho (X / □) con el puntero sobre la burbuja de pedido: informa el corte faltante y
+    /// el cliente cambia de pedido (antes era la M sobre el cliente elegido). Sobre el cuerpo no
+    /// hace nada: la burbuja es la que muestra el ícono de la acción.
+    /// </summary>
+    public void OnWorldPointerOver()
+    {
+        if (!InputManager.SecondaryPressed) return;
+        if (customer == null || customer.IsInFeedback || customer.order == null) return;
+        // Con stock en la mano el click derecho lo suelta (StockPlacementMode); con el plato u otra pieza agarrada, nada.
+        if (StockPlacementMode.IsActive || InputManager.PrimaryHeld) return;
+        if (orderBubble == null || !orderBubble.ContainsScreenPoint(InputManager.PointerPosition)) return;
+
+        GameManager gameManager = GameManager.Instance;
+        if (gameManager != null)
+            gameManager.TryChangeOrderForMissingCut(customer);
     }
 
     /// <summary>

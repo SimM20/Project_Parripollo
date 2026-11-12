@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Coal : Item
+public class Coal : Item, IWorldPointerOverHandler
 {
     public static readonly List<Coal> ActiveCoals = new List<Coal>();
 
@@ -35,6 +35,7 @@ public class Coal : Item
     private Vector3 visualOffset;
     private Collider2D ownCollider;
     private Vector2 baseColliderOffset;
+    private bool discarded;
 
     /// <summary>Renderer del carbón (para los fantasmas de limpieza y del tacho).</summary>
     public SpriteRenderer VisualRenderer => spriteRenderer;
@@ -203,6 +204,70 @@ public class Coal : Item
 
         // Encendido muestra Fase 1 → 2 → 3 según el tiempo quemado (solo visual).
         spriteRenderer.sprite = coalData.GetSpriteForBurn(state, currentBurnTime);
+    }
+
+    // ── Limpieza de cenizas ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Click derecho con el puntero encima: limpia todas las cenizas de la pila de este hueco (los
+    /// carbones de una pila se superponen, así que el hover cae en cualquiera). Los encendidos quedan.
+    /// R (<see cref="GameManager"/>) sigue limpiando la parrilla entera.
+    /// </summary>
+    public void OnWorldPointerOver()
+    {
+        if (!InputManager.SecondaryPressed) return;
+        // Con stock en la mano el click derecho lo suelta (StockPlacementMode); con una pieza agarrada no se toca la parrilla.
+        if (StockPlacementMode.IsActive || InputManager.PrimaryHeld) return;
+
+        int cleaned = currentSlot != null
+            ? DiscardAshesIn(currentSlot.stackedCoals)
+            : (DiscardAsh() ? 1 : 0);
+
+        NotifyAshesCleaned(cleaned);
+    }
+
+    /// <summary>
+    /// Si es ceniza: libera el hueco, se vuela en un fantasma y se destruye. False si no es ceniza
+    /// o ya se descartó este frame (R y click derecho juntos).
+    /// </summary>
+    public bool DiscardAsh()
+    {
+        if (discarded || state != CoalStates.Ceniza) return false;
+
+        discarded = true;
+        ReleaseOccupiedSlots();
+
+        // Solo visual: la ceniza se vuela en un fantasma, el carbón ya se fue.
+        SpriteGhost.Spawn(spriteRenderer, SpriteGhost.Motion.Vanish(0.22f, 0.32f));
+        Destroy(gameObject);
+        return true;
+    }
+
+    /// <summary>Descarta las cenizas de la lista. Recorre de atrás porque descartar saca el carbón de la pila.</summary>
+    public static int DiscardAshesIn(List<Coal> coals)
+    {
+        int cleaned = 0;
+
+        for (int i = coals.Count - 1; i >= 0; i--)
+        {
+            if (i >= coals.Count) continue;
+
+            Coal coal = coals[i];
+            if (coal != null && coal.DiscardAsh())
+                cleaned++;
+        }
+
+        return cleaned;
+    }
+
+    /// <summary>Vibración y señal del tutorial, si se limpió algo.</summary>
+    public static void NotifyAshesCleaned(int cleanedCount)
+    {
+        if (cleanedCount <= 0) return;
+
+        Debug.Log($"[Grill] Se limpiaron {cleanedCount} montones de ceniza.");
+        GamepadHaptics.Play(HapticEvent.AshesCleaned);
+        TutorialSignals.Raise(TutorialSignal.AshesCleaned);
     }
 
     public void SetVisualVisibility(bool isVisible)

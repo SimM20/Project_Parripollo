@@ -602,8 +602,9 @@ public partial class TutorialHintContext
 
     /// <summary>
     /// Clientes que piden un corte que no hay: sin stock y sin ninguno en la parrilla ni en el plato.
-    /// La M va al cliente elegido (<see cref="CustomerSystem.SelectedCustomer"/>): si el que lo
-    /// necesita es otro, primero hay que elegirlo. Solo los que se pueden señalar (sin panel encima).
+    /// El cambio es click derecho sobre la burbuja de cualquier cliente (ya no hace falta elegirlo
+    /// antes, como con la M): se señala el primero y "elegir cliente" (otherMissingCut) no sale más.
+    /// Solo los que se pueden señalar (sin panel encima).
     /// </summary>
     private void RefreshMissingCuts(CustomerSystem customers)
     {
@@ -614,7 +615,6 @@ public partial class TutorialHintContext
         if (customers == null || cooler == null)
             return;
 
-        Customer selected = customers.SelectedCustomer;
         IReadOnlyList<Customer> active = customers.ActiveCustomers;
         for (int i = 0; i < active.Count; i++)
         {
@@ -630,15 +630,9 @@ public partial class TutorialHintContext
             if (view == null || !IsPickable(view))
                 continue;
 
-            if (customer == selected)
-                selectedMissingCut = view;
-            else if (otherMissingCut == null)
-                otherMissingCut = view;
+            selectedMissingCut = view;
+            return;
         }
-
-        // Primero se resuelve el que ya recibe la M.
-        if (selectedMissingCut != null)
-            otherMissingCut = null;
     }
 
     // ── Salsas ──────────────────────────────────────────────────────────────
