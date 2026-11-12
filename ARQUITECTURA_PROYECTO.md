@@ -2,6 +2,16 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-12** (rama `development`) — **panes, guarniciones, salsas, mesa y cartel en pixel art**.
+> Sprites nuevos (recortados del lienzo de 480x270, PPU 25, Point, sin compresión, `.ase` al lado): `Food/Breads/Pan Flauta`
+> (13x17) y `Pan de Paty` (17x15), `Food/Sides/Papas Fritas`, `Ensalada Verde` y `Ensalada Papa y Huevo` (20x20),
+> `Food/Sauces/Chimichurri` y `Salsa Criolla` (8x17), `Stall/Tabla Mesa` (480x138, pivote abajo, reemplaza a
+> `Mostrador Parrilla` en `GrillView/Mostrador`: madera sin los huecos oscuros) y `Environment/DayCycle/Cartel Ruta 40`
+> (19x64). Cada guarnición usa **un solo dibujo** para panel, plato y burbuja (`sideSprite` = `plateSprite`). Los `Item_*`
+> de `ToppingsPanel` pasaron de escala 0,05 a **1** (1:1 en pantalla); en las salsas se compensó `PouringOrigin`
+> (y = 0,34, el tope del frasco) y `barPixelSize` (0,12 → 0,006, la barra queda igual). En `Plato`, `sideVisualSize` = 0,8
+> y `toppingVisualSize` = 0,4665 para que guarniciones y frascos queden 1:1 sobre el plato. Los sprites viejos (IA y
+> `Mostrador Parrilla`) pasaron a `_SinUso/Sprites/`. `CartelRuta` (apagado, ver 3.9 → *Tránsito*) ya usa el dibujo nuevo.
 > Última actualización parcial: **2026-11-05** (rama `development`) — **logo del estudio al abrir el juego**. Escena nueva
 > `StudioSplashScene` (índice 0 del build): `StudioSplash` reproduce 60 cuadros a 25 fps desde `Sprites/Splash/StudioLogoSplash.png`
 > (38 cuadros únicos, PPU 25, Point, sin compresión), queda 0,6 s quieto y pasa al menú. Se saltea con `MenuSequence.SkipPressed`.
@@ -2425,6 +2435,9 @@ Vehículos que pasan cada tanto por la ruta dibujada en el `Paisaje`. Implementa
   pivote al centro) y se ubicó **pixel exacto** sobre el original (`x = -7.38, y = 1.25`). Toma el mismo tinte que el
   paisaje: sin un vehículo detrás no se distingue. ⚠️ Si Arte mueve o redibuja el cartel en el `Paisaje`, hay que
   regenerar el recorte. Si el `Paisaje` pasa a usar sprites por clave (fundido), el recorte no los sigue.
+  **Desde 2026-11-12** el `SpriteRenderer` está **apagado** (el `Paisaje` actual, `PaisajeSinArboles`, trae su propio
+  cartel chico de ~13x30 px) y el sprite es el dibujo nuevo del artista, `Cartel Ruta 40.png` (19x64, PPU 25), que ya no
+  calza con el pintado. Para usarlo hay que borrar el cartel del `Paisaje` y ubicarlo donde corresponda.
 - **Pool.** Los vehículos (`Vehiculo` + hijo `Luces`, dos `SpriteRenderer` con el material del `Paisaje`) se crean al
   necesitarlos y se reusan; los mueve el propio `RoadTraffic` en su `Update`, con `Time.deltaTime` (la pausa los frena).
 - **Arranque.** Simula `prewarmSeconds` en el primer `Update` y no en `Start`: para entonces el `DayCycleBackground` ya
