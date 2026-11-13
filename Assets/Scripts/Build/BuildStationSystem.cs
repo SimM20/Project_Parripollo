@@ -89,8 +89,8 @@ public class BuildStationSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// El pan solo existe acompanando a una carne. Si sacar el corte deja el plato vacio, el pan
-    /// se va con el: si no, quedaria un pan invisible en el armado que el drop ya no deja poner.
+    /// Sacar el corte de un sandwich se lleva el pan con el: el dibujo del plato era uno solo
+    /// (el sandwich) y ya no esta. El pan suelto solo existe cuando se lo apoya antes que la carne.
     /// </summary>
     private void DropBreadIfNoCuts()
     {
@@ -100,16 +100,28 @@ public class BuildStationSystem : MonoBehaviour
         Debug.Log("[BuildStation] Plato sin cortes: se quita el pan.");
     }
 
+    /// <summary>
+    /// True si ese pan puede acompanar a ese corte. Sin corte vale cualquiera; un corte que va
+    /// solo al plato no admite ninguno. Lo usan el panel (que panes mostrar) y el plato (si el
+    /// pan apoyado de antemano se queda o vuelve al panel).
+    /// </summary>
+    public static bool IsBreadAllowedFor(MeatCutSO cut, BreadSO bread)
+    {
+        if (cut == null)
+            return true;
+        if (cut.servingMode == ServingMode.PlatedOnly)
+            return false;
+
+        // Corte de sandwich sin pan configurado: no se filtra, para no dejarlo sin pan posible.
+        return cut.requiredBread == null || cut.requiredBread == bread;
+    }
+
+    /// <summary>
+    /// Asigna el pan. Se puede apoyar antes que la carne: queda suelto en el plato hasta que
+    /// llega el corte (ver <see cref="BuildFoodDropZone.ResolveLooseBreads"/>).
+    /// </summary>
     public void SetBread(BreadSO bread)
     {
-        // Invariante del armado: no hay pan sin carne. Lo respeta el drop, pero tambien puede
-        // llegar aca desde un undo posterior a que el corte saliera del plato.
-        if (bread != null && !HasAnyCut)
-        {
-            Debug.Log("[BuildStation] Plato sin cortes: se ignora el pan " + bread.breadName + ".");
-            return;
-        }
-
         assembledBread = bread;
         OnAssemblyChanged?.Invoke();
         Debug.Log("[BuildStation] Pan asignado: " + (bread != null ? bread.breadName : "ninguno"));

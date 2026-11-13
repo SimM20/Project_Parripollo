@@ -115,6 +115,9 @@ public class MeatTransferBuffer : MonoBehaviour
         // Sin undo: la carne se devuelve a mano, arrastrándola a la parrilla.
         GameObject visual = AdoptVisualIntoPlate(entry, dropWorldPoint);
 
+        // Si había un pan esperando en el plato: arma el sándwich o lo devuelve al panel.
+        BuildFoodDropZone.ResolveLooseBreads();
+
         Debug.Log("[Plato] Corte montado desde la parrilla: " + (cut != null ? cut.cutName : "Sin corte")
                   + " | A: " + entry.SideAState + " | B: " + entry.SideBState);
 

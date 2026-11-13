@@ -79,6 +79,16 @@ public class BuildUndoHistory : MonoBehaviour
         TutorialSignals.Raise(TutorialSignal.UndoUsed);
     }
 
+    /// <summary>
+    /// Saca del historial una acción que ya no tiene sentido deshacer (por ejemplo, el pan suelto
+    /// que el juego devolvió al panel), para que no quede un undo que no hace nada.
+    /// </summary>
+    public void Remove(IBuildUndoAction action)
+    {
+        if (action == null || !undoStack.Remove(action)) return;
+        OnHistoryChanged?.Invoke();
+    }
+
     public void Clear()
     {
         if (undoStack.Count == 0) return;

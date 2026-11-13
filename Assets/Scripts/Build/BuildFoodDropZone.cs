@@ -86,8 +86,24 @@ public class BuildFoodDropZone : MonoBehaviour
 
     private static readonly List<PlateVisualEntry> RowBuffer = new List<PlateVisualEntry>();
 
+    [Header("Loose Bread (pan apoyado antes que la carne)")]
+    [Tooltip("Tamaño del pan suelto sobre el plato, en unidades de mundo (media geométrica de ancho y alto del sprite).")]
+    [SerializeField] private float looseBreadSize = 1.1f;
+
+    [Tooltip("Tinte del pan mientras vuelve al panel porque no era para el corte que llegó.")]
+    [SerializeField] private Color wrongBreadTint = new Color(1f, 0.3f, 0.3f, 1f);
+
+    [Tooltip("Segundos que tarda el pan equivocado en volar de vuelta al panel.")]
+    [SerializeField] [Min(0.05f)] private float wrongBreadReturnSeconds = 0.4f;
+
     private readonly List<PlateVisualEntry> plateSideTopVisuals = new List<PlateVisualEntry>();
     private static readonly List<BuildFoodDropZone> ActiveZones = new List<BuildFoodDropZone>();
+
+    // Pan apoyado en el plato sin carne: espera al corte. Si le corresponde, se arma el sándwich;
+    // si no, vuelve al panel (ver ResolveLooseBread).
+    private BreadSO looseBread;
+    private GameObject looseBreadVisual;
+    private readonly List<IBuildUndoAction> looseBreadActions = new List<IBuildUndoAction>();
 
     void Awake()
     {
@@ -98,6 +114,19 @@ public class BuildFoodDropZone : MonoBehaviour
     {
         if (!ActiveZones.Contains(this))
             ActiveZones.Add(this);
+
+        if (buildStationSystem != null)
+        {
+            buildStationSystem.OnAssemblyChanged -= RefreshLooseBread;
+            buildStationSystem.OnAssemblyChanged += RefreshLooseBread;
+            RefreshLooseBread();
+        }
+    }
+
+    void OnDisable()
+    {
+        if (buildStationSystem != null)
+            buildStationSystem.OnAssemblyChanged -= RefreshLooseBread;
     }
 
     void OnDestroy()
@@ -125,46 +154,22 @@ public class BuildFoodDropZone : MonoBehaviour
 
             if (item.breadData != null)
             {
-                // El pan envuelve a la carne, no se sirve solo: sin corte en el plato no hay
-                // sandwich posible y el armado quedaria con un pan que no se ve ni se entrega.
                 if (!zone.buildStationSystem.HasAnyCut)
                 {
-                    Debug.Log("[Build] El plato no tiene carne: se rechaza el pan " + item.breadData.breadName + ".");
-                    return false;
-                }
-
-                BreadSO previousBread = zone.buildStationSystem.AssembledBread;
-                GameObject plateMeatVisual = null;
-                Sprite previousSprite = null;
-                Vector3 previousScale = Vector3.one;
-                Vector3 previousEuler = Vector3.zero;
-                bool visualCaptured = zone.meatTransferBuffer != null
-                    && zone.meatTransferBuffer.TryCaptureLastPlateMeatVisual(
-                        out plateMeatVisual, out previousSprite, out previousScale, out previousEuler);
-
-                zone.buildStationSystem.SetBread(item.breadData);
-                ProductVariantSO variant = zone.buildStationSystem.TryResolveVariant();
-                if (variant != null)
-                {
-                    MeatStates meatState = MeatStates.Crudo;
-                    if (zone.buildStationSystem.AssembledCutStates.Count > 0)
-                        meatState = zone.buildStationSystem.AssembledCutStates[0];
-
-                    Sprite variantSprite = variant.GetSpriteForState(meatState);
-                    if (variantSprite != null)
-                        zone.meatTransferBuffer?.UpdatePlateMeatSprite(variantSprite);
-                    else
-                        Debug.LogWarning("[Build] Sin sprite de variante para: " + item.breadData.breadName);
+                    // Pan antes que la carne: queda suelto en el plato esperando al corte.
+                    // El tutorial todavía no lo cuenta como "pan agregado": si el corte que llega
+                    // no es para ese pan, vuelve al panel (ver ResolveLooseBread).
+                    zone.PlaceLooseBread(item.breadData);
                 }
                 else
                 {
-                    Debug.LogWarning("[Build] Sin sprite de variante para: " + item.breadData.breadName);
+                    BreadSO previousBread = zone.buildStationSystem.AssembledBread;
+                    zone.buildStationSystem.SetBread(item.breadData);
+                    zone.TurnPlateMeatIntoSandwich(previousBread);
+                    TutorialSignals.Raise(TutorialSignal.BreadAdded, target: item.transform);
                 }
-                BuildUndoHistory.Instance?.Push(new SetBreadUndoAction(
-                    zone.buildStationSystem, zone.meatTransferBuffer, previousBread,
-                    visualCaptured ? plateMeatVisual : null, previousSprite, previousScale, previousEuler));
+
                 Debug.Log("[Build] Pan arrastrado: " + item.breadData.breadName);
-                TutorialSignals.Raise(TutorialSignal.BreadAdded, target: item.transform);
             }
             else if (item.sideData != null)
             {
@@ -193,6 +198,212 @@ public class BuildFoodDropZone : MonoBehaviour
 
         return false;
     }
+
+    // ── Pan y sándwich ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// El armado ya tiene corte y pan: el visual de carne del plato pasa a ser el sándwich
+    /// (sprite de la variante) y queda registrado el undo que lo devuelve a carne sola.
+    /// </summary>
+    private void TurnPlateMeatIntoSandwich(BreadSO previousBread)
+    {
+        BreadSO bread = buildStationSystem.AssembledBread;
+
+        GameObject plateMeatVisual = null;
+        Sprite previousSprite = null;
+        Vector3 previousScale = Vector3.one;
+        Vector3 previousEuler = Vector3.zero;
+        bool visualCaptured = meatTransferBuffer != null
+            && meatTransferBuffer.TryCaptureLastPlateMeatVisual(
+                out plateMeatVisual, out previousSprite, out previousScale, out previousEuler);
+
+        ProductVariantSO variant = buildStationSystem.TryResolveVariant();
+        Sprite variantSprite = null;
+        if (variant != null)
+        {
+            MeatStates meatState = MeatStates.Crudo;
+            if (buildStationSystem.AssembledCutStates.Count > 0)
+                meatState = buildStationSystem.AssembledCutStates[0];
+
+            variantSprite = variant.GetSpriteForState(meatState);
+        }
+
+        if (variantSprite != null)
+            meatTransferBuffer?.UpdatePlateMeatSprite(variantSprite);
+        else
+            Debug.LogWarning("[Build] Sin sprite de variante para: " + (bread != null ? bread.breadName : "sin pan"));
+
+        BuildUndoHistory.Instance?.Push(new SetBreadUndoAction(
+            buildStationSystem, meatTransferBuffer, previousBread,
+            visualCaptured ? plateMeatVisual : null, previousSprite, previousScale, previousEuler));
+    }
+
+    /// <summary>Apoya un pan en el plato vacío. El visual lo crea <see cref="RefreshLooseBread"/>.</summary>
+    private void PlaceLooseBread(BreadSO bread)
+    {
+        BreadSO previousBread = buildStationSystem.AssembledBread;
+        if (previousBread == bread)
+            return;
+
+        buildStationSystem.SetBread(bread);
+
+        // Sin visual de carne que restaurar: el undo solo vuelve al pan anterior (o a ninguno).
+        var action = new SetBreadUndoAction(buildStationSystem, meatTransferBuffer, previousBread,
+            null, null, Vector3.one, Vector3.zero);
+        looseBreadActions.Add(action);
+        BuildUndoHistory.Instance?.Push(action);
+    }
+
+    /// <summary>
+    /// Mantiene el dibujo del pan suelto al día con el armado: se ve mientras hay pan y no hay
+    /// corte. Escucha OnAssemblyChanged, así también cubre el undo y la limpieza del plato.
+    /// Con pan y corte a la vez no toca nada: eso lo define <see cref="ResolveLooseBread"/>.
+    /// </summary>
+    private void RefreshLooseBread()
+    {
+        BreadSO bread = buildStationSystem != null ? buildStationSystem.AssembledBread : null;
+
+        if (bread == null)
+        {
+            RemoveLooseBreadVisual(true);
+            looseBread = null;
+            looseBreadActions.Clear();
+            return;
+        }
+
+        if (buildStationSystem.HasAnyCut || looseBread == bread)
+            return;
+
+        RemoveLooseBreadVisual(true);
+        looseBread = bread;
+
+        Sprite sprite = ResolveBreadSprite(bread);
+        if (sprite == null)
+        {
+            Debug.LogWarning("[Build] El pan " + bread.breadName + " no tiene sprite: queda en el plato sin dibujo.");
+            return;
+        }
+
+        looseBreadVisual = new GameObject("PlateVisual_LooseBread");
+        looseBreadVisual.transform.position = transform.position;
+        looseBreadVisual.transform.localScale = Vector3.one * FitScale(sprite, looseBreadSize);
+
+        SpriteRenderer sr = looseBreadVisual.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        sr.sortingOrder = sideTopSortingOrder - 1;
+
+        ScalePunch.PopIn(looseBreadVisual.transform);
+    }
+
+    private void RemoveLooseBreadVisual(bool vanish)
+    {
+        if (looseBreadVisual == null)
+            return;
+
+        if (vanish)
+            SpriteGhost.Spawn(looseBreadVisual.GetComponent<SpriteRenderer>(), SpriteGhost.Motion.Vanish(0.1f, 0.22f));
+
+        Destroy(looseBreadVisual);
+        looseBreadVisual = null;
+    }
+
+    /// <summary>
+    /// Llamar apenas un corte queda montado en el plato (con su visual ya creado): resuelve el
+    /// pan que estaba apoyado de antemano.
+    /// </summary>
+    public static void ResolveLooseBreads()
+    {
+        for (int i = 0; i < ActiveZones.Count; i++)
+        {
+            BuildFoodDropZone zone = ActiveZones[i];
+            if (zone != null && zone.looseBread != null && zone.buildStationSystem != null
+                && zone.buildStationSystem.HasAnyCut && zone.buildStationSystem.HasBread)
+                zone.ResolveLooseBread();
+        }
+    }
+
+    /// <summary>
+    /// El corte llegó a un plato que ya tenía pan. Si es el pan de ese corte, se arma el sándwich.
+    /// Si no, el corte se queda en el plato y el pan vuelve al panel teñido de rojo, sin carteles:
+    /// nada se pierde ni se quema por el error.
+    /// </summary>
+    private void ResolveLooseBread()
+    {
+        MeatCutSO cut = buildStationSystem.AssembledCuts[0];
+        BreadSO bread = buildStationSystem.AssembledBread;
+
+        // Los undo del pan suelto ya no aplican: o es parte del sándwich (undo nuevo) o se fue.
+        BuildUndoHistory history = BuildUndoHistory.Instance;
+        for (int i = 0; history != null && i < looseBreadActions.Count; i++)
+            history.Remove(looseBreadActions[i]);
+        looseBreadActions.Clear();
+
+        if (BuildStationSystem.IsBreadAllowedFor(cut, bread))
+        {
+            RemoveLooseBreadVisual(false);
+            looseBread = null;
+            TurnPlateMeatIntoSandwich(null);
+            // Recién acá el pan quedó puesto de verdad: el cartel "Agregá el pan" se da por aprendido.
+            TutorialSignals.Raise(TutorialSignal.BreadAdded);
+            Debug.Log("[Build] El pan que esperaba en el plato arma el sándwich: " + bread.breadName);
+            return;
+        }
+
+        ReturnLooseBreadToPanel(cut, bread);
+    }
+
+    private void ReturnLooseBreadToPanel(MeatCutSO cut, BreadSO bread)
+    {
+        Vector3 from = looseBreadVisual != null ? looseBreadVisual.transform.position : transform.position;
+
+        // El pan vuela de vuelta a su casilla del panel, en rojo. Es un fantasma: el dato ya salió.
+        SpriteRenderer sr = looseBreadVisual != null ? looseBreadVisual.GetComponent<SpriteRenderer>() : null;
+        if (sr != null && sr.sprite != null)
+        {
+            BuildDraggableFoodItem source = FindPanelBread(bread);
+            Vector3 to = source != null ? source.transform.position : from + Vector3.up * 1.5f;
+
+            SpriteGhost.Spawn(sr.sprite, from, looseBreadVisual.transform.rotation, looseBreadVisual.transform.lossyScale,
+                wrongBreadTint, sr.sortingLayerID, 6000,
+                SpriteGhost.Motion.Into(to, wrongBreadReturnSeconds, 0.6f));
+        }
+
+        RemoveLooseBreadVisual(false);
+        looseBread = null;
+        buildStationSystem.SetBread(null);
+        GamepadHaptics.Play(HapticEvent.ActionRefused);
+
+        Debug.Log("[Build] " + bread.breadName + " no es para " + cut.cutName + ": el pan vuelve al panel.");
+    }
+
+    /// <summary>El item del panel de armado que representa ese pan (aunque esté oculto), o null.</summary>
+    private static BuildDraggableFoodItem FindPanelBread(BreadSO bread)
+    {
+        BuildDraggableFoodItem[] items = FindObjectsByType<BuildDraggableFoodItem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < items.Length; i++)
+        {
+            if (items[i] != null && items[i].breadData == bread)
+                return items[i];
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Dibujo del pan suelto: el mismo que tiene en el panel (así se lee que es "ese" pan el que
+    /// vuelve); si no está en el panel, el sprite del BreadSO.
+    /// </summary>
+    private static Sprite ResolveBreadSprite(BreadSO bread)
+    {
+        BuildDraggableFoodItem source = FindPanelBread(bread);
+        SpriteRenderer sr = source != null ? source.GetComponent<SpriteRenderer>() : null;
+        if (sr != null && sr.sprite != null)
+            return sr.sprite;
+
+        return bread.breadSprite;
+    }
+
+    // ── Carne ───────────────────────────────────────────────────────────────
 
     public static bool TryAcceptMeatAt(Vector3 worldPoint, MeatCutSO cut)
     {
@@ -402,6 +613,9 @@ public class BuildFoodDropZone : MonoBehaviour
         for (int i = 0; i < ActiveZones.Count; i++)
         {
             if (ActiveZones[i] == null) continue;
+            if (ActiveZones[i].looseBreadVisual != null)
+                ActiveZones[i].looseBreadVisual.SetActive(visible);
+
             List<PlateVisualEntry> visuals = ActiveZones[i].plateSideTopVisuals;
             for (int j = 0; j < visuals.Count; j++)
             {

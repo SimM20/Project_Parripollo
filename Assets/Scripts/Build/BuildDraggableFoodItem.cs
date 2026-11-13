@@ -29,6 +29,12 @@ public class BuildDraggableFoodItem : MonoBehaviour, IWorldPointerDownHandler, I
     private Vector3 visualOffset;
     private readonly SettleOffset settle = new SettleOffset();
 
+    /// <summary>
+    /// True mientras el item maneja su propio transform: en la mano, levantado o volviendo al panel.
+    /// El panel lo consulta para no reacomodarlo en ese momento.
+    /// </summary>
+    public bool IsBusy => isDragging || settle.Active || lift > 0f || visualOffset != Vector3.zero;
+
     public bool HasExactlyOneData()
     {
         int count = 0;
