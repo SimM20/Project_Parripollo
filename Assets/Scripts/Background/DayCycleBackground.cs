@@ -71,6 +71,21 @@ public class DayCycleBackground : MonoBehaviour
         hasScriptedHour = true;
     }
 
+    /// <summary>
+    /// Toma la configuración de hora de otro fondo. Lo usa <see cref="LocationEnvironment"/> al
+    /// reemplazar el fondo de la escena por el de la parada: lo que la escena le había fijado
+    /// (la tienda muestra la noche con <see cref="fallbackHour"/>) vale también para el nuevo.
+    /// </summary>
+    public void CopySettingsFrom(DayCycleBackground other)
+    {
+        if (other == null) return;
+
+        fallbackHour = other.fallbackHour;
+        catchUpHoursPerSecond = other.catchUpHoursPerSecond;
+        overrideHour = other.overrideHour;
+        overrideHourValue = other.overrideHourValue;
+    }
+
     /// <summary>Vuelve a la hora del reloj o a <see cref="fallbackHour"/>.</summary>
     public void ClearScriptedHour() => hasScriptedHour = false;
 

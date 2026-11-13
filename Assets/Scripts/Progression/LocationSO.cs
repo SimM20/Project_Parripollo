@@ -9,8 +9,8 @@ using UnityEngine;
 ///
 /// El orden y el modo de juego los define la <see cref="LocationRouteSO"/> que la contiene: la
 /// misma parada puede estar en la ruta del modo rápido y en la del modo historia.
-/// Hoy comprarla solo desbloquea contenido; el fondo propio de cada parada queda para cuando
-/// estén los assets.
+/// Además de desbloquear contenido puede cambiar el entorno: con un fondo asignado, la escena
+/// lo muestra desde que se llega a la parada (<see cref="LocationEnvironment"/>).
 /// </summary>
 [CreateAssetMenu(fileName = "Location", menuName = "Asado/Progresión/Parada")]
 public class LocationSO : ItemDataSO
@@ -28,6 +28,16 @@ public class LocationSO : ItemDataSO
 
     [Tooltip("Mejoras que pasan a venderse en la tienda desde esta parada.")]
     public List<UpgradeSO> unlockedUpgrades = new List<UpgradeSO>();
+
+    [Header("Entorno")]
+    [Tooltip("Fondo de la jornada (GameScene) en esta parada: un prefab como FondoCicloDia, con " +
+             "DayCycleBackground en la raíz. Vacío = sigue el de la parada anterior; si ninguna " +
+             "tiene, queda el fondo que trae la escena.")]
+    public GameObject backgroundPrefab;
+
+    [Tooltip("Fondo de la tienda (EndScene) en esta parada. Va aparte porque la tienda encuadra " +
+             "el fondo distinto (más arriba y de noche). Vacío = igual criterio que el de la jornada.")]
+    public GameObject shopBackgroundPrefab;
 
     /// <summary>Nombres de lo que desbloquea que el jugador ve en la tienda: cortes y mejoras.</summary>
     public string DescribeUnlocks()

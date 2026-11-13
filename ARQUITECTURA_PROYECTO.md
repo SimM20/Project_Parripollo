@@ -331,7 +331,7 @@ Assets/Scripts/
 | **Customers/** | Llegada de clientes según el horario del `DayClock` y la curva de afluencia, tick de paciencia, hover de entrega, view + **burbuja de pedido por cliente** (base al pecho siempre visible, expandida al hover) + recuadro, **feedback de entrega/abandono/cambio** (burbuja de 4 s con estado, pago y propina), gateo de pick bajo paneles. Pedidos: `Order` (corte + punto pedido + pan/sides/toppings) y generación ponderada (`OrderSystem`) | `CustomerSystem.cs`, `Customer.cs`, `CustomerView.cs`, `CustomerOrderBubble.cs`, `CustomerFeedbackBubble.cs`, `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Datos base de items (`ItemDataSO`, `ItemType`), catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `ItemDataSO.cs`, `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
 | **Shop/** | Lógica de tienda headless (`ShopSystem`, `ShopConfigSO`) y captura de fondo (`ShopBackdropCapture*`). En `Shop/UI/` las **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**). En `Shop/Upgrades/` las mejoras (`UpgradeSO`, `UpgradeUnlockActivator`) | `ShopSystem.cs`, `UI/ShopGridUI.cs`, `UI/ShopItemCellUI.cs`, `UI/ShopHeaderUI.cs`, `Upgrades/UpgradeSO.cs` |
-| **Progression/** | Progresión por **paradas de la ruta** (ver 3.6 → *Ruta de paradas*): datos (`LocationSO`, `LocationRouteSO`) y lógica estática (`LocationProgression`). Reemplaza al desbloqueo por número de noche | `LocationSO.cs`, `LocationRouteSO.cs`, `LocationProgression.cs` |
+| **Progression/** | Progresión por **paradas de la ruta** (ver 3.6 → *Ruta de paradas*): datos (`LocationSO`, `LocationRouteSO`) y lógica estática (`LocationProgression`) y **entorno por parada** (`LocationEnvironment`: cambia el fondo de la escena). Reemplaza al desbloqueo por número de noche | `LocationSO.cs`, `LocationRouteSO.cs`, `LocationProgression.cs`, `LocationEnvironment.cs` |
 | **Run/** | Estado de la run entre noches: billetera (`PlayerWallet`, DDOL), derrota (`RunDefeatConfigSO`, `RunDefeatScreen`), evaluación económica (`RunEconomyEvaluator`), reseteo (`RunStateReset`) | `PlayerWallet.cs`, `RunEconomyEvaluator.cs`, `RunStateReset.cs` |
 | **Strikes/** | Penalización de jornada por clientes que se van con paciencia 0 (`StrikeSystem`, singleton de escena), HUD de X (`StrikeHudView`), aviso “¡Te clavaron el cartel!” (`StrikeLimitNotice`) y popup modal de cierre anticipado en `EndScene` (`StrikeEndPopup`) | `StrikeSystem.cs`, `StrikeHudView.cs`, `StrikeLimitNotice.cs`, `StrikeEndPopup.cs` |
 | **Background/** | Fondo de `GameScene` en capas (cielo, estrellas, luna, sol, nubes, paisaje). `DayCycleBackground` lee la hora del `DayClock` y se la pasa a las capas; cada `DayCycleLayer` mezcla su color (y opcionalmente su sprite) entre claves horarias; `DayCycleArc` mueve sol y luna; `ParallaxLayer` desliza las nubes; `RoadTraffic` hace pasar vehículos por la ruta. Solo visual: no escribe la hora ni toca el gameplay | `DayCycleBackground.cs`, `DayCycleLayer.cs`, `DayCycleArc.cs`, `ParallaxLayer.cs`, `RoadTraffic.cs` |
@@ -1729,8 +1729,8 @@ por número de noche (se fueron `cutUnlocks` / `ConfigureCutUnlocks` y `NightUnl
 
 #### Ruta de paradas — `Progression/` (desde 2026-11-13)
 Progresión del modo rápido: se junta plata y se compran **ubicaciones** en orden; cada una habilita cortes,
-variantes y mejoras. Ruta **lineal**. El fondo propio de cada parada queda para cuando estén los assets: hoy
-comprarla solo desbloquea contenido.
+variantes y mejoras. Ruta **lineal**. Cada parada puede además cambiar el fondo (ver *Entorno por parada*, más
+abajo); hoy ninguna tiene uno asignado. Nombres, precios y repartos son placeholders: ver *Guía para diseño*.
 
 ```csharp
 // LocationSO : ItemDataSO — una parada. basePrice = su precio (pasa por tarjeta, carrito y mínimos como cualquier item)
@@ -1768,6 +1768,73 @@ Ruta del modo rápido (`Data/Locations/RutaModoRapido.asset`). ⚠️ Precios es
 | 2 · Cafayate | `$2000` | Vacío | Radio |
 | 3 · Malargüe | `$4500` | Costillita de cerdo | Carbón de quebracho |
 | 4 · Bariloche | `$8000` | — (falta un corte balanceado) | Mesa extra |
+
+##### Entorno por parada — `Progression/LocationEnvironment.cs` · **static**
+
+Cada parada puede traer su propio fondo. **Hoy ninguna tiene uno asignado**, así que se ve siempre el fondo de
+la escena aunque se compren paradas; el día que exista un prefab nuevo alcanza con asignarlo en el asset de la
+parada, sin tocar código ni escenas.
+
+```csharp
+// LocationSO
+GameObject backgroundPrefab;       // fondo de la jornada (GameScene)
+GameObject shopBackgroundPrefab;   // fondo de la tienda (EndScene)
+
+// LocationRouteSO
+GameObject ResolveBackground(int reachedIndex, bool forShop)   // el de la parada o, si no tiene, el de la anterior más cercana
+
+// DayCycleBackground
+void CopySettingsFrom(DayCycleBackground other)   // fallbackHour, catchUp y override de hora
+```
+
+| Regla | Cómo |
+|---|---|
+| Cuándo cambia | `LocationEnvironment` se engancha solo a `SceneManager.sceneLoaded` (`RuntimeInitializeOnLoadMethod`): corre después de los `Awake` y antes de los `Start`. **No hay ningún componente que poner en las escenas** |
+| En qué escenas | Solo `GameScene` (usa `backgroundPrefab`) y `EndScene` (usa `shopBackgroundPrefab`), reconocidas **por nombre**, la misma convención de `SceneManagementUtils`. El menú principal nunca cambia: no hay run ni tracker |
+| Herencia | Una parada sin fondo propio muestra el de la parada anterior más cercana que tenga uno. Si ninguna tiene, queda el fondo que trae la escena |
+| Cómo reemplaza | Busca el `DayCycleBackground` de la escena, instancia el prefab en su mismo padre, orden y transform de raíz, le copia la configuración de hora (`CopySettingsFrom`) y destruye el viejo. Si el prefab se llama igual que el fondo de la escena, no hace nada |
+| Por qué dos prefabs | La instancia de `EndScene` pisa posiciones de capas, carriles del tráfico, altura del arco del sol y `fallbackHour = 22`: la tienda encuadra el fondo distinto y de noche. Esos ajustes viven en la escena, no en el prefab, así que un fondo nuevo para la tienda tiene que venir ya encuadrado en su propio prefab. `GameScene` no pisa nada salvo la raíz |
+| Compra en la tienda | El fondo cambia **al cargar la escena**: comprar una parada no cambia el fondo de la tienda en el momento, se ve desde la jornada siguiente |
+
+**Para agregar un fondo nuevo:** duplicar `Prefabs/Environment/FondoCicloDia.prefab` (o hacer una variante), cambiarle
+el arte, **darle otro nombre** y arrastrarlo al campo `Background Prefab` de la parada. Tiene que conservar el
+`DayCycleBackground` en la raíz para seguir la hora del día (si falta, se avisa por consola y el fondo queda fijo).
+Para la tienda, lo mismo con `Shop Background Prefab`, acomodando las capas como las tiene la instancia de `EndScene`.
+
+Hoy el entorno es solo el fondo. Para sumar otras cosas por parada (tráfico, música, clientes) el lugar es el mismo:
+un campo más en `LocationSO` y su lectura en `LocationEnvironment` (o en el sistema dueño de esa variable, leyendo
+`LocationProgression.GetCurrent(catalog)` en su `Start`).
+
+##### Guía para diseño: cambiar las paradas sin tocar código
+
+Todo lo de la ruta son **datos** en `Assets/Data/Locations/`. Los nombres, precios y repartos actuales son
+**placeholders** puestos al implementar el sistema (localidades de la Ruta 40, de norte a sur), no una decisión de
+diseño: se pueden cambiar todos.
+
+| Quiero… | Qué tocar |
+|---|---|
+| Cambiar el nombre de una parada (p. ej. "Bariloche" → "La Boca") | Campo **`Item Name`** del asset de la parada. Es lo único que ve el jugador. El nombre del archivo (`Parada 4 - Bariloche.asset`) es solo para ordenarse en el proyecto: renombrarlo desde Unity es opcional y no rompe nada |
+| Traducir el nombre | Por defecto no se traduce (sale `Item Name` tal cual). Para traducirlo, cargar una clave en `Name Key` y agregarla a `Resources/Localization/Items.csv` |
+| Cambiar el precio | Campo **`Base Price`** de la parada. El de la primera no se usa (es la inicial, no se compra) |
+| Cambiar qué desbloquea | Listas `Unlocked Cuts`, `Unlocked Variants` y `Unlocked Upgrades` de la parada. Las variantes (plato / sándwich) conviene ponerlas junto con su corte |
+| Cambiar el orden, agregar o sacar paradas | Lista `Stops` de `RutaModoRapido.asset`. El orden de la lista **es** el orden de la ruta; la primera es donde se arranca. Para una parada nueva: *Create → Asado → Progresión → Parada* y sumarla a la lista. La tienda muestra una tarjeta por parada, cuatro por fila |
+| Ponerle un fondo propio | Campos `Background Prefab` / `Shop Background Prefab` (ver *Entorno por parada*) |
+| Otra ruta para otro modo de juego | *Create → Asado → Progresión → Ruta*, con las mismas paradas u otras, y asignarla en `FoodCatalog.asset` → `Location Route` |
+
+Reglas a tener en cuenta:
+
+- **Todo lo que figura en una parada queda bloqueado hasta llegar a ella.** Un corte o una mejora que tiene que estar
+  desde el arranque va en la **primera** parada.
+- **Lo que no figura en ninguna parada no lo maneja la ruta**: queda como diga el `Is Unlocked` de su propio asset.
+  Hoy es el caso de Paty, Chinchulín, Pechuga y Matambre (bloqueados a mano, sin precio cargado).
+- **No poner el mismo corte o mejora en dos paradas**: gana la última de la lista y el cartel de la tienda puede
+  nombrar la parada equivocada.
+- **No hace falta mantener el `Is Unlocked`** de los cortes, variantes y mejoras de la ruta: el juego lo recalcula
+  al arrancar cada escena y el Editor lo devuelve al estado inicial al salir de Play.
+- Para que un corte nuevo **se pida**, además de estar en una parada tiene que estar en `Available Order Cuts` del
+  `CustomerSystem` con peso mayor que 0, y tener precio de compra y de venta.
+- Los textos fijos de la tienda ("Se desbloquea en", "Primero comprá", "Parada: X") están en
+  `Resources/Localization/Shop.csv`, claves `shop.cell.stop_*` y `shop.cell.locked_until`.
 
 #### `PlayerWallet` — Singleton + DDOL
 `float Money { get; }` · `event Action<float> OnMoneyChanged` · `CanAfford(float)`, `TrySpend(float)`, `Add(float)`. Arranca en `1000` (`startingMoney`).
@@ -2409,6 +2476,10 @@ El fondo de `GameScene` (`Prefabs/FondoCicloDia.prefab`, raíz de escena) está 
 `DayClock`: a la apertura (06:30) amanece, pasa por el día, la hora dorada y el atardecer, y hacia el cierre (21:00) es
 de noche — y sigue de noche mientras se atiende a los últimos clientes, porque el reloj queda clavado en 21:00.
 **Solo visual**: no escribe la hora ni toca el gameplay.
+
+> El fondo de `GameScene` y el de `EndScene` pueden ser reemplazados al cargar la escena por el de la parada
+> alcanzada en la ruta (3.6 → *Entorno por parada*). Nada de la escena debe guardar una referencia serializada
+> a esas dos instancias: se destruyen si la parada trae su propio fondo. La de `MainMenuScene` no se toca.
 
 #### `DayCycleBackground` — `Background/DayCycleBackground.cs` · raíz del prefab
 ```csharp

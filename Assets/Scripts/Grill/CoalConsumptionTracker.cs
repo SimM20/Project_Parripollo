@@ -10,6 +10,9 @@ public class CoalConsumptionTracker : MonoBehaviour
              "apenas nace, antes de que cualquier sistema de la escena los lea.")]
     [SerializeField] private FoodCatalogSO catalog;
 
+    /// <summary>Catálogo de la run (y con él, la ruta de paradas). Lo lee <see cref="LocationEnvironment"/>.</summary>
+    public FoodCatalogSO Catalog => catalog;
+
     public int TotalCoalConsumed { get; private set; } = 0;
     public int DaysPlayed { get; private set; } = 0;
 

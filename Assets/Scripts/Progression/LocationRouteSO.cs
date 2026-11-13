@@ -46,6 +46,25 @@ public class LocationRouteSO : ScriptableObject
     }
 
     /// <summary>
+    /// Fondo que corresponde a la parada alcanzada: el suyo o, si no tiene, el de la parada
+    /// anterior más cercana que sí tenga (una parada sin fondo propio hereda el paisaje).
+    /// Null si ninguna tiene: la escena se queda con su fondo.
+    /// </summary>
+    public GameObject ResolveBackground(int reachedIndex, bool forShop)
+    {
+        for (int i = Mathf.Min(reachedIndex, stops.Count - 1); i >= 0; i--)
+        {
+            if (stops[i] == null)
+                continue;
+
+            GameObject prefab = forShop ? stops[i].shopBackgroundPrefab : stops[i].backgroundPrefab;
+            if (prefab != null)
+                return prefab;
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Deja el <c>isUnlocked</c> de cada corte, variante y mejora de la ruta según la parada
     /// alcanzada. Idempotente: se puede llamar al arrancar cada escena y después de cada compra.
     /// </summary>
