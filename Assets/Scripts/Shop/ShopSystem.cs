@@ -268,8 +268,43 @@ public class ShopSystem : MonoBehaviour
         int meat = item is MeatCutSO ? qty : 0;
         int coal = item is CoalSO coalItem ? Mathf.Max(1, coalItem.unitsPerBag) * qty : 0;
 
-        blockedByMinimums = !CartKeepsRunAlive(cost, meat, coal);
-        return !blockedByMinimums;
+        if (CartKeepsRunAlive(cost, meat, coal)) return true;
+
+        // Una parada se puede comprar aunque deje los mínimos fuera de alcance: es la apuesta del
+        // jugador. La UI lo avisa (StopRisksRun / CartRisksRun) y pide confirmar antes de pagar.
+        if (item is LocationSO) return true;
+
+        // Con el carrito ya en riesgo por una parada, la carne y el carbón solo pueden ayudar.
+        if ((meat > 0 || coal > 0) && !CartKeepsRunAlive(0f, 0, 0)) return true;
+
+        blockedByMinimums = true;
+        return false;
+    }
+
+    /// <summary>Hay una parada en el carrito: su compra puede saltearse el freno de los mínimos.</summary>
+    private bool CartHasStop
+    {
+        get
+        {
+            foreach (var kv in cart)
+                if (kv.Key is LocationSO) return true;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// El carrito lleva una parada y, pagándolo, los mínimos del próximo día quedan fuera de
+    /// alcance: la run se pierde apenas se paga. La UI tiene que avisarlo y pedir confirmación.
+    /// </summary>
+    public bool CartRisksRun => EnforceRunMinimums && CartHasStop && !CartKeepsRunAlive(0f, 0, 0);
+
+    /// <summary>Comprar esa parada (o pagarla, si ya está en el carrito) deja la run sin los mínimos.</summary>
+    public bool StopRisksRun(LocationSO stop)
+    {
+        if (!EnforceRunMinimums || stop == null) return false;
+
+        float extra = GetCartQty(stop) > 0 ? 0f : stop.basePrice;
+        return !CartKeepsRunAlive(extra, 0, 0);
     }
 
     /// <summary>Igual que la sobrecarga de <see cref="ItemDataSO"/>: un topping nunca aporta al mínimo.</summary>
@@ -315,11 +350,14 @@ public class ShopSystem : MonoBehaviour
         if (topping != null && toppingCart.Remove(topping)) OnCartChanged?.Invoke();
     }
 
-    /// <summary>El carrito se puede pagar: tiene algo, alcanza la plata y no rompe los mínimos del próximo día.</summary>
+    /// <summary>
+    /// El carrito se puede pagar: tiene algo, alcanza la plata y no rompe los mínimos del próximo
+    /// día. Con una parada adentro se puede pagar aunque los rompa (ver <see cref="CartRisksRun"/>).
+    /// </summary>
     public bool CanConfirmCart()
     {
         if (!HasCartItems || Wallet == null) return false;
-        return Wallet.CanAfford(CartTotal()) && CartKeepsRunAlive(0f, 0, 0);
+        return Wallet.CanAfford(CartTotal()) && (CartKeepsRunAlive(0f, 0, 0) || CartHasStop);
     }
 
     /// <summary>Los mínimos siguen alcanzables pagando el carrito actual más un extra hipotético.</summary>
@@ -411,7 +449,8 @@ public class ShopSystem : MonoBehaviour
 
         // Sacar una línea puede dejar el resto del carrito fuera de los mínimos (p. ej. queda la
         // mejora y se fue el carbón): el guard se repite acá con el carrito entero.
-        if (!CartKeepsRunAlive(0f, 0, 0))
+        // Con una parada en el carrito el jugador ya fue avisado y confirmó: se paga igual.
+        if (!CartKeepsRunAlive(0f, 0, 0) && !CartHasStop)
         {
             message = Loc.Get("shop.buy.below_minimum");
             OnPurchaseResult?.Invoke(false, message);

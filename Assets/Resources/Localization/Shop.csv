@@ -15,6 +15,7 @@ shop.cell.stop_name,Parada: {0},Stop: {0}
 shop.cell.stop_unlocks,Desbloquea: {0},Unlocks: {0}
 shop.cell.stop_progress,PARADA {0}/{1},STOP {0}/{1}
 shop.cell.locked_until,Se desbloquea en {0},Unlocks at {0}
+shop.cell.stop_risk,Ojo: te deja sin el mínimo para mañana,Careful: leaves you short of tomorrow's minimum
 # Carrito (ShopCartUI / ShopCartRowUI)
 shop.cart.title,Carrito,Cart
 shop.cart.empty,Todavía no agregaste nada.,Nothing added yet.
@@ -44,6 +45,8 @@ shop.next.upgrades,Siguiente: Mejoras,Next: Upgrades
 shop.next.toppings,Siguiente: Toppings,Next: Toppings
 shop.next.start_day,Arrancar el día,Start the day
 shop.next.buy_cart,Comprar carrito,Buy cart
+shop.next.buy_cart_risk,Comprar sin el mínimo,Buy without the minimum
+shop.next.risk_confirm,Confirmar: perdés la partida,Confirm: you lose the run
 shop.next.cart_blocked,"Primero, lo mínimo",Minimum first
 shop.next.blocked,Faltan recursos,Not enough supplies
 "# Requisitos para el próximo día (ShopRequirementsUI), en mayúsculas"

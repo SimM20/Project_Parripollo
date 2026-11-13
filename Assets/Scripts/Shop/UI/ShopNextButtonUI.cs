@@ -20,6 +20,10 @@ public class ShopNextButtonUI : MonoBehaviour
     private bool started;
     private float startDayUnlockTime;
 
+    // El carrito lleva una parada que deja la run sin los mínimos: el primer click arma el aviso
+    // ("Confirmar: perdés la partida") y recién el segundo paga.
+    private bool riskConfirmArmed;
+
     void Awake()
     {
         if (button != null) button.onClick.AddListener(OnClicked);
@@ -75,6 +79,15 @@ public class ShopNextButtonUI : MonoBehaviour
             // Paso intermedio: con algo en el carrito, el botón primero lo paga.
             if (shop.HasCartItems)
             {
+                if (shop.CartRisksRun && !riskConfirmArmed)
+                {
+                    riskConfirmArmed = true;
+                    GamepadHaptics.Play(HapticEvent.ActionRefused);
+                    Refresh();
+                    return;
+                }
+
+                riskConfirmArmed = false;
                 if (shop.TryConfirmPurchase(out _))
                     startDayUnlockTime = Time.unscaledTime + startDayLockAfterPurchase;
                 return;
@@ -120,6 +133,10 @@ public class ShopNextButtonUI : MonoBehaviour
         bool isLastTab = shop.CurrentTab == ShopTabType.Toppings;
         bool payCart = isLastTab && shop.HasCartItems;
         bool blocked = isLastTab && (payCart ? !shop.CanConfirmCart() : !CanStartNextDay());
+        bool risky = payCart && !blocked && shop.CartRisksRun;
+
+        // Salir de la tab, vaciar el carrito o dejar de estar en riesgo desarma la confirmación.
+        if (!risky) riskConfirmArmed = false;
 
         if (button != null) button.interactable = !blocked;
 
@@ -131,7 +148,13 @@ public class ShopNextButtonUI : MonoBehaviour
             case ShopTabType.Meat:     label.text = Loc.Get("shop.next.upgrades"); break;
             case ShopTabType.Upgrades: label.text = Loc.Get("shop.next.toppings"); break;
             case ShopTabType.Toppings:
-                if (payCart) label.text = Loc.Get(blocked ? "shop.next.cart_blocked" : "shop.next.buy_cart");
+                if (payCart)
+                {
+                    string key = blocked ? "shop.next.cart_blocked"
+                        : !risky ? "shop.next.buy_cart"
+                        : riskConfirmArmed ? "shop.next.risk_confirm" : "shop.next.buy_cart_risk";
+                    label.text = Loc.Get(key);
+                }
                 else label.text = Loc.Get(blocked ? "shop.next.blocked" : "shop.next.start_day");
                 break;
         }

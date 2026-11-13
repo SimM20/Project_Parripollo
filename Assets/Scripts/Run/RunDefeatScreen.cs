@@ -67,6 +67,10 @@ public class RunDefeatScreen : MonoBehaviour
         RunEconomyStatus status;
         Reason = ResolveReason(out status);
 
+        // La run también se puede perder adentro de la tienda: comprar una parada sin que
+        // alcance para los mínimos (la tienda lo avisa y pide confirmar antes).
+        if (shop != null) shop.OnPurchaseResult += HandlePurchaseResult;
+
         if (Reason == RunDefeatReason.None)
         {
             root.SetActive(false);
@@ -76,8 +80,20 @@ public class RunDefeatScreen : MonoBehaviour
         Show(status);
     }
 
+    private void HandlePurchaseResult(bool success, string _)
+    {
+        if (!success || Reason != RunDefeatReason.None || !CanEvaluateEconomy()) return;
+
+        RunEconomyStatus status = shop.GetRunStatus();
+        if (status.CanContinue) return;
+
+        Reason = RunDefeatReason.InsufficientResources;
+        Show(status);
+    }
+
     private void OnDestroy()
     {
+        if (shop != null) shop.OnPurchaseResult -= HandlePurchaseResult;
         if (mainMenuButton != null) mainMenuButton.onClick.RemoveListener(GoToMainMenu);
         if (retryButton != null) retryButton.onClick.RemoveListener(RestartRun);
     }

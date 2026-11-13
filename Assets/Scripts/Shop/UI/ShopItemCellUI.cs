@@ -35,8 +35,17 @@ public class ShopItemCellUI : MonoBehaviour
     [SerializeField] private Color normalIconColor = Color.white;
     [SerializeField] private Color lockedIconColor = new Color(1f, 1f, 1f, 0.35f);
 
+    [Tooltip("Color del aviso de la parada que deja la run sin los mínimos del próximo día.")]
+    [SerializeField] private Color riskTextColor = new Color(1f, 0.42f, 0.35f, 1f);
+    [Tooltip("Color del cartel \"Se desbloquea en X\" que va encima de la tarjeta bloqueada.")]
+    [SerializeField] private Color lockedLabelColor = new Color(1f, 0.82f, 0.29f, 1f);
+
     private ItemDataSO item;
     private ToppingSO toppingItem;
+
+    // Cartel sobre el velo de la tarjeta bloqueada. Se crea solo la primera vez que hace falta,
+    // clonando el texto del nombre (misma fuente): no hay que tocar el prefab.
+    private TextMeshProUGUI lockedLabel;
     private ShopSystem shop;
     private int pendingQty = 1;
 
@@ -132,6 +141,7 @@ public class ShopItemCellUI : MonoBehaviour
             iconImage.enabled = icon != null;
         }
         if (lockedOverlay != null) lockedOverlay.enabled = !purchasable;
+        ShowLockedLabel(purchasable || item == null ? null : ResolveLockedUntil(item));
         if (nameText != null) nameText.text = name;
         if (descriptionText != null) descriptionText.text = description;
         if (stockText != null) stockText.text = stock;
@@ -240,12 +250,14 @@ public class ShopItemCellUI : MonoBehaviour
             return coal.unitsPerBag > 1 ? Loc.Format("shop.cell.coal_bag", coal.unitsPerBag) : "";
 
         if (item is LocationSO stop)
-            return Loc.Format("shop.cell.stop_unlocks", stop.DescribeUnlocks());
+        {
+            // Se puede comprar igual, pero avisando: con esta parada no se llega a los mínimos.
+            if (shop.StopRisksRun(stop))
+                return "<color=#" + ColorUtility.ToHtmlStringRGB(riskTextColor) + ">"
+                     + Loc.Get("shop.cell.stop_risk") + "</color>";
 
-        // Lo bloqueado dice en qué parada se habilita, en vez de su descripción.
-        string lockedUntil = ResolveLockedUntil(item);
-        if (lockedUntil != null)
-            return lockedUntil;
+            return Loc.Format("shop.cell.stop_unlocks", stop.DescribeUnlocks());
+        }
 
         if (item is UpgradeSO up)
         {
@@ -262,6 +274,47 @@ public class ShopItemCellUI : MonoBehaviour
             return text;
         }
         return "";
+    }
+
+    /// <summary>
+    /// Muestra (o esconde, con null) el cartel de dónde se desbloquea, encima del velo oscuro:
+    /// debajo del velo el texto de la tarjeta casi no se lee.
+    /// </summary>
+    private void ShowLockedLabel(string message)
+    {
+        if (string.IsNullOrEmpty(message))
+        {
+            if (lockedLabel != null) lockedLabel.gameObject.SetActive(false);
+            return;
+        }
+
+        if (lockedLabel == null)
+        {
+            if (lockedOverlay == null || nameText == null) return;
+
+            lockedLabel = Instantiate(nameText, lockedOverlay.transform);
+            lockedLabel.name = "LockedLabel";
+
+            // Franja de arriba de la tarjeta, sobre el ícono.
+            RectTransform rt = lockedLabel.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -40f);
+            rt.sizeDelta = new Vector2(-28f, 100f);
+
+            lockedLabel.alignment = TextAlignmentOptions.Center;
+            lockedLabel.enableWordWrapping = true;
+            lockedLabel.overflowMode = TextOverflowModes.Overflow;
+            lockedLabel.enableAutoSizing = true;
+            lockedLabel.fontSizeMin = 12f;
+            lockedLabel.fontSizeMax = 22f;
+            lockedLabel.raycastTarget = false;
+            lockedLabel.color = lockedLabelColor;
+        }
+
+        lockedLabel.text = message.ToUpper();
+        lockedLabel.gameObject.SetActive(true);
     }
 
     /// <summary>"Se desbloquea en X" para un corte o mejora bloqueado por la ruta; null si no aplica.</summary>
