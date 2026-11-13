@@ -14,7 +14,11 @@ shop.cell.in_cart,En el carrito,In the cart
 shop.cell.stop_name,Parada: {0},Stop: {0}
 shop.cell.stop_unlocks,Desbloquea: {0},Unlocks: {0}
 shop.cell.stop_progress,PARADA {0}/{1},STOP {0}/{1}
-shop.cell.locked_until,Se desbloquea en {0},Unlocks at {0}
+shop.cell.locked_until,Se desbloquea en,Unlocks at
+shop.cell.stop_owned,Ya es tuya,Already yours
+shop.cell.stop_here,ESTÁS ACÁ,YOU ARE HERE
+shop.cell.stop_visited,YA PASASTE,ALREADY VISITED
+shop.cell.stop_needs,Primero comprá,Buy first
 shop.cell.stop_risk,Ojo: te deja sin el mínimo para mañana,Careful: leaves you short of tomorrow's minimum
 # Carrito (ShopCartUI / ShopCartRowUI)
 shop.cart.title,Carrito,Cart
@@ -29,19 +33,23 @@ shop.header.coal,Carbón: {0} u.,Charcoal: {0} u.
 shop.tab.coal,1. Carbón,1. Charcoal
 shop.tab.meat,2. Carnes,2. Meats
 shop.tab.upgrades,3. Mejoras,3. Upgrades
-shop.tab.toppings,4. Toppings,4. Toppings
+shop.tab.route,4. Ruta,4. Route
+shop.tab.toppings,5. Toppings,5. Toppings
 shop.help.coal.title,CONSUMO PROMEDIO:,AVERAGE USE:
 shop.help.coal,Venís usando {0} unidades de carbón por jornada.,You've been using {0} charcoal units per day.
 shop.help.coal.first_night,Primera jornada: todavía no hay datos de consumo.,First day: no usage data yet.
 shop.help.meat.title,CORTES DE CARNE,MEAT CUTS
 shop.help.meat,Elegí los cortes para la noche.,Pick the cuts for tonight.
 shop.help.upgrades.title,MEJORAS PARA LA PARRILLA,GRILL UPGRADES
-shop.help.upgrades,Comprá la próxima parada para desbloquear cortes y mejoras.,Buy the next stop to unlock cuts and upgrades.
+shop.help.upgrades,Invertí en mejoras permanentes.,Invest in permanent upgrades.
+shop.help.route.title,LA RUTA,THE ROUTE
+shop.help.route,Comprá la próxima parada para desbloquear cortes y mejoras.,Buy the next stop to unlock cuts and upgrades.
 shop.help.toppings.title,TOPPINGS Y SALSAS,TOPPINGS & SAUCES
 shop.help.toppings,Comprá condimentos para tus platos.,Buy condiments for your dishes.
 # Botón Siguiente (ShopNextButtonUI)
 shop.next.meat,Siguiente: Carnes,Next: Meats
 shop.next.upgrades,Siguiente: Mejoras,Next: Upgrades
+shop.next.route,Siguiente: Ruta,Next: Route
 shop.next.toppings,Siguiente: Toppings,Next: Toppings
 shop.next.start_day,Arrancar el día,Start the day
 shop.next.buy_cart,Comprar carrito,Buy cart

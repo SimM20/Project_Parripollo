@@ -65,7 +65,7 @@ public class ShopTabSwipeUI : MonoBehaviour
     private void OnTabChanged()
     {
         ShopTabType current = shop.CurrentTab;
-        float side = current > lastTab ? 1f : -1f;
+        float side = ShopTabs.OrderOf(current) > ShopTabs.OrderOf(lastTab) ? 1f : -1f;
         lastTab = current;
 
         if (running != null) StopCoroutine(running);

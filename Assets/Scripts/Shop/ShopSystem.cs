@@ -119,19 +119,32 @@ public class ShopSystem : MonoBehaviour
             case ShopTabType.Upgrades:
                 if (catalog != null)
                 {
-                    // La próxima parada va primera: es la compra que habilita el resto.
-                    LocationSO nextStop = LocationProgression.GetNext(catalog);
-                    if (nextStop != null) list.Add(nextStop);
-
                     var upgrades = catalog.GetAllUpgrades();
                     for (int i = 0; i < upgrades.Count; i++)
                         if (upgrades[i] != null) list.Add(upgrades[i]);
                 }
                 break;
+
+            case ShopTabType.Route:
+                // La ruta entera, en orden: las paradas ya alcanzadas, la próxima (la única que
+                // se vende) y las que vienen después.
+                LocationRouteSO route = catalog != null ? catalog.LocationRoute : null;
+                for (int i = 0; route != null && i < route.Count; i++)
+                    if (route.GetStop(i) != null) list.Add(route.GetStop(i));
+                break;
         }
 
         return list;
     }
+
+    /// <summary>Hay una ruta con algo para comprar: la tienda muestra la pestaña de la ruta.</summary>
+    public bool HasRouteTab => catalog != null && catalog.LocationRoute != null && catalog.LocationRoute.Count > 1;
+
+    /// <summary>La pestaña que sigue a la actual en el botón "Siguiente".</summary>
+    public ShopTabType GetNextTab() => ShopTabs.Next(CurrentTab, HasRouteTab);
+
+    /// <summary>La run ya pasó por esa parada (o está en ella): no se vende, pero no está bloqueada.</summary>
+    public bool IsStopOwned(LocationSO stop) => LocationProgression.IsReached(catalog, stop);
 
     public IReadOnlyList<ToppingSO> GetToppings()
     {

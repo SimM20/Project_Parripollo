@@ -54,6 +54,9 @@ public class ShopSubtitleUI : MonoBehaviour
             case ShopTabType.Upgrades:
                 SetTexts(Loc.Get("shop.help.upgrades.title"), Loc.Get("shop.help.upgrades"));
                 break;
+            case ShopTabType.Route:
+                SetTexts(Loc.Get("shop.help.route.title"), Loc.Get("shop.help.route"));
+                break;
             case ShopTabType.Toppings:
                 SetTexts(Loc.Get("shop.help.toppings.title"), Loc.Get("shop.help.toppings"));
                 break;

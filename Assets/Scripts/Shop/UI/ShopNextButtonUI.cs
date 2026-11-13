@@ -102,8 +102,7 @@ public class ShopNextButtonUI : MonoBehaviour
         }
 
         // Avanzar al siguiente tab
-        ShopTabType next = GetNextTab(shop.CurrentTab);
-        shop.SetTab(next);
+        shop.SetTab(shop.GetNextTab());
     }
 
     /// <summary>Spec punto 7: no se puede empezar el día sin cumplir ambos mínimos.</summary>
@@ -113,17 +112,6 @@ public class ShopNextButtonUI : MonoBehaviour
         if (!shop.EnforceRunMinimums) return true;
 
         return shop.GetRunStatus().MeetsMinimums;
-    }
-
-    private static ShopTabType GetNextTab(ShopTabType current)
-    {
-        switch (current)
-        {
-            case ShopTabType.Coal:     return ShopTabType.Meat;
-            case ShopTabType.Meat:     return ShopTabType.Upgrades;
-            case ShopTabType.Upgrades: return ShopTabType.Toppings;
-            default:                   return ShopTabType.Coal;
-        }
     }
 
     private void Refresh()
@@ -144,9 +132,16 @@ public class ShopNextButtonUI : MonoBehaviour
 
         switch (shop.CurrentTab)
         {
-            case ShopTabType.Coal:     label.text = Loc.Get("shop.next.meat"); break;
-            case ShopTabType.Meat:     label.text = Loc.Get("shop.next.upgrades"); break;
-            case ShopTabType.Upgrades: label.text = Loc.Get("shop.next.toppings"); break;
+            default:
+                // "Siguiente: <la pestaña que viene>".
+                switch (shop.GetNextTab())
+                {
+                    case ShopTabType.Meat:     label.text = Loc.Get("shop.next.meat"); break;
+                    case ShopTabType.Upgrades: label.text = Loc.Get("shop.next.upgrades"); break;
+                    case ShopTabType.Route:    label.text = Loc.Get("shop.next.route"); break;
+                    default:                   label.text = Loc.Get("shop.next.toppings"); break;
+                }
+                break;
             case ShopTabType.Toppings:
                 if (payCart)
                 {

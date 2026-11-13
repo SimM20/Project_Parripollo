@@ -36,6 +36,51 @@ public class ShopTabButtonUI : MonoBehaviour
         if (button != null) button.onClick.RemoveListener(HandleClick);
     }
 
+    /// <summary>
+    /// Convierte este botón (un clon de otra pestaña) en el de <paramref name="newTab"/>, con su
+    /// texto por clave de Loc. Lo usa <see cref="ShopBreadcrumbUI"/> para la pestaña de la ruta.
+    /// </summary>
+    public void Configure(ShopTabType newTab, string labelKey)
+    {
+        tab = newTab;
+        if (label == null) return;
+
+        if (!label.TryGetComponent(out LocalizedText localized))
+            localized = label.gameObject.AddComponent<LocalizedText>();
+        localized.Key = labelKey;
+    }
+
+    // Tamaño máximo del texto tal como viene del prefab: el techo al medir.
+    private float authoredFontSize = -1f;
+
+    /// <summary>
+    /// El tamaño de letra más grande con el que el texto actual entra en la pestaña. Deja el
+    /// auto-size prendido; <see cref="SetFontSize"/> lo apaga con el tamaño elegido.
+    /// </summary>
+    public float MeasureFittingFontSize()
+    {
+        if (label == null) return 0f;
+
+        if (authoredFontSize < 0f)
+            authoredFontSize = label.enableAutoSizing ? label.fontSizeMax : label.fontSize;
+
+        if (label.TryGetComponent(out LocalizedText localized)) localized.Refresh();
+
+        label.fontSizeMax = authoredFontSize;
+        label.enableAutoSizing = true;
+        label.ForceMeshUpdate(true);
+        return label.fontSize;
+    }
+
+    /// <summary>Fija el tamaño de letra (sin auto-size), para que todas las pestañas usen el mismo.</summary>
+    public void SetFontSize(float size)
+    {
+        if (label == null || size <= 0f) return;
+
+        label.enableAutoSizing = false;
+        label.fontSize = size;
+    }
+
     public void SetActiveState(bool isActive)
     {
         // Con cartel de menú la tab activa es el cartel encendido ("estás acá"), no un botón:

@@ -32,6 +32,14 @@ public static class LocationProgression
     public static bool IsNext(FoodCatalogSO catalog, LocationSO location) =>
         location != null && GetNext(catalog) == location;
 
+    /// <summary>True si la run ya pasó por esa parada (o está en ella).</summary>
+    public static bool IsReached(FoodCatalogSO catalog, LocationSO location)
+    {
+        LocationRouteSO route = RouteOf(catalog);
+        int index = route != null ? route.IndexOf(location) : -1;
+        return index >= 0 && index <= CurrentIndex;
+    }
+
     /// <summary>
     /// Deja los desbloqueos de la ruta al día con la parada alcanzada. Lo llaman el tracker al
     /// nacer y cada escena al arrancar (GameScene antes de sortear pedidos, la tienda antes de

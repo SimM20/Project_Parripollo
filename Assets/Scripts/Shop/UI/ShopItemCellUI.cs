@@ -133,22 +133,33 @@ public class ShopItemCellUI : MonoBehaviour
         }
         else return;
 
+        // Una parada ya alcanzada no se vende, pero tampoco está bloqueada: va sin velo.
+        bool owned = item is LocationSO ownedStop && shop.IsStopOwned(ownedStop);
+        bool locked = !purchasable && !owned;
+
         if (iconImage != null)
         {
             iconImage.sprite = icon;
-            iconImage.color = purchasable ? normalIconColor : lockedIconColor;
+            iconImage.color = locked ? lockedIconColor : normalIconColor;
             // Sin sprite, un Image dibuja un cuadrado blanco: mejor no mostrar nada.
             iconImage.enabled = icon != null;
         }
-        if (lockedOverlay != null) lockedOverlay.enabled = !purchasable;
-        ShowLockedLabel(purchasable || item == null ? null : ResolveLockedUntil(item));
+        if (lockedOverlay != null) lockedOverlay.enabled = locked;
+
+        // Lo bloqueado por la ruta no tiene nada para accionar: en el lugar del −/+ y del Agregar
+        // va el cartel que dice dónde se desbloquea.
+        string lockedMessage = locked && item != null ? ResolveLockedUntil(item) : null;
+        bool showActions = lockedMessage == null;
+        ShowLockedLabel(lockedMessage);
+        if (buyButton != null && buyButton.gameObject.activeSelf != showActions)
+            buyButton.gameObject.SetActive(showActions);
         if (nameText != null) nameText.text = name;
         if (descriptionText != null) descriptionText.text = description;
         if (stockText != null) stockText.text = stock;
-        if (priceText != null) priceText.text = $"${price:N0}";
+        if (priceText != null) priceText.text = owned ? "" : $"${price:N0}";
         if (qtyText != null) qtyText.text = pendingQty.ToString();
         if (subtotalText != null) subtotalText.text = pendingQty > 1 ? Loc.Format("shop.cell.subtotal", price * pendingQty) : "";
-        if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1);
+        if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1 && showActions);
 
         // Spec punto 7: no se permite gastar la plata que hace falta para el mínimo del próximo
         // día. Plata y mínimos se miden contra el carrito entero; el guard real vive en ShopSystem.
@@ -161,7 +172,7 @@ public class ShopItemCellUI : MonoBehaviour
         int inCart = toppingItem != null ? shop.GetToppingCartQty(toppingItem) : shop.GetCartQty(item);
         if (buyLabel != null)
         {
-            string key = inCart >= MaxQty ? "shop.cell.in_cart" : "shop.cell.add";
+            string key = owned ? "shop.cell.stop_owned" : inCart >= MaxQty ? "shop.cell.in_cart" : "shop.cell.add";
             if (buyLabel.Key != key) buyLabel.Key = key;
         }
 
@@ -252,7 +263,7 @@ public class ShopItemCellUI : MonoBehaviour
         if (item is LocationSO stop)
         {
             // Se puede comprar igual, pero avisando: con esta parada no se llega a los mínimos.
-            if (shop.StopRisksRun(stop))
+            if (shop.IsPurchasable(stop) && shop.StopRisksRun(stop))
                 return "<color=#" + ColorUtility.ToHtmlStringRGB(riskTextColor) + ">"
                      + Loc.Get("shop.cell.stop_risk") + "</color>";
 
@@ -277,8 +288,9 @@ public class ShopItemCellUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Muestra (o esconde, con null) el cartel de dónde se desbloquea, encima del velo oscuro:
-    /// debajo del velo el texto de la tarjeta casi no se lee.
+    /// Muestra (o esconde, con null) el cartel de dónde se desbloquea. Va encima del velo oscuro
+    /// (debajo casi no se lee) y abajo de la tarjeta, donde estarían el −/+ y el Agregar: el
+    /// ícono y la descripción quedan limpios.
     /// </summary>
     private void ShowLockedLabel(string message)
     {
@@ -295,40 +307,54 @@ public class ShopItemCellUI : MonoBehaviour
             lockedLabel = Instantiate(nameText, lockedOverlay.transform);
             lockedLabel.name = "LockedLabel";
 
-            // Franja de arriba de la tarjeta, sobre el ícono.
+            // Franja de abajo de la tarjeta, en el lugar de los botones.
             RectTransform rt = lockedLabel.rectTransform;
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(1f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0f, -40f);
-            rt.sizeDelta = new Vector2(-28f, 100f);
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0f, 26f);
+            rt.sizeDelta = new Vector2(-28f, 112f);
 
             lockedLabel.alignment = TextAlignmentOptions.Center;
             lockedLabel.enableWordWrapping = true;
             lockedLabel.overflowMode = TextOverflowModes.Overflow;
             lockedLabel.enableAutoSizing = true;
             lockedLabel.fontSizeMin = 12f;
-            lockedLabel.fontSizeMax = 22f;
+            lockedLabel.fontSizeMax = 26f;
+            lockedLabel.richText = true;
             lockedLabel.raycastTarget = false;
             lockedLabel.color = lockedLabelColor;
         }
 
-        lockedLabel.text = message.ToUpper();
+        lockedLabel.text = message;
         lockedLabel.gameObject.SetActive(true);
     }
 
-    /// <summary>"Se desbloquea en X" para un corte o mejora bloqueado por la ruta; null si no aplica.</summary>
+    /// <summary>
+    /// "Se desbloquea en X" para un corte o mejora bloqueado por la ruta, o "Primero: X" para una
+    /// parada que todavía no es la próxima; null si no aplica.
+    /// </summary>
     private string ResolveLockedUntil(ItemDataSO item)
     {
         LocationRouteSO route = shop.Catalog != null ? shop.Catalog.LocationRoute : null;
         if (route == null) return null;
 
+        if (item is LocationSO later)
+        {
+            LocationSO previous = route.GetStop(route.IndexOf(later) - 1);
+            return previous != null ? FormatLockedMessage("shop.cell.stop_needs", previous) : null;
+        }
+
         LocationSO stop = null;
         if (item is MeatCutSO cut && !cut.isUnlocked) stop = route.FindStopUnlocking(cut);
         else if (item is UpgradeSO up && !up.isUnlocked) stop = route.FindStopUnlocking(up);
 
-        return stop != null ? Loc.Format("shop.cell.locked_until", stop.DisplayName) : null;
+        return stop != null ? FormatLockedMessage("shop.cell.locked_until", stop) : null;
     }
+
+    /// <summary>Dos renglones: la frase en chico y el nombre de la parada en grande.</summary>
+    private static string FormatLockedMessage(string titleKey, LocationSO stop) =>
+        "<size=60%>" + Loc.Get(titleKey).ToUpper() + "</size>\n" + stop.DisplayName.ToUpper();
 
     private string ResolveStock(ItemDataSO item)
     {
@@ -336,9 +362,13 @@ public class ShopItemCellUI : MonoBehaviour
         if (item is LocationSO stop)
         {
             LocationRouteSO route = shop.Catalog != null ? shop.Catalog.LocationRoute : null;
-            return route != null
-                ? Loc.Format("shop.cell.stop_progress", route.IndexOf(stop) + 1, route.Count)
-                : "";
+            if (route == null) return "";
+
+            if (shop.IsStopOwned(stop))
+                return Loc.Get(LocationProgression.GetCurrent(shop.Catalog) == stop
+                    ? "shop.cell.stop_here" : "shop.cell.stop_visited");
+
+            return Loc.Format("shop.cell.stop_progress", route.IndexOf(stop) + 1, route.Count);
         }
 
         // Una mejora no se acumula en el cooler: lo que "se tiene" es su nivel.

@@ -1753,8 +1753,10 @@ void ApplyUnlocks(catalog);  bool TryAdvanceTo(catalog, location)   // no cobra:
 | Parada alcanzada | `CoalConsumptionTracker.LocationIndex`. Se reinicia sola: el tracker se destruye en `RestartRun` y en `ReturnToMainMenu` |
 | Quién aplica los desbloqueos | `ApplyUnlocks` es idempotente y se llama en: `CoalConsumptionTracker.Awake`, `CustomerSystem.Start` (antes de `GetUnlockedOrderCuts`), `ShopSystem.Start` y `TryAdvanceTo` |
 | Qué queda afuera | Lo que **no figura en ninguna parada** no se toca: conserva el `isUnlocked` de su asset (Paty, Chinchulín, Pechuga, Matambre siguen bloqueados a mano) |
-| Compra | La próxima parada es la **primera tarjeta de la tab Mejoras** (`ShopSystem.GetItemsForTab`). `IsPurchasable` = es la próxima; cantidad máxima 1; al pagar el carrito `Deliver` → `TryAdvanceTo` → `OnCatalogChanged` → `ShopGridUI.RebuildAll` (aparecen las mejoras nuevas y la parada siguiente) |
-| Tarjeta | `ShopItemCellUI`: nombre `shop.cell.stop_name` ("Parada: X"), descripción `shop.cell.stop_unlocks` ("Desbloquea: …"), stock `shop.cell.stop_progress` ("PARADA 2/4"). Los cortes y mejoras bloqueados por la ruta muestran `shop.cell.locked_until` ("Se desbloquea en X") en vez de su descripción |
+| Pestaña propia | `ShopTabType.Route` ("4. Ruta", entre Mejoras y Toppings). El enum la tiene **al final** (los botones lo serializan como int); el orden en pantalla y el de "Siguiente" los da `ShopTabs` (`OrderOf`, `Next`). El botón **no está en el prefab**: `ShopBreadcrumbUI.EnsureRouteTab` clona el de Mejoras en `Awake` y reparte las 5 pestañas en el mismo ancho. Solo aparece si `ShopSystem.HasRouteTab` |
+| Compra | La pestaña lista **toda la ruta** (`GetItemsForTab(Route)`), una tarjeta por parada. `IsPurchasable` = es la próxima; cantidad máxima 1; al pagar el carrito `Deliver` → `TryAdvanceTo` → `OnCatalogChanged` → `ShopGridUI.RebuildAll` |
+| Riesgo | Una parada se puede comprar aunque deje los mínimos del próximo día fuera de alcance (`CanAddToCart` no la frena). `StopRisksRun` pinta el aviso rojo en la tarjeta; `CartRisksRun` hace que "Comprar carrito" pida un segundo click (`shop.next.buy_cart_risk` → `shop.next.risk_confirm`). Si se paga, `RunDefeatScreen` escucha `OnPurchaseResult` y muestra la derrota por recursos ahí mismo |
+| Tarjeta | `ShopItemCellUI`: nombre `shop.cell.stop_name` ("Parada: X"), descripción `shop.cell.stop_unlocks` ("Desbloquea: …"). Parada ya alcanzada (`ShopSystem.IsStopOwned`): sin velo ni precio, stock "ESTÁS ACÁ" / "YA PASASTE" y botón "Ya es tuya". La próxima: "PARADA 2/4" y Agregar. Las de más adelante: velo + cartel "PRIMERO: X". Los cortes y mejoras bloqueados por la ruta llevan el cartel `shop.cell.locked_until` ("SE DESBLOQUEA EN X") **encima del velo**: es un TMP que la celda crea sola clonando el nombre (`ShowLockedLabel`) |
 | Editor | `UpgradeStateResetter` devuelve los `isUnlocked` de cada ruta a "solo la parada inicial" al salir de Play, para que los assets en disco no cambien por jugar |
 | Simuladores | No modelan la decisión de comprar paradas: suponen una cada 2 noches (`NightsPerStop`) |
 
@@ -1839,7 +1841,7 @@ El `SetActive` es solo de runtime: la escena guardada deja el `Radio` desactivad
 #### `ShopSystem` — `Shop/ShopSystem.cs`
 Lógica pura, sin UI. Vive en `EndScene` y en `ShopTutorial` (también hay una copia en `GameScene`).
 ```csharp
-ShopTabType CurrentTab { get; } = Coal   // Coal → Meat → Upgrades → Toppings
+ShopTabType CurrentTab { get; } = Coal   // Coal → Meat → Upgrades → Route → Toppings (orden: ShopTabs)
 event Action OnCartChanged, OnTabChanged;  event Action<bool,string> OnPurchaseResult;
 
 void SetTab(ShopTabType)                                // no-op si ya es el tab actual
@@ -1869,7 +1871,8 @@ bool TryBuyToppingNow(ToppingSO, int qty, out string)    // compra individual: s
 |---|---|---|
 | `Coal` | `ShopConfigSO.coal` (un solo item) | siempre `true` |
 | `Meat` | `FoodCatalogSO.GetAllCuts()` | `cut.isUnlocked` |
-| `Upgrades` | La próxima parada (`LocationProgression.GetNext`, si queda alguna) + `FoodCatalogSO.GetAllUpgrades()` | parada: es la próxima de la ruta · mejora: `up.isUnlocked && !up.IsMaxed` |
+| `Upgrades` | `FoodCatalogSO.GetAllUpgrades()` | `up.isUnlocked && !up.IsMaxed` |
+| `Route` | Todas las paradas de `FoodCatalogSO.LocationRoute`, en orden | es la próxima de la ruta (`LocationProgression.IsNext`) |
 | `Toppings` | `GetToppings()` → `catalog.GetAvailableToppings()` (devuelve `ToppingSO`, **no** `ItemDataSO`) | `IsToppingPurchasable`: hay `ToppingStock` y el frasco **no** está lleno |
 
 > El tab `Toppings` es el único que **no** pasa por `GetItemsForTab`: la UI llama a `GetToppings()` y bindea `ToppingSO`. Por eso `ShopGridUI` y `ShopItemCellUI` tienen una rama y un `Bind` por cada tipo.
