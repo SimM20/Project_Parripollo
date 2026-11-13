@@ -34,6 +34,12 @@ public class ShopSystem : MonoBehaviour
 
     public event Action OnCartChanged;
     public event Action OnTabChanged;
+
+    /// <summary>
+    /// Cambió qué se vende (se compró una parada: hay cortes y mejoras nuevos, y la próxima
+    /// parada es otra). La grilla tiene que rearmarse, no alcanza con refrescar las tarjetas.
+    /// </summary>
+    public event Action OnCatalogChanged;
     public event Action<bool, string> OnPurchaseResult;
 
     // ── Tabs ────────────────────────────────────────────────────────────
@@ -51,6 +57,9 @@ public class ShopSystem : MonoBehaviour
         // Primera llamada gana: guarda la combustión original de los carbones antes de que
         // cualquier mejora la pise. Lo consume el reinicio de run desde la pantalla de derrota.
         RunStateReset.CaptureBaseline(catalog);
+
+        // Desbloqueos al día con la parada alcanzada antes de listar nada.
+        LocationProgression.ApplyUnlocks(catalog);
 
         int currentNight =
             CoalConsumptionTracker.Instance != null
@@ -110,6 +119,10 @@ public class ShopSystem : MonoBehaviour
             case ShopTabType.Upgrades:
                 if (catalog != null)
                 {
+                    // La próxima parada va primera: es la compra que habilita el resto.
+                    LocationSO nextStop = LocationProgression.GetNext(catalog);
+                    if (nextStop != null) list.Add(nextStop);
+
                     var upgrades = catalog.GetAllUpgrades();
                     for (int i = 0; i < upgrades.Count; i++)
                         if (upgrades[i] != null) list.Add(upgrades[i]);
@@ -132,6 +145,7 @@ public class ShopSystem : MonoBehaviour
         if (item is CoalSO) return true;
         if (item is MeatCutSO cut) return cut.isUnlocked;
         if (item is UpgradeSO up) return up.isUnlocked && !up.IsMaxed;
+        if (item is LocationSO stop) return LocationProgression.IsNext(catalog, stop);
         return false;
     }
 
@@ -175,12 +189,13 @@ public class ShopSystem : MonoBehaviour
     public const int UnlimitedQty = int.MaxValue;
 
     /// <summary>
-    /// Maximo comprable de un item en una sola operacion. Las mejoras se compran de a un nivel.
+    /// Maximo comprable de un item en una sola operacion. Las mejoras se compran de a un nivel
+    /// y las paradas de a una.
     /// Fuente de verdad unica: la usan el carrito, la compra directa y los steppers de las celdas.
     /// </summary>
     public int GetMaxPurchaseQty(ItemDataSO item)
     {
-        if (item is UpgradeSO) return 1;
+        if (item is UpgradeSO || item is LocationSO) return 1;
         return UnlimitedQty;
     }
 
@@ -410,19 +425,15 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
-        // Items normales (cooler)
+        // Items normales (cooler), mejoras y paradas
+        bool catalogChanged = false;
         foreach (var kv in cart)
         {
             ItemDataSO item = kv.Key;
             int qty = kv.Value;
             if (item == null || qty <= 0) continue;
 
-            if (item is CoalSO coal)
-                Cooler.Add(coal, coal.unitsPerBag * qty);
-            else if (item is UpgradeSO up)
-                up.Purchase();
-            else
-                Cooler.Add(item, qty);
+            catalogChanged |= Deliver(item, qty);
         }
 
         // Toppings (stock separado): cada compra rellena el frasco
@@ -437,12 +448,31 @@ public class ShopSystem : MonoBehaviour
 
         cart.Clear();
         toppingCart.Clear();
+        if (catalogChanged) OnCatalogChanged?.Invoke();
         OnCartChanged?.Invoke();
 
         message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);
         TutorialSignals.Raise(TutorialSignal.ShopPurchased);
         return true;
+    }
+
+    /// <summary>
+    /// Entrega una compra ya pagada: stock al cooler, nivel de mejora o avance de parada.
+    /// Devuelve true si cambió qué se vende en la tienda (se compró una parada).
+    /// </summary>
+    private bool Deliver(ItemDataSO item, int qty)
+    {
+        if (item is CoalSO coal)
+            Cooler.Add(coal, coal.unitsPerBag * qty);
+        else if (item is UpgradeSO up)
+            up.Purchase();
+        else if (item is LocationSO stop)
+            return LocationProgression.TryAdvanceTo(catalog, stop);
+        else
+            Cooler.Add(item, qty);
+
+        return false;
     }
 
     public bool TryBuyNow(ItemDataSO item, int qty, out string message)
@@ -485,12 +515,7 @@ public class ShopSystem : MonoBehaviour
             return false;
         }
 
-        if (item is CoalSO coal)
-            Cooler.Add(coal, coal.unitsPerBag * qty);
-        else if (item is UpgradeSO up)
-            up.Purchase();
-        else
-            Cooler.Add(item, qty);
+        if (Deliver(item, qty)) OnCatalogChanged?.Invoke();
 
         message = Loc.Format("shop.buy.done", total.ToString("F0"));
         OnPurchaseResult?.Invoke(true, message);

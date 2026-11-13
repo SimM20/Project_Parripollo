@@ -217,6 +217,7 @@ public class ShopItemCellUI : MonoBehaviour
         if (item is CoalSO coal) return coal.coalSprite;
         if (item is MeatCutSO cut) return cut.GetDefaultSprite();
         if (item is UpgradeSO up) return up.icon;
+        if (item is LocationSO stop) return stop.icon;
         return null;
     }
 
@@ -227,6 +228,8 @@ public class ShopItemCellUI : MonoBehaviour
         if (item is MeatCutSO cut) return cut.cutName;
         if (item is CoalSO coal && coal.unitsPerBag > 1)
             return Loc.Format("shop.cell.coal_name", coal.DisplayName, coal.unitsPerBag);
+        if (item is LocationSO)
+            return Loc.Format("shop.cell.stop_name", item.DisplayName);
         return item.DisplayName;
     }
 
@@ -235,6 +238,14 @@ public class ShopItemCellUI : MonoBehaviour
         // Una compra de carbón suma unitsPerBag unidades al cooler, no una.
         if (item is CoalSO coal)
             return coal.unitsPerBag > 1 ? Loc.Format("shop.cell.coal_bag", coal.unitsPerBag) : "";
+
+        if (item is LocationSO stop)
+            return Loc.Format("shop.cell.stop_unlocks", stop.DescribeUnlocks());
+
+        // Lo bloqueado dice en qué parada se habilita, en vez de su descripción.
+        string lockedUntil = ResolveLockedUntil(item);
+        if (lockedUntil != null)
+            return lockedUntil;
 
         if (item is UpgradeSO up)
         {
@@ -253,8 +264,30 @@ public class ShopItemCellUI : MonoBehaviour
         return "";
     }
 
+    /// <summary>"Se desbloquea en X" para un corte o mejora bloqueado por la ruta; null si no aplica.</summary>
+    private string ResolveLockedUntil(ItemDataSO item)
+    {
+        LocationRouteSO route = shop.Catalog != null ? shop.Catalog.LocationRoute : null;
+        if (route == null) return null;
+
+        LocationSO stop = null;
+        if (item is MeatCutSO cut && !cut.isUnlocked) stop = route.FindStopUnlocking(cut);
+        else if (item is UpgradeSO up && !up.isUnlocked) stop = route.FindStopUnlocking(up);
+
+        return stop != null ? Loc.Format("shop.cell.locked_until", stop.DisplayName) : null;
+    }
+
     private string ResolveStock(ItemDataSO item)
     {
+        // Una parada no se acumula: lo que importa es por cuál va de la ruta.
+        if (item is LocationSO stop)
+        {
+            LocationRouteSO route = shop.Catalog != null ? shop.Catalog.LocationRoute : null;
+            return route != null
+                ? Loc.Format("shop.cell.stop_progress", route.IndexOf(stop) + 1, route.Count)
+                : "";
+        }
+
         // Una mejora no se acumula en el cooler: lo que "se tiene" es su nivel.
         if (item is UpgradeSO up) return FormatUpgradeLevel(up);
 

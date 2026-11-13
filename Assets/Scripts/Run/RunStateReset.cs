@@ -9,9 +9,10 @@ using UnityEngine;
 /// recrean solos, pero las mejoras viven en assets: sin esto, "Reintentar" arrancaría el
 /// Día 1 con todas las mejoras ya compradas (ver nota 5 de ARQUITECTURA_PROYECTO.md).
 ///
-/// <see cref="MeatCutSO.isUnlocked"/> NO se toca acá a propósito: lo recalcula
-/// <see cref="CoalConsumptionTracker"/> en su Awake según la noche actual, así que con el
-/// tracker destruido se corrige solo.
+/// Los <c>isUnlocked</c> de cortes, variantes y mejoras NO se tocan acá a propósito: los fija
+/// <see cref="LocationProgression"/> según la parada alcanzada, que vive en
+/// <see cref="CoalConsumptionTracker"/>. Con el tracker destruido la ruta vuelve a la parada
+/// inicial y el tracker nuevo los corrige en su Awake.
 ///
 /// Es el equivalente en runtime de <c>Scripts/Editor/UpgradeStateResetter.cs</c>, que solo
 /// corre al salir del Play Mode.

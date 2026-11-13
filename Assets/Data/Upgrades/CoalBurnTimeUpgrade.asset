@@ -20,7 +20,7 @@ MonoBehaviour:
   description: 'Carbon mas denso: cada brasa dura mas del doble antes de volverse
     ceniza.'
   descriptionKey: upgrade.coal_burn_time.desc
-  isUnlocked: 1
+  isUnlocked: 0
   maxLevel: 1
   currentLevel: 0
   effectType: 0

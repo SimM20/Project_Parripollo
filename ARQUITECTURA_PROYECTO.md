@@ -331,6 +331,7 @@ Assets/Scripts/
 | **Customers/** | Llegada de clientes según el horario del `DayClock` y la curva de afluencia, tick de paciencia, hover de entrega, view + **burbuja de pedido por cliente** (base al pecho siempre visible, expandida al hover) + recuadro, **feedback de entrega/abandono/cambio** (burbuja de 4 s con estado, pago y propina), gateo de pick bajo paneles. Pedidos: `Order` (corte + punto pedido + pan/sides/toppings) y generación ponderada (`OrderSystem`) | `CustomerSystem.cs`, `Customer.cs`, `CustomerView.cs`, `CustomerOrderBubble.cs`, `CustomerFeedbackBubble.cs`, `OrderSystem.cs`, `Order.cs` |
 | **Food/** | Datos base de items (`ItemDataSO`, `ItemType`), catálogo estático (`FoodCatalogSO` : `IFoodCatalogProvider`), reglas de validez (`DishValidator`), **economía de entrega** (`CookingDeliveryEvaluator`: cocción + extras + propina), puente catálogo+stock (`FoodAvailabilityService`) | `ItemDataSO.cs`, `CookingDeliveryEvaluator.cs`, `DishValidator.cs`, `FoodCatalogSO.cs` |
 | **Shop/** | Lógica de tienda headless (`ShopSystem`, `ShopConfigSO`) y captura de fondo (`ShopBackdropCapture*`). En `Shop/UI/` las **dos capas de UI paralelas**: `*UI` (uGUI/Canvas, **la activa** en `EndScene`) y `*2D` (world-space, prefab `ShopRoot` — presente pero **desactivado**). En `Shop/Upgrades/` las mejoras (`UpgradeSO`, `UpgradeUnlockActivator`) | `ShopSystem.cs`, `UI/ShopGridUI.cs`, `UI/ShopItemCellUI.cs`, `UI/ShopHeaderUI.cs`, `Upgrades/UpgradeSO.cs` |
+| **Progression/** | Progresión por **paradas de la ruta** (ver 3.6 → *Ruta de paradas*): datos (`LocationSO`, `LocationRouteSO`) y lógica estática (`LocationProgression`). Reemplaza al desbloqueo por número de noche | `LocationSO.cs`, `LocationRouteSO.cs`, `LocationProgression.cs` |
 | **Run/** | Estado de la run entre noches: billetera (`PlayerWallet`, DDOL), derrota (`RunDefeatConfigSO`, `RunDefeatScreen`), evaluación económica (`RunEconomyEvaluator`), reseteo (`RunStateReset`) | `PlayerWallet.cs`, `RunEconomyEvaluator.cs`, `RunStateReset.cs` |
 | **Strikes/** | Penalización de jornada por clientes que se van con paciencia 0 (`StrikeSystem`, singleton de escena), HUD de X (`StrikeHudView`), aviso “¡Te clavaron el cartel!” (`StrikeLimitNotice`) y popup modal de cierre anticipado en `EndScene` (`StrikeEndPopup`) | `StrikeSystem.cs`, `StrikeHudView.cs`, `StrikeLimitNotice.cs`, `StrikeEndPopup.cs` |
 | **Background/** | Fondo de `GameScene` en capas (cielo, estrellas, luna, sol, nubes, paisaje). `DayCycleBackground` lee la hora del `DayClock` y se la pasa a las capas; cada `DayCycleLayer` mezcla su color (y opcionalmente su sprite) entre claves horarias; `DayCycleArc` mueve sol y luna; `ParallaxLayer` desliza las nubes; `RoadTraffic` hace pasar vehículos por la ruta. Solo visual: no escribe la hora ni toca el gameplay | `DayCycleBackground.cs`, `DayCycleLayer.cs`, `DayCycleArc.cs`, `ParallaxLayer.cs`, `RoadTraffic.cs` |
@@ -390,6 +391,7 @@ Assets/Data/
 ├── Toppings/        ToppingSO   — Chimichurri, Salsa criolla
 ├── Variants/        ProductVariantSO — platos y sándwiches
 ├── Upgrades/        UpgradeSO   — CoalBurnTimeUpgrade, CustomerCapacityUpgrade, TipUpgrade, RadioUpgrade
+├── Locations/       LocationSO (Parada 1..4) + LocationRouteSO (RutaModoRapido) — la ruta de paradas
 ├── TutorialHints/   TutorialHintSO / TutorialHintSetSO — Partida/, Tienda/, InputGlyphs
 ├── Coal/            CoalData.asset (CoalSO)
 ├── Customers/       CustomerFeedbackSO.asset (CustomerFeedbackConfigSO: tiempos, colores y sprites del feedback; las frases están en las tablas)
@@ -1718,9 +1720,52 @@ int   TotalCoalConsumed { get; }
 int   DaysPlayed { get; }
 int   CurrentNight => DaysPlayed + 1;
 float AverageCoalPerDay { get; }
-void  ReportConsumption(int), RegisterDayCompleted(), ConfigureNightTwoCut(MeatCutSO), ResetProgress()
+int   LocationIndex { get; }          // parada de la ruta alcanzada (0 = la inicial)
+void  ReportConsumption(int), RegisterDayCompleted(), SetLocationIndex(int), ResetProgress()
 ```
-`ApplyProgressionUnlocks()` fija `nightTwoCut.isUnlocked = (CurrentNight >= 2)`.
+Tiene serializado el `FoodCatalogSO` (`catalog`): en su `Awake` llama `LocationProgression.ApplyUnlocks(catalog)`,
+así los `isUnlocked` quedan al día antes de que cualquier sistema de la escena los lea. Ya **no** desbloquea
+por número de noche (se fueron `cutUnlocks` / `ConfigureCutUnlocks` y `NightUnlock.cs`).
+
+#### Ruta de paradas — `Progression/` (desde 2026-11-13)
+Progresión del modo rápido: se junta plata y se compran **ubicaciones** en orden; cada una habilita cortes,
+variantes y mejoras. Ruta **lineal**. El fondo propio de cada parada queda para cuando estén los assets: hoy
+comprarla solo desbloquea contenido.
+
+```csharp
+// LocationSO : ItemDataSO — una parada. basePrice = su precio (pasa por tarjeta, carrito y mínimos como cualquier item)
+Sprite icon;  List<MeatCutSO> unlockedCuts;  List<ProductVariantSO> unlockedVariants;  List<UpgradeSO> unlockedUpgrades;
+string DescribeUnlocks()                       // "Vacío, Radio": cortes + mejoras, para la tarjeta
+
+// LocationRouteSO — la ruta de UN modo de juego. stops[0] es la inicial (no se cobra)
+int Count;  LocationSO GetStop(int);  int IndexOf(LocationSO);
+LocationSO FindStopUnlocking(MeatCutSO | UpgradeSO)   // para el "Se desbloquea en X" de la tienda
+void ApplyUnlocks(int reachedIndex)                   // isUnlocked = (índice de su parada <= reachedIndex). Idempotente
+
+// LocationProgression — static, sin estado propio (el índice vive en CoalConsumptionTracker.LocationIndex)
+int CurrentIndex;  LocationSO GetCurrent(catalog), GetNext(catalog);  bool IsNext(catalog, location)
+void ApplyUnlocks(catalog);  bool TryAdvanceTo(catalog, location)   // no cobra: el precio lo maneja ShopSystem
+```
+
+| Pieza | Dónde vive |
+|---|---|
+| Qué ruta se usa | `FoodCatalogSO.LocationRoute` (`locationRoute`). El modo historia tendrá otra `LocationRouteSO` con las mismas `LocationSO` u otras y sus precios |
+| Parada alcanzada | `CoalConsumptionTracker.LocationIndex`. Se reinicia sola: el tracker se destruye en `RestartRun` y en `ReturnToMainMenu` |
+| Quién aplica los desbloqueos | `ApplyUnlocks` es idempotente y se llama en: `CoalConsumptionTracker.Awake`, `CustomerSystem.Start` (antes de `GetUnlockedOrderCuts`), `ShopSystem.Start` y `TryAdvanceTo` |
+| Qué queda afuera | Lo que **no figura en ninguna parada** no se toca: conserva el `isUnlocked` de su asset (Paty, Chinchulín, Pechuga, Matambre siguen bloqueados a mano) |
+| Compra | La próxima parada es la **primera tarjeta de la tab Mejoras** (`ShopSystem.GetItemsForTab`). `IsPurchasable` = es la próxima; cantidad máxima 1; al pagar el carrito `Deliver` → `TryAdvanceTo` → `OnCatalogChanged` → `ShopGridUI.RebuildAll` (aparecen las mejoras nuevas y la parada siguiente) |
+| Tarjeta | `ShopItemCellUI`: nombre `shop.cell.stop_name` ("Parada: X"), descripción `shop.cell.stop_unlocks` ("Desbloquea: …"), stock `shop.cell.stop_progress` ("PARADA 2/4"). Los cortes y mejoras bloqueados por la ruta muestran `shop.cell.locked_until` ("Se desbloquea en X") en vez de su descripción |
+| Editor | `UpgradeStateResetter` devuelve los `isUnlocked` de cada ruta a "solo la parada inicial" al salir de Play, para que los assets en disco no cambien por jugar |
+| Simuladores | No modelan la decisión de comprar paradas: suponen una cada 2 noches (`NightsPerStop`) |
+
+Ruta del modo rápido (`Data/Locations/RutaModoRapido.asset`). ⚠️ Precios estimados a mano, sin pasar por el simulador:
+
+| Parada | Precio | Cortes | Mejoras |
+|---|---|---|---|
+| 1 · La Quiaca (inicial) | — | Chorizo, Tira de asado | Frasco de propinas |
+| 2 · Cafayate | `$2000` | Vacío | Radio |
+| 3 · Malargüe | `$4500` | Costillita de cerdo | Carbón de quebracho |
+| 4 · Bariloche | `$8000` | — (falta un corte balanceado) | Mesa extra |
 
 #### `PlayerWallet` — Singleton + DDOL
 `float Money { get; }` · `event Action<float> OnMoneyChanged` · `CanAfford(float)`, `TrySpend(float)`, `Add(float)`. Arranca en `1000` (`startingMoney`).
@@ -1824,7 +1869,7 @@ bool TryBuyToppingNow(ToppingSO, int qty, out string)    // compra individual: s
 |---|---|---|
 | `Coal` | `ShopConfigSO.coal` (un solo item) | siempre `true` |
 | `Meat` | `FoodCatalogSO.GetAllCuts()` | `cut.isUnlocked` |
-| `Upgrades` | `FoodCatalogSO.GetAllUpgrades()` | `up.isUnlocked && !up.IsMaxed` |
+| `Upgrades` | La próxima parada (`LocationProgression.GetNext`, si queda alguna) + `FoodCatalogSO.GetAllUpgrades()` | parada: es la próxima de la ruta · mejora: `up.isUnlocked && !up.IsMaxed` |
 | `Toppings` | `GetToppings()` → `catalog.GetAvailableToppings()` (devuelve `ToppingSO`, **no** `ItemDataSO`) | `IsToppingPurchasable`: hay `ToppingStock` y el frasco **no** está lleno |
 
 > El tab `Toppings` es el único que **no** pasa por `GetItemsForTab`: la UI llama a `GetToppings()` y bindea `ToppingSO`. Por eso `ShopGridUI` y `ShopItemCellUI` tienen una rama y un `Bind` por cada tipo.
@@ -2007,7 +2052,7 @@ pantalla de derrota es `DaysPlayed`.
 | Estado visual en tienda | `ShopRequirementsUI` en `ShopCanvas.prefab/.../ShopContent/Requirements` (abajo a la izquierda, 924×160, termina a 194 del borde = donde termina la grilla). Desde 2026-10-31 son **5 carteles** `Panel_Ruta_Noche` (`Sliced`, `pixelsPerUnitMultiplier = 2`, el marco del "Hoy vinieron") colgados de `Panel` (contenedor sin imagen; `ShopRequirementsUI.Panel` lo sigue devolviendo): arriba, alto 50, `TitlePlate` ("PARA ARRANCAR MAÑANA", `LocalizedText`) y `StreakPlate` (`"NOCHES SEGUIDAS CON STRIKES: N / M"`, `strikeStreakRoot`: se prende entero **solo con racha > 0** y es lo que devuelve `StreakLine`); abajo, alto 100, `MeatCard` y `CoalCard` (etiqueta `shop.req.*.label` por `LocalizedText` + número `shop.req.amount` `"{0} / {1}"`) y `StatusCard` (etiqueta `deficitLabelText`: `shop.req.status` "ESTADO" o `shop.req.missing` "FALTA COMPRAR"; valor "LISTO PARA ARRANCAR" o la lista de faltantes). Verde/rojo según se cumpla. Fuente ParripolloPixel |
 | Pantalla de derrota | `EndScene/RunDefeatCanvas` (order **30**, sobre `StrikeEndPopupCanvas` 20 y `ShopCanvas` 10) + `RunDefeatScreen`. Clon del popup de strikes: hijo `Popup` inactivo con fondo opaco `raycastTarget` |
 | Botones | *Menú principal* → `ReturnToMainMenu()` · *Reintentar* → `SceneManagementUtils.RestartRun(catalog)` |
-| Reset de run | `RunStateReset`: snapshot de `CoalSO.maxBurnTime` (lo toma `ShopSystem.Start`, primera llamada gana) y vuelta de `UpgradeSO.currentLevel` a 0. `MeatCutSO.isUnlocked` se corrige solo vía `CoalConsumptionTracker` |
+| Reset de run | `RunStateReset`: snapshot de `CoalSO.maxBurnTime` (lo toma `ShopSystem.Start`, primera llamada gana) y vuelta de `UpgradeSO.currentLevel` a 0. Los `isUnlocked` (cortes, variantes, mejoras) se corrigen solos: la ruta vuelve a la parada inicial con el tracker nuevo |
 | QA | `StrikeSystem` → *QA/Sumar noche cerrada por strikes*, *QA/Reiniciar racha de noches*. `RunDefeatScreen` → *QA/Forzar derrota por recursos*, *QA/Forzar derrota por racha de strikes* |
 
 `ShopSystem.enforceRunMinimums` va en `true` en `GameScene` y `EndScene` (lo apagaba solo el tutorial viejo).
@@ -2759,7 +2804,7 @@ GameScene
                              CustomerSystem.OnNightEnded
    └─► GameManager.EndNight()
          ├─ DayClock.StopDay()
-         ├─ CoalConsumptionTracker.RegisterDayCompleted()   // DaysPlayed++, aplica desbloqueos
+         ├─ CoalConsumptionTracker.RegisterDayCompleted()   // DaysPlayed++ (los desbloqueos ya no dependen de la noche)
          └─ LoadSceneByName("EndScene")
 
    El botón "terminar el día" del menú de pausa llama al mismo GameManager.EndNight().

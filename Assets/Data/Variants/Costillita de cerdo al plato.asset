@@ -24,4 +24,4 @@ MonoBehaviour:
   cut: {fileID: 11400000, guid: 653773d762bd72547b1d4628df28fa18, type: 2}
   bread: {fileID: 0}
   sellPrice: 100
-  isUnlocked: 1
+  isUnlocked: 0

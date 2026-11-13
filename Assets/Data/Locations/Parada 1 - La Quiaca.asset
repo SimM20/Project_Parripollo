@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 544d95657ca2400497d91da0e87f90b9, type: 3}
+  m_Name: Parada 1 - La Quiaca
+  m_EditorClassIdentifier:
+  itemName: La Quiaca
+  nameKey:
+  basePrice: 0
+  category: 0
+  icon: {fileID: 0}
+  unlockedCuts:
+  - {fileID: 11400000, guid: 108b5252f29a83f4688464ab945f2ea4, type: 2}
+  - {fileID: 11400000, guid: 6e4b78453eb534d44aabcf530fc12f21, type: 2}
+  unlockedVariants: []
+  unlockedUpgrades:
+  - {fileID: 11400000, guid: b3a3f539efd64a06ba2f6583161427b9, type: 2}

@@ -10,6 +10,11 @@ shop.cell.subtotal,Total: ${0:N0},Total: ${0:N0}
 shop.cell.buy,Comprar,Buy
 shop.cell.add,Agregar,Add
 shop.cell.in_cart,En el carrito,In the cart
+# Paradas de la ruta (LocationSO): la tarjeta de la próxima parada y el aviso de lo bloqueado
+shop.cell.stop_name,Parada: {0},Stop: {0}
+shop.cell.stop_unlocks,Desbloquea: {0},Unlocks: {0}
+shop.cell.stop_progress,PARADA {0}/{1},STOP {0}/{1}
+shop.cell.locked_until,Se desbloquea en {0},Unlocks at {0}
 # Carrito (ShopCartUI / ShopCartRowUI)
 shop.cart.title,Carrito,Cart
 shop.cart.empty,Todavía no agregaste nada.,Nothing added yet.
@@ -30,7 +35,7 @@ shop.help.coal.first_night,Primera jornada: todavía no hay datos de consumo.,Fi
 shop.help.meat.title,CORTES DE CARNE,MEAT CUTS
 shop.help.meat,Elegí los cortes para la noche.,Pick the cuts for tonight.
 shop.help.upgrades.title,MEJORAS PARA LA PARRILLA,GRILL UPGRADES
-shop.help.upgrades,Invertí en mejoras permanentes.,Invest in permanent upgrades.
+shop.help.upgrades,Comprá la próxima parada para desbloquear cortes y mejoras.,Buy the next stop to unlock cuts and upgrades.
 shop.help.toppings.title,TOPPINGS Y SALSAS,TOPPINGS & SAUCES
 shop.help.toppings,Comprá condimentos para tus platos.,Buy condiments for your dishes.
 # Botón Siguiente (ShopNextButtonUI)

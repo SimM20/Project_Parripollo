@@ -13138,11 +13138,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bcda3f1737e7f9499df733de17adcef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cutUnlocks:
-  - cut: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
-    night: 2
-  - cut: {fileID: 11400000, guid: 653773d762bd72547b1d4628df28fa18, type: 2}
-    night: 3
+  catalog: {fileID: 11400000, guid: c47218184b1c40747b898decc4e587c8, type: 2}
 --- !u!1 &1865235212
 GameObject:
   m_ObjectHideFlags: 0

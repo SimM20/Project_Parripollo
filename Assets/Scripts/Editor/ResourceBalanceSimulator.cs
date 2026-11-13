@@ -182,12 +182,18 @@ public static class ResourceBalanceSimulator
         d.maxSides = so.FindProperty("maxSidesPerOrder").intValue;
         d.affluence = so.FindProperty("affluenceCurve").animationCurveValue;
 
+        // Los cortes ya no se desbloquean por noche sino comprando paradas de la ruta. El simulador
+        // no modela esa decisión de compra: supone una parada cada NightsPerStop noches.
+        const int NightsPerStop = 2;
         var unlockNights = new Dictionary<MeatCutSO, int>();
-        var unlocksProp = so.FindProperty("cutUnlocks");
-        for (int i = 0; i < unlocksProp.arraySize; i++)
+        var routeCatalog = AssetDatabase.LoadAssetAtPath<FoodCatalogSO>("Assets/Data/Config/FoodCatalog.asset");
+        LocationRouteSO route = routeCatalog != null ? routeCatalog.LocationRoute : null;
+        for (int i = 0; route != null && i < route.Count; i++)
         {
-            var e = unlocksProp.GetArrayElementAtIndex(i);
-            if (e.FindPropertyRelative("cut").objectReferenceValue is MeatCutSO c) unlockNights[c] = e.FindPropertyRelative("night").intValue;
+            LocationSO stop = route.GetStop(i);
+            if (stop == null) continue;
+            foreach (MeatCutSO c in stop.unlockedCuts)
+                if (c != null) unlockNights[c] = 1 + i * NightsPerStop;
         }
         var cutsProp = so.FindProperty("availableOrderCuts");
         for (int i = 0; i < cutsProp.arraySize; i++)

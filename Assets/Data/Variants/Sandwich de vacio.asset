@@ -14,7 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: "S\xE1ndwich de vac\xEDo"
   variantSprite: {fileID: 21300000, guid: 74cd5a9274fef3140a1fbf634311564a, type: 3}
+  cookingSprites:
+    crudo: {fileID: 0}
+    jugoso: {fileID: 0}
+    hecho: {fileID: 0}
+    muyHecho: {fileID: 0}
+    pasado: {fileID: 0}
+    quemado: {fileID: 0}
   cut: {fileID: 11400000, guid: dc27fa04205906749bd98c03e2f832a5, type: 2}
   bread: {fileID: 11400000, guid: 829722caacc1e9745856c2faeb47f743, type: 2}
   sellPrice: 100
-  isUnlocked: 1
+  isUnlocked: 0

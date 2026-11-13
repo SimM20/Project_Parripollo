@@ -29,6 +29,7 @@ public class ShopGridUI : MonoBehaviour
         if (shop != null)
         {
             shop.OnTabChanged += RebuildAll;
+            shop.OnCatalogChanged += RebuildAll;     // se compró una parada: cambia qué tarjetas hay
             shop.OnCartChanged += RefreshAllCells;   // el Agregar mide plata y mínimos contra el carrito
             if (shop.Cooler != null) shop.Cooler.OnInventoryChanged += RefreshAllCells;
             if (shop.Toppings != null) shop.Toppings.OnStockChanged += RefreshAllCells;
@@ -49,6 +50,7 @@ public class ShopGridUI : MonoBehaviour
         if (shop != null)
         {
             shop.OnTabChanged -= RebuildAll;
+            shop.OnCatalogChanged -= RebuildAll;
             shop.OnCartChanged -= RefreshAllCells;
             if (shop.Cooler != null) shop.Cooler.OnInventoryChanged -= RefreshAllCells;
             if (shop.Toppings != null) shop.Toppings.OnStockChanged -= RefreshAllCells;

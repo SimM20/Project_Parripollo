@@ -5,9 +5,10 @@ public class CoalConsumptionTracker : MonoBehaviour
 {
     public static CoalConsumptionTracker Instance { get; private set; }
 
-    [Header("Night Unlocks")]
-    [Tooltip("Cortes que se desbloquean a partir de cierta noche.")]
-    [SerializeField] private List<NightCutUnlock> cutUnlocks = new List<NightCutUnlock>();
+    [Header("Progresión")]
+    [Tooltip("Catálogo con la ruta de paradas. Con esto el tracker deja los desbloqueos al día " +
+             "apenas nace, antes de que cualquier sistema de la escena los lea.")]
+    [SerializeField] private FoodCatalogSO catalog;
 
     public int TotalCoalConsumed { get; private set; } = 0;
     public int DaysPlayed { get; private set; } = 0;
@@ -16,6 +17,13 @@ public class CoalConsumptionTracker : MonoBehaviour
     /// La primera noche corresponde a DaysPlayed = 0.
     /// </summary>
     public int CurrentNight => DaysPlayed + 1;
+
+    /// <summary>
+    /// Parada de la ruta alcanzada en esta run (0 = la inicial). Vive acá porque este objeto es
+    /// el progreso de la partida: al destruirse (reintentar, volver al menú) la ruta vuelve a 0.
+    /// Se lee y se mueve por <see cref="LocationProgression"/>.
+    /// </summary>
+    public int LocationIndex { get; private set; } = 0;
 
     /// <summary>
     /// Promedio de unidades consumidas por día.
@@ -30,20 +38,6 @@ public class CoalConsumptionTracker : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            // Si el tracker persistente no tenía cortes configurados,
-            // toma los configurados en esta copia antes de destruirla.
-            if (Instance.cutUnlocks.Count == 0 && cutUnlocks.Count > 0)
-            {
-                Instance.cutUnlocks = new List<NightCutUnlock>(cutUnlocks);
-
-                Debug.Log(
-                    "[NightProgression] Se copiaron los cortes de desbloqueo al " +
-                    "tracker persistente: " + UnlockNames(cutUnlocks)
-                );
-
-                Instance.ApplyProgressionUnlocks();
-            }
-
             Debug.Log(
                 "[NightProgression] Se encontró otro CoalConsumptionTracker. " +
                 "Se mantiene el existente. Noche actual: " +
@@ -59,13 +53,13 @@ public class CoalConsumptionTracker : MonoBehaviour
         transform.SetParent(null);
         DontDestroyOnLoad(gameObject);
 
-        ApplyProgressionUnlocks();
+        LocationProgression.ApplyUnlocks(catalog);
 
         Debug.Log(
             "[NightProgression] Tracker iniciado. " +
             "Noches completadas: " + DaysPlayed +
             " | Noche actual: " + CurrentNight +
-            " | Cortes desbloqueables: " + UnlockNames(cutUnlocks)
+            " | Parada: " + LocationIndex
         );
     }
 
@@ -100,68 +94,12 @@ public class CoalConsumptionTracker : MonoBehaviour
             ". Noches completadas: " + DaysPlayed +
             " | Próxima noche: " + CurrentNight
         );
-
-        ApplyProgressionUnlocks();
-    }
-    public void ConfigureCutUnlocks(IReadOnlyList<NightCutUnlock> unlocks)
-    {
-        if (unlocks == null || unlocks.Count == 0)
-        {
-            Debug.LogWarning(
-                "[NightProgression] Se intentó configurar los desbloqueos sin cortes."
-            );
-            return;
-        }
-
-        cutUnlocks = new List<NightCutUnlock>(unlocks);
-
-        Debug.Log(
-            "[NightProgression] Cortes desbloqueables configurados: " +
-            UnlockNames(cutUnlocks) +
-            " | Noche actual: " + CurrentNight
-        );
-
-        ApplyProgressionUnlocks();
     }
 
-    private void ApplyProgressionUnlocks()
+    /// <summary>Mueve la parada alcanzada. Solo lo llama <see cref="LocationProgression"/>.</summary>
+    public void SetLocationIndex(int index)
     {
-        if (cutUnlocks.Count == 0)
-        {
-            Debug.LogWarning(
-                "[NightProgression] No se asignaron cortes desbloqueables " +
-                "en CoalConsumptionTracker."
-            );
-            return;
-        }
-
-        for (int i = 0; i < cutUnlocks.Count; i++)
-        {
-            NightCutUnlock entry = cutUnlocks[i];
-
-            if (entry != null && entry.cut != null)
-                entry.cut.isUnlocked = CurrentNight >= entry.night;
-        }
-
-        Debug.Log(
-            "[NightProgression] Noche actual: " + CurrentNight +
-            " | Cortes: " + UnlockNames(cutUnlocks)
-        );
-    }
-
-    private static string UnlockNames(List<NightCutUnlock> unlocks)
-    {
-        var names = new List<string>();
-
-        for (int i = 0; i < unlocks.Count; i++)
-        {
-            NightCutUnlock entry = unlocks[i];
-
-            if (entry != null && entry.cut != null)
-                names.Add(entry.cut.cutName + " (noche " + entry.night + ")");
-        }
-
-        return names.Count > 0 ? string.Join(", ", names) : "SIN ASIGNAR";
+        LocationIndex = Mathf.Max(0, index);
     }
 
     /// <summary>
@@ -172,8 +110,9 @@ public class CoalConsumptionTracker : MonoBehaviour
     {
         TotalCoalConsumed = 0;
         DaysPlayed = 0;
+        LocationIndex = 0;
 
-        ApplyProgressionUnlocks();
+        LocationProgression.ApplyUnlocks(catalog);
 
         Debug.Log(
             "[NightProgression] Progreso reiniciado. " +

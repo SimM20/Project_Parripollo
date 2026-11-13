@@ -140,16 +140,6 @@ public class CustomerSystem : MonoBehaviour
     [Tooltip("Máximo de guarniciones distintas por pedido. El pool sale de FoodCatalog.availableSides.")]
     [SerializeField] [Min(1)] private int maxSidesPerOrder = 1;
 
-    [Header("Night Progression")]
-    [Tooltip("Cortes que se desbloquean (tienda y pedidos) a partir de cierta noche.")]
-    [SerializeField]
-    private List<NightCutUnlock> cutUnlocks =
-        new List<NightCutUnlock>();
-    [Tooltip("Variantes que se desbloquean a partir de cierta noche. Conviene que coincidan con la noche de su corte.")]
-    [SerializeField]
-    private List<NightVariantUnlock> variantUnlocks =
-        new List<NightVariantUnlock>();
-   
     [Header("Patience")]
     [SerializeField] private float basePatienceSeconds = 30f;
 
@@ -254,28 +244,9 @@ public class CustomerSystem : MonoBehaviour
             " | Paciencia x" + resolvedPatienceMultiplier
         );
 
-        // Comunica al tracker cuáles son los cortes desbloqueables.
-        if (CoalConsumptionTracker.Instance != null)
-        {
-            CoalConsumptionTracker.Instance.ConfigureCutUnlocks(
-                cutUnlocks
-            );
-        }
-        else
-        {
-            Debug.LogError(
-                "[CustomerSystem] No existe CoalConsumptionTracker."
-            );
-        }
-
-        // Desbloqueo de variantes.
-        for (int i = 0; i < variantUnlocks.Count; i++)
-        {
-            NightVariantUnlock entry = variantUnlocks[i];
-
-            if (entry != null && entry.variant != null)
-                entry.variant.isUnlocked = currentNight >= entry.night;
-        }
+        // Qué cortes y variantes se pueden pedir lo define la parada alcanzada en la ruta.
+        // El tracker ya lo aplicó al nacer; se repite acá (es idempotente) para no depender de él.
+        LocationProgression.ApplyUnlocks(Catalog);
 
         List<WeightedOrderCut> cuts =
             GetUnlockedOrderCuts();

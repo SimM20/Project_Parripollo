@@ -29,6 +29,14 @@ public class FoodCatalogSO : ScriptableObject, IFoodCatalogProvider
     [Header("Upgrades")]
     [SerializeField] private List<UpgradeSO> allUpgrades = new List<UpgradeSO>();
 
+    [Header("Progresión")]
+    [Tooltip("Ruta de paradas del modo de juego. Define qué cortes, variantes y mejoras están " +
+             "desbloqueados según la parada alcanzada. Sin ruta, cada asset conserva su isUnlocked.")]
+    [SerializeField] private LocationRouteSO locationRoute;
+
+    /// <summary>Ruta de paradas de este catálogo, o null. Se consulta por <see cref="LocationProgression"/>.</summary>
+    public LocationRouteSO LocationRoute => locationRoute;
+
     // ── IFoodCatalogProvider ────────────────────────────────────────────────
 
     public IReadOnlyList<MeatCutSO> GetUnlockedCuts()

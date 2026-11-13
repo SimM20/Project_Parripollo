@@ -96,10 +96,63 @@ internal static class UpgradeStateResetter
             SessionState.EraseString(SnapshotKey);
         }
 
-        if (resetLevels == 0 && restoredCoals == 0) return;
+        int relocked = RestoreRouteUnlocks();
+
+        if (resetLevels == 0 && restoredCoals == 0 && relocked == 0) return;
 
         AssetDatabase.SaveAssets();
         Debug.Log("[UpgradeStateResetter] Mejoras reseteadas: " + resetLevels
-                + " nivel(es) a 0, " + restoredCoals + " carbon(es) restaurado(s).");
+                + " nivel(es) a 0, " + restoredCoals + " carbon(es) restaurado(s), "
+                + relocked + " desbloqueo(s) de ruta devuelto(s) a la parada inicial.");
+    }
+
+    /// <summary>
+    /// Deja cortes, variantes y mejoras de cada ruta como al arrancar una run (solo la parada
+    /// inicial alcanzada). Comprar paradas jugando en el Editor muta `isUnlocked` en los assets:
+    /// sin esto quedarian desbloqueados en disco y ensuciarian el control de versiones.
+    /// </summary>
+    static int RestoreRouteUnlocks()
+    {
+        int changed = 0;
+
+        foreach (string guid in AssetDatabase.FindAssets("t:LocationRouteSO"))
+        {
+            var route = AssetDatabase.LoadAssetAtPath<LocationRouteSO>(AssetDatabase.GUIDToAssetPath(guid));
+            if (route == null) continue;
+
+            for (int i = 0; i < route.Count; i++)
+            {
+                LocationSO stop = route.GetStop(i);
+                if (stop == null) continue;
+
+                bool reached = i == 0;
+
+                foreach (MeatCutSO cut in stop.unlockedCuts)
+                {
+                    if (cut == null || cut.isUnlocked == reached) continue;
+                    cut.isUnlocked = reached;
+                    EditorUtility.SetDirty(cut);
+                    changed++;
+                }
+
+                foreach (ProductVariantSO variant in stop.unlockedVariants)
+                {
+                    if (variant == null || variant.isUnlocked == reached) continue;
+                    variant.isUnlocked = reached;
+                    EditorUtility.SetDirty(variant);
+                    changed++;
+                }
+
+                foreach (UpgradeSO upgrade in stop.unlockedUpgrades)
+                {
+                    if (upgrade == null || upgrade.isUnlocked == reached) continue;
+                    upgrade.isUnlocked = reached;
+                    EditorUtility.SetDirty(upgrade);
+                    changed++;
+                }
+            }
+        }
+
+        return changed;
     }
 }

@@ -20,7 +20,7 @@ MonoBehaviour:
   description: 'Una radio en el mostrador: la espera se hace mas corta y los clientes
     te aguantan un 20% mas.'
   descriptionKey: upgrade.radio.desc
-  isUnlocked: 1
+  isUnlocked: 0
   maxLevel: 1
   currentLevel: 0
   effectType: 3

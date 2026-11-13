@@ -20,7 +20,7 @@ MonoBehaviour:
   description: 'Una mesa mas en el patio: sumas un cliente simultaneo por cada nivel
     comprado.'
   descriptionKey: upgrade.customer_capacity.desc
-  isUnlocked: 1
+  isUnlocked: 0
   maxLevel: 3
   currentLevel: 0
   effectType: 1
