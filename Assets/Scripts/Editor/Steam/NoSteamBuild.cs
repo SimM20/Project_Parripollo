@@ -64,8 +64,7 @@ public static class NoSteamBuild
         string appIdFile = Path.Combine(folder, "steam_appid.txt");
         if (File.Exists(appIdFile)) File.Delete(appIdFile);
 
-        Debug.Log("[Steam] Build SIN Steam lista en " + folder + " (" + (summary.totalSize / (1024 * 1024)) + " MB). " +
-                  "No la subas a Steam: no verifica licencia ni desbloquea logros.");
+        Debug.Log("[Steam] No Steam Build Ready: " + folder + " (" + (summary.totalSize / (1024 * 1024)) + " MB).");
         EditorUtility.RevealInFinder(summary.outputPath);
     }
 }
