@@ -72,9 +72,12 @@ Además, una build de release con `AppId = 0` falla con un mensaje que explica q
 
 ### Build sin Steam (muestras, profes, itch.io)
 
-Agregar `DISABLESTEAMWORKS` en *Player Settings → Other Settings → Scripting Define Symbols*.
-El bootstrap queda vacío, los logros van al backend local y no se pide App ID. Hay que sacarlo
-antes de la build de Steam.
+**Una build de release normal NO sirve para alguien sin el juego en Steam:** pide Steam y se cierra.
+Para eso está el menú **Parripollo → Steam → NoSteamBuild** (`Editor/Steam/NoSteamBuild.cs`):
+pide una carpeta (por defecto `Builds/SinSteam`, que está en `.gitignore`) y genera una build de
+Windows de release compilada con `DISABLESTEAMWORKS` solo para esa build. El bootstrap queda vacío,
+el juego no pide Steam y los logros van al backend local. **No tocar Player Settings** y **no subir
+esa build a Steam**.
 
 ---
 
