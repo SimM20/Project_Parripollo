@@ -12,8 +12,6 @@ public class PlayerWallet : MonoBehaviour
 
     void Awake()
     {
-        Debug.Log("Awake del PlayerWallet");
-        
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);

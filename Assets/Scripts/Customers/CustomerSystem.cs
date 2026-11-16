@@ -245,15 +245,6 @@ public class CustomerSystem : MonoBehaviour
         resolvedPatienceMultiplier =
             CalculatePatienceMultiplier();
 
-        Debug.Log(
-            "[CustomerSystem] Iniciando noche " + currentNight +
-            " | Clientes de esta noche: " + customersTargetTonight +
-            " | Máximo configurado: " + maximumCustomersPerNight +
-            " | Simultáneos: " + resolvedMaxSimultaneousCustomers +
-            " (base " + Mathf.Max(1, maxSimultaneousCustomers) + ")" +
-            " | Paciencia x" + resolvedPatienceMultiplier
-        );
-
         // Qué cortes y variantes se pueden pedir lo define la parada alcanzada en la ruta.
         // El tracker ya lo aplicó al nacer; se repite acá (es idempotente) para no depender de él.
         LocationProgression.ApplyUnlocks(Catalog);
@@ -272,12 +263,6 @@ public class CustomerSystem : MonoBehaviour
         for (int i = 0; i < cuts.Count; i++)
         {
             WeightedOrderCut entry = cuts[i];
-
-            Debug.Log(
-                "[CustomerSystem] Disponible para pedidos: " +
-                entry.cut.cutName +
-                " | Peso: " + entry.weight
-            );
         }
 
         IReadOnlyList<ToppingSO> orderToppings =
@@ -440,14 +425,6 @@ public class CustomerSystem : MonoBehaviour
             clock.OnClosingTime -= HandleClosingTime;
             clock.OnClosingTime += HandleClosingTime;
             clock.StartDay();
-
-            Debug.Log(
-                "[CustomerSystem] Jornada iniciada de " +
-                DayClock.FormatHour(clock.OpeningHour) + " a " +
-                DayClock.FormatHour(clock.ClosingHour) +
-                " | Clientes esperados: " + customersTargetTonight +
-                " (uno cada " + BaseSpawnIntervalSeconds.ToString("0.0") + "s en promedio)"
-            );
         }
         else
         {
@@ -741,30 +718,6 @@ public class CustomerSystem : MonoBehaviour
 
         UIManager.Instance?.SetArrivedCustomers(
             spawnedTonight
-        );
-
-        Debug.Log(
-            "[CustomerSystem] Spawn " +
-            customer.type +
-            " en slot " +
-            slotIndex +
-            " | Pedido: " +
-            order.PrimaryCut.cutName +
-            (order.IsSandwich
-                ? " (" + order.bread.breadName + ")"
-                : " al plato") +
-            (order.sides.Count > 0
-                ? " + " + string.Join(", ", order.sides.Select(s => s.sideName))
-                : "") +
-            (order.toppings.Count > 0
-                ? " + " + string.Join(", ", order.toppings.Select(t => t.toppingName))
-                : "") +
-            " | Cliente n° " +
-            spawnedTonight +
-            (DayClock.Instance != null
-                ? " | " + DayClock.Instance.TimeLabel
-                : "/" + customersTargetTonight) +
-            (ignoreNightLimit ? " | Spawn forzado" : "")
         );
     }
 
@@ -1177,7 +1130,6 @@ public class CustomerSystem : MonoBehaviour
                 true,
                 () =>
                 {
-                    Debug.Log($"[CustomerSystem] Cambio por faltante completado: {newCut.cutName}. Propina anulada.");
                     RefreshSelectionVisuals();
                 },
                 feedbackConfig
@@ -1234,8 +1186,6 @@ public class CustomerSystem : MonoBehaviour
             else if (IsDeliverySelectionActive)
                 EndDeliverySelection();
         }
-
-        Debug.Log("[CustomerSystem] Remove: " + reason);
 
         // opcional: compactar slots (corrés a la izquierda para no dejar huecos)
         CompactSlots();
@@ -1422,11 +1372,6 @@ public class CustomerSystem : MonoBehaviour
         float from = Mathf.Clamp01(Mathf.Min(specialSkinArrivalWindow.x, specialSkinArrivalWindow.y));
         float to = Mathf.Clamp01(Mathf.Max(specialSkinArrivalWindow.x, specialSkinArrivalWindow.y));
         specialSkinArrivalPoint = UnityEngine.Random.Range(from, to);
-
-        Debug.Log("[CustomerSystem] Hoy viene el cliente especial, después de las " +
-                  DayClock.FormatHour(Mathf.Lerp(DayClock.Instance.OpeningHour,
-                                                 DayClock.Instance.ClosingHour,
-                                                 specialSkinArrivalPoint)));
     }
 
     /// <summary>True si el cliente que entra ahora tiene que ser el especial.</summary>
@@ -1479,11 +1424,6 @@ public class CustomerSystem : MonoBehaviour
     {
         var result = new List<WeightedOrderCut>();
 
-        Debug.Log(
-            "[CustomerSystem] Cortes configurados: " +
-            availableOrderCuts.Count
-        );
-
         for (int i = 0; i < availableOrderCuts.Count; i++)
         {
             WeightedOrderCut entry = availableOrderCuts[i];
@@ -1509,12 +1449,6 @@ public class CustomerSystem : MonoBehaviour
 
                 continue;
             }
-
-            Debug.Log(
-                "[CustomerSystem] Corte: " + cut.cutName +
-                " | Desbloqueado: " + cut.isUnlocked +
-                " | Peso: " + entry.weight
-            );
 
             if (!cut.isUnlocked)
                 continue;

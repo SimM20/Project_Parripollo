@@ -66,10 +66,6 @@ public class ShopSystem : MonoBehaviour
                 ? CoalConsumptionTracker.Instance.CurrentNight
                 : 1;
 
-        Debug.Log(
-            "[Shop] Tienda abierta. Noche actual: " + currentNight
-        );
-
         if (catalog == null)
         {
             Debug.LogError("[Shop] No hay FoodCatalogSO asignado.");
@@ -84,12 +80,6 @@ public class ShopSystem : MonoBehaviour
 
             if (cut == null)
                 continue;
-
-            Debug.Log(
-                "[Shop] Corte: " + cut.cutName +
-                " | isUnlocked: " + cut.isUnlocked +
-                " | IsPurchasable: " + IsPurchasable(cut)
-            );
         }
     }
 

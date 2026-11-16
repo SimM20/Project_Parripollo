@@ -140,11 +140,6 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            Debug.Log(
-                "[GameManager] Comenzando noche " + tracker.CurrentNight +
-                " | Noches completadas: " + tracker.DaysPlayed
-            );
-
             UIManager.Instance?.SetActualDay(tracker.CurrentNight);
         }
     }
@@ -634,9 +629,6 @@ public class GameManager : MonoBehaviour
         // Iniciar feedback de entrega (4 segundos con slot ocupado)
         customerSystem.TriggerDeliveryFeedback(customer, eval.payment, eval.tip, eval.feedbackState);
 
-        Debug.Log("✔ Pedido entregado. Pago: " + eval.payment + " | Propinas: " + eval.tip
-                  + " | Desfase: " + eval.worstOffset + " | Estado: " + eval.feedbackState
-                  + (eval.extrasNote != null ? " | Extras: " + eval.extrasNote : ""));
         TutorialSignals.Raise(TutorialSignal.ProductDelivered);
         return true;
     }

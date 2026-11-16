@@ -57,13 +57,6 @@ public class CoalConsumptionTracker : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         LocationProgression.ApplyUnlocks(catalog);
-
-        Debug.Log(
-            "[NightProgression] Tracker iniciado. " +
-            "Noches completadas: " + DaysPlayed +
-            " | Noche actual: " + CurrentNight +
-            " | Parada: " + LocationIndex
-        );
     }
 
     private void OnDestroy()

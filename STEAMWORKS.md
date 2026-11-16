@@ -3,10 +3,9 @@
 Integración con Steamworks: wrapper, arranque, verificación de propiedad, logros y subida de builds.
 El código está en `Assets/Scripts/Platform/Steam/`, `Assets/Scripts/Achievements/` y `Assets/Scripts/Editor/Steam/`.
 
-> **App ID: 5636520**, cargado en `Assets/Scripts/Platform/Steam/SteamConfig.cs`. **Confirmarlo en
-> el panel de Steamworks** (*App Admin*, al lado del nombre del juego): la página de la tienda todavía
-> no es pública, así que no se pudo verificar desde afuera. Si es otro, se cambia solo ahí: el editor
-> regenera `steam_appid.txt` al abrir Unity. El depot por defecto es el App ID + 1 (**5636521**).
+> **App ID: 5636520** (confirmado en el panel de Steamworks), cargado en
+> `Assets/Scripts/Platform/Steam/SteamConfig.cs`. El editor genera `steam_appid.txt` con ese número
+> al abrir Unity. El depot por defecto es el App ID + 1 (**5636521**).
 
 ---
 
@@ -204,11 +203,16 @@ En partner.steamgames.com → *App Admin* → Parrilla 40 → **Stats & Achievem
 
 ### Probarlos
 
-- **En el editor:** Steam abierto con una cuenta que tenga el juego (los del equipo: claves de
-  desarrollador desde *Request Steam Product Keys*). `SteamConfig.AppId` cargado (genera
-  `steam_appid.txt`). Al dar Play, la consola dice `[Steam] Inicializado` y cada logro
-  `[Logros] Desbloqueado (Steam): …`. El aviso emergente (overlay) no sale en el editor: se ve en
-  la página del juego en la biblioteca de Steam.
+- **En el editor:** Steam abierto con una cuenta que tenga el juego en la biblioteca. Lo más simple
+  es que cada integrante esté en el grupo de partner de Steamworks con acceso a la app. Si no, se
+  piden claves *Release State Override* desde *Request Steam Product Keys*; Valve exige esperar
+  tres semanas desde que se creó el App ID en el primer juego del estudio. `SteamConfig.AppId`
+  cargado (genera `steam_appid.txt`). Al dar Play, la consola dice `[Steam] Inicializado` y cada
+  logro `[Logros] Desbloqueado (Steam): …`.
+- **Antes del lanzamiento los logros ganados NO se ven** ni en la biblioteca ni en el perfil de la
+  Comunidad (lo dice Valve). La forma de confirmarlos es la consola de Unity. Desde la consola del
+  cliente de Steam (`steam.exe -console`) también se pueden borrar:
+  `achievement_clear 5636520 ACH_FIRST_FIRE` o `reset_all_stats 5636520`.
 - **Sin Steam:** `[Logros] Desbloqueado (local): …` en la consola. No se guarda nada.
 - **Resetear para volver a probar:** menú **Parripollo → Steam → Resetear logros y stats** (en Play).
   **Parripollo → Steam → Estado de Steam** muestra el App ID, si inicializó y el backend.
@@ -225,9 +229,11 @@ En partner.steamgames.com → *App Admin* → Parrilla 40 → **Stats & Achievem
    `Parrilla 40.exe`, sistema operativo Windows, 64 bits.
 3. **Installation → Redistributables**: en general nada (Unity 2022 no necesita el redistribuible de
    DirectX ni de VC++). Probar en una PC limpia para confirmarlo.
-4. **Publicar** (pestaña Publish) cada vez que se cambia algo de esto.
-5. **Cuenta para builds**: conviene una cuenta de Steam aparte, con permiso solo para subir builds
-   (*Users & Permissions*), con Steam Guard por mail. Así nadie usa la cuenta del estudio.
+4. **Paquetes asociados** (*App Admin → Paquetes y DLC asociados*): agregar el depot a los paquetes
+   del juego, incluido el *Developer Comp*. Si el depot no está en un paquete, nadie lo puede bajar.
+5. **Publicar** (pestaña Publish) cada vez que se cambia algo de esto.
+6. **Cuenta para builds**: Valve recomienda una cuenta de Steam aparte, con los permisos *Edit App
+   Metadata* y *Publish App Changes To Steam* (*Users & Permissions*). Así nadie usa la cuenta del estudio.
 
 ### En cada versión
 
@@ -258,6 +264,7 @@ En partner.steamgames.com → *App Admin* → Parrilla 40 → **Stats & Achievem
 			}
 			"FileExclusion" "*.pdb"
 			"FileExclusion" "*_BurstDebugInformation_DoNotShip*"
+			"FileExclusion" "*_BackUpThisFolder_ButDontShipItWithYourGame*"
 			"FileExclusion" "steam_appid.txt"
 		}
 	}
@@ -288,7 +295,6 @@ Esto no bloquea la integración técnica.
 
 ## Checklist
 
-- [ ] Confirmar en Steamworks que el App ID es 5636520 (ya está en `SteamConfig`)
 - [ ] Abrir el proyecto una vez y commitear `packages-lock.json` y el define `STEAMWORKS_NET` de `ProjectSettings.asset`
 - [ ] Stats cargados en Steamworks (5)
 - [ ] Logros cargados con textos es/en e íconos (20 × 2 íconos)

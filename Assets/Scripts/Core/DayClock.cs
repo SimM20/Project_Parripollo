@@ -132,12 +132,6 @@ public class DayClock : MonoBehaviour
         lastPushedLabel = null;
 
         PushLabel();
-
-        Debug.Log(
-            "[DayClock] Jornada iniciada: " + FormatHour(openingHour) +
-            " → " + FormatHour(closingHour) +
-            " en " + dayDurationSeconds + "s reales."
-        );
     }
 
     /// <summary>

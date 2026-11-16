@@ -20,16 +20,12 @@ public static class CustomerFeedbackSelfCheck
             if (condition)
             {
                 passed++;
-                Debug.Log($"<color=#4ADE80>✔ [PASS]</color> {testName}");
             }
             else
             {
                 failed++;
-                Debug.LogError($"<color=#EF4444>❌ [FAIL]</color> {testName}");
             }
         }
-
-        Debug.Log("<b>[CustomerFeedbackSelfCheck] Iniciando validación del sistema...</b>");
 
         // 1. Validar Categorías
         Assert(CustomerFeedbackState.TuristaFeliz.GetCategory() == CustomerFeedbackCategory.Positive, "TuristaFeliz es Positive");
@@ -166,7 +162,6 @@ public static class CustomerFeedbackSelfCheck
         cFeedback.UpdatePatience(5f);
         Assert(Mathf.Approximately(cFeedback.patience, 25f), "Paciencia decae normalmente tras EndFeedback");
 
-        Debug.Log($"<b>[CustomerFeedbackSelfCheck] Pruebas finalizadas: {passed} exitosas, {failed} fallidas.</b>");
         return failed;
     }
 }

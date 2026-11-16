@@ -41,11 +41,5 @@ public class UpgradeUnlockActivator : MonoBehaviour
         bool unlocked = upgrade.CurrentLevel > 0;
 
         target.SetActive(unlocked);
-
-        Debug.Log(
-            "[UpgradeUnlockActivator] " + upgrade.itemName +
-            " nivel " + upgrade.CurrentLevel +
-            " -> " + target.name + (unlocked ? " activado" : " desactivado")
-        );
     }
 }

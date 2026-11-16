@@ -22,7 +22,6 @@ public class CoolerSystem : MonoBehaviour
 
     void Awake()
     {
-        Debug.Log("[CoolerSystem] Awake — Instance is " + (Instance != null ? Instance.GetInstanceID().ToString() : "null"));
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
