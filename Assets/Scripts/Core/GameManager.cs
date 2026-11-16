@@ -22,6 +22,93 @@ public class GameManager : MonoBehaviour
 
     public CustomerSystem Customers => customerSystem;
 
+    /// <summary>
+    /// Una entrega aceptada y cobrada (las crudas o quemadas no cuentan: esas suman strike).
+    /// Lo escuchan sistemas que no son de la partida, como los logros (<see cref="AchievementService"/>):
+    /// el GameManager no sabe quién escucha.
+    /// </summary>
+    public static event System.Action<DeliveryReport> DeliveryCompleted;
+
+    /// <summary>
+    /// Terminó la jornada, justo antes de cargar EndScene. Sale del único embudo de fin de día
+    /// (<see cref="EndNight(bool)"/>), con la racha de strikes ya actualizada.
+    /// </summary>
+    public static event System.Action<NightReport> NightFinished;
+
+    // Con "Enter Play Mode" sin domain reload los estáticos sobreviven entre sesiones de play.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticEvents()
+    {
+        DeliveryCompleted = null;
+        NightFinished = null;
+    }
+
+    /// <summary>Foto de una entrega cobrada, para <see cref="DeliveryCompleted"/>.</summary>
+    public readonly struct DeliveryReport
+    {
+        /// <summary>Corte principal que pidió el cliente (el que se le entregó).</summary>
+        public readonly MeatCutSO Cut;
+        public readonly bool IsSandwich;
+        public readonly float Payment;
+        public readonly float Tip;
+        public readonly TipTier TipTier;
+        /// <summary>Entrega perfecta: mismo criterio que la racha de <see cref="DayStats"/>.</summary>
+        public readonly bool Perfect;
+        /// <summary>Racha de entregas perfectas después de contar esta.</summary>
+        public readonly int PerfectStreak;
+        /// <summary>Se le entregó al cliente especial del día (el enano bostero).</summary>
+        public readonly bool SpecialCustomer;
+
+        public DeliveryReport(MeatCutSO cut, bool isSandwich, float payment, float tip, TipTier tipTier, bool perfect,
+                              int perfectStreak, bool specialCustomer)
+        {
+            SpecialCustomer = specialCustomer;
+            Cut = cut;
+            IsSandwich = isSandwich;
+            Payment = payment;
+            Tip = tip;
+            TipTier = tipTier;
+            Perfect = perfect;
+            PerfectStreak = perfectStreak;
+        }
+    }
+
+    /// <summary>Resumen de la jornada que terminó, para <see cref="NightFinished"/>.</summary>
+    public readonly struct NightReport
+    {
+        /// <summary>Número de la noche que se acaba de jugar (1 = la primera de la run).</summary>
+        public readonly int Night;
+        /// <summary>Noches cerradas en esta run, contando esta.</summary>
+        public readonly int NightsPlayedInRun;
+        /// <summary>El jugador la cortó a mano desde el menú de pausa.</summary>
+        public readonly bool EndedEarlyByPlayer;
+        /// <summary>Se cerró por el límite de strikes (te clavaron el cartel).</summary>
+        public readonly bool EndedByStrikes;
+        public readonly int Strikes;
+        /// <summary>Noches seguidas cerradas por strikes ANTES de esta (la racha que venía).</summary>
+        public readonly int PreviousStrikeNightStreak;
+        public readonly float Sales;
+        public readonly float Tips;
+        public readonly int BestStreak;
+
+        public NightReport(int night, int nightsPlayedInRun, bool endedEarlyByPlayer, bool endedByStrikes, int strikes,
+                           int previousStrikeNightStreak, float sales, float tips, int bestStreak)
+        {
+            Night = night;
+            NightsPlayedInRun = nightsPlayedInRun;
+            EndedEarlyByPlayer = endedEarlyByPlayer;
+            EndedByStrikes = endedByStrikes;
+            Strikes = strikes;
+            PreviousStrikeNightStreak = previousStrikeNightStreak;
+            Sales = sales;
+            Tips = tips;
+            BestStreak = bestStreak;
+        }
+
+        /// <summary>La noche cuenta como fallida para la racha de la run.</summary>
+        public bool Failed => EndedEarlyByPlayer || EndedByStrikes;
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -534,7 +621,12 @@ public class GameManager : MonoBehaviour
         }
 
         PlayerWallet.Instance?.Add(eval.payment + eval.tip);
-        DayStats.RegisterDelivery(eval.payment, eval.tip, eval.worstOffset == 0 && !customer.IsTipAnulada);
+        bool perfect = eval.worstOffset == 0 && !customer.IsTipAnulada;
+        DayStats.RegisterDelivery(eval.payment, eval.tip, perfect);
+
+        DeliveryCompleted?.Invoke(new DeliveryReport(
+            customer.order.PrimaryCut, customer.order.IsSandwich, eval.payment, eval.tip, eval.tipTier,
+            perfect, DayStats.PerfectStreak, customerSystem.IsSpecialCustomer(customer)));
 
         // Un toque al entregar; la vibración fuerte llega con la plata al contador (HudManager).
         GamepadHaptics.Play(HapticEvent.DeliveryAccepted);
@@ -600,8 +692,21 @@ public class GameManager : MonoBehaviour
         // Racha de la run: leer (sin consumir) el flag que dejó CustomerSystem.TryEndNight.
         // El flag lo sigue consumiendo StrikeEndPopup ya en EndScene.
         // Cerrar a mano desde la pausa cuenta igual que quedarse sin clientes por strikes.
-        bool failedNight = endedEarlyByPlayer || StrikeSystem.LastNightEndedByStrikes;
+        bool endedByStrikes = StrikeSystem.LastNightEndedByStrikes;
+        bool failedNight = endedEarlyByPlayer || endedByStrikes;
+        int previousStrikeNightStreak = StrikeSystem.ConsecutiveStrikeNights;
         StrikeSystem.RegisterNightResult(failedNight);
+
+        NightFinished?.Invoke(new NightReport(
+            tracker != null ? tracker.CurrentNight - 1 : 1,
+            tracker != null ? tracker.DaysPlayed : 1,
+            endedEarlyByPlayer,
+            endedByStrikes,
+            StrikeSystem.Instance != null ? StrikeSystem.Instance.CurrentStrikes : 0,
+            previousStrikeNightStreak,
+            DayStats.SalesToday,
+            DayStats.TipsToday,
+            DayStats.BestStreak));
 
         SceneManagementUtils.LoadSceneByName("EndScene");
     }

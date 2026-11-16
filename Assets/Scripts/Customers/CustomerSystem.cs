@@ -116,6 +116,16 @@ public class CustomerSystem : MonoBehaviour
     // Negativo = hoy no viene, o ya vino.
     private float specialSkinArrivalPoint = -1f;
 
+    // El cliente que entró hoy con la imagen especial; null si todavía no vino (o no viene).
+    private Customer specialCustomer;
+
+    /// <summary>
+    /// True si ese cliente es el especial de hoy (el enano bostero). Se marca al spawnear, no
+    /// por el sprite que tiene puesto: así no depende de animaciones ni del pool de imágenes.
+    /// </summary>
+    public bool IsSpecialCustomer(Customer customer) =>
+        customer != null && customer == specialCustomer;
+
     // Buffer reusable del sorteo de imagen, para no generar basura en cada spawn.
     private readonly List<Sprite> skinCandidates = new List<Sprite>();
 
@@ -400,6 +410,7 @@ public class CustomerSystem : MonoBehaviour
         servedToday = 0;
         nightEnded = false;
         warnedEmptySkinPool = false;
+        specialCustomer = null;
         RollSpecialSkinVisit();
 
         DayStats.ResetDay();
@@ -708,7 +719,11 @@ public class CustomerSystem : MonoBehaviour
             return;
         }
 
-        view.ApplySkin(PickCustomerSkin());
+        Sprite skin = PickCustomerSkin();
+        if (skin != null && skin == specialSkin)
+            specialCustomer = customer;
+
+        view.ApplySkin(skin);
         view.Init(customer, this);
 
         slotViews[slotIndex] = view;

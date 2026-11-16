@@ -1,0 +1,43 @@
+﻿key,es,en
+# Logros de Steam (AchievementIds). Nombre y descripción a cargar en Steamworks > Stats & Achievements, en cada idioma
+# Steam muestra sus propios textos: si se cambia algo acá hay que cambiarlo también en el panel y publicar
+achievement.ACH_FIRST_FIRE.name,Prendé el fuego,Light It Up
+achievement.ACH_FIRST_FIRE.desc,Poné el primer carbón en la parrilla.,Put your first charcoal on the grill.
+achievement.ACH_FIRST_BURN.name,Carbonizado,Charred
+achievement.ACH_FIRST_BURN.desc,Quemá un corte. Pasa en las mejores familias.,Burn a cut. It happens to the best of us.
+achievement.ACH_FIRST_DELIVERY.name,Primer cliente,First Customer
+achievement.ACH_FIRST_DELIVERY.desc,Entregá y cobrá tu primer pedido.,Deliver and get paid for your first order.
+achievement.ACH_PERFECT_STREAK_5.name,En su punto,Cooked Just Right
+achievement.ACH_PERFECT_STREAK_5.desc,Hacé 5 entregas perfectas seguidas.,Make 5 perfect deliveries in a row.
+achievement.ACH_PERFECT_STREAK_15.name,Maestro parrillero,Grill Master
+achievement.ACH_PERFECT_STREAK_15.desc,Hacé 15 entregas perfectas seguidas.,Make 15 perfect deliveries in a row.
+achievement.ACH_FULL_MENU.name,Carta completa,Full Menu
+achievement.ACH_FULL_MENU.desc,Entregá todos los cortes de la ruta en una misma partida.,Deliver every cut on the route in a single run.
+achievement.ACH_DELIVERIES_100.name,Cien platos,A Hundred Plates
+achievement.ACH_DELIVERIES_100.desc,Entregá 100 pedidos en total.,Deliver 100 orders in total.
+achievement.ACH_DELIVERIES_1000.name,Leyenda de la ruta,Legend of the Road
+achievement.ACH_DELIVERIES_1000.desc,Entregá 1000 pedidos en total.,Deliver 1000 orders in total.
+achievement.ACH_GREAT_TIP.name,Propinón,Big Tipper
+achievement.ACH_GREAT_TIP.desc,Recibí una propina de las grandes.,Get one of the big tips.
+achievement.ACH_TIPS_5000.name,Pozo de propinas,Tip Jar
+achievement.ACH_TIPS_5000.desc,Juntá $5000 en propinas en total.,Collect $5000 in tips in total.
+achievement.ACH_FIRST_NIGHT.name,Primera jornada,First Shift
+achievement.ACH_FIRST_NIGHT.desc,Terminá tu primera jornada.,Finish your first shift.
+achievement.ACH_CLEAN_NIGHT.name,Sin quejas,No Complaints
+achievement.ACH_CLEAN_NIGHT.desc,Terminá una jornada sin ningún strike.,Finish a shift without a single strike.
+achievement.ACH_NIGHTS_7.name,Una semana en la ruta,A Week on the Road
+achievement.ACH_NIGHTS_7.desc,Llegá a la séptima jornada en una misma partida.,Reach the seventh shift in a single run.
+achievement.ACH_FIRST_STOP.name,Arranca el viaje,Hitting the Road
+achievement.ACH_FIRST_STOP.desc,Mudá el puesto a la segunda parada de la ruta.,Move your stand to the second stop on the route.
+achievement.ACH_ROUTE_END.name,Fin de la ruta,End of the Road
+achievement.ACH_ROUTE_END.desc,Llegá a la última parada de la ruta.,Reach the last stop on the route.
+achievement.ACH_FIRST_UPGRADE.name,A mejorar el puesto,Upgrading the Stand
+achievement.ACH_FIRST_UPGRADE.desc,Comprá tu primera mejora.,Buy your first upgrade.
+achievement.ACH_ALL_UPGRADES.name,Puesto tuneado,Fully Loaded
+achievement.ACH_ALL_UPGRADES.desc,Llevá todas las mejoras al nivel máximo.,Max out every upgrade.
+achievement.ACH_STRIKE_LIMIT.name,Te clavaron el cartel,Shut Down
+achievement.ACH_STRIKE_LIMIT.desc,Perdé tantos clientes que tengas que cerrar antes.,Lose so many customers you have to close early.
+achievement.ACH_COMEBACK.name,Remontada,Comeback
+achievement.ACH_COMEBACK.desc,A una noche de perder la partida por strikes cerrá una jornada bien.,One bad night away from losing the run to strikes: close a shift properly.
+achievement.ACH_SPECIAL_CUSTOMER.name,La mitad más uno,A Very Special Guest
+achievement.ACH_SPECIAL_CUSTOMER.desc,Atendé al cliente especial que aparece algunos días.,Serve the special customer who shows up on some days.

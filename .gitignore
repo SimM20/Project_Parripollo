@@ -73,3 +73,6 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Steam: lo genera el editor desde SteamConfig.AppId (SteamBuildGuard). No va en las builds de release
+steam_appid.txt
