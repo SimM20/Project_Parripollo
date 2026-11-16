@@ -1,6 +1,6 @@
 ﻿key,es,en
 # Info con el puntero encima (HoverInfoResolver): cartelito junto al puntero y barra de abajo. Sin ¡ ! ¿ ?: no están en el atlas de la fuente
-hover.empty,Pasá el puntero por algo para ver qué es y qué podés hacer,Point at something to see what it is and what you can do
+hover.empty,Sin selección,Nothing selected
 hover.in_hand,{0} en la mano,{0} in hand
 hover.place,Poner en la parrilla,Place on the grill
 hover.release,Soltar,Let go
