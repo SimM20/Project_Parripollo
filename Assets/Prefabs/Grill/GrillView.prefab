@@ -14142,30 +14142,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7258831492092880165}
     m_Modifications:
-    - target: {fileID: 559615318073954040, guid: b6854b60f474c1b49928d9650cc09056, type: 3}
-      propertyPath: m_SpriteTilingProperty.newSize.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 559615318073954040, guid: b6854b60f474c1b49928d9650cc09056, type: 3}
-      propertyPath: m_SpriteTilingProperty.newSize.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2216397793409411375, guid: b6854b60f474c1b49928d9650cc09056, type: 3}
-      propertyPath: m_Size.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2216397793409411375, guid: b6854b60f474c1b49928d9650cc09056, type: 3}
-      propertyPath: m_Size.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3677019555813438629, guid: b6854b60f474c1b49928d9650cc09056, type: 3}
-      propertyPath: m_Size.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3677019555813438629, guid: b6854b60f474c1b49928d9650cc09056, type: 3}
-      propertyPath: m_Size.y
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 7248303899615788062, guid: b6854b60f474c1b49928d9650cc09056, type: 3}
       propertyPath: m_Name
       value: StockPanel
