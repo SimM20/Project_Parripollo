@@ -103,8 +103,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7553080148160671582}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &10960585982225206
@@ -341,8 +339,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8560337882865251645}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &105095088771446978
@@ -448,8 +444,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 327422439339925122}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &144083504811575464
@@ -555,8 +549,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6642903435972348572}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &213211374037107674
@@ -662,8 +654,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6950528557984932834}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &256368200612778682
@@ -769,8 +759,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3763842759348494835}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &356354414115518733
@@ -876,8 +864,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5725819442254945664}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &466542197557525384
@@ -983,8 +969,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5251933478686447107}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &499855215188194932
@@ -1090,8 +1074,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2291883077987936927}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &593840688707722560
@@ -1197,8 +1179,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7789922597661638474}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &710421135130399277
@@ -1304,8 +1284,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8741662815054312702}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &746184634002491060
@@ -1411,8 +1389,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 260121428147565230}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &789619250746961710
@@ -1518,8 +1494,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6508097082118692843}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &805149714132479187
@@ -1625,8 +1599,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 855489948541178639}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &902781152315802807
@@ -1732,8 +1704,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5830443326668953030}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1035675771728049540
@@ -1839,8 +1809,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5341314198980123683}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1056490369727958608
@@ -1946,8 +1914,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4152471179486273763}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1100245685938721421
@@ -2053,8 +2019,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5726638980131021911}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1101620119780359846
@@ -2160,8 +2124,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4382508609044844078}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1178223630592253398
@@ -2298,8 +2260,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 1311037969554838685}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1279937256180707418
@@ -2405,8 +2365,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 248317870813110621}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1282118902236503574
@@ -2628,8 +2586,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3094281458324359895}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1353676222638127408
@@ -2735,8 +2691,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3830727491011272887}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1374626915241217875
@@ -2842,8 +2796,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2604781936990459614}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1384377965422694297
@@ -2949,8 +2901,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7172336996713611408}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1438582668085435972
@@ -3164,8 +3114,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3567243433188583810}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1558112827977657977
@@ -3271,8 +3219,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5940655711329987445}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1595058719071649744
@@ -3378,8 +3324,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5316443488191587064}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1622085798024907120
@@ -3485,8 +3429,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3439757752870552957}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1654688220996359559
@@ -3624,8 +3566,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3405151013498024558}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1663252467697406816
@@ -3815,8 +3755,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2176276400321890414}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1871199660117703252
@@ -3922,8 +3860,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6346911456751727643}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1872047226574411571
@@ -4029,8 +3965,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 9187048553556505519}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &1991877365289622257
@@ -4136,8 +4070,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7832149907673874605}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2027291395626191679
@@ -4243,8 +4175,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5500482428600570278}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2065461672360657839
@@ -4381,8 +4311,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrashZone
   zoneCollider: {fileID: 2936447707108482496}
-  onlyWhenGrillView: 1
-  viewManager: {fileID: 0}
+  swallowSeconds: 0.2
+  binEcho: 1
 --- !u!1 &2134524478159136701
 GameObject:
   m_ObjectHideFlags: 0
@@ -4486,8 +4416,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 9092675388312870048}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2212724771298337630
@@ -4593,8 +4521,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 320090347750283450}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2231095796727503723
@@ -4700,8 +4626,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4463377877671873118}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2291164275046852365
@@ -4807,8 +4731,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2123343563663703764}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2348959603111395475
@@ -4914,8 +4836,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8990939518532782792}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2471977071439501937
@@ -5021,8 +4941,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 149654095342679034}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2691070672989163989
@@ -5128,8 +5046,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5077677328914504322}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2750508571601379530
@@ -5235,8 +5151,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 334154409006478852}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2805195837925534665
@@ -5342,8 +5256,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6703286197613857229}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &2887118327959858012
@@ -5449,8 +5361,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3286799219096361821}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3072583781659966744
@@ -5556,8 +5466,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8970169317283646685}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3131387193295707329
@@ -5663,8 +5571,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 1216459379904664213}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3255475603271837993
@@ -5854,8 +5760,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3175986930465837280}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3342110691001660022
@@ -5961,8 +5865,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4178655747888179144}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3368610377047500440
@@ -6068,8 +5970,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3102084174526925376}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3370085527705271109
@@ -6175,8 +6075,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7728996485625684964}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3485526069100749136
@@ -6282,8 +6180,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6815773811691799304}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3512702645065540780
@@ -6389,8 +6285,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8568129627171456885}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3539187642511388399
@@ -6496,8 +6390,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6060535888160880061}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3751901283755048176
@@ -6603,8 +6495,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7144934503641129531}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3883831455545777605
@@ -6794,8 +6684,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2995235878840751103}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3931303798199605654
@@ -6901,8 +6789,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 600121993782722355}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &3950793142544167919
@@ -7008,8 +6894,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6647655561457257583}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4066488603930389542
@@ -7115,8 +6999,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6408372782737971952}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4109379429569118396
@@ -7222,8 +7104,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8840973454748654409}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4199353091936031722
@@ -7329,8 +7209,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4354008395311815093}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4384783660495824784
@@ -7436,8 +7314,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2086140770005448467}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4424857695569739612
@@ -7543,8 +7419,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7346280881079342327}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4491052455926531593
@@ -7650,8 +7524,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 710813908576471943}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4535127900182069781
@@ -7865,8 +7737,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8438606546032114569}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4609247957474928819
@@ -7972,8 +7842,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5907637959205648016}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4671512426436239035
@@ -8079,8 +7947,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 1500836285811176769}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4720327054145883224
@@ -8186,8 +8052,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4368452220328574241}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4726795805752472666
@@ -8293,8 +8157,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3122301846093482408}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4798513348642240194
@@ -8400,8 +8262,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7867341098074144266}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4818980783864945707
@@ -8507,8 +8367,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 313294111145003697}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &4884316282377336592
@@ -8614,8 +8472,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 273850215112369999}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &5046845358400610529
@@ -8805,8 +8661,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8014385407578738797}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &5111584265632276313
@@ -8912,8 +8766,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 833588965030826115}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &5309899957608162039
@@ -9019,8 +8871,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4868318849950000047}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &5324546851167228702
@@ -9126,8 +8976,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7180258555650240468}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &5392269949020604224
@@ -9401,8 +9249,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7444195838515924806}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &5784935320328096944
@@ -9508,8 +9354,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2077742798487342839}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &5797168019912798838
@@ -9615,8 +9459,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4142025355461607622}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &5921427371754438195
@@ -9722,8 +9564,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 1681709671797282294}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6002656411840960644
@@ -9829,8 +9669,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6702915837797575980}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6078875278366391932
@@ -9936,8 +9774,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4185393536557765983}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6241508642227302994
@@ -10043,8 +9879,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8916076013519110498}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6346355099970953592
@@ -10150,8 +9984,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8945308229398264493}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6449840336925559217
@@ -10257,8 +10089,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2139247354471416484}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6529205165310335469
@@ -10364,8 +10194,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8100899375968266846}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6574040606290055531
@@ -10471,8 +10299,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6197044157193319345}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6603535837213179611
@@ -10578,8 +10404,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4931190072836469902}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6627458724784548460
@@ -10685,8 +10509,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6020150345012544768}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6738132615320768469
@@ -10792,8 +10614,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8247913038047483145}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6770291951527712417
@@ -10899,8 +10719,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 171826809792591521}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6808960084133260399
@@ -11006,8 +10824,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 222234609272274410}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6810743540238127882
@@ -11113,8 +10929,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2298479287031771150}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6821614426173156272
@@ -11220,8 +11034,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3745911127726980406}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6828599656368451231
@@ -11327,8 +11139,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4667838940247484057}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6869819207604069986
@@ -11434,8 +11244,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7844245853878706564}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6928433955027020066
@@ -11541,8 +11349,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 1372635434898298141}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6932516861804670918
@@ -11648,8 +11454,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6111218107203225341}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &6979098055294714289
@@ -11755,8 +11559,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8947676604808652234}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7118811565267241854
@@ -11862,8 +11664,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 7236444208102133218}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7127499603577300356
@@ -11969,8 +11769,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5200580551468296881}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7165517544277651116
@@ -12076,8 +11874,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 1126164322220062186}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7223158149165434444
@@ -12183,8 +11979,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 8199316512731668926}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7324163796344618075
@@ -12290,8 +12084,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6937013667015837210}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7434721114009771624
@@ -12397,8 +12189,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2413920622653929245}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7494277578432210821
@@ -12504,8 +12294,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2685720427926675229}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7673791803291639840
@@ -12611,8 +12399,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 2562891422261186009}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &7885163162456486510
@@ -12729,6 +12515,8 @@ MonoBehaviour:
   buttonVariable2: {fileID: 0}
   startLayer: 0
   inactiveAlpha: 0.2
+  layerFadeSeconds: 0.12
+  buttonEcho: 1
 --- !u!61 &8408190652205416115
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -12961,8 +12749,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6280517287102490415}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8118064128861131705
@@ -13068,8 +12854,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4540003972999634893}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8121942720780035773
@@ -13175,8 +12959,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 267561688566563637}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8197050356786414525
@@ -13282,8 +13064,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4931128063990522434}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8201435475275387857
@@ -13389,8 +13169,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 6987286644755685114}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8309092515740145747
@@ -13496,8 +13274,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4048182404070539748}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8332738960783200522
@@ -13603,8 +13379,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 1794578393347690397}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8337229699092342096
@@ -13710,8 +13484,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 944506575082454447}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8583411660787558536
@@ -13817,8 +13589,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 3721987827440296609}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8709902948010522829
@@ -13962,8 +13732,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 682643153850457438}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8827065340811914754
@@ -14069,8 +13837,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 580567616772512150}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &8975818648158077390
@@ -14261,8 +14027,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 5770962529229951334}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1 &9187584309319304365
@@ -14368,8 +14132,6 @@ MonoBehaviour:
   internalHeat: 0
   totalHeatReceived: 0
   hoverRenderer: {fileID: 4641967332834159485}
-  validHoverColor: {r: 0.35, g: 1, b: 0.35, a: 0.6}
-  invalidHoverColor: {r: 1, g: 0.35, b: 0.35, a: 0.6}
   gridX: 0
   gridY: 0
 --- !u!1001 &5608451100675826243

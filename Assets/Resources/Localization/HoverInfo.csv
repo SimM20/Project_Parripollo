@@ -1,0 +1,55 @@
+﻿key,es,en
+# Info con el puntero encima (HoverInfoResolver): cartelito junto al puntero y barra de abajo. Sin ¡ ! ¿ ?: no están en el atlas de la fuente
+hover.empty,Sin selección,Nothing selected
+hover.in_hand,{0} en la mano,{0} in hand
+hover.place,Poner en la parrilla,Place on the grill
+hover.release,Soltar,Let go
+hover.shortcut,Atajo,Shortcut
+hover.rotate,Rotar,Rotate
+hover.need_coal_layer,Para poner carbón hay que estar en la capa de carbón,Switch to the charcoal layer to place charcoal
+hover.need_meat_layer,Para poner carne hay que estar en la capa de carne,Switch to the meat layer to place meat
+hover.hand.coal_status,Cada click pone uno · hasta 3 por hueco,Each click places one · up to 3 per spot
+hover.hand.meat_status,Ponela sobre las brasas para que se cocine,Put it over the embers so it cooks
+# Stock
+hover.stock.count,En stock: {0},In stock: {0}
+hover.stock.empty,Sin stock: se compra en la tienda,Out of stock: buy more in the shop
+hover.stock.take_coal,Agarrar carbón,Take charcoal
+hover.stock.take_meat,Agarrar uno,Take one
+# Carne
+hover.meat.cooking,Abajo: {0} · Arriba: {1},Bottom: {0} · Top: {1}
+hover.meat.no_fire,Sin fuego · Abajo: {0} · Arriba: {1},No heat · Bottom: {0} · Top: {1}
+hover.meat.about_to_burn,Se quema · Abajo: {0} · Arriba: {1},Burning · Bottom: {0} · Top: {1}
+hover.meat.burnt,Quemada: no se puede entregar,Burnt: it can't be served
+hover.meat.flip,Dar vuelta,Flip
+hover.meat.move,Mover,Move
+hover.meat.drop,Soltar en la parrilla o en el plato,Drop it on the grill or the plate
+# Carbón
+hover.coal.unlit,Apagado: se prende en la parrilla,Unlit: it lights up on the grill
+hover.coal.lit,Encendido · le quedan {0} s de brasa,Lit · {0} s of embers left
+hover.coal.lit_with_ash,Encendido · {0} s · la ceniza le baja el fuego,Lit · {0} s · ash lowers its heat
+hover.coal.ash,Ceniza: no calienta y baja el fuego,Ash: no heat and lowers the fire
+hover.coal.stack,Pila: {0}/3,Pile: {0}/3
+hover.coal.clean_stack,Limpiar esta pila,Clear this pile
+hover.coal.clean_all,Limpiar todas las cenizas,Clear all the ashes
+hover.coal.move,Mover,Move
+hover.coal.drop,Soltar en un hueco de la parrilla,Drop it on a grill spot
+# Capas
+hover.layer,Capa de la parrilla,Grill layer
+hover.layer.now_meat,Ahora: carne,Now: meat
+hover.layer.now_coal,Ahora: carbón,Now: charcoal
+hover.layer.to_coal,Ir a la capa de carbón,Go to the charcoal layer
+hover.layer.to_meat,Ir a la capa de carne,Go to the meat layer
+# Clientes
+hover.customer,Cliente,Customer
+hover.customer.patience,Paciencia {0}%,Patience {0}%
+hover.customer.deliver,Entregar con el plato,Serve with the plate
+hover.customer.change_order,Pedir otro corte (sin stock),Ask for another cut (out of stock)
+# Plato y extras
+hover.plate,Plato,Plate
+hover.plate.empty,Vacío: soltá acá la carne cocida,Empty: drop the cooked meat here
+hover.plate.deliver,Llevar al cliente,Take it to the customer
+hover.plate.deliver_drop,Soltar sobre el cliente,Drop it on the customer
+hover.plate.clear,Vaciar plato,Clear plate
+hover.sauce.left,Queda {0}%,{0}% left
+hover.sauce.pour,Arrastrar sobre el plato para servir,Drag it over the plate to pour
+hover.food.to_plate,Arrastrar al plato,Drag it to the plate

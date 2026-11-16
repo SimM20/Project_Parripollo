@@ -349,10 +349,12 @@ MonoBehaviour:
   screenMargin: 12
   arrowOverlap: 2
   arrowCornerInset: 10
-  showDuration: 0.28
+  showDuration: 0.35
   hideDuration: 0.16
-  bobAmplitude: 3
-  bobFrequency: 1.2
+  bobAmplitude: 6
+  bobFrequency: 1.4
+  background: {fileID: 2866223864807447734}
+  arrowImage: {fileID: 2095377303755014957}
 --- !u!1 &4580697087659374629
 GameObject:
   m_ObjectHideFlags: 0

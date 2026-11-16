@@ -10,6 +10,15 @@ public class Item : MonoBehaviour, IWorldPointerDownHandler, IWorldPointerDragHa
     protected bool isHeldByMouse;
     private readonly List<GridSlot> hoveredSlots = new List<GridSlot>();
 
+    /// <summary>Está puesto en un hueco de la parrilla.</summary>
+    public bool IsPlaced => currentSlot != null;
+
+    /// <summary>Se está arrastrando con el puntero.</summary>
+    public bool IsHeld => isHeldByMouse;
+
+    /// <summary>Hueco donde está puesto (null si no está en la parrilla).</summary>
+    public GridSlot CurrentSlot => currentSlot;
+
     public void OnWorldPointerDown()
     {
         if (!CanBeginHold()) return;

@@ -38,11 +38,50 @@ public class TutorialHintView : MonoBehaviour
     [SerializeField] private float arrowCornerInset = 10f;
 
     [Header("Animación (tiempo sin escalar)")]
-    [SerializeField] [Min(0.01f)] private float showDuration = 0.28f;
+    [SerializeField] [Min(0.01f)] private float showDuration = 0.35f;
     [SerializeField] [Min(0.01f)] private float hideDuration = 0.16f;
     [Tooltip("Vaivén hacia el objetivo, en px. 0 = quieto.")]
-    [SerializeField] private float bobAmplitude = 3f;
-    [SerializeField] private float bobFrequency = 1.2f;
+    [SerializeField] private float bobAmplitude = 6f;
+    [SerializeField] private float bobFrequency = 1.4f;
+
+    [Header("Llamar la atención")]
+    [Tooltip("Fondo del cartel: su borde parpadea y lleva el contorno brillante. Vacío = el hijo 'Background'.")]
+    [SerializeField] private Image background;
+    [Tooltip("Imagen de la flecha: parpadea y se estira hacia el objetivo. Vacío = la Image de 'arrow'.")]
+    [SerializeField] private Image arrowImage;
+    [Tooltip("Color del parpadeo, del contorno y del recuadro alrededor del objetivo.")]
+    [SerializeField] private Color flashColor = new Color(1f, 0.72f, 0.1f, 1f);
+    [Tooltip("Parpadeos por segundo. 0 = sin parpadeo.")]
+    [SerializeField] [Min(0f)] private float flashFrequency = 1.2f;
+    [Tooltip("Grosor máximo del contorno brillante, en px. 0 = sin contorno.")]
+    [SerializeField] [Min(0f)] private float outlineDistance = 3f;
+    [Tooltip("Cuánto late el tamaño del cartel (0.04 = ±4 %).")]
+    [SerializeField] [Min(0f)] private float pulseAmount = 0.04f;
+    [SerializeField] [Min(0f)] private float pulseFrequency = 1.2f;
+    [Tooltip("Cada cuánto el cartel da un salto (crece y vuelve), en segundos. 0 = nunca.")]
+    [SerializeField] [Min(0f)] private float burstInterval = 3.5f;
+    [SerializeField] [Min(0.01f)] private float burstDuration = 0.4f;
+    [Tooltip("Cuánto crece en el salto (0.1 = +10 %).")]
+    [SerializeField] [Min(0f)] private float burstScale = 0.1f;
+    [Tooltip("Cuánto se estira la flecha hacia el objetivo con cada parpadeo (0.2 = +20 %).")]
+    [SerializeField] [Min(0f)] private float arrowStretch = 0.2f;
+
+    [Header("Insistencia (si el jugador lo ignora)")]
+    [Tooltip("Segundos a la vista antes de empezar a insistir más.")]
+    [SerializeField] [Min(0f)] private float escalateAfter = 6f;
+    [Tooltip("Segundos que tarda en llegar a la insistencia máxima.")]
+    [SerializeField] [Min(0.01f)] private float escalateDuration = 10f;
+    [Tooltip("Multiplicador de pulso, saltos y recuadro a la insistencia máxima.")]
+    [SerializeField] [Min(1f)] private float maxEscalation = 1.35f;
+
+    [Header("Recuadro alrededor del objetivo")]
+    [SerializeField] private bool showFocusFrame = true;
+    [Tooltip("Distancia mínima entre el objetivo y las esquinas del recuadro, en px.")]
+    [SerializeField] private float focusPadding = 8f;
+    [Tooltip("Cuánto se abre y se cierra el recuadro, en px.")]
+    [SerializeField] [Min(0f)] private float focusBreath = 6f;
+    [SerializeField] [Min(1f)] private float focusThickness = 4f;
+    [SerializeField] [Min(1f)] private float focusCornerLength = 24f;
 
     private enum Phase { Hidden, Showing, Visible, Hiding }
 
@@ -69,6 +108,21 @@ public class TutorialHintView : MonoBehaviour
     private bool leavingCompleted;
     private bool listeningTexts;
 
+    // Llamar la atención
+    private Outline outline;
+    private Color backgroundBaseColor = Color.white;
+    private Color arrowBaseColor = Color.white;
+    private float effectTime;
+    private float aliveTime;
+    private float burstClock;
+    private float burstTime = float.MaxValue;
+    private float flash;
+    private float escalation = 1f;
+
+    private RectTransform focusFrame;
+    private CanvasGroup focusGroup;
+    private readonly Image[] focusBars = new Image[8];
+
     /// <summary>Cambia cada vez que el cartel se reusa: sirve para no retirar uno nuevo por uno viejo.</summary>
     public int Generation { get; private set; }
 
@@ -86,9 +140,38 @@ public class TutorialHintView : MonoBehaviour
         group = GetComponent<CanvasGroup>();
         group.blocksRaycasts = false;
         group.interactable = false;
+
+        if (background == null)
+        {
+            Transform child = transform.Find("Background");
+            if (child != null)
+                background = child.GetComponent<Image>();
+        }
+        if (arrowImage == null && arrow != null)
+            arrowImage = arrow.GetComponent<Image>();
+
+        if (background != null)
+        {
+            backgroundBaseColor = background.color;
+            if (outlineDistance > 0f)
+            {
+                outline = background.GetComponent<Outline>();
+                if (outline == null)
+                    outline = background.gameObject.AddComponent<Outline>();
+                outline.useGraphicAlpha = true;
+            }
+        }
+        if (arrowImage != null)
+            arrowBaseColor = arrowImage.color;
     }
 
     private void OnDisable() => StopListeningTexts();
+
+    private void OnDestroy()
+    {
+        if (focusFrame != null)
+            Destroy(focusFrame.gameObject);
+    }
 
     // ── Ciclo de vida (lo maneja TutorialHintLayer) ─────────────────────────
 
@@ -107,8 +190,21 @@ public class TutorialHintView : MonoBehaviour
         phaseTime = 0f;
         bobTime = 0f;
         leavingCompleted = false;
+        effectTime = 0f;
+        aliveTime = 0f;
+        escalation = 1f;
+        // El primer sacudón sale apenas termina de entrar.
+        burstClock = burstInterval > 0f ? Mathf.Max(0f, burstInterval - showDuration) : 0f;
+        burstTime = float.MaxValue;
 
         gameObject.SetActive(true);
+        EnsureFocusFrame();
+        if (focusFrame != null)
+        {
+            focusFrame.gameObject.SetActive(true);
+            // Debajo del cartel: el recuadro nunca le tapa el texto.
+            focusFrame.SetSiblingIndex(rect.GetSiblingIndex());
+        }
         ApplyPlacement();
         Refresh();
         StartListeningTexts();
@@ -138,6 +234,9 @@ public class TutorialHintView : MonoBehaviour
         SetTarget(null);
         StopListeningTexts();
         group.alpha = 0f;
+        ResetEffects();
+        if (focusFrame != null)
+            focusFrame.gameObject.SetActive(false);
         gameObject.SetActive(false);
     }
 
@@ -226,9 +325,10 @@ public class TutorialHintView : MonoBehaviour
         {
             case Phase.Showing:
             {
+                // Entra con un rebote marcado: que se note que apareció algo.
                 float k = Mathf.Clamp01(phaseTime / showDuration);
-                alpha = Mathf.Clamp01(k * 2f);
-                scale = Mathf.LerpUnclamped(0.6f, 1f, EaseOutBack(k));
+                alpha = Mathf.Clamp01(k * 2.5f);
+                scale = Mathf.LerpUnclamped(0.45f, 1f, EaseOutBack(k, 2.2f));
                 if (k >= 1f)
                     phase = Phase.Visible;
                 break;
@@ -249,18 +349,186 @@ public class TutorialHintView : MonoBehaviour
         }
 
         if (phase != Phase.Hiding)
-            bobTime += deltaTime;
+        {
+            bobTime += deltaTime * escalation;
+            effectTime += deltaTime;
+            aliveTime += deltaTime;
+            UpdateEscalation();
+
+            // Late todo el tiempo y, cada tanto, un salto.
+            scale *= 1f + Mathf.Sin(effectTime * pulseFrequency * 2f * Mathf.PI) * pulseAmount * escalation;
+            UpdateBurst(deltaTime, ref scale);
+            UpdateFlash();
+        }
+        else
+        {
+            flash = Mathf.MoveTowards(flash, 0f, deltaTime * 8f);
+            ApplyFlash();
+        }
 
         group.alpha = alpha;
         rect.localScale = new Vector3(scale, scale, 1f);
     }
 
-    private static float EaseOutBack(float t)
+    /// <summary>Si el jugador lo ignora, el cartel insiste cada vez más.</summary>
+    private void UpdateEscalation()
     {
-        const float c1 = 1.70158f;
-        const float c3 = c1 + 1f;
+        float k = Mathf.Clamp01((aliveTime - escalateAfter) / escalateDuration);
+        escalation = Mathf.Lerp(1f, maxEscalation, k * k * (3f - 2f * k));
+    }
+
+    private void UpdateBurst(float deltaTime, ref float scale)
+    {
+        if (burstInterval <= 0f || phase != Phase.Visible)
+            return;
+
+        // Con más insistencia, los saltos vienen más seguido.
+        burstClock += deltaTime * escalation;
+        if (burstClock >= burstInterval)
+        {
+            burstClock -= burstInterval;
+            burstTime = 0f;
+        }
+
+        if (burstTime >= burstDuration)
+            return;
+
+        burstTime += deltaTime;
+        float p = Mathf.Clamp01(burstTime / burstDuration);
+        scale *= 1f + Mathf.Sin(p * Mathf.PI) * burstScale * escalation;
+    }
+
+    private void UpdateFlash()
+    {
+        if (flashFrequency <= 0f)
+        {
+            flash = 0f;
+        }
+        else
+        {
+            // Onda suave: el color va y viene sin cortes bruscos.
+            float s = Mathf.Sin(effectTime * flashFrequency * 2f * Mathf.PI);
+            flash = 0.5f + s * 0.5f;
+        }
+
+        ApplyFlash();
+    }
+
+    private void ApplyFlash()
+    {
+        if (background != null)
+            background.color = Color.Lerp(backgroundBaseColor, backgroundBaseColor * flashColor, flash);
+
+        if (outline != null)
+        {
+            Color glow = flashColor;
+            glow.a = flash;
+            outline.effectColor = glow;
+            float d = outlineDistance * Mathf.Lerp(0.5f, 1f, flash) * escalation;
+            outline.effectDistance = new Vector2(d, -d);
+        }
+
+        if (arrowImage != null)
+            arrowImage.color = Color.Lerp(arrowBaseColor, arrowBaseColor * flashColor, flash);
+
+        if (arrow != null)
+        {
+            // El pivot está en la base: estirarla en Y la alarga hacia el objetivo.
+            float stretch = 1f + flash * arrowStretch * escalation;
+            arrow.localScale = new Vector3(1f + flash * arrowStretch * 0.4f, stretch, 1f);
+        }
+    }
+
+    private void ResetEffects()
+    {
+        flash = 0f;
+        escalation = 1f;
+        ApplyFlash();
+        if (outline != null)
+            outline.effectColor = Color.clear;
+        if (arrow != null)
+            arrow.localScale = Vector3.one;
+    }
+
+    private static float EaseOutBack(float t, float overshoot = 1.70158f)
+    {
+        float c3 = overshoot + 1f;
         float u = t - 1f;
-        return 1f + c3 * u * u * u + c1 * u * u;
+        return 1f + c3 * u * u * u + overshoot * u * u;
+    }
+
+    // ── Recuadro alrededor del objetivo ─────────────────────────────────────
+
+    /// <summary>
+    /// Cuatro esquinas en L alrededor de lo que señala el cartel, en la misma capa y debajo de él.
+    /// Se crean por código (Image sin sprite) para no depender de arte.
+    /// </summary>
+    private void EnsureFocusFrame()
+    {
+        if (!showFocusFrame || focusFrame != null || rect.parent == null)
+            return;
+
+        GameObject root = new GameObject("TutorialFocus", typeof(RectTransform), typeof(CanvasGroup));
+        root.layer = gameObject.layer;
+        focusFrame = (RectTransform)root.transform;
+        focusFrame.SetParent(rect.parent, false);
+        focusFrame.anchorMin = focusFrame.anchorMax = new Vector2(0.5f, 0.5f);
+        focusFrame.pivot = new Vector2(0.5f, 0.5f);
+
+        focusGroup = root.GetComponent<CanvasGroup>();
+        focusGroup.blocksRaycasts = false;
+        focusGroup.interactable = false;
+        focusGroup.alpha = 0f;
+
+        for (int corner = 0; corner < 4; corner++)
+        {
+            Vector2 anchor = new Vector2(corner & 1, corner >> 1);
+            for (int bar = 0; bar < 2; bar++)
+            {
+                GameObject go = new GameObject(bar == 0 ? "H" : "V", typeof(RectTransform), typeof(Image));
+                go.layer = root.layer;
+                RectTransform r = (RectTransform)go.transform;
+                r.SetParent(focusFrame, false);
+                r.anchorMin = r.anchorMax = anchor;
+                r.pivot = anchor;
+                r.anchoredPosition = Vector2.zero;
+                r.sizeDelta = bar == 0
+                    ? new Vector2(focusCornerLength, focusThickness)
+                    : new Vector2(focusThickness, focusCornerLength);
+
+                Image image = go.GetComponent<Image>();
+                image.raycastTarget = false;
+                image.color = flashColor;
+                focusBars[corner * 2 + bar] = image;
+            }
+        }
+    }
+
+    private void PlaceFocusFrame(Vector2 min, Vector2 max, Vector2 parentCenter, bool visible)
+    {
+        if (focusFrame == null)
+            return;
+
+        if (!visible)
+        {
+            focusGroup.alpha = 0f;
+            return;
+        }
+
+        // Se abre y se cierra sobre el objetivo, más rápido y más amplio si el jugador lo ignora.
+        float breath = (0.5f - 0.5f * Mathf.Cos(effectTime * pulseFrequency * 1.5f * 2f * Mathf.PI)) * focusBreath * escalation;
+        float pad = focusPadding + breath;
+
+        focusFrame.anchoredPosition = (min + max) * 0.5f - parentCenter;
+        focusFrame.sizeDelta = new Vector2(Mathf.Abs(max.x - min.x), Mathf.Abs(max.y - min.y)) + Vector2.one * (pad * 2f);
+        focusGroup.alpha = group.alpha * Mathf.Lerp(0.55f, 1f, flash);
+
+        Color color = Color.Lerp(flashColor, Color.white, flash * 0.6f);
+        for (int i = 0; i < focusBars.Length; i++)
+        {
+            if (focusBars[i] != null)
+                focusBars[i].color = color;
+        }
     }
 
     // ── Ubicación ───────────────────────────────────────────────────────────
@@ -291,12 +559,16 @@ public class TutorialHintView : MonoBehaviour
     {
         RectTransform parent = rect.parent as RectTransform;
         if (target == null || parent == null)
+        {
+            PlaceFocusFrame(Vector2.zero, Vector2.zero, Vector2.zero, false);
             return;
+        }
 
         if (!TryGetTargetScreenRect(out Vector2 screenMin, out Vector2 screenMax))
         {
             // Detrás de la cámara: este frame no se dibuja.
             group.alpha = 0f;
+            PlaceFocusFrame(Vector2.zero, Vector2.zero, Vector2.zero, false);
             return;
         }
 
@@ -304,6 +576,7 @@ public class TutorialHintView : MonoBehaviour
         RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenMin, uiCamera, out Vector2 min);
         RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenMax, uiCamera, out Vector2 max);
         Vector2 center = (min + max) * 0.5f;
+        PlaceFocusFrame(min, max, parent.rect.center, true);
 
         float reach = gap + arrow.rect.height;
         Vector2 anchor;
