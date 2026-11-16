@@ -185,7 +185,7 @@ public class HoverInfoLayer : MonoBehaviour
         Stretch(barContent);
         barContentGroup = barContent.gameObject.AddComponent<CanvasGroup>();
 
-        barText = NewText("Info", barContent, barFontSize, TextAlignmentOptions.MidlineLeft);
+        barText = NewText("Info", barContent, barFontSize, TextAlignmentOptions.Left);
         RectTransform textRect = barText.rectTransform;
         textRect.anchorMin = new Vector2(0f, 0f);
         textRect.anchorMax = new Vector2(1f, 1f);
@@ -239,7 +239,7 @@ public class HoverInfoLayer : MonoBehaviour
         entry.keyLabel.color = new Color(0.16f, 0.12f, 0.09f, 1f);
         Stretch(entry.keyLabel.rectTransform);
 
-        entry.text = NewText("Text", entry.root, actionFontSize, TextAlignmentOptions.MidlineLeft);
+        entry.text = NewText("Text", entry.root, actionFontSize, TextAlignmentOptions.Left);
         entry.text.enableWordWrapping = false;
 
         entry.root.gameObject.SetActive(false);
@@ -344,7 +344,7 @@ public class HoverInfoLayer : MonoBehaviour
         fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        labelText = NewText("Text", label, labelFontSize, TextAlignmentOptions.Midline);
+        labelText = NewText("Text", label, labelFontSize, TextAlignmentOptions.Center);
         labelText.enableWordWrapping = false;
         labelText.fontStyle = FontStyles.Bold;
         labelText.color = textColor;

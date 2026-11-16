@@ -97,7 +97,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   glyphs: {fileID: 11400000, guid: 00258a0f3b94c554c849fe8b1beb9a01, type: 2}
-  font: {fileID: 11400000, guid: 1b8a183dccbf485479adf4e987d93204, type: 2}
+  font: {fileID: 11400000, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
   panelSprite: {fileID: 21300000, guid: 3ba86a79e04b4264cb4b34c414619df1, type: 3}
   panelPixelsPerUnitMultiplier: 1.6
   textColor: {r: 1, g: 0.965, b: 0.902, a: 1}
