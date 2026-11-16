@@ -36,6 +36,9 @@ public sealed class WorldPointerDispatcher
     /// algo). Es lo que se está agarrando: la navegación con gamepad decide los destinos por esto.
     /// </summary>
     public GameObject PressedObject => downHit[Physics2DIndex] != null ? downHit[Physics2DIndex] : downHit[Physics3D];
+
+    /// <summary>Objeto bajo el puntero en el último frame (el que recibe Enter/Over). Null si no hay ninguno.</summary>
+    public GameObject HoveredObject => lastHit[Physics2DIndex] != null ? lastHit[Physics2DIndex] : lastHit[Physics3D];
     private static readonly IComparer<Camera> ByDepth =
         Comparer<Camera>.Create((a, b) => a.depth.CompareTo(b.depth));
 

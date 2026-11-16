@@ -147,6 +147,9 @@ public class InputManager : MonoBehaviour
     /// <summary>Objeto del mundo que recibió el Down del botón principal en curso (null si no hay nada apretado).</summary>
     public static GameObject PressedObject => Instance != null ? Instance.worldPointer.PressedObject : null;
 
+    /// <summary>Objeto del mundo bajo el puntero (el que recibe los eventos de hover). Null si no hay ninguno.</summary>
+    public static GameObject HoveredObject => Instance != null ? Instance.worldPointer.HoveredObject : null;
+
     /// <summary>Un modo dibuja su propio ícono en el puntero (carbón en la mano): sin cursor del sistema ni flecha del gamepad.</summary>
     public static bool PointerIconHidden => Instance != null && Instance.pointerIconHidden;
 

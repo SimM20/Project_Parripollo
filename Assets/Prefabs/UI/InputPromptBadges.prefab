@@ -1093,9 +1093,9 @@ MonoBehaviour:
   glyphs: {fileID: 11400000, guid: 00258a0f3b94c554c849fe8b1beb9a01, type: 2}
   anchor: 3
   target: {fileID: 0}
-  targetPoint: {x: 0.5, y: 0}
-  badgePivot: {x: 0.5, y: 1}
-  offset: {x: 0, y: -4}
+  targetPoint: {x: 1, y: 0.5}
+  badgePivot: {x: 0, y: 0.5}
+  offset: {x: 10, y: 0}
   screenMargin: 6
   glyphImage: {fileID: 5027060396488421528}
   keyCap: {fileID: 538026531838660188}
