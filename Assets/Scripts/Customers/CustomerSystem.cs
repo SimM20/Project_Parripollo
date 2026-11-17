@@ -168,6 +168,18 @@ public class CustomerSystem : MonoBehaviour
     [Min(0)]
     [SerializeField] private int simpleOpeningOrdersFirstNight = 0;
 
+    [Header("Presión por noche")]
+    [Tooltip("Paciencia que se pierde por noche desde que termina el bonus de las primeras noches (0.015 = −1,5% " +
+             "por noche). Es la presión que crece de una noche a otra: sumar clientes no la da, porque los lugares " +
+             "ya están siempre llenos. Solo con DayClock.")]
+    [Range(0f, 0.1f)]
+    [SerializeField] private float patienceLossPerNight = 0f;
+
+    [Tooltip("Piso de esa pérdida: la paciencia de la noche nunca baja de este factor (0.85 = −15% como máximo). " +
+             "Las mejoras de paciencia (Radio) se aplican aparte y la compensan.")]
+    [Range(0.5f, 1f)]
+    [SerializeField] private float minPatienceFactor = 0.85f;
+
     // Noche de esta escena, resuelta en Start.
     private int currentNight = 1;
 
@@ -381,7 +393,23 @@ public class CustomerSystem : MonoBehaviour
             return 1f;
         }
 
-        return Mathf.Max(0.01f, catalog.GetPatienceMultiplier()) * EarlyNightPatienceFactor(currentNight);
+        return Mathf.Max(0.01f, catalog.GetPatienceMultiplier()) *
+               EarlyNightPatienceFactor(currentNight) *
+               NightPressureFactor(currentNight);
+    }
+
+    /// <summary>
+    /// Presión que crece por noche: desde la noche siguiente al fin del bonus de las primeras noches,
+    /// patienceLossPerNight menos de paciencia por noche, con piso en minPatienceFactor.
+    /// </summary>
+    private float NightPressureFactor(int night)
+    {
+        if (DayClock.Instance == null || patienceLossPerNight <= 0f)
+            return 1f;
+
+        int nightsAfterBonus = Mathf.Max(0, Mathf.Max(1, night) - (Mathf.Max(1, patienceBonusNights) + 1));
+
+        return Mathf.Max(Mathf.Min(1f, minPatienceFactor), 1f - patienceLossPerNight * nightsAfterBonus);
     }
 
     /// <summary>

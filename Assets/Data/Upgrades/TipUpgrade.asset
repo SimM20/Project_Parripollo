@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: Frasco de propinas
   nameKey: upgrade.tip.name
-  basePrice: 700
+  basePrice: 400
   category: 0
   icon: {fileID: 21300000, guid: 5078a530ba6290346a92120239d467ca, type: 3}
   description: 'Un frasco bien a la vista en el mostrador: cada nivel sube un 10%
@@ -27,5 +27,5 @@ MonoBehaviour:
   targetCoal: {fileID: 0}
   upgradedMaxBurnTime: 0
   customersPerLevel: 1
-  tipBonusPerLevel: 0.1
+  tipBonusPerLevel: 0.25
   patienceBonusPerLevel: 0.15

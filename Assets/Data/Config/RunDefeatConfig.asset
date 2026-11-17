@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RunDefeatConfig
   m_EditorClassIdentifier: 
   baseMeatRequirement: 5
-  meatRequirementPerDay: 2
+  meatRequirementPerDay: 1
   baseCoalRequirement: 10
   coalRequirementPerDay: 1
   strikeStreakDefeatEnabled: 1

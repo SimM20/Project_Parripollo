@@ -33,8 +33,8 @@ MonoBehaviour:
     muyHecho: {fileID: 21300000, guid: fe0237e711856bf468a8075954e81304, type: 3}
     pasado: {fileID: 21300000, guid: c5ec22eaf1f2d6d4ebf02a1b3ba0b036, type: 3}
     quemado: {fileID: 0}
-  timeHeatA: 210
-  timeHeatB: 180
+  timeHeatA: 130
+  timeHeatB: 115
   heatScale: 0
   grillSpace: {x: 2, y: 1}
   servingMode: 0

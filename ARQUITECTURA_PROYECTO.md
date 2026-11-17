@@ -1760,14 +1760,17 @@ void ApplyUnlocks(catalog);  bool TryAdvanceTo(catalog, location)   // no cobra:
 | Editor | `UpgradeStateResetter` devuelve los `isUnlocked` de cada ruta a "solo la parada inicial" al salir de Play, para que los assets en disco no cambien por jugar |
 | Simuladores | No modelan la decisión de comprar paradas: suponen una cada 2 noches (`NightsPerStop`) |
 
-Ruta del modo rápido (`Data/Locations/RutaModoRapido.asset`). ⚠️ Precios estimados a mano, sin pasar por el simulador:
+Ruta del modo rápido (`Data/Locations/RutaModoRapido.asset`). Precios pasados por el simulador el 2026-11-17
+(`Docs/Balance/balance_economia.md`): el jugador promedio llega a Cafayate en la noche 4 y a Malargüe en la 10;
+el eficiente, a Bariloche en la 11. `ResourceBalanceSimulator` compra la próxima parada cuando le alcanza para
+reponer y cumplir los mínimos (la fila *Simuladores* de arriba describe el supuesto viejo del `EconomySimulator`):
 
 | Parada | Precio | Cortes | Mejoras |
 |---|---|---|---|
 | 1 · La Quiaca (inicial) | — | Chorizo, Tira de asado | Frasco de propinas |
-| 2 · Cafayate | `$2000` | Vacío | Radio |
-| 3 · Malargüe | `$4500` | Costillita de cerdo | Carbón de quebracho |
-| 4 · Bariloche | `$8000` | — (falta un corte balanceado) | Mesa extra |
+| 2 · Cafayate | `$1800` | Vacío | Radio |
+| 3 · Malargüe | `$3000` | Costillita de cerdo | Carbón de quebracho |
+| 4 · Bariloche | `$5000` | — (falta un corte balanceado) | Mesa extra |
 
 ##### Entorno por parada — `Progression/LocationEnvironment.cs` · **static**
 
@@ -1872,10 +1875,10 @@ Dos maneras de aplicar el efecto, según a quién le pertenezca la variable:
 
 | Asset | Efecto | Precio | Niveles |
 |---|---|---|---|
-| `CoalBurnTimeUpgrade` | `maxBurnTime` del carbón → `200` | `$500` | 1 |
-| `CustomerCapacityUpgrade` | `+1` cliente simultáneo por nivel | `$100` / nivel | 3 |
-| `TipUpgrade` | `+50%` de propina por nivel (**aditivo**: ×1.5 / ×2 / ×2.5) | `$100` / nivel | 3 |
-| `RadioUpgrade` | `+15%` de paciencia total + activa el GO `Radio` de `GameScene` (una radio que suena de verdad, 3.8 → *Radio*) | `$400` | 1 |
+| `CoalBurnTimeUpgrade` | `maxBurnTime` del carbón → `200` | `$1200` | 1 |
+| `CustomerCapacityUpgrade` | `+1` cliente simultáneo por nivel | `$2500` / nivel | 3 |
+| `TipUpgrade` | `+25%` de propina por nivel (**aditivo**: ×1.25 / ×1.5 / ×1.75) | `$400` / nivel | 3 |
+| `RadioUpgrade` | `+20%` de paciencia total + activa el GO `Radio` de `GameScene` (una radio que suena de verdad, 3.8 → *Radio*) | `$1500` | 1 |
 
 ⚠️ `currentLevel` se serializa en el asset: **si se compra en el Editor, queda comprado**.
 `Scripts/Editor/UpgradeStateResetter.cs` lo limpia solo al salir del Play Mode (ver abajo).
@@ -2094,7 +2097,7 @@ Se evalúa al llegar a `EndScene`. Si la run está perdida **no se pasa por la t
 
 ```csharp
 // RunDefeatConfigSO — Assets/ScriptableObjects/RunDefeatConfig.asset
-int GetMeatRequirement(int day)   // 5 + 2*(N-1)   configurables
+int GetMeatRequirement(int day)   // 5 + 1*(N-1)   configurables (era +2/día hasta 2026-11-17)
 int GetCoalRequirement(int day)   // 10 + 1*(N-1)  configurables
 bool strikeStreakDefeatEnabled;  int MaxConsecutiveStrikeNights;   // 3
 
@@ -2130,8 +2133,8 @@ pantalla de derrota es `DaysPlayed`.
 **Sin tope de carbón.** Desde 2026-11-03 el stock de carbón no tiene máximo: antes `CoolerSystem.CoalStorageCap`
 (40) lo recortaba y, como el mínimo es `10 + (N-1)`, desde el día 32 la run quedaba perdida sí o sí.
 
-⚠️ **Varios cortes tienen `basePrice = 0`** (`Paty`, `Chinchulín`, `Costillita de cerdo`, `Pechuga de pollo`,
-`Matambre`). Como el costo de la carne faltante usa el corte comprable más barato, hoy completar el mínimo de
+⚠️ **Varios cortes tienen `basePrice = 0`** (`Paty`, `Chinchulín`, `Pechuga de pollo`, `Matambre`; la
+Costillita ya tiene precio: `$135`). Como el costo de la carne faltante usa el corte comprable más barato, hoy completar el mínimo de
 carne sale **$0** y la derrota económica depende solo del carbón. Es un tema de datos, no de código.
 
 ---

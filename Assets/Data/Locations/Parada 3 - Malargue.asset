@@ -11,10 +11,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 544d95657ca2400497d91da0e87f90b9, type: 3}
   m_Name: Parada 3 - Malargue
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   itemName: "Malarg\xFCe"
-  nameKey:
-  basePrice: 4500
+  nameKey: 
+  basePrice: 3000
   category: 0
   icon: {fileID: 0}
   unlockedCuts:
@@ -23,3 +23,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 48c5257db93d4344cbc8274d8a7ffa9b, type: 2}
   unlockedUpgrades:
   - {fileID: 11400000, guid: f39cb61e368c4cceb8401abd02fd27a8, type: 2}
+  backgroundPrefab: {fileID: 0}
+  shopBackgroundPrefab: {fileID: 0}
