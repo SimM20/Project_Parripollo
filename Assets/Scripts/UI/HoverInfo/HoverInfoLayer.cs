@@ -258,9 +258,16 @@ public class HoverInfoLayer : MonoBehaviour
         else
         {
             barText.color = textColor;
-            string status = string.IsNullOrEmpty(shown.Status)
-                ? string.Empty
-                : $"   <color=#{ColorUtility.ToHtmlStringRGBA(shown.Warning ? warningColor : statusColor)}>{shown.Status}</color>";
+            string status = string.Empty;
+            if (!string.IsNullOrEmpty(shown.Status))
+            {
+                Color baseColor = shown.Warning ? warningColor : statusColor;
+                // La fuente pixel no tiene peso bold: el tramo <b> del estado se resalta con un color
+                // a mitad de camino entre el del estado y el del título.
+                string highlight = ColorUtility.ToHtmlStringRGBA(Color.Lerp(baseColor, textColor, 0.5f));
+                string body = shown.Status.Replace("<b>", $"<b><color=#{highlight}>").Replace("</b>", "</color></b>");
+                status = $"   <color=#{ColorUtility.ToHtmlStringRGBA(baseColor)}>{body}</color>";
+            }
             barText.text = $"<b>{shown.Title}</b>{status}";
         }
 

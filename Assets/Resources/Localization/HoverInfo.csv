@@ -16,9 +16,9 @@ hover.stock.empty,Sin stock: se compra en la tienda,Out of stock: buy more in th
 hover.stock.take_coal,Agarrar carbón,Take charcoal
 hover.stock.take_meat,Agarrar uno,Take one
 # Carne
-hover.meat.cooking,Abajo: {0} · Arriba: {1},Bottom: {0} · Top: {1}
-hover.meat.no_fire,Sin fuego · Abajo: {0} · Arriba: {1},No heat · Bottom: {0} · Top: {1}
-hover.meat.about_to_burn,Se quema · Abajo: {0} · Arriba: {1},Burning · Bottom: {0} · Top: {1}
+hover.meat.cooking,<b>Arriba: {0}</b> · Abajo: {1},<b>Top: {0}</b> · Bottom: {1}
+hover.meat.no_fire,Sin fuego · <b>Arriba: {0}</b> · Abajo: {1},No heat · <b>Top: {0}</b> · Bottom: {1}
+hover.meat.about_to_burn,Se quema · <b>Arriba: {0}</b> · Abajo: {1},Burning · <b>Top: {0}</b> · Bottom: {1}
 hover.meat.burnt,Quemada: no se puede entregar,Burnt: it can't be served
 hover.meat.flip,Dar vuelta,Flip
 hover.meat.move,Mover,Move
