@@ -53,6 +53,10 @@ public static class ResourceBalanceSimulator
         public float coalBuffer;        // compra carbón = consumo de anoche × esto
         public float meatBuffer;        // compra carne = consumo de anoche × esto
         public bool adversarialOrders;  // pedidos sesgados al corte con menos stock (mala racha)
+        // Supuesto de modelo, solo noche 1: todavía está aprendiendo los controles. Reacción, armado y
+        // tiempo de respuesta valen (1 + learnBoost) al abrir y bajan con constante learnTau segundos.
+        public float learnBoost;
+        public float learnTau = 90f;
     }
 
     public static readonly Profile Beginner = new Profile
@@ -60,7 +64,7 @@ public static class ResourceBalanceSimulator
         name = "Principiante", reaction = 12f, maxParallel = 2, aimNoise = .22f, actDelay = 8f, forgetProb = .10f,
         assembly = 12f, extraError = .25f, coalPerSmallCut = 2, coalPerBigCut = 2, bedSize = 4, cleanAshProb = .2f,
         minLifeToReuse = .5f, refuelBelow = .6f, knowsSubstitution = .5f, reuseLeftover = .2f,
-        trustsShopMinimum = true, coalBuffer = 1f, meatBuffer = 1f
+        trustsShopMinimum = true, coalBuffer = 1f, meatBuffer = 1f, learnBoost = 1f
     };
 
     public static readonly Profile Average = new Profile
@@ -68,7 +72,7 @@ public static class ResourceBalanceSimulator
         name = "Promedio", reaction = 10f, maxParallel = 3, aimNoise = .16f, actDelay = 7f, forgetProb = .06f,
         assembly = 12f, extraError = .12f, coalPerSmallCut = 1, coalPerBigCut = 2, bedSize = 0, cleanAshProb = .6f,
         minLifeToReuse = .35f, refuelBelow = .4f, knowsSubstitution = .9f, reuseLeftover = .5f,
-        coalBuffer = 1.2f, meatBuffer = 1.15f
+        coalBuffer = 1.2f, meatBuffer = 1.15f, learnBoost = .4f
     };
 
     public static readonly Profile Efficient = new Profile
@@ -84,7 +88,7 @@ public static class ResourceBalanceSimulator
         name = "Promedio + pedidos adversos", reaction = 10f, maxParallel = 3, aimNoise = .16f, actDelay = 7f, forgetProb = .06f,
         assembly = 12f, extraError = .12f, coalPerSmallCut = 1, coalPerBigCut = 2, bedSize = 0, cleanAshProb = .6f,
         minLifeToReuse = .35f, refuelBelow = .4f, knowsSubstitution = .9f, reuseLeftover = .5f,
-        coalBuffer = 1.2f, meatBuffer = 1.15f, adversarialOrders = true
+        coalBuffer = 1.2f, meatBuffer = 1.15f, adversarialOrders = true, learnBoost = .4f
     };
 
     public static Profile[] AllProfiles => new[] { Beginner, Average, Efficient, AverageUnlucky };
@@ -110,6 +114,16 @@ public static class ResourceBalanceSimulator
         public int? baseCoalRequirement;
         public int? coalRequirementPerDay;
         public int? estimatedCoalConsumption;
+        public int? customersFirstNight;
+        public int? customersAddedPerNight;
+        public float? basePatience;
+        public float? toppingChance;
+        public float? sideChance;
+        public AnimationCurve affluence;
+        public float? firstNightPatienceBonus;
+        public int? patienceBonusNights;
+        public int? simpleOpeningOrders;
+        public int? nightsPerStop;          // 99 = nunca compra paradas nuevas
     }
 
     // ── Datos del proyecto ───────────────────────────────────────────────────
@@ -142,6 +156,8 @@ public static class ResourceBalanceSimulator
         public AnimationCurve affluence;
         public float affluenceAvg = 1f;
         public float basePatience, dayDuration, toppingChance, sideChance, startMoney, feedbackSeconds, coalBurn, coalPrice;
+        public float firstNightPatienceBonus;
+        public int patienceBonusNights = 1, simpleOpeningOrders;
         public int maxSim, firstNight, perNight, maxNight, maxToppings, maxSides, maxStrikes, unitsPerBag, estimatedCoal;
         public Dictionary<CutData, int> initialMeat = new Dictionary<CutData, int>();
         public int initialCoal;
@@ -181,10 +197,19 @@ public static class ResourceBalanceSimulator
         d.sideChance = so.FindProperty("sideOrderChance").floatValue;
         d.maxSides = so.FindProperty("maxSidesPerOrder").intValue;
         d.affluence = so.FindProperty("affluenceCurve").animationCurveValue;
+        if (o?.customersFirstNight != null) d.firstNight = o.customersFirstNight.Value;
+        if (o?.customersAddedPerNight != null) d.perNight = o.customersAddedPerNight.Value;
+        if (o?.basePatience != null) d.basePatience = o.basePatience.Value;
+        if (o?.toppingChance != null) d.toppingChance = o.toppingChance.Value;
+        if (o?.sideChance != null) d.sideChance = o.sideChance.Value;
+        if (o?.affluence != null) d.affluence = o.affluence;
+        d.firstNightPatienceBonus = o?.firstNightPatienceBonus ?? so.FindProperty("firstNightPatienceBonus").floatValue;
+        d.patienceBonusNights = Mathf.Max(1, o?.patienceBonusNights ?? so.FindProperty("patienceBonusNights").intValue);
+        d.simpleOpeningOrders = o?.simpleOpeningOrders ?? so.FindProperty("simpleOpeningOrdersFirstNight").intValue;
 
         // Los cortes ya no se desbloquean por noche sino comprando paradas de la ruta. El simulador
         // no modela esa decisión de compra: supone una parada cada NightsPerStop noches.
-        const int NightsPerStop = 2;
+        int NightsPerStop = o?.nightsPerStop ?? 2;
         var unlockNights = new Dictionary<MeatCutSO, int>();
         var routeCatalog = AssetDatabase.LoadAssetAtPath<FoodCatalogSO>("Assets/Data/Config/FoodCatalog.asset");
         LocationRouteSO route = routeCatalog != null ? routeCatalog.LocationRoute : null;
@@ -352,6 +377,9 @@ public static class ResourceBalanceSimulator
         public float coalBurnSeconds, coalIdleSeconds, coalLeftLife;
         public float sales, tips, spentMeat, spentCoal, spentUpgrades, moneyEnd;
         public bool endedByStrikes, blocked, strikeDefeat;
+        public float firstStrikeAt = -1f;   // s desde la apertura; -1 = ningún strike
+        public int maxWaiting;              // pico de clientes esperando a la vez
+        public int turnedAway;              // llegadas que no entraron por falta de lugar (sin strike)
         public int coalEnd, meatEnd;
         public int[] meatEndByCut, takenByCut, ordersByCut;
         public bool AnyScarcityLoss => lostByMeat + lostByCoal > 0;
@@ -426,6 +454,8 @@ public static class ResourceBalanceSimulator
         int target = Mathf.Min(d.firstNight + (s.night - 1) * d.perNight, Mathf.Max(d.firstNight, d.maxNight));
         int seats = d.maxSim + d.upgrades.Where(u => u.effectType == UpgradeEffectType.MaxSimultaneousCustomers).Sum(u => s.Level(u) * Mathf.Max(1, u.customersPerLevel));
         float patienceMult = 1f + d.upgrades.Where(u => u.effectType == UpgradeEffectType.CustomerPatience).Sum(u => s.Level(u) * u.patienceBonusPerLevel);
+        // CustomerSystem.EarlyNightPatienceFactor
+        patienceMult *= 1f + d.firstNightPatienceBonus * Mathf.Clamp01((d.patienceBonusNights - (s.night - 1)) / (float)d.patienceBonusNights);
         float tipMult = 1f + d.upgrades.Where(u => u.effectType == UpgradeEffectType.TipPercent).Sum(u => s.Level(u) * u.tipBonusPerLevel);
         float burnSaved = d.coalBurn;
         foreach (var u in d.upgrades)
@@ -439,6 +469,7 @@ public static class ResourceBalanceSimulator
         var waiting = new List<Cust>();
         var jobs = new List<Job>();
         float nextSpawn = NextDelay(d, interval, 0f);
+        float Learn(float time) => s.night == 1 ? 1f + p.learnBoost * Mathf.Exp(-time / Mathf.Max(1f, p.learnTau)) : 1f;
         int strikes = 0;
         bool blocked = false;
         float nextAction = 0f;
@@ -563,14 +594,15 @@ public static class ResourceBalanceSimulator
                 {
                     r.arrived++;
                     var type = Pick(d.types, x => x.weight, rng);
-                    var order = MakeOrder(d, p, s, unlocked, rng);
+                    var order = MakeOrder(d, p, s, unlocked, rng, s.night == 1 && r.arrived <= d.simpleOpeningOrders);
                     r.ordersByCut[d.cuts.First(c => c.so == order.PrimaryCut).index]++;
                     var c = new Customer();
                     c.Init(type.type, order, d.basePatience * type.patienceMult * patienceMult, free);
-                    var cu = new Cust { c = c, arrive = t, seat = free, startAfter = t + p.reaction * (0.5f + (float)rng.NextDouble()) };
+                    var cu = new Cust { c = c, arrive = t, seat = free, startAfter = t + p.reaction * Learn(t) * (0.5f + (float)rng.NextDouble()) };
                     seatCust[free] = cu;
                     waiting.Add(cu);
                 }
+                else r.turnedAway++;
             }
 
             // Cama de brasas del principiante: la repone siempre que el local esté abierto o haya gente.
@@ -685,7 +717,7 @@ public static class ResourceBalanceSimulator
                     if (t < j.forgetUntil) continue;
 
                     float side = j.onA ? j.a : j.b, aim = j.phase == 0 ? j.aimA : j.aimB;
-                    if (side >= aim && j.actAt < 0f) j.actAt = t + p.actDelay * (float)(-Math.Log(1.0 - rng.NextDouble()));
+                    if (side >= aim && j.actAt < 0f) j.actAt = t + p.actDelay * Learn(t) * (float)(-Math.Log(1.0 - rng.NextDouble()));
                     // MeatBurnAlert avisa antes de que se queme: si está mirando, reacciona rápido.
                     if (side >= burnAt - 0.6f * band) j.actAt = j.actAt >= 0f ? Mathf.Min(j.actAt, t + 1f) : t + 1f;
                     if (j.actAt >= 0f && t >= j.actAt)
@@ -697,7 +729,7 @@ public static class ResourceBalanceSimulator
                             j.phase = 2;
                             FreeJob(j);
                             int extras = cu.c.order.toppings.Count + cu.c.order.sides.Count;
-                            j.readyAt = t + p.assembly + extras * 1.5f;
+                            j.readyAt = t + (p.assembly + extras * 1.5f) * Learn(t);
                         }
                     }
                 }
@@ -741,6 +773,11 @@ public static class ResourceBalanceSimulator
                 waiting.Remove(cu);
                 seatCust[i] = null;
             }
+
+            if (strikes > 0 && r.firstStrikeAt < 0f) r.firstStrikeAt = t;
+            int occupied = 0;
+            foreach (var x in seatCust) if (x != null) occupied++;
+            if (occupied > r.maxWaiting) r.maxWaiting = occupied;
 
             if (strikes >= d.maxStrikes && !blocked) { blocked = true; r.endedByStrikes = true; }
         }
@@ -1010,6 +1047,84 @@ public static class ResourceBalanceSimulator
         return RunAll(label, runs, nights, seed, o, profileFilter);
     }
 
+    /// <summary>
+    /// Informe de dificultad: por perfil y noche, cuánto se atiende, cuánto falla, cuándo llega el
+    /// primer strike, cuántas noches cierran por strikes y con qué insumos y plata queda la run.
+    /// Simula runs completas (con la tienda entre noches) para ver también la transición.
+    /// </summary>
+    public static string DifficultyReport(string label, int runs = 500, int nights = 6, int seed = 40, Overrides o = null)
+    {
+        var d = LoadData(o);
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Dificultad por noche — {label}");
+        sb.AppendLine();
+        sb.AppendLine($"Generado {DateTime.Now:yyyy-MM-dd HH:mm}. Semilla {seed}, {runs} runs de {nights} noches por perfil. " +
+                      $"Clientes {d.firstNight} (+{d.perNight}/noche), {d.maxSim} lugares, paciencia base {d.basePatience}s, jornada {d.dayDuration}s, " +
+                      $"toppings {d.toppingChance:0.##}, guarniciones {d.sideChance:0.##}, stock inicial {string.Join(", ", d.initialMeat.Select(kv => kv.Key.name + " " + kv.Value))}, carbón {d.initialCoal}.");
+        sb.AppendLine();
+        int k = 0;
+        foreach (var p in AllProfiles)
+        {
+            k++;
+            var sm = SimulateRuns(d, p, runs, nights, seed + k);
+            sb.AppendLine($"## {p.name} (runs vivas al final: {Pct(sm.runs - sm.blockedRuns - sm.strikeDefeatRuns, sm.runs)}; bloqueadas por insumos/plata {Pct(sm.blockedRuns, sm.runs)}, derrota por strikes {Pct(sm.strikeDefeatRuns, sm.runs)})");
+            sb.AppendLine();
+            sb.AppendLine("| Noche | Vivas | Llegan | Sin lugar | Atendidos | Fallidos (paciencia / mala cocción / insumos) | Strikes | Cierra por strikes | 1.er strike (mediana) | Strike antes de 2 min | Pico esperando | Carne usada / stock tras tienda | Carbón puesto / stock tras tienda | Perdió pedidos por carbón | Ventas+propinas | Plata tras tienda | Run termina acá |");
+            sb.AppendLine("|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            for (int n = 0; n < nights; n++)
+            {
+                var l = sm.perNight[n];
+                if (l.Count == 0) { sb.AppendLine($"| {n + 1} | 0 |"); continue; }
+                var fs = l.Where(r => r.firstStrikeAt >= 0f).Select(r => r.firstStrikeAt).OrderBy(v => v).ToList();
+                string firstStrike = fs.Count > 0 ? $"{fs[fs.Count / 2]:0}s ({Pct(fs.Count, l.Count)} con strike)" : "—";
+                sb.AppendLine($"| {n + 1} | {l.Count} | {l.Average(r => r.arrived):0.0} | {l.Average(r => r.turnedAway):0.0} | {l.Average(r => r.served - r.badCooking):0.0} | " +
+                              $"{l.Average(r => r.lostPatience):0.0} / {l.Average(r => r.badCooking):0.0} / {l.Average(r => r.lostByMeat + r.lostByCoal):0.0} | " +
+                              $"{l.Average(r => r.strikes):0.00} | {Pct(l.Count(r => r.endedByStrikes), l.Count)} | {firstStrike} | {Pct(l.Count(r => r.firstStrikeAt >= 0f && r.firstStrikeAt < 120f), l.Count)} | " +
+                              $"{l.Average(r => r.maxWaiting):0.0} | {l.Average(r => r.cutsTaken):0.0} / {l.Average(r => r.meatEnd):0.0} | {l.Average(r => r.coalPlaced):0.0} / {l.Average(r => r.coalEnd):0.0} | " +
+                              $"{Pct(l.Count(r => r.lostByCoal > 0), l.Count)} | ${l.Average(r => r.sales + r.tips):0} | ${l.Average(r => r.moneyEnd):0} | {Pct(l.Count(r => r.blocked || r.strikeDefeat), l.Count)} |");
+            }
+            sb.AppendLine();
+        }
+        string dir = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Docs", "Balance");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "difficulty_" + label + ".md"), sb.ToString());
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Barrido compacto: por variante y perfil, las métricas clave de las primeras noches de runs
+    /// completas (con tienda en el medio), más la supervivencia de la run al final.
+    /// </summary>
+    public static string SweepEarlyNights(IEnumerable<(string name, Overrides o)> variants, int runs = 300, int nights = 3, int seed = 40)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("| Variante | Perfil | Noche | Atendidos | Fallidos | Strikes | Cierra por strikes | Strike antes de 2 min | 1.er strike (mediana) | Pedidos perdidos por carbón | Carne usada / al cierre | Carbón puesto / al cierre | Plata tras tienda | Run viva al final |");
+        sb.AppendLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+        foreach (var (name, o) in variants)
+        {
+            var d = LoadData(o);
+            int k = 0;
+            foreach (var p in AllProfiles)
+            {
+                k++;
+                if (p.adversarialOrders) continue;
+                var sm = SimulateRuns(d, p, runs, nights, seed + k);
+                string alive = Pct(sm.runs - sm.blockedRuns - sm.strikeDefeatRuns, sm.runs);
+                for (int n = 0; n < nights; n++)
+                {
+                    var l = sm.perNight[n];
+                    if (l.Count == 0) continue;
+                    var fs = l.Where(r => r.firstStrikeAt >= 0f).Select(r => r.firstStrikeAt).OrderBy(v => v).ToList();
+                    sb.AppendLine($"| {name} | {p.name} | {n + 1} | {l.Average(r => r.served - r.badCooking):0.0} | {l.Average(r => r.lostPatience + r.badCooking + r.lostByMeat + r.lostByCoal):0.0} | " +
+                                  $"{l.Average(r => r.strikes):0.00} | {Pct(l.Count(r => r.endedByStrikes), l.Count)} | {Pct(l.Count(r => r.firstStrikeAt >= 0f && r.firstStrikeAt < 120f), l.Count)} | " +
+                                  $"{(fs.Count > 0 ? fs[fs.Count / 2].ToString("0") + "s" : "—")} | {l.Average(r => r.lostByCoal):0.00} | " +
+                                  $"{l.Average(r => r.cutsTaken):0.0} / {l.Average(r => r.meatEnd):0.0} | {l.Average(r => r.coalPlaced):0.0} / {l.Average(r => r.coalEnd):0.0} | ${l.Average(r => r.moneyEnd):0} | {(n == nights - 1 ? alive : "")} |");
+                }
+            }
+        }
+        return sb.ToString();
+    }
+
     // ── Informe ──────────────────────────────────────────────────────────────
 
     static string Pct(int a, int b) => b > 0 ? (a * 100f / b).ToString("0.0") + "%" : "-";
@@ -1124,20 +1239,55 @@ public static class ResourceBalanceSimulator
         return ashRank;
     }
 
+    /// <summary>
+    /// Verifica contra el código del juego lo que el simulador copia de las primeras noches:
+    /// el pedido simple (OrderSystem.GenerateSimpleOrder) y el bonus de paciencia por noche.
+    /// </summary>
+    public static string SelfCheckEarlyNights()
+    {
+        var d = LoadData(null);
+        var cuts = d.cuts.Where(c => c.unlockNight <= 1).Select(c => new WeightedOrderCut { cut = c.so, weight = c.weight }).ToList();
+        var orders = new OrderSystem(cuts, d.toppings, 1f, d.maxToppings, d.sides, 1f, d.maxSides); // extras siempre: si se cuelan, se ven
+        MeatCutSO fastest = cuts.OrderBy(c => c.cut.GetHeatScale()).First().cut;
+        for (int i = 0; i < 200; i++)
+        {
+            Order o = orders.GenerateSimpleOrder();
+            if (o.PrimaryCut != fastest || o.toppings.Count > 0 || o.sides.Count > 0)
+                return $"FALLA: pedido simple {o.PrimaryCut?.name} con {o.toppings.Count} toppings y {o.sides.Count} guarniciones (esperado {fastest.name} solo).";
+        }
+
+        var cs = UnityEngine.Object.FindFirstObjectByType<CustomerSystem>(FindObjectsInactive.Include);
+        var factor = typeof(CustomerSystem).GetMethod("EarlyNightPatienceFactor", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        bool hasClock = DayClock.Instance != null;
+        var sb = new StringBuilder($"OK pedido simple = {fastest.name} sin extras (200/200). Paciencia por noche (juego / simulador):");
+        for (int night = 1; night <= 4; night++)
+        {
+            float sim = 1f + d.firstNightPatienceBonus * Mathf.Clamp01((d.patienceBonusNights - (night - 1)) / (float)d.patienceBonusNights);
+            float game = (float)factor.Invoke(cs, new object[] { night });
+            if (hasClock && Mathf.Abs(game - sim) > 0.0001f)
+                return $"FALLA: noche {night} juego {game} simulador {sim}.";
+            sb.Append($" N{night} {game:0.###}/{sim:0.###}");
+        }
+        if (!hasClock) sb.Append(" (sin DayClock activo en edición el juego devuelve 1: se compara solo en Play Mode)");
+        return sb.ToString();
+    }
+
     // ── Utilidades ───────────────────────────────────────────────────────────
 
-    static Order MakeOrder(GameData d, Profile p, RunState s, List<CutData> unlocked, System.Random rng)
+    static Order MakeOrder(GameData d, Profile p, RunState s, List<CutData> unlocked, System.Random rng, bool simple = false)
     {
         var order = new Order();
         CutData cut;
-        if (p.adversarialOrders && rng.NextDouble() < 0.5)
+        if (simple)
+            cut = unlocked.OrderBy(c => c.so.GetHeatScale()).First(); // OrderSystem.GenerateSimpleOrder
+        else if (p.adversarialOrders && rng.NextDouble() < 0.5)
             cut = unlocked.OrderBy(c => s.meat[c.index] / c.weight).First(); // el que menos stock tiene para su demanda
         else
             cut = Pick(unlocked, c => c.weight, rng);
         order.SetSingleCut(cut.so, (MeatStates)rng.Next((int)MeatStates.Jugoso, (int)MeatStates.Pasado + 1));
         bool sandwich = cut.so.servingMode == ServingMode.SandwichOnly || (cut.so.servingMode == ServingMode.Both && rng.NextDouble() < 0.5);
         if (sandwich && cut.so.requiredBread != null) order.bread = cut.so.requiredBread;
-        if (!order.IsSandwich)
+        if (!simple && !order.IsSandwich)
         {
             AddDistinct(d.toppings, d.toppingChance, d.maxToppings, order.toppings, rng);
             AddDistinct(d.sides, d.sideChance, d.maxSides, order.sides, rng);

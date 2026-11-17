@@ -153,6 +153,24 @@ public class CustomerSystem : MonoBehaviour
     [Header("Patience")]
     [SerializeField] private float basePatienceSeconds = 30f;
 
+    [Header("Primeras noches (aprendizaje)")]
+    [Tooltip("Paciencia extra en la noche 1 (0.25 = +25%). Baja en línea recta noche a noche y desaparece " +
+             "después de 'Patience Bonus Nights', así la noche 2 no es un salto. Solo con DayClock (jornada real).")]
+    [Min(0f)]
+    [SerializeField] private float firstNightPatienceBonus = 0f;
+
+    [Tooltip("Cuántas noches dura el bonus de paciencia: 1 = solo la noche 1; 2 = la noche 2 lleva la mitad.")]
+    [Min(1)]
+    [SerializeField] private int patienceBonusNights = 1;
+
+    [Tooltip("Los primeros N clientes de la noche 1 piden algo simple para aprender: el corte que más rápido " +
+             "se cocina, sin toppings ni guarniciones (el pan sigue pudiendo salir). 0 = desactivado.")]
+    [Min(0)]
+    [SerializeField] private int simpleOpeningOrdersFirstNight = 0;
+
+    // Noche de esta escena, resuelta en Start.
+    private int currentNight = 1;
+
     [Header("Delivery Feedback")]
     [SerializeField] private CustomerFeedbackConfigSO feedbackConfig;
 
@@ -231,7 +249,7 @@ public class CustomerSystem : MonoBehaviour
 
     void Start()
     {
-        int currentNight =
+        currentNight =
             CoalConsumptionTracker.Instance != null
                 ? CoalConsumptionTracker.Instance.CurrentNight
                 : 1;
@@ -363,8 +381,29 @@ public class CustomerSystem : MonoBehaviour
             return 1f;
         }
 
-        return Mathf.Max(0.01f, catalog.GetPatienceMultiplier());
+        return Mathf.Max(0.01f, catalog.GetPatienceMultiplier()) * EarlyNightPatienceFactor(currentNight);
     }
+
+    /// <summary>
+    /// Bonus de paciencia de las primeras noches: completo en la noche 1 y baja en línea recta hasta
+    /// 0 en la noche patienceBonusNights + 1. Sin DayClock (no es una jornada real) no aplica.
+    /// </summary>
+    private float EarlyNightPatienceFactor(int night)
+    {
+        if (DayClock.Instance == null || firstNightPatienceBonus <= 0f)
+            return 1f;
+
+        int nights = Mathf.Max(1, patienceBonusNights);
+        float fade = Mathf.Clamp01((nights - (Mathf.Max(1, night) - 1)) / (float)nights);
+
+        return 1f + firstNightPatienceBonus * fade;
+    }
+
+    /// <summary>True si el próximo cliente tiene que pedir algo simple (arranque de la noche 1).</summary>
+    private bool NextOrderIsSimple =>
+        currentNight == 1 &&
+        DayClock.Instance != null &&
+        spawnedTonight < simpleOpeningOrdersFirstNight;
 
     void Update()
     {
@@ -648,7 +687,9 @@ public class CustomerSystem : MonoBehaviour
             return;
         }
 
-        Order order = orderSystem.GenerateOrder();
+        Order order = NextOrderIsSimple
+            ? orderSystem.GenerateSimpleOrder()
+            : orderSystem.GenerateOrder();
 
         if (order == null || order.PrimaryCut == null)
         {

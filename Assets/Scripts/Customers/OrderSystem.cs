@@ -70,11 +70,17 @@ public class OrderSystem
         return result;
     }
 
-    public Order GenerateOrder()
+    public Order GenerateOrder() => BuildOrder(GetRandomMeat(), true);
+
+    /// <summary>
+    /// Pedido de aprendizaje: el corte disponible que más rápido se cocina y sin toppings ni
+    /// guarniciones. El punto y el pan salen igual que en un pedido normal.
+    /// </summary>
+    public Order GenerateSimpleOrder() => BuildOrder(GetFastestCookingMeat(), false);
+
+    private Order BuildOrder(MeatCutSO cut, bool allowExtras)
     {
         Order order = new Order();
-
-        MeatCutSO cut = GetRandomMeat();
 
         if (cut == null)
             return order;
@@ -97,7 +103,7 @@ public class OrderSystem
         // El pan bloquea salsas y guarniciones: solo los pedidos al plato pueden llevarlas.
         // Cada tipo se tira por separado, así un plato puede salir solo, solo con salsa,
         // solo con guarnición o con las dos.
-        if (!order.IsSandwich)
+        if (allowExtras && !order.IsSandwich)
         {
             AddRandomDistinct(availableToppings, toppingChance, maxToppingsPerOrder, order.toppings);
             AddRandomDistinct(availableSides, sideChance, maxSidesPerOrder, order.sides);
@@ -145,6 +151,24 @@ public class OrderSystem
             (int)MeatStates.Jugoso,
             (int)MeatStates.Pasado + 1
         );
+    }
+
+    private MeatCutSO GetFastestCookingMeat()
+    {
+        MeatCutSO fastest = null;
+
+        for (int i = 0; i < availableCuts.Count; i++)
+        {
+            WeightedOrderCut entry = availableCuts[i];
+
+            if (entry == null || entry.cut == null || entry.weight <= 0f)
+                continue;
+
+            if (fastest == null || entry.cut.GetHeatScale() < fastest.GetHeatScale())
+                fastest = entry.cut;
+        }
+
+        return fastest != null ? fastest : GetRandomMeat();
     }
 
     private MeatCutSO GetRandomMeat()

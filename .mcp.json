@@ -1,8 +1,10 @@
 {
   "mcpServers": {
     "UnityMCP": {
-      "type": "http",
-      "url": "http://localhost:8080/mcp"
+      "type": "stdio",
+      "command": "C:\\Users\\carge\\.local\\bin\\uvx.exe",
+      "args": ["--from", "mcpforunityserver==10.3.0", "mcp-for-unity", "--transport", "stdio"],
+      "env": { "UV_LINK_MODE": "copy" }
     }
   }
 }
