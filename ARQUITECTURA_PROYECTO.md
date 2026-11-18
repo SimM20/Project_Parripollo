@@ -70,8 +70,12 @@
 > control en uso (`Input/InputPrompts.cs`). Herramientas en `Tools/Localización/`. Sección 3.11 y nota 37.
 
 > Última actualización parcial: **2026-09-27** (rama `FTD-Sprint17`) — **rechazo de entrega más visible**. `DeliveryFeedbackText`
-> dibuja un cartel semitransparente con bordes redondeados detrás del texto (lo crea solo, sin setup de escena) y entra con
-> pop y sale con fundido; vale para todos los mensajes. Cuando el rechazo lo decide el cliente
+> dibuja un cartel detrás del texto (lo crea solo, sin setup de escena) y entra con pop; vale para todos los mensajes.
+> **2026-11-18** (rama `FeedBackEntrega`): mismo estilo que los carteles del tutorial — fondo `Cartel PH` (9-slice,
+> `backgroundSprite`; importado como **Full Rect** porque un `SpriteRenderer` Sliced lo pide), `ParripolloPixel SDF` bold
+> crema, tamaño 3.4 con escala uniforme; sale achicándose con fundido (`exitEndScale`), sin moverse mientras se ve.
+> Bajó a `y = -0.65` (entre los clientes y la parrilla) para no tapar la burbuja del cliente. El margen y las esquinas
+> del cartel están en unidades del mundo (compensa la escala del texto). Cuando el rechazo lo decide el cliente
 > (`DeliveryEvaluation.rejectedByCustomer`: corte equivocado o plato inválido) el cliente se sacude y se tiñe de rojo
 > (`CustomerView.PlayRejectReaction`) y suena `AudioManager.deliveryRejectedClip`. En todo rechazo con cliente, el plato
 > "rebota" al volver al mostrador (`PlateDeliveryDraggable.StartRejectShake`).
