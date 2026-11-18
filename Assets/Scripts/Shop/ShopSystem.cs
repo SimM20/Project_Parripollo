@@ -256,32 +256,33 @@ public class ShopSystem : MonoBehaviour
 
     // ── Agregar / quitar del carrito (capa uGUI) ────────────────────────
     /// <summary>
-    /// Se pueden sumar <paramref name="qty"/> unidades al carrito: el item se vende, no pasa el tope,
-    /// la plata alcanza para TODO el carrito y el carrito resultante no rompe los mínimos del próximo día.
+    /// Se pueden sumar <paramref name="qty"/> unidades al carrito: el item se vende y no pasa el tope.
+    /// La plata y los mínimos no frenan el agregar: se miden al pagar el carrito entero
+    /// (<see cref="CartOverBudget"/>, <see cref="CartMissingMinimums"/>, <see cref="CanConfirmCart"/>).
+    /// <paramref name="blockedByMinimums"/> queda siempre en false.
     /// </summary>
     public bool CanAddToCart(ItemDataSO item, int qty, out bool blockedByMinimums)
     {
         blockedByMinimums = false;
         if (!IsPurchasable(item) || qty <= 0) return false;
-        if (qty > GetMaxPurchaseQty(item) - GetCartQty(item)) return false;
+        return qty <= GetMaxPurchaseQty(item) - GetCartQty(item);
+    }
 
-        float cost = item.basePrice * qty;
-        if (Wallet == null || !Wallet.CanAfford(CartTotal() + cost)) return false;
+    /// <summary>El carrito cuesta más que la plata que hay: el botón de pagar lo avisa en rojo.</summary>
+    public bool CartOverBudget => HasCartItems && (Wallet == null || !Wallet.CanAfford(CartTotal()));
 
-        int meat = item is MeatCutSO ? qty : 0;
-        int coal = item is CoalSO coalItem ? Mathf.Max(1, coalItem.unitsPerBag) * qty : 0;
-
-        if (CartKeepsRunAlive(cost, meat, coal)) return true;
-
-        // Una parada se puede comprar aunque deje los mínimos fuera de alcance: es la apuesta del
-        // jugador. La UI lo avisa (StopRisksRun / CartRisksRun) y pide confirmar antes de pagar.
-        if (item is LocationSO) return true;
-
-        // Con el carrito ya en riesgo por una parada, la carne y el carbón solo pueden ayudar.
-        if ((meat > 0 || coal > 0) && !CartKeepsRunAlive(0f, 0, 0)) return true;
-
-        blockedByMinimums = true;
-        return false;
+    /// <summary>
+    /// Pagando el carrito, el stock no llega a los mínimos del próximo día (carne o carbón).
+    /// Solo avisa (cartel de ayuda): se puede pagar igual y comprar lo que falta después.
+    /// </summary>
+    public bool CartMissingMinimums
+    {
+        get
+        {
+            if (!EnforceRunMinimums || !HasCartItems) return false;
+            CountCartSupplies(out int meat, out int coal);
+            return !BuildRunStatus(CartTotal(), meat, coal).MeetsMinimums;
+        }
     }
 
     /// <summary>Hay una parada en el carrito: su compra puede saltearse el freno de los mínimos.</summary>
@@ -315,13 +316,7 @@ public class ShopSystem : MonoBehaviour
     {
         blockedByMinimums = false;
         if (!IsToppingPurchasable(topping) || qty <= 0) return false;
-        if (qty > GetMaxPurchaseQty(topping) - GetToppingCartQty(topping)) return false;
-
-        float cost = topping.purchasePrice * qty;
-        if (Wallet == null || !Wallet.CanAfford(CartTotal() + cost)) return false;
-
-        blockedByMinimums = !CartKeepsRunAlive(cost, 0, 0);
-        return !blockedByMinimums;
+        return qty <= GetMaxPurchaseQty(topping) - GetToppingCartQty(topping);
     }
 
     public bool TryAddToCart(ItemDataSO item, int qty)
@@ -368,15 +363,20 @@ public class ShopSystem : MonoBehaviour
     {
         if (!EnforceRunMinimums) return true;
 
-        int meat = extraMeat;
-        int coal = extraCoal;
+        CountCartSupplies(out int meat, out int coal);
+        return BuildRunStatus(CartTotal() + extraCost, meat + extraMeat, coal + extraCoal).CanContinue;
+    }
+
+    /// <summary>Cortes y unidades de carbón que suma el carrito al pagarlo.</summary>
+    private void CountCartSupplies(out int meat, out int coal)
+    {
+        meat = 0;
+        coal = 0;
         foreach (var kv in cart)
         {
             if (kv.Key is MeatCutSO) meat += kv.Value;
             else if (kv.Key is CoalSO coalItem) coal += Mathf.Max(1, coalItem.unitsPerBag) * kv.Value;
         }
-
-        return BuildRunStatus(CartTotal() + extraCost, meat, coal).CanContinue;
     }
 
     public void ClearCart()

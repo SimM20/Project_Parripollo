@@ -2,6 +2,13 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-18** (rama `FeedBackEntrega`) — **carrito sin tope de plata ni mínimos**.
+> `ShopSystem.CanAddToCart` solo mira que el item se venda y el tope (`blockedByMinimums` queda siempre en false, así que
+> el cartel `T3.PrimeroLoMinimo` ya no sale). Al pagar: `CartOverBudget` pone el botón grande en rojo
+> (`shop.next.over_budget`, `ShopNextButtonUI.overBudgetColor`) y lo deshabilita; `CartMissingMinimums` (el stock tras
+> pagar no llega a `MeetsMinimums`) muestra el cartel nuevo `T5.CarritoSinMinimo` (`shop_cart_minimum`, nunca se aprende,
+> prio 75) sobre el botón en la tab Toppings: solo avisa, se puede pagar igual. Valores nuevos al final de los enums:
+> `HintAnchorId.ShopConfirmButton`, `HintCondition.ShopCartMissingMinimums`. El botón se lee de `ShopNextButtonUI.Current`.
 > Última actualización parcial: **2026-11-12** (rama `FeedBack-Improvements`) — **carrito en la tienda**. La tarjeta ya
 > no compra: su botón dice "Agregar" (`ShopSystem.TryAddToCart`) y el pago es uno solo con el botón grande, que en
 > Toppings pasa por "Comprar carrito" (`TryConfirmPurchase`) antes de "Arrancar el día". Panel nuevo `Cart` en la

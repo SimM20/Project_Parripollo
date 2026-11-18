@@ -19,6 +19,7 @@ public partial class TutorialHintContext
     private Transform firstBuyButton;
     private Transform blockedBuyButton;
     private Transform streakLine;
+    private Transform confirmButton;
 
     private static readonly Vector3[] ShopCorners = new Vector3[4];
 
@@ -43,6 +44,7 @@ public partial class TutorialHintContext
         firstBuyButton = null;
         blockedBuyButton = null;
         streakLine = null;
+        confirmButton = null;
 
         if (shopGrid == null || !shopGrid.isActiveAndEnabled)
             return;
@@ -50,6 +52,12 @@ public partial class TutorialHintContext
             return;
 
         shopReady = true;
+
+        // El botón grande solo paga el carrito en la tab de toppings: ahí avisa si falta lo mínimo.
+        ShopSystem shop = shopGrid.Shop;
+        ShopNextButtonUI next = ShopNextButtonUI.Current;
+        if (shop != null && next != null && shop.CurrentTab == ShopTabType.Toppings && shop.CartMissingMinimums)
+            confirmButton = next.HintTarget;
 
         // Solo las tarjetas que se ven: las de más abajo pueden estar scrolleadas fuera de la grilla.
         RectTransform viewport = shopGrid.Viewport;
@@ -86,6 +94,7 @@ public partial class TutorialHintContext
             case HintCondition.ShopCanBuy: return firstBuyButton != null;
             case HintCondition.ShopPurchaseBlocked: return blockedBuyButton != null;
             case HintCondition.StrikeStreakActive: return streakLine != null;
+            case HintCondition.ShopCartMissingMinimums: return confirmButton != null;
             default: return false;
         }
     }
@@ -104,6 +113,7 @@ public partial class TutorialHintContext
             case HintAnchorId.ShopFirstBuyButton: return firstBuyButton;
             case HintAnchorId.ShopBlockedBuyButton: return blockedBuyButton;
             case HintAnchorId.ShopStreakLine: return streakLine;
+            case HintAnchorId.ShopConfirmButton: return confirmButton;
             default: return null;
         }
     }

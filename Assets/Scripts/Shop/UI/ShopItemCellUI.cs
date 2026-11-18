@@ -161,8 +161,8 @@ public class ShopItemCellUI : MonoBehaviour
         if (subtotalText != null) subtotalText.text = pendingQty > 1 ? Loc.Format("shop.cell.subtotal", price * pendingQty) : "";
         if (stepperRoot != null) stepperRoot.SetActive(MaxQty > 1 && showActions);
 
-        // Spec punto 7: no se permite gastar la plata que hace falta para el mínimo del próximo
-        // día. Plata y mínimos se miden contra el carrito entero; el guard real vive en ShopSystem.
+        // Plata y mínimos ya no frenan el agregar: se miden contra el carrito entero al pagarlo
+        // (botón grande en rojo si no alcanza, cartel de ayuda si falta lo mínimo).
         bool blockedByMinimums;
         CanBuy = toppingItem != null
             ? shop.CanAddToCart(toppingItem, pendingQty, out blockedByMinimums)

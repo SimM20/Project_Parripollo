@@ -109,6 +109,8 @@ public enum HintAnchorId
     /// se arrastra un frasco que todavía no vierte.
     /// </summary>
     SaucePourPoint,
+    /// <summary>Tienda: el botón grande de abajo ("Comprar carrito"), mientras el carrito no cubre lo mínimo.</summary>
+    ShopConfirmButton,
 }
 
 /// <summary>
@@ -188,4 +190,9 @@ public enum HintCondition
     NotDraggingSauce,
     /// <summary>El plato tiene al menos una guarnición o salsa (el pan no cuenta).</summary>
     PlateHasTopping,
+    /// <summary>
+    /// Tienda, tab de toppings con carrito: pagándolo, el stock no llega a los mínimos del próximo día
+    /// (<see cref="ShopSystem.CartMissingMinimums"/>).
+    /// </summary>
+    ShopCartMissingMinimums,
 }
