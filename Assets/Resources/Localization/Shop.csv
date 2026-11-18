@@ -56,6 +56,7 @@ shop.next.buy_cart,Comprar carrito,Buy cart
 shop.next.buy_cart_risk,Comprar sin el mínimo,Buy without the minimum
 shop.next.risk_confirm,Confirmar: perdés la partida,Confirm: you lose the run
 shop.next.cart_blocked,"Primero, lo mínimo",Minimum first
+shop.next.over_budget,Te pasás ${0} del presupuesto,${0} over budget
 shop.next.blocked,Faltan recursos,Not enough supplies
 "# Requisitos para el próximo día (ShopRequirementsUI), en mayúsculas"
 shop.req.title,PARA ARRANCAR MAÑANA,TO OPEN TOMORROW

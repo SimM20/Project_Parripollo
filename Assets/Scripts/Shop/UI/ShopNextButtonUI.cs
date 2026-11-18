@@ -17,6 +17,17 @@ public class ShopNextButtonUI : MonoBehaviour
     [Tooltip("Después de pagar el carrito el botón pasa a \"Arrancar el día\": un doble click no tiene que saltear ese paso.")]
     [SerializeField] private float startDayLockAfterPurchase = 0.4f;
 
+    [Header("Aviso de presupuesto")]
+    [Tooltip("Color del texto cuando el carrito cuesta más que la plata que hay.")]
+    [SerializeField] private Color overBudgetColor = new Color(0.9f, 0.2f, 0.18f, 1f);
+
+    /// <summary>El botón de la tienda a la vista. Lo lee el tutorial para señalarlo sin buscarlo en la escena.</summary>
+    public static ShopNextButtonUI Current { get; private set; }
+
+    /// <summary>A qué apuntan los carteles: el botón (o este objeto, si no hay botón asignado).</summary>
+    public Transform HintTarget => button != null ? button.transform : transform;
+
+    private Color defaultLabelColor = Color.white;
     private bool started;
     private float startDayUnlockTime;
 
@@ -27,6 +38,7 @@ public class ShopNextButtonUI : MonoBehaviour
     void Awake()
     {
         if (button != null) button.onClick.AddListener(OnClicked);
+        if (label != null) defaultLabelColor = label.color;
     }
 
     void OnDestroy()
@@ -36,6 +48,7 @@ public class ShopNextButtonUI : MonoBehaviour
 
     void OnEnable()
     {
+        Current = this;
         Loc.OnTextsChanged += Refresh;
         if (shop != null)
         {
@@ -58,6 +71,7 @@ public class ShopNextButtonUI : MonoBehaviour
 
     void OnDisable()
     {
+        if (Current == this) Current = null;
         Loc.OnTextsChanged -= Refresh;
         if (shop != null)
         {
@@ -123,12 +137,22 @@ public class ShopNextButtonUI : MonoBehaviour
         bool blocked = isLastTab && (payCart ? !shop.CanConfirmCart() : !CanStartNextDay());
         bool risky = payCart && !blocked && shop.CartRisksRun;
 
+        // Se agrega sin mirar la plata: si el carrito se pasa, el botón lo dice en rojo y no paga.
+        bool overBudget = payCart && shop.CartOverBudget;
+
         // Salir de la tab, vaciar el carrito o dejar de estar en riesgo desarma la confirmación.
         if (!risky) riskConfirmArmed = false;
 
         if (button != null) button.interactable = !blocked;
 
         if (label == null) return;
+
+        label.color = overBudget ? overBudgetColor : defaultLabelColor;
+        if (overBudget)
+        {
+            label.text = Loc.Format("shop.next.over_budget", (-shop.MoneyAfterPurchase()).ToString("N0"));
+            return;
+        }
 
         switch (shop.CurrentTab)
         {

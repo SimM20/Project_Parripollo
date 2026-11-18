@@ -179,33 +179,17 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
     [Tooltip("Color used to render a square placeholder when no sprite is assigned.")]
     [SerializeField] private Color placeholderColor = new Color(0.25f, 0.6f, 0.2f, 1f);
 
-    [Header("Sauce Bar")]
-    [Tooltip("Width of the sauce bar in bar pixels (frame included).")]
-    [SerializeField, Min(10)] private int barWidthPixels = 44;
+    [Header("Sauce Level")]
+    [Tooltip("A partir de esta proporción de salsa el indicador de la casilla es verde.")]
+    [SerializeField, Range(0f, 1f), UnityEngine.Serialization.FormerlySerializedAs("barHighThreshold")]
+    private float levelHighThreshold = 0.6f;
 
-    [Tooltip("Size of one bar pixel in the container's local units. 0.12 = one pixel of the bottle art (12 texels at 100 PPU).")]
-    [SerializeField] private float barPixelSize = 0.12f;
+    [Tooltip("A partir de esta proporción (y por debajo de la alta) es amarillo; por debajo, rojo.")]
+    [SerializeField, Range(0f, 1f), UnityEngine.Serialization.FormerlySerializedAs("barLowThreshold")]
+    private float levelLowThreshold = 0.3f;
 
-    [Tooltip("Gap (world units) between the top of the container sprite (the cap) and the bar.")]
-    [SerializeField] private float barGapAboveTop = 0.04f;
-
-    [Tooltip("At or above this fill ratio the bar is green.")]
-    [SerializeField, Range(0f, 1f)] private float barHighThreshold = 0.6f;
-
-    [Tooltip("At or above this fill ratio (and below the high one) the bar is yellow; below it, red.")]
-    [SerializeField, Range(0f, 1f)] private float barLowThreshold = 0.3f;
-
-    [Tooltip("Sorting order for the sauce bar visuals.")]
-    [SerializeField] private int barSortingOrder = 6100;
-
-    [Tooltip("Scale of the sauce bar while pouring, so it reads comfortably over the plate.")]
-    [SerializeField, Min(1f)] private float barPouringScale = 3f;
-
-    [Tooltip("Seconds the bar takes to grow when pouring starts (overshoots a little before settling).")]
-    [SerializeField, Min(0.01f)] private float barGrowDuration = 0.3f;
-
-    [Tooltip("Seconds the bar takes to shrink back when pouring stops.")]
-    [SerializeField, Min(0.01f)] private float barShrinkDuration = 0.25f;
+    /// <summary>Cambió la cantidad de salsa del frasco (lo escucha el <see cref="SauceLevelIndicator"/> de su casilla).</summary>
+    public event System.Action SauceLevelChanged;
 
     private Vector3 startPosition;
     private Quaternion startRotation;
@@ -263,38 +247,8 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
     private float currentSauceAmount;
     private bool sauceEmpty;
 
-    private GameObject barRoot;
-    private SpriteRenderer barFill;
-    private float barPopScale = 1f;
-    private float barPopFrom = 1f;
-    private float barPopT = 1f;
-    private bool barPopGrowing;
-    private static Sprite cachedBarFrameSprite;
-    private static Sprite[] cachedBarFillSprites;
-
-    // Marco de la barra, en pixeles: contorno 1 + madera 2 a cada lado, sombra de 1 abajo.
-    private const int BarFrameInset = 3;
-    private const int BarInnerHeight = 5;
-    private const int BarShadowRows = 1;
-    private const int BarFrameHeight = BarShadowRows + BarFrameInset * 2 + BarInnerHeight;
-
-    // Paleta de la madera, sacada de la barra de cocción (Barra Coccion v4).
+    // Contorno del aro de aterrizaje.
     private static readonly Color32 BarOutline = new Color32(0x14, 0x0A, 0x0B, 0xFF);
-    private static readonly Color32 BarWoodLight = new Color32(0xE3, 0xA9, 0x8F, 0xFF);
-    private static readonly Color32 BarWoodMid = new Color32(0xB9, 0x71, 0x5B, 0xFF);
-    private static readonly Color32 BarWoodDark = new Color32(0x8C, 0x4B, 0x3B, 0xFF);
-    private static readonly Color32 BarWoodDarker = new Color32(0x63, 0x2F, 0x2B, 0xFF);
-    private static readonly Color32 BarTrack = new Color32(0x2B, 0x14, 0x16, 0xFF);
-    private static readonly Color32 BarTrackShadow = new Color32(0x1A, 0x0B, 0x0C, 0xFF);
-    private static readonly Color32 BarDropShadow = new Color32(0x00, 0x00, 0x00, 0x5A);
-
-    // Rampas del relleno de arriba hacia abajo: brillo, claro, base, base, sombra. Índice 0 verde, 1 amarillo, 2 rojo.
-    private static readonly Color32[][] BarFillRamps =
-    {
-        new[] { new Color32(0xE8, 0xF8, 0xB0, 0xFF), new Color32(0xA6, 0xDC, 0x4E, 0xFF), new Color32(0x6C, 0xB3, 0x3A, 0xFF), new Color32(0x6C, 0xB3, 0x3A, 0xFF), new Color32(0x3F, 0x7A, 0x2A, 0xFF) },
-        new[] { new Color32(0xFF, 0xF4, 0xBE, 0xFF), new Color32(0xFF, 0xD9, 0x4A, 0xFF), new Color32(0xF0, 0xAE, 0x2A, 0xFF), new Color32(0xF0, 0xAE, 0x2A, 0xFF), new Color32(0xB4, 0x70, 0x1C, 0xFF) },
-        new[] { new Color32(0xFF, 0xC2, 0xAE, 0xFF), new Color32(0xF2, 0x5A, 0x3E, 0xFF), new Color32(0xC8, 0x30, 0x2E, 0xFF), new Color32(0xC8, 0x30, 0x2E, 0xFF), new Color32(0x86, 0x1C, 0x24, 0xFF) },
-    };
 
     private static readonly List<ToppingDraggable> ActiveInstances = new List<ToppingDraggable>();
 
@@ -323,8 +277,6 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
         EnsureCollider();
         EnsurePlaceholderVisual();
         InitializeSauceAmount();
-        CreateSauceBar();
-        UpdateSauceBar();
     }
 
     // En Start y no en Awake: en la primera escena el Awake del ToppingStock puede correr después.
@@ -334,30 +286,7 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
 
         currentSauceAmount = ToppingStock.Instance.GetSauceAmount(toppingData);
         sauceEmpty = currentSauceAmount <= 0f;
-        UpdateSauceBar();
-    }
-
-    // Solo trabaja mientras la barra se agranda o se achica. Tiempo sin escala: si se pausa a
-    // mitad de vertida, la barra igual vuelve a su tamaño.
-    void LateUpdate()
-    {
-        if (barPopT >= 1f) return;
-
-        barPopT = Mathf.Min(1f, barPopT + Time.unscaledDeltaTime / (barPopGrowing ? barGrowDuration : barShrinkDuration));
-        float target = barPopGrowing ? barPouringScale : 1f;
-        float eased = barPopGrowing ? FeelEase.OutBack(barPopT) : FeelEase.OutBack(barPopT, 1f);
-        barPopScale = Mathf.LerpUnclamped(barPopFrom, target, eased);
-        UpdateSauceBar();
-    }
-
-    /// <summary>Arranca la animación hacia grande (vertiendo) o hacia el tamaño normal, desde el tamaño actual.</summary>
-    private void SetBarPop(bool grow)
-    {
-        if (grow == barPopGrowing) return;
-
-        barPopGrowing = grow;
-        barPopFrom = barPopScale;
-        barPopT = 0f;
+        SauceLevelChanged?.Invoke();
     }
 
     private bool UsesStock => !ignoreStock && toppingData != null && ToppingStock.Instance != null;
@@ -516,7 +445,6 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
         }
 
         UpdateSqueeze();
-        UpdateSauceBar();
         UpdateLandingMarker(insideZone);
     }
 
@@ -551,8 +479,6 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
 
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
-
-        UpdateSauceBar();
     }
 
     private void RestoreScale()
@@ -582,8 +508,6 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
 
         if (selfRenderer != null)
             selfRenderer.sortingOrder = startSortingOrder;
-
-        UpdateSauceBar();
     }
 
     private void StartPouring()
@@ -596,7 +520,6 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
         puddleRadius = splatterSpread * puddleStartSpread;
         perlinSeed = Random.Range(0f, 1000f);
         CreateSauceThread();
-        SetBarPop(true);
 
         if (!toppingRegistered)
             RegisterTopping();
@@ -609,7 +532,6 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
             streamFX.Release(impactPoint.y, pourVolumeRate, PourRadius);
 
         isPouring = false;
-        SetBarPop(false);
 
         // Toda vertida termina acá (soltar, cancelar, frasco vacío): se guarda una vez y no por frame.
         SaveSauceToStock();
@@ -635,6 +557,8 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
             sauceEmpty = true;
             StopPouring();
         }
+
+        SauceLevelChanged?.Invoke();
     }
 
     public float GetSauceRatio()
@@ -649,139 +573,14 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
         float max = (toppingData != null) ? toppingData.maxSauceAmount : 100f;
         currentSauceAmount = max;
         sauceEmpty = false;
-        UpdateSauceBar();
+        SauceLevelChanged?.Invoke();
     }
 
-    private void CreateSauceBar()
+    /// <summary>Color del nivel: 0 verde, 1 amarillo, 2 rojo, según los umbrales del frasco.</summary>
+    public int GetSauceLevelTier()
     {
-        barRoot = new GameObject("SauceBar");
-        barRoot.transform.SetParent(transform, false);
-        barRoot.transform.localRotation = Quaternion.identity;
-        barRoot.transform.localScale = Vector3.one;
-
-        GameObject frameGo = new GameObject("BarFrame");
-        frameGo.transform.SetParent(barRoot.transform, false);
-        frameGo.transform.localScale = new Vector3(barPixelSize, barPixelSize, 1f);
-        SpriteRenderer frame = frameGo.AddComponent<SpriteRenderer>();
-        frame.sprite = GetBarFrameSprite(barWidthPixels);
-        frame.sortingOrder = barSortingOrder;
-
-        // El relleno arranca en el borde izquierdo del canal y crece hacia la derecha.
-        GameObject fillGo = new GameObject("BarFill");
-        fillGo.transform.SetParent(barRoot.transform, false);
-        float innerCenterY = BarShadowRows + BarFrameInset + BarInnerHeight * 0.5f - BarFrameHeight * 0.5f;
-        fillGo.transform.localPosition = new Vector3(
-            (BarFrameInset - barWidthPixels * 0.5f) * barPixelSize,
-            innerCenterY * barPixelSize,
-            0f);
-        barFill = fillGo.AddComponent<SpriteRenderer>();
-        barFill.sprite = GetBarFillSprites()[0];
-        barFill.sortingOrder = barSortingOrder + 1;
-    }
-
-    /// <summary>
-    /// Siempre visible: en el panel muestra cuánta salsa queda y al arrastrar acompaña a la botella.
-    /// Va apenas por encima de la tapa (o de la base, con la botella dada vuelta).
-    /// El relleno avanza de a pixel entero y cambia de verde a amarillo a rojo por tramos.
-    /// Mientras vierte se agranda (<see cref="barPouringScale"/>) creciendo hacia arriba: el borde
-    /// de abajo queda donde estaba, sin tapar la botella.
-    /// </summary>
-    private void UpdateSauceBar()
-    {
-        if (barRoot == null || barFill == null) return;
-
         float ratio = GetSauceRatio();
-
-        float barHalfHeight = BarFrameHeight * 0.5f * barPixelSize * Mathf.Abs(transform.lossyScale.y) / squeezeFactor.y;
-        float barCenterY = GetContainerHalfHeight() + barGapAboveTop + barHalfHeight * (barPopScale - 1f);
-
-        barRoot.transform.rotation = Quaternion.identity;
-        barRoot.transform.position = transform.position + new Vector3(0f, barCenterY, 0f);
-        // La barra no se aprieta con la botella.
-        barRoot.transform.localScale = new Vector3(barPopScale / squeezeFactor.x, barPopScale / squeezeFactor.y, 1f);
-
-        int innerWidth = barWidthPixels - BarFrameInset * 2;
-        int fillPixels = ratio > 0f ? Mathf.Clamp(Mathf.RoundToInt(innerWidth * ratio), 1, innerWidth) : 0;
-
-        barFill.enabled = fillPixels > 0;
-        barFill.transform.localScale = new Vector3(fillPixels * barPixelSize, barPixelSize, 1f);
-
-        int ramp = ratio >= barHighThreshold ? 0 : ratio >= barLowThreshold ? 1 : 2;
-        barFill.sprite = GetBarFillSprites()[ramp];
-    }
-
-    /// <summary>Media altura del sprite en mundo, sin contar la rotación ni el apretón.</summary>
-    private float GetContainerHalfHeight()
-    {
-        if (selfRenderer == null || selfRenderer.sprite == null)
-            return 0f;
-
-        Bounds b = selfRenderer.sprite.bounds;
-        return (b.center.y + b.extents.y) * Mathf.Abs(transform.lossyScale.y) / squeezeFactor.y;
-    }
-
-    /// <summary>
-    /// Marco de madera pixel art: contorno con esquinas recortadas, madera clara arriba y oscura
-    /// abajo, canal oscuro adentro y una fila de sombra debajo. 1 unidad = 1 pixel.
-    /// </summary>
-    private static Sprite GetBarFrameSprite(int width)
-    {
-        if (cachedBarFrameSprite != null && Mathf.RoundToInt(cachedBarFrameSprite.rect.width) == width)
-            return cachedBarFrameSprite;
-
-        const int h = BarFrameHeight;
-        var pixels = new Color32[width * h];
-        int top = h - 1;
-        int bottom = BarShadowRows;
-        int innerBottom = bottom + BarFrameInset;
-        int innerTop = innerBottom + BarInnerHeight - 1;
-
-        for (int y = 0; y < h; y++)
-        for (int x = 0; x < width; x++)
-        {
-            Color32 c = new Color32(0, 0, 0, 0);
-            bool edgeX = x == 0 || x == width - 1;
-
-            if (y < bottom)
-                c = (x > 0 && x < width - 1) ? BarDropShadow : c;
-            else if (y == bottom || y == top)
-                c = edgeX ? c : BarOutline;
-            else if (edgeX)
-                c = BarOutline;
-            else if (y == top - 1) c = BarWoodLight;
-            else if (y == top - 2) c = BarWoodMid;
-            else if (y == bottom + 1) c = BarWoodDarker;
-            else if (y == bottom + 2) c = BarWoodDark;
-            else if (x == 1) c = BarWoodMid;
-            else if (x == 2) c = BarWoodDark;
-            else if (x == width - 2) c = BarWoodDarker;
-            else if (x == width - 3) c = BarWoodDark;
-            else c = y == innerTop ? BarTrackShadow : BarTrack;
-
-            pixels[y * width + x] = c;
-        }
-
-        cachedBarFrameSprite = CreatePixelSprite(width, h, pixels, new Vector2(0.5f, 0.5f), "SauceBarFrame");
-        return cachedBarFrameSprite;
-    }
-
-    /// <summary>Una columna de 1 pixel por color (verde, amarillo, rojo), con pivote a la izquierda: se estira en X.</summary>
-    private static Sprite[] GetBarFillSprites()
-    {
-        if (cachedBarFillSprites != null && cachedBarFillSprites[0] != null)
-            return cachedBarFillSprites;
-
-        cachedBarFillSprites = new Sprite[BarFillRamps.Length];
-        for (int i = 0; i < BarFillRamps.Length; i++)
-        {
-            var pixels = new Color32[BarInnerHeight];
-            for (int y = 0; y < BarInnerHeight; y++)
-                pixels[y] = BarFillRamps[i][BarInnerHeight - 1 - y];
-
-            cachedBarFillSprites[i] = CreatePixelSprite(1, BarInnerHeight, pixels, new Vector2(0f, 0.5f), "SauceBarFill" + i);
-        }
-
-        return cachedBarFillSprites;
+        return ratio >= levelHighThreshold ? 0 : ratio >= levelLowThreshold ? 1 : 2;
     }
 
     private static Sprite CreatePixelSprite(int width, int height, Color32[] pixels, Vector2 pivot, string name)
@@ -1260,7 +1059,7 @@ public class ToppingDraggable : MonoBehaviour, IWorldPointerDownHandler, IWorldP
         currentSauceAmount = Mathf.Clamp(amount, 0f, max);
         sauceEmpty = currentSauceAmount <= 0f;
         SaveSauceToStock();
-        UpdateSauceBar();
+        SauceLevelChanged?.Invoke();
     }
 
     /// <summary>

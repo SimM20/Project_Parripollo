@@ -11,6 +11,7 @@ public class RollbackButtonUI : MonoBehaviour
     [SerializeField] private BuildUndoHistory undoHistory;
 
     private Button button;
+    private MenuButtonHover hover;
 
     void Awake()
     {
@@ -18,6 +19,14 @@ public class RollbackButtonUI : MonoBehaviour
 
         // Mismo hover/click que los botones de los menús (deshabilitado no reacciona).
         MenuButtonHover.Ensure(button);
+        hover = GetComponent<MenuButtonHover>();
+    }
+
+    void Update()
+    {
+        // Late mientras un cartel del tutorial lo señala ("Por si te confundiste", "Deshacer").
+        if (hover != null)
+            hover.Attention = TutorialHintLayer.Instance != null && TutorialHintLayer.Instance.IsPointingAt(transform);
     }
 
     void OnEnable()

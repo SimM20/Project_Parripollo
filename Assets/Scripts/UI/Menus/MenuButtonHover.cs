@@ -13,6 +13,25 @@ public class MenuButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [SerializeField] private float hoverScale = 1.06f;
     [SerializeField] private float pressedScale = 0.97f;
     [SerializeField] private float smoothTime = 0.08f;
+    [Tooltip("Escala máxima del latido mientras Attention está prendido.")]
+    [SerializeField] private float attentionScale = 1.08f;
+    [Tooltip("Latidos por segundo mientras Attention está prendido.")]
+    [SerializeField] private float attentionRate = 1.2f;
+
+    /// <summary>
+    /// Late suave (escala ida y vuelta) para llamar la atención, p. ej. mientras un cartel del tutorial
+    /// apunta al botón. El hover y el click le ganan; deshabilitado no late.
+    /// </summary>
+    public bool Attention
+    {
+        get => attention;
+        set
+        {
+            if (attention == value) return;
+            attention = value;
+            attentionTime = 0f;
+        }
+    }
 
     /// <summary>
     /// Suma este juice a un botón armado en escena sin él, para que responda igual que los del
@@ -32,6 +51,8 @@ public class MenuButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExit
     private float velocity;
     private bool hovered;
     private bool pressed;
+    private bool attention;
+    private float attentionTime;
 
     private void Awake()
     {
@@ -44,6 +65,7 @@ public class MenuButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         hovered = false;
         pressed = false;
+        attentionTime = 0f;
         current = target = 1f;
         if (rect != null) rect.localScale = baseScale;
     }
@@ -53,6 +75,14 @@ public class MenuButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExit
         // Un botón deshabilitado no reacciona: agrandarlo invitaría a clickear algo que no hace nada.
         bool interactable = selectable == null || selectable.IsInteractable();
         target = !interactable ? 1f : pressed ? pressedScale : (hovered ? hoverScale : 1f);
+
+        if (attention && interactable && !pressed && !hovered)
+        {
+            // Arranca en 1 y sube: 0.5 - 0.5 cos va de 0 a 1 y vuelve.
+            attentionTime += Time.unscaledDeltaTime;
+            float wave = 0.5f - 0.5f * Mathf.Cos(attentionTime * attentionRate * 2f * Mathf.PI);
+            target = 1f + (attentionScale - 1f) * wave;
+        }
 
         if (Mathf.Abs(current - target) < 0.0005f && Mathf.Abs(velocity) < 0.0005f)
             return;

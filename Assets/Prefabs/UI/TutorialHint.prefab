@@ -163,8 +163,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Ver carnes
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 1b8a183dccbf485479adf4e987d93204, type: 2}
-  m_sharedMaterial: {fileID: -6446966571928538980, guid: 1b8a183dccbf485479adf4e987d93204, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
+  m_sharedMaterial: {fileID: 6531084185216290391, guid: 84b78dd0648ac1045a72aecb0c897144, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

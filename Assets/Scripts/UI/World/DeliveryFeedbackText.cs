@@ -6,8 +6,10 @@ using UnityEngine;
 /// Mensaje breve de feedback para el flujo de entrega (rechazos y avisos de cobro).
 /// Singleton de escena, mismo patrón que MeatHoverBubble.
 /// Se muestra/oculta cambiando el texto (el GameObject queda activo bajo GrillView).
-/// Detrás del texto dibuja un cartel semitransparente con bordes redondeados que se crea solo
-/// (no hace falta armarlo en la escena): entra con un "pop" y sale con un fundido.
+/// Detrás del texto dibuja un cartel con el mismo estilo que los carteles del tutorial
+/// (<see cref="backgroundSprite"/>, 9-slice) que se crea solo (no hace falta armarlo en la escena).
+/// Entra con un "pop" y sale achicándose con un fundido; no se mueve mientras está a la vista.
+/// Sin sprite asignado usa un cartel redondeado semitransparente generado por código.
 /// </summary>
 public class DeliveryFeedbackText : MonoBehaviour
 {
@@ -17,19 +19,24 @@ public class DeliveryFeedbackText : MonoBehaviour
     [SerializeField] private float showSeconds = 2f;
 
     [Header("Cartel de fondo")]
-    [SerializeField] private Color backgroundColor = new Color(0.08f, 0.05f, 0.04f, 0.72f);
-    [Tooltip("Margen del cartel alrededor del texto, en unidades locales del texto (X horizontal, Y vertical).")]
-    [SerializeField] private Vector2 backgroundPadding = new Vector2(0.35f, 0.18f);
-    [Tooltip("Radio de las esquinas redondeadas, en unidades locales del texto.")]
-    [SerializeField] private float cornerRadius = 0.18f;
+    [Tooltip("Sprite 9-slice del cartel (el de los carteles del tutorial). Vacío = cartel redondeado generado.")]
+    [SerializeField] private Sprite backgroundSprite;
+    [Tooltip("Color del cartel. Con sprite propio, blanco = el sprite tal cual.")]
+    [SerializeField] private Color backgroundColor = Color.white;
+    [Tooltip("Margen del cartel alrededor del texto, en unidades del mundo (X horizontal, Y vertical).")]
+    [SerializeField] private Vector2 backgroundPadding = new Vector2(0.3f, 0.16f);
+    [Tooltip("Cuánto mide en el mundo el borde del 9-slice (las esquinas del cartel).")]
+    [SerializeField] private float cornerRadius = 0.2f;
 
     [Header("Animación")]
     [Tooltip("Duración del pop de entrada.")]
     [SerializeField] private float popSeconds = 0.18f;
     [Tooltip("Escala inicial del pop (1 = sin pop).")]
     [SerializeField] private float popStartScale = 0.8f;
-    [Tooltip("Duración del fundido de salida. Se descuenta de showSeconds.")]
-    [SerializeField] private float fadeSeconds = 0.35f;
+    [Tooltip("Duración de la salida (se achica y se desvanece). Se descuenta de showSeconds.")]
+    [SerializeField] private float fadeSeconds = 0.25f;
+    [Tooltip("Escala final de la salida (1 = solo fundido).")]
+    [SerializeField] private float exitEndScale = 0.85f;
 
     // Textura de 64 px con esquinas de 16 px: el sprite se estira en 9 partes (Sliced).
     private const int TexSize = 64;
@@ -69,6 +76,8 @@ public class DeliveryFeedbackText : MonoBehaviour
         if (showRoutine != null) StopCoroutine(showRoutine);
 
         text.text = message;
+        // El cartel se mide con la escala de reposo, no con la de un pop a medias.
+        text.transform.localScale = baseScale;
         text.ForceMeshUpdate();
         SetAlpha(1f);
         // Solo hay cartel si el texto ocupa lugar de verdad.
@@ -117,9 +126,13 @@ public class DeliveryFeedbackText : MonoBehaviour
         float hold = Mathf.Max(0f, showSeconds - popSeconds - fadeSeconds);
         yield return new WaitForSeconds(hold);
 
+        // Salida: se achica y se desvanece a la vez (easeIn: arranca lento y se va rápido).
         for (float e = 0f; e < fadeSeconds; e += Time.deltaTime)
         {
-            SetAlpha(1f - e / fadeSeconds);
+            float k = e / fadeSeconds;
+            k *= k;
+            t.localScale = baseScale * Mathf.Lerp(1f, exitEndScale, k);
+            SetAlpha(1f - k);
             yield return null;
         }
 
@@ -169,7 +182,7 @@ public class DeliveryFeedbackText : MonoBehaviour
         go.transform.SetParent(text.transform, false);
 
         background = go.AddComponent<SpriteRenderer>();
-        background.sprite = GetRoundedSprite();
+        background.sprite = backgroundSprite != null ? backgroundSprite : GetRoundedSprite();
         background.drawMode = SpriteDrawMode.Sliced;
         background.color = backgroundColor;
 
@@ -195,12 +208,19 @@ public class DeliveryFeedbackText : MonoBehaviour
             return false;
         background.transform.localPosition = new Vector3(b.center.x, b.center.y, 0f);
 
-        // El sprite mide TexSize px con esquinas de TexCorner px; se elige la escala para que
-        // la esquina mida cornerRadius, y el tamaño se compensa para quedar en unidades del texto.
-        float cornerScale = cornerRadius / (TexCorner / 100f);
-        background.transform.localScale = new Vector3(cornerScale, cornerScale, 1f);
+        // Todo en unidades del mundo: el texto tiene escala no uniforme (más ancho que alto) y
+        // estiraría las esquinas del 9-slice. La escala del fondo compensa la del texto.
+        Vector3 textScale = text.transform.lossyScale;
+        if (Mathf.Approximately(textScale.x, 0f) || Mathf.Approximately(textScale.y, 0f))
+            return false;
 
-        Vector2 size = new Vector2(b.size.x + backgroundPadding.x * 2f, b.size.y + backgroundPadding.y * 2f);
+        Sprite sprite = background.sprite;
+        float borderUnits = sprite.border.x > 0f ? sprite.border.x / sprite.pixelsPerUnit : TexCorner / 100f;
+        float cornerScale = cornerRadius / borderUnits;
+        background.transform.localScale = new Vector3(cornerScale / textScale.x, cornerScale / textScale.y, 1f);
+
+        Vector2 size = new Vector2(b.size.x * textScale.x + backgroundPadding.x * 2f,
+                                   b.size.y * textScale.y + backgroundPadding.y * 2f);
         float minSide = cornerRadius * 2f;
         size.x = Mathf.Max(size.x, minSide);
         size.y = Mathf.Max(size.y, minSide);
