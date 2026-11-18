@@ -42,6 +42,7 @@ public partial class TutorialHintContext
     private bool plateHasMeat;
     private bool plateHasBurnt;
     private bool plateHasRaw;
+    private bool plateHasTopping;
     private Transform plate;
     private Meat firstMeatOnGrill;
     private Meat meatToFlip;
@@ -142,6 +143,7 @@ public partial class TutorialHintContext
                 return plateHasMeat && (plateHasBurnt || (waitingCustomer != null && plateCustomer == null));
             case HintCondition.DraggingSauce: return pourPoint != null;
             case HintCondition.NotDraggingSauce: return !sauceInHand;
+            case HintCondition.PlateHasTopping: return plateHasTopping;
             default: return EvaluateShop(condition);
         }
     }
@@ -465,6 +467,7 @@ public partial class TutorialHintContext
         plateHasMeat = false;
         plateHasBurnt = false;
         plateHasRaw = false;
+        plateHasTopping = false;
         BuildStationSystem station = null;
 
         IReadOnlyList<BuildFoodDropZone> zones = BuildFoodDropZone.Zones;
@@ -476,6 +479,10 @@ public partial class TutorialHintContext
 
             if (plate == null)
                 plate = zone.PlateBody != null ? zone.PlateBody : zone.transform;
+            // Con o sin carne: lo que cuenta es que ya se puso algo que se puede deshacer.
+            if (zone.isActiveAndEnabled && zone.BuildStation != null
+                && (zone.BuildStation.AssembledToppings.Count > 0 || zone.BuildStation.AssembledSides.Count > 0))
+                plateHasTopping = true;
             if (zone.HasLoadedPlate)
             {
                 plateHasMeat = true;

@@ -186,4 +186,6 @@ public enum HintCondition
     DraggingSauce,
     /// <summary>No hay ningún frasco de salsa en la mano (ni arrastrándose ni vertiendo).</summary>
     NotDraggingSauce,
+    /// <summary>El plato tiene al menos una guarnición o salsa (el pan no cuenta).</summary>
+    PlateHasTopping,
 }

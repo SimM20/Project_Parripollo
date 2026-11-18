@@ -79,6 +79,7 @@ hint.closed,Cerrado: atendé a los que quedan,Closed: serve who's left
 hint.ash_heat,La ceniza baja el fuego,Ashes lower the heat
 hint.remove_meat,Sacar la carne,Remove the meat
 hint.reset_hints_tip,Reiniciá las ayudas en Opciones,Reset hints in Options
+hint.undo_tip,Por si te confundiste,In case you made a mistake
 # Carteles de la tienda (EndScene)
 hint.shop_minimum,Lo mínimo para mañana,What you need for tomorrow
 hint.shop_buy,Agregar al carrito,Add to cart
