@@ -170,6 +170,18 @@ public class ToppingsPanelController : SlidingPanel
         }
     }
 
+    /// <summary>Si el item es un frasco, su casilla muestra cuánta salsa le queda (entre la casilla y el frasco).</summary>
+    private void AttachSauceLevel(Transform slot, Transform item)
+    {
+        if (slot == null)
+            return;
+
+        ToppingDraggable jar = item.GetComponent<ToppingDraggable>();
+        SpriteRenderer slotRenderer = slot.GetComponent<SpriteRenderer>();
+        if (jar != null && slotRenderer != null)
+            SauceLevelIndicator.Attach(slotRenderer, jar, itemSortingOrder - 1);
+    }
+
     private Vector3 CellLocalPosition(int index)
     {
         int safeColumns = Mathf.Max(1, columns);
@@ -194,6 +206,7 @@ public class ToppingsPanelController : SlidingPanel
             {
                 Transform item = layoutItems[i];
                 Transform slot = slotsParent != null && i < slotsParent.childCount ? slotsParent.GetChild(i) : null;
+                AttachSauceLevel(slot, item);
 
                 cells.Add(new Cell
                 {
