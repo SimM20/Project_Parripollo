@@ -2,6 +2,17 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-19** (rama `development`) — **paisaje nuevo del artista y cielo en 4 franjas**.
+> `Paisaje` usa `Sprites/Environment/DayCycle/PaisajeRuta.png` (480x270, PPU 25, pivote abajo, `y = -5.4`: el lienzo del
+> artista es la pantalla, igual que la parrilla). Sale de `PaisajeRuta.ase` **sin la capa `CIELO`** (y sin la oculta
+> `Layer 1`, una referencia): el cielo lo siguen pintando las capas del ciclo de día. Las 4 franjas de celeste que dibujó el
+> artista se imitan con `CieloFranjas.png` (1x90, alfa 1 / 0,82 / 0,5 / 0 con cortes en y = 4,80 / 4,32 / 3,80) en
+> `CieloCenit`: de día da casi sus mismos colores y en el resto de las horas toma el tinte de cada clave. Carriles del
+> tránsito ajustados a la ruta nueva (1,46 y 0,76, también en los overrides de `MainMenuScene` y `EndScene`). En esas dos
+> escenas (cámara ortográfica, raíz en `y = -0.6`) el override de `CieloCenit` pasó de 4,38 a 4,55 para que las franjas
+> caigan donde las dibujó el artista respecto del paisaje; ahí la tierra del dibujo ocupa media pantalla. El paisaje nuevo
+> no trae cartel de RUTA 40: se prendió `CartelRuta` (dibujo suelto del artista) donde estaba el cartel pintado viejo.
+> Para que su poste quede detrás del mostrador, `Paisaje` bajó de -5 a -7 y el `SortingGroup` de `Transito` de -3 a -5. `PaisajeSinArboles.png` y `CieloDegradado.png` pasaron a `_SinUso/Sprites/FondoCicloDia/`.
 > Última actualización parcial: **2026-11-18** (rama `FeedBackEntrega`) — **carrito sin tope de plata ni mínimos**.
 > `ShopSystem.CanAddToCart` solo mira que el item se venda y el tope (`blockedByMinimums` queda siempre en false, así que
 > el cartel `T3.PrimeroLoMinimo` ya no sale). Al pagar: `CartOverBudget` pone el botón grande en rojo
@@ -2521,14 +2532,14 @@ escena se ve con los colores guardados en cada `SpriteRenderer` (el look de medi
 | Capa | Sprite | `sortingOrder` | Componentes | Qué hace |
 |---|---|---|---|---|
 | `CieloHorizonte` | `CieloBase` (blanco, Sliced 22×4) | -60 | `DayCycleLayer` | Color del cielo en el horizonte |
-| `CieloCenit` | `CieloDegradado` (1×12 px, alfa 1 arriba → 0 abajo; Sliced 22×3,6) | -55 | `DayCycleLayer` | Color del cenit. Sobre el anterior arma el degradé en 12 franjas. `Filter Mode` en `Bilinear` = degradé liso |
+| `CieloCenit` | `CieloFranjas` (1×90 px a PPU 25, Point; Sliced 22×3,6) | -55 | `DayCycleLayer` | Color del cenit. Sobre el anterior arma el cielo en **4 franjas** como las del dibujo del artista (alfa 1 / 0,82 / 0,5 / 0, cortes en y = 4,80 / 4,32 / 3,80 en `GameScene`) |
 | `Estrellas` | `Estrellas` | -50 | `DayCycleLayer` | Solo alfa: aparecen desde ~19:25; a las 06:30 quedan unas pocas |
 | `Luna` | `Luna` | -45 | `DayCycleLayer` + `DayCycleArc` | Sale 19:24 por la derecha; a las 21:00 ya está alta |
 | `Sol` | `Sol` | -40 | `DayCycleLayer` + `DayCycleArc` | Sale 05:30 por la derecha (a las 06:30 asoma sobre los árboles), se pone 19:30 por la izquierda |
 | `NubesLejanas` | `NubesLejanas` (Tiled ×2) | -30 | `DayCycleLayer` + `ParallaxLayer` (`0.08` u/s) | 3 nubes, más lentas y apenas más apagadas: se distinguen cuando se cruzan |
 | `NubesCercanas` | `NubesCercanas` (Tiled ×2) | -20 | `DayCycleLayer` + `ParallaxLayer` (`0.16` u/s) | 2 nubes grandes, al doble de velocidad |
-| `Paisaje` | `Paisaje` | -5 | `DayCycleLayer` | Árboles, alambrado, cartel, ruta y pasto. Mismo lugar (`y = -5.5`) y order que el fondo viejo |
-| `Transito` | — (vehículos creados en runtime) + hijo `CartelRuta` | `SortingGroup` en -3 | `RoadTraffic` | Autos y camiones por la ruta, delante del paisaje y detrás de parrilla y clientes. Ver *Tránsito* abajo |
+| `Paisaje` | `PaisajeRuta` (480×270, PPU 25, pivote abajo) | -7 | `DayCycleLayer` | Árboles, alambrado, ruta y tierra, sin cielo. `y = -5.4`: el lienzo de 480×270 cae sobre la pantalla |
+| `Transito` | — (vehículos creados en runtime) + hijo `CartelRuta` | `SortingGroup` en -5 | `RoadTraffic` | Autos y camiones por la ruta, delante del paisaje y detrás de parrilla y clientes. Ver *Tránsito* abajo |
 
 Sol y luna salen por la **derecha** (lo correcto en el hemisferio sur mirando al norte) a propósito: la fila de clientes
 ocupa la mitad izquierda (slots en `x = −6, −3.4, −0.8…`, cabezas hasta `y ≈ 3.9`) y tapaba el amanecer y la luna.
@@ -2571,7 +2582,7 @@ Vehículos que pasan cada tanto por la ruta dibujada en el `Paisaje`. Implementa
 | Campo de inspector | Valor | |
 |---|---|---|
 | `vehicleTypes` | 6 tipos | `{ label, bodies[], lights, weight, speed (mín, máx) }`. Auto (4 colores, peso 3), Auto chico (3, 2), Camioneta (3, 2), Camión (2, 1,2), Camión con acoplado (2, 1), Micro (2, 0,6). Autos ~2,5–3,6 u/s, camiones ~1,8–2,5 |
-| `lanes` | 2 carriles | `{ label, y, towardsRight, scale, speedMultiplier, haze, sortingOrder, spawnInterval }`. **Atrás**: `y = 1.08`, hacia la izquierda, escala 1,6 y velocidad × 0,8, `haze` azulado, order 0, cada 6–16 s. **Adelante**: `y = 0.68`, hacia la derecha, escala 2 y velocidad × 1, order 10, cada 5–14 s. Con escala 2 un pixel de arte mide lo mismo que el de los clientes; el camión con acoplado llega a la altura del cuello de un cliente y deja cielo libre arriba |
+| `lanes` | 2 carriles | `{ label, y, towardsRight, scale, speedMultiplier, haze, sortingOrder, spawnInterval }`. **Atrás**: `y = 1.46`, hacia la izquierda, escala 1,6 y velocidad × 0,8, `haze` azulado, order 0, cada 6–16 s. **Adelante**: `y = 0.76`, hacia la derecha, escala 2 y velocidad × 1, order 10, cada 5–14 s. Con escala 2 un pixel de arte mide lo mismo que el de los clientes; el camión con acoplado llega a la altura del cuello de un cliente y deja cielo libre arriba |
 | `roadHalfLength` | `9.6` | Media ruta (el `Paisaje` mide 19,2 u): los vehículos entran y salen justo afuera |
 | `minGap` | `3` | Espacio mínimo con el de adelante para entrar (en unidades: si se cambia la escala de los carriles, escalarlo igual) |
 | `densityByHour` | curva 0–24 | Divide el intervalo del carril: 1 de 08:00 a 19:00, ~0,5 de madrugada y de noche. 0 = no pasa nadie |
@@ -2588,9 +2599,10 @@ Vehículos que pasan cada tanto por la ruta dibujada en el `Paisaje`. Implementa
   espera `minGap` de espacio (si no, reintenta a los 0,5 s). Con velocidades constantes, nunca se pisan.
 - **Color.** Carrocería = tinte del `Paisaje` × `haze` del carril: de noche quedan tan oscuros como el asfalto. Las luces
   (hijo `Luces`, order del carril + 1) **no se tiñen**: solo cambian de alfa con `lightsByHour`.
-- **Orden de dibujo.** Dentro del `SortingGroup` (-3): carril de atrás 0/1, adelante 10/11, `CartelRuta` 100. El grupo
-  entero queda sobre el `Paisaje` (-5) y su fundido (-4), y debajo de la parrilla (-2) y los clientes (10/11). Comparte el
-  -3 con `Grill`/`ToBuild` de `GrillView`, que no se tocan con la ruta. El cuerpo del cliente (`Personaje`) va en 0
+- **Orden de dibujo.** Dentro del `SortingGroup` (-5): carril de atrás 0/1, adelante 10/11, `CartelRuta` 100. El grupo
+  entero queda sobre el `Paisaje` (-7) y su fundido (-6), y **debajo del mostrador** (`Mostrador`, -4), de `Grill`/`ToBuild`
+  (-3), la parrilla (-2) y los clientes (10/11). Hasta 2026-11-19 el grupo iba en -3 y el paisaje en -5: el mostrador (-4)
+  quedaba detrás del tránsito, y el poste del cartel, que baja más que la ruta, se dibujaba encima. El cuerpo del cliente (`Personaje`) va en 0
   y lo tapa `MostradorFrente/MostradorBorde` (12, solo el borde superior recortado de `Mostrador Parrilla Frente`, en
   `GameScene`): las piernas quedan detrás del mostrador. La `Radio` va en 13 para seguir apoyada delante del borde.
 - **`CartelRuta`.** El poste del cartel RUTA 40 cruza la ruta por delante, así que se recortó del `Paisaje` (los 3 colores
@@ -2598,7 +2610,13 @@ Vehículos que pasan cada tanto por la ruta dibujada en el `Paisaje`. Implementa
   pivote al centro) y se ubicó **pixel exacto** sobre el original (`x = -7.38, y = 1.25`). Toma el mismo tinte que el
   paisaje: sin un vehículo detrás no se distingue. ⚠️ Si Arte mueve o redibuja el cartel en el `Paisaje`, hay que
   regenerar el recorte. Si el `Paisaje` pasa a usar sprites por clave (fundido), el recorte no los sigue.
-  **Desde 2026-11-12** el `SpriteRenderer` está **apagado** (el `Paisaje` actual, `PaisajeSinArboles`, trae su propio
+  **Desde 2026-11-19** el `Paisaje` (`PaisajeRuta`) **no trae cartel** y `CartelRuta` vuelve a estar **prendido en el
+  prefab** (las tres escenas) con `Cartel Ruta 40.png` (19x64, PPU 25), en `x = -7.42, y = 0.2`: mismo centro de poste y
+  mismo borde de arriba de la placa (y = 1,48) que el cartel pintado en `PaisajeSinArboles`. Es más grande que aquel porque
+  está dibujado a la escala del paisaje nuevo. Tapa el carril de adelante (order 100 en el `SortingGroup`) y en `GameScene` el
+  poste queda detrás del mostrador. El artista lo exportó también sobre el lienzo de 480x270 en (231,104), pero se usó la
+  ubicación del cartel viejo.
+  **Desde 2026-11-12** el `SpriteRenderer` está **apagado** (el `Paisaje` de entonces, `PaisajeSinArboles`, traía su propio
   cartel chico de ~13x30 px) y el sprite es el dibujo nuevo del artista, `Cartel Ruta 40.png` (19x64, PPU 25), que ya no
   calza con el pintado. Para usarlo hay que borrar el cartel del `Paisaje` y ubicarlo donde corresponda.
 - **Pool.** Los vehículos (`Vehiculo` + hijo `Luces`, dos `SpriteRenderer` con el material del `Paisaje`) se crean al
@@ -2782,6 +2800,10 @@ MainMenuScene (build index 0)
   │     · HaloSol (objeto de escena, no del prefab; Sprites/FondoCicloDia/HaloSol.png, 160 px a PPU 25, anillos de alfa
   │       escalonado, order -42: sobre el cielo, detrás de sol, nubes y árboles): sigue al sol, crece 0,25 → 1 y se apaga
   │     · Título: Text y Shadow caen con OutBack, la sombra 0,05 s después · Subtítulo: letra por letra (maxVisibleCharacters)
+  │     · BandaTitulo (primer hijo de Title, desde 2026-11-19): Image negra con alfa 0,5 y sprite
+  │       Sprites/UI/Menus/BandaTitulo.png (degradé vertical, Bilinear), 4000x451 px del canvas, de y=17 a y=468 desde
+  │       arriba: oscurece el paisaje detrás del título y el subtítulo para que no se pierdan entre los árboles.
+  │       No se anima: aparece con el CanvasGroup del título. Sin raycast. La oscuridad se ajusta con el alfa del color
   │     · Botones: sube el contenedor Buttons y cada botón entra por alfa (CanvasGroup agregado en runtime). No se anima
   │       escala ni posición por botón: RetroMenuButton escribe la escala cada frame y el VerticalLayoutGroup la posición
   │     · Desplazamientos de UI redondeados a 4 px de referencia (pixelStep). Tiempo unscaled, delta topeado a 1/30
@@ -2960,7 +2982,7 @@ SceneManagementUtils.ReturnToMainMenu()   ← reset total
 | 29 | **`SceneManagementUtils.RestartRun` usa `DestroyImmediate`, no `Destroy`**, sobre los cuatro DDOL. Carga `GameScene` en el mismo frame y `GameScene` trae sus propias copias: con destrucción diferida los viejos siguen vivos durante el `Awake` de los nuevos, los nuevos se autodestruyen por el guard de singleton y recién después mueren los viejos → las cuatro `Instance` quedan en `null`. `ReturnToMainMenu` no tiene el problema porque `MainMenuScene` no trae copias |
 | 30 | **`Electronic Highway Sign SDF` no tiene acentos ni `—` / `→`** y los dibuja como cuadrado (ya pasa en los labels viejos de `ShopNextButtonUI` y en `CantCarbones`). **`Bungee-Regular SDF` y `Nunito-Regular SDF` sí tienen los acentos**: para texto nuevo de tienda usar esas dos, y evitar igual los signos exóticos (`·`, `—`, `→`). **`BungeeHairline-Regular SDF` no sirve para texto chico**: es de trazo "pelo" y por debajo de ~20 pt se ve cortado. Desde el rediseño la tienda ya no la usa: solo Bungee y Nunito. Para texto de cuerpo, Nunito |
 | 31 | **Los TMP del header de la tienda tienen `margin` negativo** (`CantCarbones`: `(-105, 0, -132, -18)`). Clonarlos para texto nuevo arrastra ese margen y el texto se dibuja corrido respecto de su `RectTransform`: poner `margin = Vector4.zero` en el clon |
-| 32 | **El fondo de `GameScene` es `FondoCicloDia` y usa los `sortingOrder` -60 a -4** (capas en -60/-55/-50/-45/-40/-30/-20, paisaje en -5; el fundido de sprites de `DayCycleLayer` dibuja en `order + 1`, así que el del paisaje cae en -4). Algo nuevo que vaya detrás de la carne pero delante del fondo va en -3 o más. El tránsito de la ruta (`Transito`) es un `SortingGroup` en -3: lo que tenga que tapar a los vehículos (como el poste del cartel) va dentro del grupo, no subiéndole el order. El tinte del ciclo de día es **solo para esas capas**: parrilla, carne, clientes y HUD no se tiñen, porque leer el punto de cocción depende de sus colores. Ver 3.9 |
+| 32 | **El fondo de `GameScene` es `FondoCicloDia` y usa los `sortingOrder` -60 a -5** (capas en -60/-55/-50/-45/-40/-30/-20, paisaje en -7; el fundido de sprites de `DayCycleLayer` dibuja en `order + 1`, así que el del paisaje cae en -6). El mostrador (`Mostrador`) va en -4; algo nuevo que vaya detrás de la carne pero delante del fondo va en -4 o más. El tránsito de la ruta (`Transito`) es un `SortingGroup` en -5, debajo del mostrador: lo que tenga que tapar a los vehículos (como el poste del cartel) va dentro del grupo, no subiéndole el order. El tinte del ciclo de día es **solo para esas capas**: parrilla, carne, clientes y HUD no se tiñen, porque leer el punto de cocción depende de sus colores. Ver 3.9 |
 | 33 | **El collider de un visual de carne NO se mide con `sprite.bounds`.** Los visuales salen todos del prefab genérico `StockPrefab` — que es **solo `Transform` + `SpriteRenderer` vacío, sin collider** (el 2026-09-23 se le sacó la `BoxCollider2D` de `0.0001 × 0.0001` que arrastraba) — y el sprite del corte se les asigna después; además **todos los cortes se dibujan sobre un lienzo de 100x100 px**, así que `sprite.bounds` devuelve `1x1` para el chorizo (ocupa 84x53 px), el vacío (92x59) y el paty (82x87) por igual. Medir por ahí daba el mismo cuadrado para todos y, en el plato, con el `* 1.2f` de margen que llevaba el agarre, la caja del corte se comía los clicks del plato de alrededor: al querer levantar el plato se levantaba la carne. Se mide con **`SpriteColliderFitter.Fit`** (`Build/SpriteColliderFitter.cs`), que calca el **physics shape** del sprite en un `PolygonCollider2D` (los PNG de cortes se importan con `spriteGenerateFallbackPhysicsShape`, así que Unity genera el contorno por alfa: verificados los 61 sprites de los 10 `MeatCutSO` y los 28 de los `ProductVariantSO`) y cae a una caja ajustada solo si el sprite no trae shape. **El prefab ya no trae collider**: todos los caminos que lo instancian crean el suyo — plato (`PlateDeliveryDraggable.Awake`) y bandeja (`ToBuildDraggableMeat.Awake`/`Setup`) vía el fitter, y los dos draggables legados (`MeatHolderDraggableMeat`, `CoolerDraggableMeat`) con su `GetComponent ?? AddComponent`. La única pila que queda sin collider es la cola `toGrill`, que son visuales pasivos y hoy no tiene llamadores vivos. Lo usan `PlateDeliveryDraggable.RefreshCollider` y `ToBuildDraggableMeat.RefreshCollider`. Dos detalles que hay que respetar en cualquier variante nueva: el `padding` se empuja desde el centro del **contorno** (no del lienzo) y el **`flipX` del `SpriteRenderer` espeja el dibujo pero no el shape**, así que el fitter lo espeja a mano o la cara B queda con el collider de la cara A |
 | 26 | El feedback de clientes ocupa el slot 4 s (`IsInFeedback`): `MaxSimultaneousCustomers` los cuenta, `SpawnLoop` no spawnea en su lugar hasta que se van, y `OnNightEnded` espera a que termine el último feedback. `IsCustomerActive`, `SetDeliveryDragHover` y `EvaluateDelivery` los excluyen |
 | 35 | **Input: nada de `UnityEngine.Input` ni `OnMouseXXX`.** Todo pasa por `InputManager` (3.1 → *Input*): posición con `InputManager.PointerPosition`, botones con `PrimaryPressed/Held/Released` y `SecondaryPressed`, teclas con `WasPressed(GameAction)`. Un collider del mundo nuevo implementa `OnWorldPointerDown/Drag/Up/Click/Enter/Over/Exit` (mismos contratos que los `OnMouseXXX`); un `OnMouseDown` nuevo **no se dispara con el gamepad** (y con el mouse funcionaría de casualidad, porque *Active Input Handling* está en *Both*). Una acción nueva: agregarla al enum `GameAction` **y** al mapa `Gameplay` del asset con el mismo nombre (si falta, `InputManager` loguea error al arrancar). **Un elemento interactivo nuevo (algo que se agarra, se clickea o donde se suelta) hay que sumarlo a `GamepadNavTargets`** (idle o el `DragKind` que corresponda), o con gamepad no se va a poder seleccionar; los botones de UI entran solos. **Pendientes:** (a) ~~los textos del tutorial nombran teclas~~ resuelto con los tokens `[[Accion]]` (3.11 → `InputPrompts`); quedan los **íconos dibujados** de teclas en algunos paneles (la "Q" de `AbrirInventario2`), que son sprites. Los íconos que dependen del control (carteles e `InputPromptBadge`) ya cambian solos con `InputGlyphSetSO`, pero el arte de joystick (`Sprites/UI/Input/`) es **placeholder**. (b) Menú principal y tienda ya se recorren con los saltos (sus botones son `Selectable`), pero falta adaptarlos: scroll de la grilla de la tienda hasta lo que no se ve, orden de selección pensado y botón B para volver. (c) Cambiar *Active Input Handling* requiere reiniciar el Editor: sin reinicio el Input System no recibe dispositivos nativos |

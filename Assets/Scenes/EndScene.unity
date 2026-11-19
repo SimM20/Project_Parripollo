@@ -4142,11 +4142,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1618794728772224263, guid: dc258ae671562d44084f431ce0a897f0, type: 3}
       propertyPath: lanes.Array.data[0].y
-      value: 1.4
+      value: 1.46
       objectReference: {fileID: 0}
     - target: {fileID: 1618794728772224263, guid: dc258ae671562d44084f431ce0a897f0, type: 3}
       propertyPath: lanes.Array.data[1].y
-      value: 0.78
+      value: 0.76
       objectReference: {fileID: 0}
     - target: {fileID: 1618794728772224263, guid: dc258ae671562d44084f431ce0a897f0, type: 3}
       propertyPath: occluders.Array.data[0]
@@ -4226,7 +4226,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8862328703810144816, guid: dc258ae671562d44084f431ce0a897f0, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 4.38
+      value: 4.55
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
