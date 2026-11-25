@@ -1,0 +1,178 @@
+10_aviso_noche|corte_Vacio|217|785|333|893
+10_aviso_noche|corte_Costillita de cerdo|720|694|813|775
+10_aviso_noche|corte_Paty|519|653|616|745
+10_aviso_noche|corte_Tira de asado|316|682|425|787
+10_aviso_noche|corte_Chorizo|155|620|223|712
+10_aviso_noche|tabla_cortar|1223|688|1774|946
+10_aviso_noche|plato|1326|687|1684|910
+10_aviso_noche|tacho|79|410|175|509
+10_aviso_noche|radio|1543|459|1762|602
+10_aviso_noche|boton_capa|413|957|628|1027
+10_aviso_noche|nubes_cerca|-863|12|3077|175
+10_aviso_noche|nubes_lejos|-936|12|3003|175
+10_aviso_noche|paisaje|-25|-14|1945|1094
+10_aviso_noche|vehiculo_0_Auto_Rojo|1710|305|2067|393
+10_aviso_noche|vehiculo_1_Camioneta_Bordo|726|305|1094|393
+10_aviso_noche|vehiculo_2_Auto_Azul|-47|355|391|464
+10_aviso_noche|hud_placa_corta|1326|6|1521|83
+10_aviso_noche|hud_x_1|1351|23|1394|66
+10_aviso_noche|hud_x_2|1402|23|1444|66
+10_aviso_noche|hud_x_3|1453|23|1495|66
+10_aviso_noche|hud_pausa|12|6|94|83
+10_aviso_noche|hud_deshacer|1695|616|1776|697
+10_aviso_noche|hud_placa|119|6|395|83
+10_aviso_noche|panel_pestana_der|1811|166|1875|304
+10_aviso_noche|panel_pestana_izq|50|166|113|304
+10_aviso_noche|burbuja_0|1121|282|1345|401
+10_aviso_noche|burbuja_1|854|282|1074|401
+10_aviso_noche|burbuja_2|NORENDER comps=Transform,CustomerOrderBubble kids=OrderBubbleContent,
+10_aviso_noche|aviso_cartel|510|160|1410|390
+01_juego|corte_Matambre|773|785|877|893
+01_juego|corte_Chinchulin|516|785|626|893
+01_juego|corte_Vacio|295|854|409|963
+01_juego|corte_Costillita de cerdo|640|694|735|775
+01_juego|corte_Paty|519|653|616|745
+01_juego|corte_Tira de asado|316|682|425|787
+01_juego|corte_Chorizo|155|620|223|712
+01_juego|tabla_cortar|1223|688|1774|946
+01_juego|plato|1326|687|1684|910
+01_juego|tacho|79|410|175|509
+01_juego|radio|1543|459|1762|602
+01_juego|boton_capa|413|957|628|1027
+01_juego|nubes_cerca|-1964|12|1976|175
+01_juego|nubes_lejos|-502|12|3437|175
+01_juego|vehiculo_0_Auto_Blanco|414|355|843|464
+01_juego|hud_placa_corta|1326|6|1521|83
+01_juego|hud_x_1|1351|23|1394|66
+01_juego|hud_x_2|1402|23|1444|66
+01_juego|hud_x_3|1453|23|1495|66
+01_juego|hud_pausa|12|6|94|83
+01_juego|hud_deshacer|1695|616|1776|697
+01_juego|hud_placa|119|6|395|83
+01_juego|hud_entero|12|-6|1556|95
+01_juego|panel_pestana_der|1811|166|1875|304
+01_juego|panel_pestana_izq|50|166|113|304
+01_juego|burbuja_0|854|282|1074|401
+01_juego|paciencia_0_BarraPAciencia|877|115|1043|158
+01_juego|burbuja_1|583|288|806|407
+01_juego|paciencia_1_BarraPAciencia|615|121|787|164
+02_paneles|panel_lateral_StockPanel|47|83|528|384
+02_paneles|casillero_StockPanel_0|70|125|188|233
+02_paneles|casillero_StockPanel_1|178|125|294|233
+02_paneles|pestana_StockPanel|521|166|575|304
+02_paneles|panel_lateral_ToppingsPanel|1397|83|1877|384
+02_paneles|casillero_ToppingsPanel_0|1419|125|1531|233
+02_paneles|casillero_ToppingsPanel_1|1524|125|1638|233
+02_paneles|pestana_ToppingsPanel|1349|166|1403|304
+02_paneles|burbuja_coccion|34|456|343|614
+02_paneles|barra_coccion|74|553|303|595
+02_paneles|barra_coccion_Bar|74|553|303|595
+02_paneles|barra_coccion_Indicator|75|554|98|594
+02_paneles|barra_coccion_PendingShade|80|564|298|584
+02_paneles|alerta_quemado|338|602|404|662
+02_paneles|corte_Matambre|773|785|877|893
+02_paneles|corte_Chinchulin|516|785|626|893
+02_paneles|corte_Vacio|295|854|409|963
+02_paneles|corte_Costillita de cerdo|640|694|735|775
+02_paneles|corte_Paty|519|653|616|745
+02_paneles|corte_Tira de asado|316|682|425|787
+02_paneles|corte_Chorizo|155|620|223|712
+03_carbon|carbon_0_Carbon Apagado|128|733|204|806
+03_carbon|carbon_1_Carbon Prendido (Fase 1)|290|733|365|806
+03_carbon|carbon_2_Carbon Prendido (Fase 2)|452|733|527|806
+03_carbon|carbon_3_Carbon Prendido (Fase 3)|696|733|768|806
+03_carbon|carbon_4_Carbon Ceniza|858|733|930|806
+04_pausa|Panel/Vignette=Vineta_Pausa|0|0|1920|1080
+04_pausa|SFXSlider/Slider/Background=Slider_Ruta_Barra|490|389|890|489
+04_pausa|Slider/Fill Area/Fill=Slider_Ruta_Relleno|542|433|822|441
+04_pausa|Slider/Handle Slide Area/Handle=Slider_Ruta_Handle|802|413|842|465
+04_pausa|MusicSlider/Slider/Background=Slider_Ruta_Barra|490|550|890|650
+04_pausa|Slider/Fill Area/Fill=Slider_Ruta_Relleno|542|594|558|602
+04_pausa|Slider/Handle Slide Area/Handle=Slider_Ruta_Handle|538|574|578|626
+04_pausa|VerticalContainer/LeftColumn/OptionsButton=Boton_Ruta|460|711|920|811
+04_pausa|VerticalContainer/RightColumn/RestartDay=Boton_Ruta_Seleccionado|1000|389|1460|489
+04_pausa|VerticalContainer/RightColumn/EndGameButton=Boton_Ruta|1000|550|1460|650
+04_pausa|VerticalContainer/RightColumn/BackToMenu=Boton_Ruta|1000|711|1460|811
+05_tutorial|0_Background=Cartel PH|125|206|437|263
+05_tutorial|1_GlyphImage=LetraQ|137|214|174|255
+05_tutorial|2_Arrow=Flecha Cartel PH|113|223|127|246
+05_tutorial|3_Background=Cartel PH|160|613|581|670
+05_tutorial|4_GlyphImage=Mouse Arrastrar PH|172|621|232|661
+05_tutorial|5_Arrow=Flecha Cartel PH|359|668|382|681
+05_tutorial|6_Background=Cartel PH|882|770|1314|826
+05_tutorial|7_GlyphImage=Mouse Click PH|894|778|922|818
+05_tutorial|8_Arrow=Flecha Cartel PH|1312|786|1326|810
+05_tutorial|9_Background=Cartel PH|1080|401|1377|458
+05_tutorial|10_GlyphImage=Mouse Hover PH|1093|409|1120|449
+05_tutorial|11_Arrow=Flecha Cartel PH|1217|389|1240|403
+05_tutorial|12_Background=Cartel PH|1099|506|1531|562
+05_tutorial|13_GlyphImage=Mouse Click Derecho PH|1111|514|1139|554
+05_tutorial|14_Arrow=Flecha Cartel PH|1529|522|1543|546
+05_tutorial|15_Background=Cartel PH|276|889|765|945
+05_tutorial|16_GlyphImage=LetraSpace_0|288|897|415|937
+05_tutorial|17_Arrow=Flecha Cartel PH|509|943|532|957
+06_menu|StartButton=Boton_Ruta_Seleccionado_Brillo|748|659|1172|765
+06_menu|ExitButton=Boton_Ruta|760|910|1160|1010
+06_menu|OptionsButton=Boton_Ruta|760|786|1160|886
+06_menu|BandaTitulo=BandaTitulo|-1040|17|2960|468
+06_menu|logo_texto|276|126|1676|326
+06_menu|logo_texto|260|110|1660|310
+07_opciones|ApplyButton=Boton_Ruta|980|892|1300|992
+07_opciones|BackButton=Boton_Ruta_Seleccionado_Brillo|610|889|950|995
+07_opciones|ResetButton=Boton_Ruta_Chico|668|816|964|876
+07_opciones|Next=Flecha_Ruta_Der|1380|816|1440|876
+07_opciones|Prev=Flecha_Ruta_Izq|980|816|1040|876
+07_opciones|Next=Flecha_Ruta_Der|1380|750|1440|810
+07_opciones|Prev=Flecha_Ruta_Izq|980|750|1040|810
+07_opciones|Next=Flecha_Ruta_Der|1380|684|1440|744
+07_opciones|Prev=Flecha_Ruta_Izq|980|684|1040|744
+07_opciones|Next=Flecha_Ruta_Der|1380|618|1440|678
+07_opciones|Prev=Flecha_Ruta_Izq|980|618|1040|678
+07_opciones|Next=Flecha_Ruta_Der|1380|552|1440|612
+07_opciones|Prev=Flecha_Ruta_Izq|980|552|1040|612
+07_opciones|Next=Flecha_Ruta_Der|1380|486|1440|546
+07_opciones|Prev=Flecha_Ruta_Izq|980|486|1040|546
+07_opciones|Next=Flecha_Ruta_Der|1380|420|1440|480
+07_opciones|Prev=Flecha_Ruta_Izq|980|420|1040|480
+07_opciones|Window=Panel_Ruta|410|280|1510|1020
+07_opciones|BandaTitulo=BandaTitulo|-1040|17|2960|468
+08_tienda|ShopCanvas/Background=Vineta_Pausa|0|0|1920|1080
+08_tienda|Header/CustomersPlate=Panel_Ruta_Noche|305|28|794|78
+08_tienda|Header/MoneyPlate=Panel_Ruta_Noche|1580|13|1880|93
+08_tienda|SubHeader/HintPlate=Panel_Ruta_Noche|313|216|1353|268
+08_tienda|Scroll View/Viewport=UIMask|83|290|1565|886
+08_tienda|Content/ShopItemCell 1(Clone)=Panel_Ruta_Noche|232|298|512|778
+08_tienda|IconFrame/Vidriera=Chapa_Ruta_Noche_Encendido|300|316|444|460
+08_tienda|IconFrame/ItemIcon=Chorizo Crudo|312|326|432|446
+08_tienda|StepperContainer/MinusButton=Chapa_Ruta_Noche|277|628|323|670
+08_tienda|StepperContainer/PlusButton=Chapa_Ruta_Noche|421|628|467|670
+08_tienda|ShopItemCell 1(Clone)/BuyButton=Boton_Ruta_Chico_Noche|262|698|482|748
+08_tienda|Content/ShopItemCell 1(Clone)=Panel_Ruta_Noche|536|298|816|778
+08_tienda|IconFrame/Vidriera=Chapa_Ruta_Noche_Encendido|604|316|748|460
+08_tienda|IconFrame/ItemIcon=Paty Crudo|616|326|736|446
+08_tienda|StepperContainer/MinusButton=Chapa_Ruta_Noche|581|628|627|670
+08_tienda|StepperContainer/PlusButton=Chapa_Ruta_Noche|725|628|771|670
+08_tienda|ShopItemCell 1(Clone)/BuyButton=Boton_Ruta_Chico_Noche|566|698|786|748
+08_tienda|IconFrame/ItemIcon=Tira de Asado Cruda|920|326|1040|446
+08_tienda|IconFrame/ItemIcon=Vacio Crudo|1224|326|1344|446
+08_tienda|IconFrame/ItemIcon=Chinchulin Crudo|312|830|432|950
+08_tienda|IconFrame/ItemIcon=Costilla Cruda|616|830|736|950
+08_tienda|IconFrame/ItemIcon=Matambre Crudo|1224|830|1344|950
+08_tienda|ShopContent/Next Button=Boton_Ruta_Noche|996|886|1583|1046
+08_tienda|Tabs/TabCoal=Boton_Ruta_Chico_Noche|323|134|517|198
+08_tienda|Tabs/TabMeat=Boton_Ruta_Chico_Noche_Encendido|529|134|724|198
+08_tienda|Tabs/TabUpgrades=Boton_Ruta_Chico_Noche|736|134|930|198
+08_tienda|Tabs/TabRoute=Boton_Ruta_Chico_Noche|942|134|1137|198
+08_tienda|Tabs/TabToppings=Boton_Ruta_Chico_Noche|1149|134|1343|198
+08_tienda|Panel/TitlePlate=Panel_Ruta_Noche|40|886|452|936
+08_tienda|Panel/MeatCard=Panel_Ruta_Noche|40|946|240|1046
+08_tienda|Panel/CoalCard=Panel_Ruta_Noche|252|946|452|1046
+08_tienda|Panel/StatusCard=Panel_Ruta_Noche|464|946|964|1046
+08_tienda|ShopContent/Cart=Panel_Ruta_Noche|1608|134|1880|1046
+09_mejoras|icono_mejora=Carbon 1 |335|326|455|446
+09_mejoras|icono_mejora=Clientes|639|326|759|446
+09_mejoras|icono_mejora=moneda|943|326|1063|446
+09_mejoras|icono_mejora=Radio|1247|326|1367|446
+11_popup_strikes|Panel=Fondo para Textos Corto|460|220|1460|860
+11_popup_strikes|Illustration=AngryCustomer|810|235|1110|415
+11_popup_strikes|ContinueButton=Boton Comenzar|760|741|1160|816

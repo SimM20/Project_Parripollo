@@ -2,6 +2,17 @@
 
 > Documentación técnica de referencia. Objetivo: entender el proyecto sin leer los scripts.
 > Última revisión completa contra el código: **2026-09-21** (rama `merge-strikes-rota-cambios`, commit `458edca`).
+> Última actualización parcial: **2026-11-25** (rama `development`) — **HUD y choripán del artista**. Reemplazan a los
+> placeholders con el mismo nombre (los viejos, y los `.aseprite` del choripán, pasaron a `_SinUso/Sprites/`): `UI/HUD/HUD
+> Placa.png` (68x19, separador en la columna 23) e íconos `HUD Icono Dia` (16x13), `Dinero` (19x20), `Clientes` (16x15) y
+> `Hora` (19x19), más `Food/Cuts/Choripan/Choripan <Estado>.png` (21x15, 6 estados: `Choripan.asset` ahora tiene
+> `quemado`). Todos PPU 25, Point, sin compresión, con su `.ase` al lado. El choripán mide en mundo lo mismo que antes
+> (0,84x0,6 contra 0,85x0,61; `variantSpriteScale` sigue en 1). En `HudCanvas`, las 4 `HudContainer` miden 2,72x0,76
+> (1:1) y **ya no usan su `HorizontalLayoutGroup`** (apagado): ícono a su tamaño nativo centrado en el hueco izquierdo de
+> la placa (x = 0,50–0,52) y texto centrado en el derecho (x = 1,78, y = −0,38). `PauseButton` y `HudContainer (Strikes)`
+> pasaron a 0,76 de alto (19 px, antes se aplastaban a 18,75) y la placa corta a 1,92 de ancho (48 px). Tres son overrides
+> de `Prefabs/UI/HudContainer.prefab` en la escena; el prefab no cambió. Pendiente de Arte: `HUD Placa Corta` y `HUD Pausa`
+> siguen con el estilo viejo.
 > Última actualización parcial: **2026-11-19** (rama `development`) — **paisaje nuevo del artista y cielo en 4 franjas**.
 > `Paisaje` usa `Sprites/Environment/DayCycle/PaisajeRuta.png` (480x270, PPU 25, pivote abajo, `y = -5.4`: el lienzo del
 > artista es la pantalla, igual que la parrilla). Sale de `PaisajeRuta.ase` **sin la capa `CIELO`** (y sin la oculta
